@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About us page html</title>
+  <style>
+      
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: lightcoral;
+      margin: 0;
+      padding: 0;
+    }
+    #menu {
+
+    margin: auto;
+    
+
+}
+
+ul {
+
+word-spacing: 10px;
+
+}
+
+ul li {
+
+display: inline;
+text-decoration: none;
+font-family: 'Roboto Slab', serif;
+color: white;
+letter-spacing: 5px;
+background-color: orangered;
+padding: 8px;
+border-radius: 2px;
+}
+
+ul li:hover {
+
+background-color:#564256;
+cursor: pointer;
+
+}
+
+    .navbar {
+      display: flex;
+      width: 100%;
+      box-shadow: 0 0 5px black;
+      text-align: center;
+      height: 40px;
+      justify-content: center;
+      align-items: center;
+      font-size: 25px;
+    }
+
+    .wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      background: rgb(223, 215, 215);
+      margin: 10px auto;
+      padding: 5px 30px;
+      width: 800px;
+      box-shadow: 0 0 5px black;
+    }
+
+    .hr {
+      display: flex;
+      align-items: center;
+    }
+
+    hr {
+      width: 30px;
+      height: 1px;
+      background: black;
+      margin: 0 15px;
+    }
+
+    h2 {
+      font-size: 25px;
+      font-weight: normal;
+      text-transform: uppercase;
+    }
+
+    .mission-txt {
+      font-size: 18px;
+      font-weight: 500px;
+      font-style: italic;
+      margin-top: 0;
+    }
+
+    div img {
+      width: 150px;
+      filter: drop-shadow(0 10px 5px black);
+    }
+
+    p {
+      text-align: justify;
+       text-transform: uppercase;
+    }
+
+    .faculties {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .unit {
+      margin: 25px;
+      width: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .unit img {
+      border-radius: 100px;
+      width: 150px;
+      height: 150px;
+      margin-bottom: 10px;
+    }
+
+    .unit p {
+      text-align: left;
+      margin: 2px;
+    }
+
+    .unit p:first-of-type {
+      font-weight: bolder;
+      margin-bottom: 5px;
+    }
+
+    @media screen and (max-width:820px) {
+      .wrapper {
+        width: 80%;
+        padding: 5px 30px;
+      }
+    }
+  
+  </style>
+</head>
+
+<body>
+  <!-- place your nav bar here -->
+
+ <div class="container">
+
+    <div class="wrapper">
+      <div class="hr">
+        <hr>
+        <h2>My Mission</h2>
+        <hr>
+      </div>
+     
+      <p class="mission-txt">"To Provide Online Exam Portal"</p>
+      <div id="menu">
+        <br>
+        <br>
+        <br>
+        <ul>
+            <li><a href="index.jsp">Home</a></li>
+            <li><a href="login.jsp">login</a></li>
+            <li><a href="contactuspage.html">Contact Us</a></li>
+
+        </ul>
+
+    </div>
+
+    </div>
+
+    <div class="wrapper">
+      <h2>About</h2>
+      <div>
+        <img src="https://c8.alamy.com/comp/T7AF53/isometric-3d-online-exam-or-course-concept-with-books-and-computer-exams-with-time-icon-vector-illustration-T7AF53.jpg" alt="img">
+        <p>This project is developed using java server pages (jsp) and MySQL is used for backend. IDE is the Netbeans. sql script is included in "db script" folder. Please create: exam_system as a database schema.
+
+database settings are in DatabaseClass.java. you can modify it or default settings are: db name: exam_system user: root pass: root
+
+insert your first user into the database and use the application. Thanks<br><br>. </p>
+
+      </div>
+    </div>
+    
+    <div class="wrapper">
+      <h2>It's Me</h2>
+      
+      <div class="Faculties">
+        <div class="">
+          <img src="https://media.geeksforgeeks.org/auth/profile/2io2cj9xz7j42t6jn8vn" alt="">
+          <p>Ayush Rastogi,&nbsp<b>Computer Science And Engineering</b></p>
+          <br>
+          <p>Prefer Java, Hands-on Practice (JavaScript, Java Applets, Java Servlets, Java Beans, XML). Knowledge of Object-Oriented Programming and design, SQL and web technologies like HTML, CSS, Javascript, and JQuery.Motivated team player and ability to reflect leadership skills.</p>
+
+        </div>
+        
+      </div>
+    </div>
+
+  </div>
+</body>
+
+</html>

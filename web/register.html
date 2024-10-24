@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register New User</title>
+
+    <!-- Include Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Optional Custom CSS -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .central-div {
+            text-align: center;
+            margin: auto;
+            margin-top: 3%;
+            width: 50%;
+            background-color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            border-radius: 10px;
+        }
+
+        h2 {
+            margin-bottom: 25px;
+            color: #333;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* Two equal-width columns */
+            gap: 15px; /* Space between grid items */
+            width: 100%; /* Full width of the container */
+            margin: 0 auto;
+        }
+
+        .grid-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .grid-submit {
+            grid-column: span 2; /* Make the submit button span both columns */
+            text-align: center; /* Center the submit button */
+        }
+
+        input[type="text"], input[type="password"], input[type="email"], input[type="tel"] {
+            width: 100%; /* Ensure inputs take full width of grid item */
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .button {
+            width: 100%;
+            padding: 12px;
+            background-color: #09294D;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        .error-message {
+            color: #cc0000;
+            font-size: 14px;
+            display: block;
+        }
+
+        footer {
+            background-color: #f8f9fa;
+            padding: 10px 0;
+            text-align: center;
+            width: 100%;
+            position: absolute;
+            bottom: 0;
+        }
+
+        @media (max-width: 768px) {
+            .central-div {
+                margin: 50px 20px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .central-div {
+                margin: 30px 10px;
+            }
+
+            input[type="text"], input[type="password"], .button {
+                font-size: 14px;
+            }
+        }
+
+    </style>
+<body>
+	<center>
+		<div class="central-div" style="top:10%">
+        <!-- Form for Registration -->
+        <form action="controller.jsp">
+            <input type="hidden" name="page" value="register">
+
+            <div class="grid-container">
+
+                <div class="grid-item">
+                    <input type="text" name="fname" class="text" placeholder="First Name" required>
+                </div>
+                <div class="grid-item">
+                    <input type="text" name="lname" class="text" placeholder="Last Name" required>
+                </div>
+
+                <div class="grid-item">
+                    <input type="text" name="uname" class="text" placeholder="User Name">
+                </div>
+
+                <div class="grid-item">
+                    <input type="tel" name="contactno" class="text" placeholder="Contact No" required>
+                    <span id="errorContact" class="error-message"></span>
+                </div>
+
+                <div class="grid-item" style="grid-column: span 2;">
+                    <input type="email" name="email" class="text" placeholder="MUT Email" required>
+                    <span id="errorEmail" class="error-message"></span>
+                </div>
+
+                <div class="grid-item">
+                    <input type="text" name="city" class="text" placeholder="City" required>
+                </div>
+
+                <div class="grid-item">
+                    <input type="text" name="address" class="text" placeholder="Address" required>
+                </div>
+
+                <div class="grid-item">
+                    <input type="password" name="pass" class="text" placeholder="Password" required>
+                    <span id="errorPassword" class="error-message"></span>
+                </div>
+                
+                <div class="grid-item grid-submit">
+                    <input type="submit" value="Register Now" class="button">
+                </div>
+            </div>
+        </form>
+		</div>
+	</center>
+</body>
+</html>
