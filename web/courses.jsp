@@ -34,21 +34,27 @@
 
 </style>
 
-            <!-- SIDEBAR -->
-            <div class="sidebar" >
-                <div class="sidebar-background" style="background-color:#F3F3F3; color:black">
-                    <div style="flex: 1;">
-                        <img src="IMG/mut.png" alt="MUT Logo" style="max-height: 120px;">
-                    </div>
-                    <div class="left-menu">
-                        <a href="adm-page.jsp?pgprt=0"><h2 style="color:black">Profile</h2></a>
-                        <a class="active" href="adm-page.jsp?pgprt=2"><h2 style="color:black">Courses</h2></a>
-                        <a href="adm-page.jsp?pgprt=3"><h2 style="color:black">Questions</h2></a>
-                        <a href="adm-page.jsp?pgprt=1"><h2 style="color:black">Accounts</h2></a>
-                        <a href="std-page.jsp?pgprt=2"><h2 style="color:black">Students Results</h2></a>
-                    </div>
-                </div>
-            </div>
+<!-- SIDEBAR -->
+<div class="sidebar">
+    <div class="sidebar-background" style="background-color:#F3F3F3; color:black">
+        <!-- Logo Section -->
+        <div style="text-align: center; margin: 20px 0;">
+            <img src="IMG/mut.png" alt="MUT Logo" style="max-height: 120px;">
+        </div>
+        <!-- Navigation Menu -->
+        <div class="left-menu">
+            <!-- Profile Section -->
+            <a href="adm-page.jsp?pgprt=0"><h2 style="color:black">Profile</h2></a>
+            <!-- Academic Management -->
+            <a class="active" href="adm-page.jsp?pgprt=2"><h2 style="color:black">Courses</h2></a>
+            <a href="adm-page.jsp?pgprt=3"><h2 style="color:black">Questions</h2></a>
+            <a href="adm-page.jsp?pgprt=5"><h2 style="color:black">Students Results</h2></a>
+            <!-- Administrative Tasks -->
+            <a href="adm-page.jsp?pgprt=1"><h2 style="color:black">Accounts</h2></a>
+        </div>
+    </div>
+</div>
+
 
 
 

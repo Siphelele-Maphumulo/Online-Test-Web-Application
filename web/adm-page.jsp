@@ -1,6 +1,8 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@page import="myPackage.classes.User"%>
 <%@page import="myPackage.DatabaseClass"%>
+<%@page import="myPackage.classes.Result"%>
+<%@page import="java.util.ArrayList"%>
 <jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>
 <!DOCTYPE html>
 <html>
@@ -34,6 +36,9 @@
             <center><h2>Lecture Panel</h2></center> 
             <!--<a href="controller.jsp?page=logout" style="float: right;background:#3b5998; color:white">Logout</a>-->
         </div>
+
+            
+            
     <%
         } else {
             // Optional: Handle other user types or unknown types (e.g., student)
@@ -78,7 +83,7 @@
             } else if (request.getParameter("pgprt").equals("5")) {
         %>
                 <!-- Include the Show All page -->
-                <jsp:include page="result_lecture.jsp" />
+                <jsp:include page="admin-results.jsp" />
         <%
             } else {
         %>

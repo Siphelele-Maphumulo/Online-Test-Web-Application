@@ -463,3 +463,59 @@ box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.14);
 .form-style-6 input[type="button"]:hover{
     background: #2EBC99;
 }
+
+body {
+    font-family: Arial, sans-serif;
+}
+
+.sidebar {
+    width: 250px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background-color: #2f4f4f;
+    padding-top: 20px;
+}
+
+.sidebar-background {
+    color: white;
+    padding: 10px;
+}
+
+.sidebar .left-menu a {
+    text-decoration: none;
+    color: black;
+    padding: 10px 15px;
+    display: block;
+    margin: 10px 0;
+}
+
+.sidebar .left-menu a:hover {
+    background-color: #555;
+    color: white;
+}
+
+.content-area {
+    margin-left: 250px;
+    padding: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table th, table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+table tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+table tr:hover {
+    background-color: #ddd;
+}

@@ -2,22 +2,42 @@
 <%@page import="java.util.ArrayList"%>
 <jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>
 
+<style>
+    .sidebar {
+        width: 250px;
+        height: 100vh;
+        background-color: black;
+        position: fixed;
+        top: 0;
+        left: 0;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }    
+</style>
+
 <!-- SIDEBAR -->
 <div class="sidebar">
     <div class="sidebar-background" style="background-color:#F3F3F3; color:black">
-        <div style="flex: 1;">
+        <!-- Logo Section -->
+        <div style="text-align: center; margin: 20px 0;">
             <img src="IMG/mut.png" alt="MUT Logo" style="max-height: 120px;">
         </div>
+        <!-- Navigation Menu -->
         <div class="left-menu">
+            <!-- Profile Section -->
             <a href="adm-page.jsp?pgprt=0"><h2 style="color:black">Profile</h2></a>
+            <!-- Academic Management -->
             <a href="adm-page.jsp?pgprt=2"><h2 style="color:black">Courses</h2></a>
             <a href="adm-page.jsp?pgprt=3"><h2 style="color:black">Questions</h2></a>
-            <a class="active" href="adm-page.jsp?pgprt=4"><h2 style="color:black">Accounts</h2></a>
-            <a href="std-page.jsp?pgprt=2"><h2 style="color:black">Students Results</h2></a>
-        
+            <a href="adm-page.jsp?pgprt=5"><h2 style="color:black">Students Results</h2></a>
+            <!-- Administrative Tasks -->
+            <a class="active" href="adm-page.jsp?pgprt=1"><h2 style="color:black">Accounts</h2></a>
         </div>
     </div>
 </div>
+
 
 <!-- CONTENT AREA -->
 <div class="content-area">

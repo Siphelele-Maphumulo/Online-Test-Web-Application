@@ -15,7 +15,7 @@
             <!-- Include the header -->
             <jsp:include page="header.jsp" />
 		<center><h2>Student Panel</h2></center> 
-                <!--<a href="controller.jsp?page=logout" class="button" style="float: right;background:crimson;color:white">Logout</a>-->
+<!--                <a href="controller.jsp?page=logout" class="button" style="float: right;background:crimson;color:white">Logout</a>-->
 	</div>
     
     <%

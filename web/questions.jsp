@@ -16,35 +16,35 @@
     }    
 </style>
 
-
 <!-- SIDEBAR -->
-<div class="sidebar" style="background-color:#3b5998">
+<div class="sidebar">
     <div class="sidebar-background" style="background-color:#F3F3F3; color:black">
-                    <div style="flex: 1;">
-                        <img src="IMG/mut.png" alt="MUT Logo" style="max-height: 120px;">
-                    </div>
+        <!-- Logo Section -->
+        <div style="text-align: center; margin: 20px 0;">
+            <img src="IMG/mut.png" alt="MUT Logo" style="max-height: 120px;">
+        </div>
+        <!-- Navigation Menu -->
         <div class="left-menu">
             <a href="adm-page.jsp?pgprt=0"><h2 style="color:black">Profile</h2></a>
             <a href="adm-page.jsp?pgprt=2"><h2 style="color:black">Courses</h2></a>
             <a class="active" href="adm-page.jsp?pgprt=3"><h2 style="color:black">Questions</h2></a>
+            <a href="adm-page.jsp?pgprt=5"><h2 style="color:black">Students Results</h2></a>
             <a href="adm-page.jsp?pgprt=1"><h2 style="color:black">Accounts</h2></a>
-            <a href="std-page.jsp?pgprt=2"><h2 style="color:black">Students Results</h2></a>
         </div>
     </div>
 </div>
 
 <!-- CONTENT AREA -->
 <div class="content-area">
-    <!-- Panel for Showing All Questions for a Selected Course -->
     <div class="panel form-style-6" style="min-width: 300px; max-width: 390px; float: left">
         <form action="adm-page.jsp">
             <div class="title" style="background-color: #D8A02E">Show All Questions for</div>
             <br><br>
             <label>Select Course</label>
             <input type="hidden" name="pgprt" value="4">
-            <select name="coursename" class="text">
+            <select name="coursename" class="text" id="courseSelectShowAll">
                 <% 
-                ArrayList<String> courseNames = pDAO.getAllCourseNames();  // A new method to get only course names
+                ArrayList<String> courseNames = pDAO.getAllCourseNames(); 
                 for (String course : courseNames) {
                 %>
                 <option value="<%=course%>"><%=course%></option>
@@ -59,11 +59,10 @@
         <form action="controller.jsp" method="POST">
             <div class="title" style="background-color: #D8A02E">Add New Question</div>
             <table>
-                <!-- Select Course Dropdown -->
                 <tr>
                     <td><label>Select Course:</label></td>
                     <td colspan="4">
-                        <select name="coursename" class="text" required>
+                        <select name="coursename" class="text" id="courseSelectAddNew" required>
                             <option value="">Select Course</option>
                             <% 
                             for (String course : courseNames) {
@@ -74,7 +73,6 @@
                     </td>
                 </tr>
 
-                <!-- Field for entering the question -->
                 <tr>
                     <td><label>Your Question:</label></td>
                     <td colspan="4">
@@ -82,7 +80,6 @@
                     </td>
                 </tr>
 
-                <!-- Dropdown to select the question type (MCQ or True/False) -->
                 <tr>
                     <td><label>Question Type</label></td>
                     <td colspan="4">
@@ -93,7 +90,6 @@
                     </td>
                 </tr>
 
-                <!-- Options for Multiple Choice Questions -->
                 <tr id="mcqOptions">
                     <td><label>Options</label></td>
                     <td><input type="text" name="opt1" class="text" placeholder="First Option" style="width: 130px;"></td>
@@ -102,7 +98,6 @@
                     <td><input type="text" name="opt4" class="text" placeholder="Fourth Option" style="width: 130px;"></td>
                 </tr>
 
-                <!-- Correct answer input -->
                 <tr>
                     <td><label>Correct Answer</label></td>
                     <td colspan="4">
@@ -110,7 +105,6 @@
                     </td>
                 </tr>
 
-                <!-- Submit Button -->
                 <tr>
                     <td colspan="5">
                         <input type="hidden" name="page" value="questions">
@@ -125,26 +119,47 @@
         </form>
 
         <script>
-            // JavaScript to toggle the display of MCQ options based on the question type
             function toggleOptions() {
                 var questionType = document.getElementById("questionType").value;
                 var mcqOptions = document.getElementById("mcqOptions");
                 var correctAnswer = document.getElementById("correctAnswer");
 
                 if (questionType === "TrueFalse") {
-                    mcqOptions.style.display = "none"; // Hide MCQ options
-                    correctAnswer.value = ""; // Clear the input field
-                    correctAnswer.placeholder = "True/False"; // Update placeholder for True/False
+                    mcqOptions.style.display = "none"; 
+                    correctAnswer.value = ""; 
+                    correctAnswer.placeholder = "True/False"; 
                 } else {
-                    mcqOptions.style.display = "table-row"; // Show MCQ options
-                    correctAnswer.placeholder = "Correct Answer"; // Placeholder for MCQ correct answer
+                    mcqOptions.style.display = "table-row"; 
+                    correctAnswer.placeholder = "Correct Answer"; 
                 }
             }
 
-            // Call the function on page load to ensure the correct display
             window.onload = function() {
-                toggleOptions(); // Ensure the correct options are displayed based on the initial value
+                toggleOptions(); 
             };
+
+            const courseSelectAddNew = document.getElementById('courseSelectAddNew');
+            const courseSelectShowAll = document.getElementById('courseSelectShowAll');
+
+            let currentCourse = courseSelectAddNew.value; // Initialize with selected course
+
+            courseSelectAddNew.addEventListener('change', function() {
+                const selectedCourse = this.value; // Get the new selection from the dropdown
+                if (selectedCourse !== currentCourse) {
+                    const confirmation = confirm("Are you sure you want to change the course?");
+                    if (confirmation) {
+                        currentCourse = selectedCourse; // Update to new course
+                        courseSelectShowAll.value = selectedCourse; // Also update the Show All Questions dropdown
+                    } else {
+                        this.value = currentCourse; // Revert to previous selected course
+                    }
+                }
+            });
+
+            courseSelectShowAll.addEventListener('change', function() {
+                courseSelectAddNew.value = this.value; // Update second dropdown
+                currentCourse = this.value; // Ensure currentCourse reflects this change
+            });
         </script>
     </div>
 </div>

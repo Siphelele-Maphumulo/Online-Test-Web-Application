@@ -1,41 +1,38 @@
 package myPackage;
 
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.text.SimpleDateFormat;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import myPackage.classes.Answers;
+import myPackage.classes.Exams;
+import myPackage.classes.Questions;
+import myPackage.classes.User;
+import org.mindrot.jbcrypt.BCrypt;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
+import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.swing.JOptionPane;
-import myPackage.classes.Answers;
-import myPackage.classes.Courses;
-import myPackage.classes.Exams;
-import myPackage.classes.Questions;
-import myPackage.classes.User;
-import org.mindrot.jbcrypt.BCrypt;
-
+import myPackage.classes.Result;
 
 public class DatabaseClass {
     private Connection conn;
-    
+
     public DatabaseClass() throws ClassNotFoundException, SQLException {
         establishConnection();
     }
-    
+
     private void establishConnection() throws ClassNotFoundException, SQLException {
-       
-            Class.forName("com.mysql.jdbc.Driver");
-            conn= DriverManager.getConnection("jdbc:mysql://localhost:3306/exam_system","root","");
-       
+        Class.forName("com.mysql.cj.jdbc.Driver"); // Updated to MySQL Connector/J 8.x
+        conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/exam_system", "root", "");
     }
-    
+
     String user_Type = "";
     public boolean checkLecturerByEmail(String email) {
         System.out.println("Here");
@@ -358,26 +355,27 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
         return list;
     }
     
-    public int startExam(String cName,int sId){
-        int examId=0;
+    public int startExam(String cName, int sId) {
+        int examId = 0;
         try {
-            String sql="INSERT into exams(course_name,date,start_time,exam_time,std_id,total_Marks) "
-                    + "VALUES(?,?,?,?,?,?)";
-            PreparedStatement pstm=conn.prepareStatement(sql);
-            pstm.setString(1,cName);
-            pstm.setString(2,getFormatedDate(LocalDate.now().toString()));
-            pstm.setString(3,LocalTime.now().toString());
-            pstm.setString(4,getCourseTimeByName(cName));
-            pstm.setInt(5,sId);
+            String sql = "INSERT INTO exams(course_name, date, start_time, exam_time, std_id, total_marks) " +
+                         "VALUES (?, ?, ?, ?, ?, ?)";
+            PreparedStatement pstm = conn.prepareStatement(sql);
+            pstm.setString(1, cName);
+            pstm.setString(2, LocalDate.now().toString()); // Ensure consistent date format
+            pstm.setString(3, LocalTime.now().toString());
+            pstm.setString(4, getCourseTimeByName(cName));
+            pstm.setInt(5, sId);
             pstm.setInt(6, getTotalMarksByName(cName));
             pstm.executeUpdate();
             pstm.close();
-            examId=getLastExamId();
+            examId = getLastExamId();
         } catch (SQLException ex) {
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
         }
         return examId;
     }
+    
     public int getLastExamId(){
         int id=0;
          try {
@@ -531,21 +529,27 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
         System.out.println(time);
         return time;
     }
-   public void insertAnswer(int eId,int qid,String question,String ans){
+    
+    
+    public void insertAnswer(int eId, int qid, String question, String ans) {
         try {
-            PreparedStatement pstm=conn.prepareStatement("insert into answers(exam_id,question,answer,correct_answer,status) "
-                    + "Values(?,?,?,?,?)");
-            pstm.setInt(1,eId);
-            pstm.setString(2, question);
-            pstm.setString(3,ans);
-            String correct=getCorrectAnswer(qid);
-            pstm.setString(4, correct);
-            pstm.setString(5,getAnswerStatus(ans,correct));
+            String correct = getCorrectAnswer(qid); // Fetch correct answer
+            String status = getAnswerStatus(ans == null ? "" : ans, correct); // Handle null answers
+
+            PreparedStatement pstm = conn.prepareStatement(
+                "INSERT INTO answers (exam_id, question, answer, correct_answer, status) VALUES (?, ?, ?, ?, ?)"
+            );
+            pstm.setInt(1, eId); // Exam ID
+            pstm.setString(2, question); // Question text
+            pstm.setString(3, ans == null ? "N/A" : ans); // User's answer (or "N/A" if unanswered)
+            pstm.setString(4, correct); // Correct answer
+            pstm.setString(5, status); // Status (correct/incorrect)
             pstm.executeUpdate();
         } catch (SQLException ex) {
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
         }
-   } 
+    }
+
 
     private String getCorrectAnswer(int qid) {
         String ans="";
@@ -574,24 +578,168 @@ private String getAnswerStatus(String ans, String correct) {
 }
 
 
-    public ArrayList getAllResultsFromExams(int stdId){
-        ArrayList list=new ArrayList();
-        Exams exam=null;
+
+    // Method to get all results from the exams table
+    public ArrayList<Exams> getResultsFromExams() {
+        ArrayList<Exams> list = new ArrayList<>();
         try {
-            PreparedStatement pstm=conn.prepareStatement("select * from exams where std_id=? order by date desc");
-            pstm.setInt(1, stdId);
-            ResultSet rs=pstm.executeQuery();
-            while(rs.next()){
-                exam=new Exams(rs.getInt(1),rs.getString(2),rs.getString(3),rs.getString(4),rs.getString(5)
-                ,rs.getString(6),getFormatedTime(rs.getString(7)),getFormatedTime(rs.getString(8)),rs.getString(9),rs.getString(10));
+            String query = "SELECT u.first_name, u.last_name, e.exam_id, e.std_id, e.course_name, " +
+                           "e.total_marks, e.obt_marks, e.date, e.start_time, e.end_time, e.exam_time, e.status " +
+                           "FROM exams e " +
+                           "JOIN users u ON e.std_id = u.user_id " +
+                           "ORDER BY e.date DESC";
+            PreparedStatement pstm = conn.prepareStatement(query);
+            ResultSet rs = pstm.executeQuery();
+
+            while (rs.next()) {
+                String formattedDate = rs.getDate("date") != null ? rs.getDate("date").toString() : null;
+
+                Exams exam = new Exams(
+                    rs.getString("first_name"),
+                    rs.getString("last_name"),
+                    rs.getInt("exam_id"),
+                    rs.getString("std_id"),
+                    rs.getString("course_name"),
+                    rs.getInt("total_marks"),
+                    rs.getInt("obt_marks"),
+                    formattedDate,
+                    rs.getString("start_time"),
+                    rs.getString("end_time"),
+                    rs.getString("exam_time"),
+                    rs.getString("status")
+                );
                 list.add(exam);
             }
         } catch (SQLException ex) {
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
         }
         return list;
-        
     }
+
+
+// Method to get results for a specific student by student ID
+    public ArrayList<Exams> getResultsFromExams(int stdId) {
+        ArrayList<Exams> list = new ArrayList<>();
+        try {
+            String query = "SELECT u.first_name, u.last_name, e.exam_id, e.std_id, e.course_name, " +
+                           "e.total_marks, e.obt_marks, e.date, e.start_time, e.end_time, e.exam_time, e.status " +
+                           "FROM exams e " +
+                           "JOIN users u ON e.std_id = u.user_id " +
+                           "WHERE e.std_id = ? " +
+                           "ORDER BY e.date DESC";
+            PreparedStatement pstm = conn.prepareStatement(query);
+            pstm.setInt(1, stdId);
+            ResultSet rs = pstm.executeQuery();
+
+            while (rs.next()) {
+                String formattedDate = rs.getDate("date") != null ? rs.getDate("date").toString() : null;
+
+                Exams exam = new Exams(
+                    rs.getString("first_name"),
+                    rs.getString("last_name"),
+                    rs.getInt("exam_id"),
+                    rs.getString("std_id"),
+                    rs.getString("course_name"),
+                    rs.getInt("total_marks"),
+                    rs.getInt("obt_marks"),
+                    formattedDate,
+                    rs.getString("start_time"),
+                    rs.getString("end_time"),
+                    rs.getString("exam_time"),
+                    rs.getString("status")
+                );
+                list.add(exam);
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return list;
+    }
+
+
+// Method to get an Exam by Exam ID
+public Exams getResultByExamId(int examId) {
+    Exams exam = null;
+    PreparedStatement pstm = null;
+    ResultSet rs = null;
+
+    try {
+        String query = "SELECT u.first_name, u.last_name, " +
+                       "e.exam_id, e.std_id, e.course_name, e.total_marks, e.obt_marks, " +
+                       "e.date, e.start_time, e.end_time, e.exam_time, e.status " +
+                       "FROM exams e " +
+                       "INNER JOIN users u ON e.std_id = u.user_id " +
+                       "WHERE e.exam_id = ?";
+
+        pstm = conn.prepareStatement(query);
+        pstm.setInt(1, examId);
+        rs = pstm.executeQuery();
+
+        if (rs.next()) {
+            String formattedDate = rs.getDate("date") != null ? rs.getDate("date").toString() : null;
+            exam = new Exams(
+                rs.getString("first_name"), 
+                rs.getString("last_name"), 
+                rs.getInt("exam_id"),
+                rs.getString("std_id"),
+                rs.getString("course_name"),
+                rs.getInt("total_marks"),
+                rs.getInt("obt_marks"),
+                formattedDate,
+                rs.getString("start_time"),
+                rs.getString("end_time"),
+                rs.getString("exam_time"),
+                rs.getString("status")
+            );
+        }
+    } catch (SQLException ex) {
+        ex.printStackTrace();
+    } finally {
+        closeResources(pstm, rs);
+    }
+    return exam;
+}
+
+// Method to get all exams with results
+public ArrayList<Exams> getAllExamsWithResults() {
+    ArrayList<Exams> exams = new ArrayList<>();
+
+    String query = "SELECT u.first_name, u.last_name, " +
+                   "e.exam_id, e.std_id, e.course_name, e.total_marks, e.obt_marks, " +
+                   "e.date, e.start_time, e.end_time, e.exam_time, e.status " +
+                   "FROM exams e " +
+                   "INNER JOIN users u ON e.std_id = u.user_id";
+
+    try (PreparedStatement ps = conn.prepareStatement(query);
+         ResultSet rs = ps.executeQuery()) {
+
+        while (rs.next()) {
+            String formattedDate = rs.getDate("date") != null 
+                                    ? new SimpleDateFormat("yyyy-MM-dd").format(rs.getDate("date")) 
+                                    : null;
+
+            Exams exam = new Exams(
+                rs.getString("first_name"),
+                rs.getString("last_name"),
+                rs.getInt("exam_id"),
+                rs.getString("std_id"),
+                rs.getString("course_name"),
+                rs.getInt("total_marks"),
+                rs.getInt("obt_marks"),
+                formattedDate,
+                rs.getString("start_time"),
+                rs.getString("end_time"),
+                rs.getString("exam_time"),
+                rs.getString("status")
+            );
+            exams.add(exam);
+        }
+    } catch (SQLException e) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error fetching exams with results", e);
+    }
+
+    return exams;
+}
 
 
 private int getObtMarks(int examId, int tMarks, int size) {
@@ -616,24 +764,36 @@ private int getObtMarks(int examId, int tMarks, int size) {
 }
 
     
-    public Exams getResultByExamId(int examId){
-        Exams exam=null;
-        try {
-            PreparedStatement pstm=conn.prepareStatement("select * from exams where exam_id=?");
-            pstm.setInt(1, examId);
-            ResultSet rs=pstm.executeQuery();
-            while(rs.next()){
-                exam=new Exams(rs.getInt(1),rs.getString(2),rs.getString(3),rs.getString(4),rs.getString(5)
-                ,rs.getString(6),getFormatedTime(rs.getString(7)),getFormatedTime(rs.getString(8)),rs.getString(9),rs.getString(10));
-                
-            }
-        } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return exam;
-        
-    }
-    
+//    public Exams getResultByExamId(int examId){
+//        Exams exam=null;
+//        try {
+//            PreparedStatement pstm=conn.prepareStatement("select * from exams where exam_id=?");
+//            pstm.setInt(1, examId);
+//            ResultSet rs=pstm.executeQuery();
+//            while(rs.next()){
+//                exam=new Exams(                
+//                rs.getString(1), // firstName (assuming it is in column 11)
+//                rs.getString(2),  // lastName (assuming it is in column 12) 
+//                rs.getInt(3),  // examId
+//                rs.getString(4), // stdId
+//                rs.getString(5), // cName
+//                rs.getString(6), // tMarks
+//                rs.getString(7), // obtMarks
+//                rs.getString(8), // date
+//                getFormatedTime(rs.getString(9)), // startTime
+//                getFormatedTime(rs.getString(10)), // endTime
+//                rs.getString(11), // examTime
+//                rs.getString(12) // status)
+//                );
+//                
+//            }
+//        } catch (SQLException ex) {
+//            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+//        return exam;
+//        
+//    }
+//    
  public void calculateResult(int eid, int tMarks, String endTime, int size) {
     try {
         String sql = "UPDATE exams SET obt_marks=?, end_time=?, status=? WHERE exam_id=?";
@@ -652,48 +812,51 @@ private int getObtMarks(int examId, int tMarks, int size) {
     } catch (SQLException ex) {
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
     }
-}
+}  
+
+
+
+  // Method to get all exams with results and include user details
+
+
  
-public ArrayList<Exams> getAllResultsForAllStudents() {
-    ArrayList<Exams> list = new ArrayList<>();
-    Exams exam = null;
 
-    try {
-        // Fetching all exams from the database ordered by date
-        PreparedStatement pstm = conn.prepareStatement("SELECT * FROM exams ORDER BY date DESC");
-        ResultSet rs = pstm.executeQuery();
-        while (rs.next()) {
-            exam = new Exams(
-                rs.getInt("exam_id"),
-                rs.getString("std_id"),  // Assuming std_id is a String
-                rs.getString("course_name"),
-                rs.getString("total_marks"),
-                rs.getString("obt_marks"),
-                rs.getString("date"),
-                rs.getString("start_time"),
-                rs.getString("end_time"),
-                rs.getString("exam_time"),
-                rs.getString("status")
-            );
-            list.add(exam);
-        }
-        pstm.close();
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-    }
-
-    return list;
-}
-
-
-    
-    public void finalize(){
-        try{
-            if(conn!=null)
-                conn.close();
-        }catch(Exception e){
+    // Method to close resources
+    private void closeResources(Statement stmt, ResultSet rs) {
+        try {
+            if (rs != null) {
+                rs.close();
+            }
+            if (stmt != null) {
+                stmt.close();
+            }
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
-   
+
+    // Overloaded method to close PreparedStatement
+    private void closeResources(PreparedStatement ps, ResultSet rs) {
+        try {
+            if (rs != null) {
+                rs.close();
+            }
+            if (ps != null) {
+                ps.close();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Method to close the connection (optional, if you want to close at the end)
+    public void closeConnection() {
+        try {
+            if (conn != null) {
+                conn.close();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 }

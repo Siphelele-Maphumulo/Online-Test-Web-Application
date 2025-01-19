@@ -8,23 +8,27 @@
     // Check if the user is either an admin or a lecturer
     if (user.getType().equalsIgnoreCase("admin") || user.getType().equalsIgnoreCase("lecture")) {
 %>
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-        <div class="sidebar-background" style="background-color:#F3F3F3; color:black">
-            <!-- Logo on the left -->
-            <div style="flex: 1;">
-                <img src="IMG/mut.png" alt="MUT Logo" style="max-height: 120px;">
-            </div>
-
-            <div class="left-menu">
-                <a class="active" href="adm-page.jsp?pgprt=0"><h2 style="color:black">Profile</h2></a>
-                <a href="adm-page.jsp?pgprt=2"><h2 style="color:black">Courses</h2></a>
-                <a href="adm-page.jsp?pgprt=3"><h2 style="color:black">Questions</h2></a>
-                <a href="adm-page.jsp?pgprt=1"><h2 style="color:black">Accounts</h2></a>
-                <a href="adm-page.jsp?pgprt=5"><h2 style="color:black">Students Results</h2></a>
-            </div>
+<!-- SIDEBAR -->
+<div class="sidebar">
+    <div class="sidebar-background" style="background-color:#F3F3F3; color:black">
+        <!-- Logo Section -->
+        <div style="text-align: center; margin: 20px 0;">
+            <img src="IMG/mut.png" alt="MUT Logo" style="max-height: 120px;">
+        </div>
+        <!-- Navigation Menu -->
+        <div class="left-menu">
+            <!-- Profile Section -->
+            <a class="active"  href="adm-page.jsp?pgprt=0"><h2 style="color:black">Profile</h2></a>
+            <!-- Academic Management -->
+            <a href="adm-page.jsp?pgprt=2"><h2 style="color:black">Courses</h2></a>
+            <a href="adm-page.jsp?pgprt=3"><h2 style="color:black">Questions</h2></a>
+            <a href="adm-page.jsp?pgprt=5"><h2 style="color:black">Students Results</h2></a>
+            <!-- Administrative Tasks -->
+            <a href="adm-page.jsp?pgprt=1"><h2 style="color:black">Accounts</h2></a>
         </div>
     </div>
+</div>
+
     <!-- CONTENT AREA -->
     <div class="content-area">
         <div class="panel" style="float: left;max-width: 600px">
