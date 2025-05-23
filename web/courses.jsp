@@ -105,15 +105,15 @@
             <table>
                 <tr>
                     <td><label>Course Name</label></td>
-                    <td><input type="text" name="coursename" class="text" placeholder="Course Name" required></td>
+                    <td><input type="text" name="coursename" class="text" placeholder="Course Name" required style="font-size:20px"></td>
                 </tr>
                 <tr>
                     <td><label>Total Marks</label></td>
-                    <td><input type="text" name="totalmarks" class="text" placeholder="Total Marks" required></td>
+                    <td><input type="text" name="totalmarks" class="text" placeholder="Total Marks" required style="font-size:20px"></td>
                 </tr>
                 <tr>
                     <td><label>Exam Time</label></td>
-                    <td><input type="text" name="time" class="text" placeholder="MM" required></td>
+                    <td><input type="text" name="time" class="text" placeholder="MM" required style="font-size:20px"></td>
                 </tr>
                 <tr>
                     <td><label>Exam Date</label></td>

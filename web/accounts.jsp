@@ -15,6 +15,12 @@
         flex-direction: column;
         justify-content: space-between;
     }    
+    .search-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 10px 0;
+    }
 </style>
 
 <!-- SIDEBAR -->
@@ -26,36 +32,33 @@
         </div>
         <!-- Navigation Menu -->
         <div class="left-menu">
-            <!-- Profile Section -->
             <a href="adm-page.jsp?pgprt=0"><h2 style="color:black">Profile</h2></a>
-            <!-- Academic Management -->
             <a href="adm-page.jsp?pgprt=2"><h2 style="color:black">Courses</h2></a>
-            <a href="adm-page.jsp?pgprt=3"><h2 style="color:black">Questions</h2></a>
+<!--            <a href="adm-page.jsp?pgprt=3"><h2 style="color:black">Questions</h2></a>-->
             <a href="adm-page.jsp?pgprt=5"><h2 style="color:black">Students Results</h2></a>
-            <!-- Administrative Tasks -->
-            <a class="active" href="adm-page.jsp?pgprt=1"><h2 style="color:black">Accounts</h2></a>
+            <a class="active" href="adm-page.jsp?pgprt=1"><h2 style="color:black">Student Accounts</h2></a>
+            <a href="adm-page.jsp?pgprt=6"><h2 style="color:black">Lecture Accounts</h2></a>
         </div>
     </div>
 </div>
 
-
 <!-- CONTENT AREA -->
 <div class="content-area">
     <div class="inner" style="margin-top: 50px">
-        <div class="title" style="margin-top: -30px" style="background-color: #D8A02E">List of All Registered Students</div>
+        <!-- Students Table -->
+        <div class="title" style="margin-top: -30px; background-color: #D8A02E">List of All Registered Students</div>
         
-        <br><br><br/>
-        <div style="padding-left: 5%">
-            <!-- Passing the "from=account" parameter in the link to indicate the user is coming from the Accounts page -->
-            <a href="signup.jsp?from=account" class="button">
+        <br><br/>
+        <div class="search-container" style="padding-left: 5%">
+                        <a href="signup.jsp?from=account" class="button">
                 <span class="form-button" style="background-color: #d3d3d3; border: none; border-radius: 12px; padding: 10px 20px; font-size: 16px; color: #000; cursor: pointer;">
                     Add New Student
                 </span>
             </a>
+            <input type="text" id="studentSearch" placeholder="Search by Student No." style="margin-right: 10%;">
+
         </div>
         
-        <br>
-
         <table id="one-column-emphasis">
             <colgroup>
                 <col class="oce-first" />
@@ -63,54 +66,39 @@
             <thead>
                 <tr>
                     <th scope="col">Name</th>
+                    <th scope="col">Student Number</th>
                     <th scope="col">Email</th>
+                    <th scope="col">Contact</th>
                     <th scope="col">City</th>
                     <th scope="col">Address</th>
                     <th scope="col">Action</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="studentTableBody">
                 <%
                     User currentUser = pDAO.getUserDetails(session.getAttribute("userId").toString());
-                    ArrayList<User> list = pDAO.getAllUsers();
-                    User user;
+                    ArrayList<User> studentList = pDAO.getAllStudents();
                     
-                    // Iterate through the user list
-                    for (int i = 0; i < list.size(); i++) {
-                        user = list.get(i);
-
-                        // Only show users that are not the current user and apply filters based on role
+                    // Iterate through the student list
+                    for (User user : studentList) {
                         if (user.getUserId() != Integer.parseInt(session.getAttribute("userId").toString())) {
-
-                            // If the logged-in user is a lecturer, show only student accounts
-                            if (currentUser.getType().equalsIgnoreCase("lecture") && user.getType().equalsIgnoreCase("student")) {
+                            // Show students based on the user type
+                            if (currentUser.getType().equalsIgnoreCase("lecture") && user.getType().equalsIgnoreCase("student") ||
+                                currentUser.getType().equalsIgnoreCase("admin")) {
                 %>
                                 <tr>
                                     <td><%= user.getFirstName() + " " + user.getLastName() %></td>
+                                    <td><%= user.getUserName() %></td>
                                     <td><%= user.getEmail() %></td>
+                                    <td><%= user.getContact() %></td>
                                     <td><%= user.getCity() %></td>
                                     <td><%= user.getAddress() %></td>
                                     <td>
-                                        <a href="controller.jsp?page=accounts&operation=del&uid=<%= user.getUserId() %>" 
-                                           onclick="return confirm('Are you sure you want to delete this?');">
-                                            <div class="delete-btn" style="max-width: 40px;font-size: 17px; padding: 3px">X</div>
-                                        </a>
-                                    </td>
-                                </tr>
-                <%
-                            // If the logged-in user is an admin, show all accounts
-                            } else if (currentUser.getType().equalsIgnoreCase("admin")) {
-                %>
-                                <tr>
-                                    <td><%= user.getFirstName() + " " + user.getLastName() %></td>
-                                    <td><%= user.getEmail() %></td>
-                                    <td><%= user.getCity() %></td>
-                                    <td><%= user.getAddress() %></td>
-                                    <td>
-                                        <a href="controller.jsp?page=accounts&operation=del&uid=<%= user.getUserId() %>" 
-                                           onclick="return confirm('Are you sure you want to delete this?');">
-                                            <div class="delete-btn" style="max-width: 40px;font-size: 17px; padding: 3px">X</div>
-                                        </a>
+                                    <!-- In the table body where you have the delete link for each student -->
+                                    <a href="controller.jsp?page=accounts&operation=del&uid=<%= user.getUserId() %>" 
+                                       onclick="return confirm('Are you sure you want to delete this?');">
+                                        <div class="delete-btn" style="max-width: 40px;font-size: 17px; padding: 3px">X</div>
+                                    </a>
                                     </td>
                                 </tr>
                 <%
@@ -120,5 +108,54 @@
                 %>
             </tbody>
         </table>
+
+        <br>
+
+     
+    
     </div>
 </div>
+
+<script>
+    // Function to filter students
+    document.getElementById('studentSearch').onkeyup = function() {
+        var input = this.value.toLowerCase();
+        var table = document.getElementById("studentTableBody");
+        var rows = table.getElementsByTagName("tr");
+        
+        for (var i = 0; i < rows.length; i++) {
+            var cells = rows[i].getElementsByTagName("td");
+            var match = false;
+            if (cells.length > 0) {
+                for (var j = 0; j < cells.length; j++) {
+                    if (cells[j].textContent.toLowerCase().includes(input)) {
+                        match = true;
+                        break;
+                    }
+                }
+                rows[i].style.display = match ? "" : "none";
+            }
+        }
+    };
+
+    // Function to filter lecturers
+    document.getElementById('lecturerSearch').onkeyup = function() {
+        var input = this.value.toLowerCase();
+        var table = document.getElementById("lecturerTableBody");
+        var rows = table.getElementsByTagName("tr");
+        
+        for (var i = 0; i < rows.length; i++) {
+            var cells = rows[i].getElementsByTagName("td");
+            var match = false;
+            if (cells.length > 0) {
+                for (var j = 0; j < cells.length; j++) {
+                    if (cells[j].textContent.toLowerCase().includes(input)) {
+                        match = true;
+                        break;
+                    }
+                }
+                rows[i].style.display = match ? "" : "none";
+            }
+        }
+    };
+</script>

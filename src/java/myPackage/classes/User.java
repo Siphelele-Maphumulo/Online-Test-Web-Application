@@ -1,27 +1,37 @@
-
 package myPackage.classes;
 
-
 public class User {
-   private int userId;
-   private String firstName,lastName,userName,email,password,type,contact,city,address;
+    private int userId;
+    private String firstName;
+    private String lastName;
+    private String userName;
+    private String email;
+    private String password;
+    private String type;  // Matches database column "user_type"
+    private String contact;
+    private String city;
+    private String address;
 
-   public User(){
-       
-   }
-    public User(int userId, String firstName, String lastName, String userName, String email, String password, String type, String contact, String city, String address) {
+    // Default constructor
+    public User() {}
+
+    // Full constructor with proper parameter names
+    public User(int userId, String firstName, String lastName, String userName,
+               String email, String password, String user_type, String contact,
+               String city, String address) {
         this.userId = userId;
         this.firstName = firstName;
         this.lastName = lastName;
         this.userName = userName;
         this.email = email;
         this.password = password;
-        this.type = type;
+        this.type = user_type;  // Maps to DB column "user_type"
         this.contact = contact;
         this.city = city;
         this.address = address;
     }
 
+    // Getters and Setters
     public int getUserId() {
         return userId;
     }
@@ -78,6 +88,11 @@ public class User {
         this.type = type;
     }
 
+    // Alias for setType to match your existing code
+    public void setUserType(String type) {
+        this.type = type;
+    }
+
     public String getContact() {
         return contact;
     }
@@ -102,5 +117,13 @@ public class User {
         this.address = address;
     }
 
-   
+    // Optional: toString() for debugging
+    @Override
+    public String toString() {
+        return "User{" +
+                "userId=" + userId +
+                ", userName='" + userName + '\'' +
+                ", type='" + type + '\'' +
+                '}';
+    }
 }

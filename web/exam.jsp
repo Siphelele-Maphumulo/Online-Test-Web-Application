@@ -55,10 +55,11 @@
             %>
             <input type="hidden" name="size" value="<%= questionsList.size() %>">
             <input type="hidden" name="totalmarks" value="<%= pDAO.getTotalMarksByName(request.getParameter("coursename")) %>">
-            
+
             <%
             for (int i = 0; i < questionsList.size(); i++) {
                 Questions question = questionsList.get(i);
+                boolean isTrueFalse = question.getOpt3() == null && question.getOpt4() == null; // Check if Options 3 and 4 are null
             %>
             <center>
                 <div class="question-panel">
@@ -71,16 +72,18 @@
                         <label for="c1<%= i %>"><%= question.getOpt1() %></label>
                         <input type="radio" id="c2<%= i %>" name="ans<%= i %>" value="<%= question.getOpt2() %>"/>
                         <label for="c2<%= i %>"><%= question.getOpt2() %></label>
-                        <input type="radio" id="c3<%= i %>" name="ans<%= i %>" value="<%= question.getOpt3() %>"/>
-                        <label for="c3<%= i %>"><%= question.getOpt3() %></label>
-                        <input type="radio" id="c4<%= i %>" name="ans<%= i %>" value="<%= question.getOpt4() %>"/>
-                        <label for="c4<%= i %>"><%= question.getOpt4() %></label>
+                        <% if (!isTrueFalse) { %>
+                            <input type="radio" id="c3<%= i %>" name="ans<%= i %>" value="<%= question.getOpt3() %>"/>
+                            <label for="c3<%= i %>"><%= question.getOpt3() %></label>
+                            <input type="radio" id="c4<%= i %>" name="ans<%= i %>" value="<%= question.getOpt4() %>"/>
+                            <label for="c4<%= i %>"><%= question.getOpt4() %></label>
+                        <% } %>
                     </div>
                 </div>
                 <input type="hidden" name="question<%= i %>" value="<%= question.getQuestion() %>">
                 <input type="hidden" name="qid<%= i %>" value="<%= question.getQuestionId() %>">
             </center>
-            <% } %>
+         <% } %>
             <input type="hidden" name="page" value="exams">
             <input type="hidden" name="operation" value="submitted"> 
             <input type="submit" class="add-btn" value="Done">

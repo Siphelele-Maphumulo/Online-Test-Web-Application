@@ -1,4 +1,5 @@
 <%@page import="java.util.ArrayList"%>
+<%@page import="myPackage.DatabaseClass"%>
 <jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>
 
 <style>
@@ -19,11 +20,9 @@
 <!-- SIDEBAR -->
 <div class="sidebar">
     <div class="sidebar-background" style="background-color:#F3F3F3; color:black">
-        <!-- Logo Section -->
         <div style="text-align: center; margin: 20px 0;">
             <img src="IMG/mut.png" alt="MUT Logo" style="max-height: 120px;">
         </div>
-        <!-- Navigation Menu -->
         <div class="left-menu">
             <a href="adm-page.jsp?pgprt=0"><h2 style="color:black">Profile</h2></a>
             <a href="adm-page.jsp?pgprt=2"><h2 style="color:black">Courses</h2></a>
@@ -45,16 +44,16 @@
             <select name="coursename" class="text" id="courseSelectShowAll">
                 <% 
                 ArrayList<String> courseNames = pDAO.getAllCourseNames(); 
+                String lastCourseName = pDAO.getLastCourseName(); // Get the last course name
                 for (String course : courseNames) {
                 %>
-                <option value="<%=course%>"><%=course%></option>
+                <option value="<%=course%>" <%=lastCourseName.equals(course) ? "selected" : ""%>><%=course%></option>
                 <% } %>
             </select>
             <input type="submit" class="form-button" value="Show" style="background-color: #d3d3d3; border: none; border-radius: 12px; padding: 10px 20px; font-size: 16px; color: #000; cursor: pointer;">
         </form>
     </div>
 
-    <!-- Panel for Adding a New Question -->
     <div class="panel form-style-6" style="max-width: 600px; float: left">
         <form action="controller.jsp" method="POST">
             <div class="title" style="background-color: #D8A02E">Add New Question</div>
@@ -65,9 +64,11 @@
                         <select name="coursename" class="text" id="courseSelectAddNew" required>
                             <option value="">Select Course</option>
                             <% 
-                            for (String course : courseNames) {
+                            ArrayList<String> allCourseNames = pDAO.getAllCourseNames();
+                            lastCourseName = pDAO.getLastCourseName(); // Get the last course name
+                            for (String course : allCourseNames) {
                             %>
-                            <option value="<%=course%>"><%=course%></option>
+                            <option value="<%=course%>" <%=lastCourseName.equals(course) ? "selected" : ""%>><%=course%></option>
                             <% } %>
                         </select>
                     </td>
@@ -136,30 +137,15 @@
 
             window.onload = function() {
                 toggleOptions(); 
+                
+                // Synchronize course dropdowns
+                const courseSelectAddNew = document.getElementById('courseSelectAddNew');
+                const courseSelectShowAll = document.getElementById('courseSelectShowAll');
+
+                courseSelectAddNew.addEventListener('change', function() {
+                    courseSelectShowAll.value = this.value; // Update the Show All Questions dropdown
+                });
             };
-
-            const courseSelectAddNew = document.getElementById('courseSelectAddNew');
-            const courseSelectShowAll = document.getElementById('courseSelectShowAll');
-
-            let currentCourse = courseSelectAddNew.value; // Initialize with selected course
-
-            courseSelectAddNew.addEventListener('change', function() {
-                const selectedCourse = this.value; // Get the new selection from the dropdown
-                if (selectedCourse !== currentCourse) {
-                    const confirmation = confirm("Are you sure you want to change the course?");
-                    if (confirmation) {
-                        currentCourse = selectedCourse; // Update to new course
-                        courseSelectShowAll.value = selectedCourse; // Also update the Show All Questions dropdown
-                    } else {
-                        this.value = currentCourse; // Revert to previous selected course
-                    }
-                }
-            });
-
-            courseSelectShowAll.addEventListener('change', function() {
-                courseSelectAddNew.value = this.value; // Update second dropdown
-                currentCourse = this.value; // Ensure currentCourse reflects this change
-            });
         </script>
     </div>
 </div>

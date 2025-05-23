@@ -32,6 +32,7 @@
     <!-- CONTENT AREA -->
     <div class="content-area">
         <div class="panel" style="float: left;max-width: 600px">
+
 <%
     } else {
 %>
@@ -94,15 +95,27 @@
         <form action="controller.jsp">
             <input type="hidden" name="page" value="profile">
             <input type="hidden" name="utype" value="<%= user.getType() %>">
-            
-            <!-- Hidden fields for First Name, Last Name, Email, and Password -->
-            <input type="hidden" name="fname" value="<%= user.getUserName() %>">
-            <input type="hidden" name="fname" value="<%= user.getFirstName() %>">
-            <input type="hidden" name="lname" value="<%= user.getLastName() %>">
-            <input type="hidden" name="email" value="<%= user.getEmail() %>">
-            <input type="hidden" name="pass" value="<%= user.getPassword() %>">
-
             <table>
+                <tr>
+                    <td><label>First Name</label></td>
+                    <td><input type="text" name="fname" value="<%= user.getFirstName() %>" class="text" placeholder="First Name"></td>
+                </tr>
+                <tr>
+                    <td><label>Last Name</label></td>
+                    <td><input type="text" name="lname" value="<%= user.getLastName() %>" class="text" placeholder="Last Name"></td>
+                </tr>
+                <tr>
+                    <td><label>User Name</label></td>
+                    <td><input type="text" name="uname" value="<%= user.getUserName() %>" class="text" placeholder="User Name"></td>
+                </tr>
+                <tr>
+                    <td><label>Email</label></td>
+                    <td><input type="email" name="email" value="<%= user.getEmail() %>" class="text" placeholder="Email"></td>
+                </tr>
+                <tr>
+                    <td><label>Password</label></td>
+                    <td><input type="password" name="pass" value="<%= user.getPassword() %>" class="text" placeholder="Password"></td>
+                </tr>
                 <tr>
                     <td><label>Contact No</label></td>
                     <td><input type="text" name="contactno" value="<%= user.getContact() %>" class="text" placeholder="Contact No"></td>

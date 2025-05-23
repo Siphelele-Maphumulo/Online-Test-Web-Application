@@ -2,6 +2,8 @@ package myPackage.classes;
 
 public class Exams {
     private String fullName;  // Combined first and last name
+    private String userName;   // Username of the student
+    private String email;      // Email of the student
     private int examId;
     private String stdId;
     private String cName;  // Course name
@@ -13,10 +15,12 @@ public class Exams {
     private String examTime;  // Exam duration
     private String status;
 
-    // Constructor with full name and other fields
-    public Exams(String firstName, String lastName, int examId, String stdId, String courseName, int totalMarks,
-                 int obtainedMarks, String date, String startTime, String endTime, String examTime, String status) {
+    // Modified constructor
+    public Exams(String firstName, String lastName, String userName, String email, int examId, String stdId, String courseName, 
+                 int totalMarks, int obtainedMarks, String date, String startTime, String endTime, String examTime, String status) {
         this.fullName = firstName + " " + lastName;  // Combine first and last names
+        this.userName = userName;                     // Set username
+        this.email = email;                           // Set email
         this.examId = examId;
         this.stdId = stdId;
         this.cName = courseName;
@@ -29,6 +33,23 @@ public class Exams {
         this.status = status;
     }
 
+    // Add getters for the new fields
+    public String getUserName() {
+        return userName;
+    }
+    
+    public void setUserName(String userName) {
+        this.userName = userName; 
+    }
+
+    public String getEmail() {
+        return email;
+    }
+    
+    public void setEmail(String email) {
+        this.email = email;     
+    }
+    
     // Getter for fullName
     public String getFullName() {
         return fullName;

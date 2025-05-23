@@ -272,22 +272,3 @@ form label{
 	background: #d0dafd url('table-images/gradhover.png') repeat-x;
 	color: #339;
 }
-
-.content-area {
-    padding: 20px;
-}
-
-#results-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-#results-table th, #results-table td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-}
-
-#results-table th {
-    background-color: #f2f2f2;
-}

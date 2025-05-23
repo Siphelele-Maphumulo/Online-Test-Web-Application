@@ -1,8 +1,17 @@
 body {
-    background-color: #DEDEDE;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.4),
+      rgb(253,255,245 0.2),
+      rgba(207, 222, 243, 0.3)
+    );
+    background-attachment: fixed;
     color: #3C4858;
     font-family: sans-serif;
+    margin: 0;
+    padding: 0;
 }
+
 .top-area{
 	position: fixed;
 	top: 0;
@@ -31,7 +40,7 @@ body {
     width: 260px;
     background-size: cover;
     background-position: center center;
-    
+     background: rgb(229,229,229, 0.1);
 }
 .sidebar .sidebar-background {
     position: absolute;
@@ -48,10 +57,23 @@ body {
     
 }
 
-.left-menu{
-padding: 0;
-margin: 0;
-margin-top: 110px;
+.left-menu {
+    position: relative;
+    width: 98%;
+    min-height: 500px;
+    margin-left: 10px;
+    border-radius: 12px;
+    color: transparent;
+    /* Glassy white/gray background */
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px); /* Safari support */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.1),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+        z-index: 1;
 }
 
 .left-menu h2{
@@ -97,15 +119,16 @@ box-shadow: 0 4px 20px 0px rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(60, 72, 88,
 	padding: 20px; 
 	padding-left: 30px;
 }
-.content-area .inner{
-position: relative;
-width: 98%;
-min-height: 500px;
-margin-left: 10px;
-border-radius: 3px;
-background-color: white;
-box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.14);
+.content-area .inner {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
 }
+
 .question-panel{
 
 }
@@ -462,60 +485,4 @@ box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.14);
 .form-style-6 input[type="submit"]:hover,
 .form-style-6 input[type="button"]:hover{
     background: #2EBC99;
-}
-
-body {
-    font-family: Arial, sans-serif;
-}
-
-.sidebar {
-    width: 250px;
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100%;
-    background-color: #2f4f4f;
-    padding-top: 20px;
-}
-
-.sidebar-background {
-    color: white;
-    padding: 10px;
-}
-
-.sidebar .left-menu a {
-    text-decoration: none;
-    color: black;
-    padding: 10px 15px;
-    display: block;
-    margin: 10px 0;
-}
-
-.sidebar .left-menu a:hover {
-    background-color: #555;
-    color: white;
-}
-
-.content-area {
-    margin-left: 250px;
-    padding: 20px;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-table th, table td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-}
-
-table tr:nth-child(even) {
-    background-color: #f2f2f2;
-}
-
-table tr:hover {
-    background-color: #ddd;
 }

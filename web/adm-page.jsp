@@ -12,93 +12,95 @@
 </head>
 <body>
 
-    <%
-        // Retrieve the logged-in user details using the session attribute for userId
-        User currentUser = pDAO.getUserDetails(session.getAttribute("userId").toString());
+<%
+    // Get userId from session
+    Object userIdObj = session.getAttribute("userId");
 
-        // Check the type of user and display the corresponding panel
-        if (currentUser.getType().equalsIgnoreCase("admin")) {
-    %>
-        <!-- Top Area for Admin Panel -->
-        <div class="top-area">
-            <!-- Include the header -->
-            <jsp:include page="header.jsp" />
-            <center><h2>Admin Panel</h2></center> 
-            <!--<a href="controller.jsp?page=logout" style="float: right;background:#3b5998; color:white">Logout</a>-->
-        </div>
-    <%
-        } else if (currentUser.getType().equalsIgnoreCase("lecture")) {
-    %>
-        <!-- Top Area for Lecture Panel -->
-        <div class="top-area">
-            <!-- Include the header -->
-            <jsp:include page="header.jsp" />
-            <center><h2>Lecture Panel</h2></center> 
-            <!--<a href="controller.jsp?page=logout" style="float: right;background:#3b5998; color:white">Logout</a>-->
-        </div>
+    if (userIdObj == null) {
+        // Redirect if no session or invalid login
+        response.sendRedirect("login.jsp");
+        return;
+    }
 
-            
-            
-    <%
-        } else {
-            // Optional: Handle other user types or unknown types (e.g., student)
-    %>
-        <!-- Top Area for Default Panel (for other user types, such as students) -->
-        <div class="top-area">
-            <!-- Include the header -->
-            <jsp:include page="header.jsp" />
-            <center><h2>Student Panel</h2></center> 
-            <!--<a href="controller.jsp?page=logout" style="float: right;background:#3b5998; color:white">Logout</a>-->
-        </div>
-    <%
-        }
-    %>
+    String userIdStr = userIdObj.toString();
+    User currentUser = pDAO.getUserDetails(userIdStr);
 
-    <%
-        if (session.getAttribute("userStatus") != null && session.getAttribute("userStatus").equals("1")) {
-    %>
+    if (currentUser == null) {
+        // If user details not found, redirect to login
+        response.sendRedirect("login.jsp");
+        return;
+    }
+
+    String panelTitle;
+
+    if (currentUser.getType().equalsIgnoreCase("admin")) {
+        panelTitle = "Admin Panel";
+    } else if (currentUser.getType().equalsIgnoreCase("lecture")) {
+        panelTitle = "Lecture Panel";
+    } else {
+        // For students or unhandled types
+        panelTitle = "Student Panel";
+    }
+%>
+
+<!-- Top Area -->
+<div class="top-area">
+    <jsp:include page="header.jsp" />
+    <center><h2><%= panelTitle %></h2></center>
+</div>
+
+<%
+    // Check if user is logged in
+    if (session.getAttribute("userStatus") != null && session.getAttribute("userStatus").equals("1")) {
+        String pgprt = request.getParameter("pgprt");
+%>
 
         <%
-            // Handle different parts of the dashboard (accounts, courses, questions, profile)
-            if (request.getParameter("pgprt").equals("1")) {
+            if ("1".equals(pgprt)) {
         %>
-                <!-- Include the Accounts page -->
                 <jsp:include page="accounts.jsp" />
         <%
-            } else if (request.getParameter("pgprt").equals("2")) {
+            } else if ("2".equals(pgprt)) {
         %>
-                <!-- Include the Courses page -->
                 <jsp:include page="courses.jsp" />
         <%
-            } else if (request.getParameter("pgprt").equals("3")) {
+            } else if ("3".equals(pgprt)) {
         %>
-                <!-- Include the Questions page -->
                 <jsp:include page="questions.jsp" />
         <%
-            } else if (request.getParameter("pgprt").equals("4")) {
+            } else if ("4".equals(pgprt)) {
         %>
-                <!-- Include the Show All page -->
                 <jsp:include page="showall.jsp" />
         <%
-            } else if (request.getParameter("pgprt").equals("5")) {
+            } else if ("5".equals(pgprt)) {
         %>
-                <!-- Include the Show All page -->
                 <jsp:include page="admin-results.jsp" />
         <%
-            } else {
+            } else if ("6".equals(pgprt)) {
         %>
-                <!-- Default is the Profile page -->
-                <jsp:include page="profile.jsp" />
+                <jsp:include page="Lecturers_accounts.jsp" />
         <%
+            } else {
+                // Default page: Profile
+                if (currentUser.getType().equalsIgnoreCase("admin")
+                    || currentUser.getType().equalsIgnoreCase("lecture")) {
+        %>
+                    <jsp:include page="profile_staff.jsp" />
+        <%
+                } else {
+        %>
+                    <jsp:include page="profile.jsp" />
+        <%
+                }
             }
         %>
 
-    <%
-        } else {
-            // Redirect to login page if userStatus is not set or not "1"
-            response.sendRedirect("login.jsp");
-        }
-    %>
+<%
+    } else {
+        // Redirect if session is invalid
+        response.sendRedirect("login.jsp");
+    }
+%>
 
 </body>
 </html>

@@ -32,6 +32,7 @@
     <!-- CONTENT AREA -->
     <div class="content-area">
         <div class="panel" style="float: left;max-width: 600px">
+
 <%
     } else {
 %>
@@ -66,67 +67,74 @@
             <span class="tag" style="background-color: rgba(74, 23, 30, 0.8);">Address</span><span class="val"><%= user.getAddress() %></span>
         </h2>
     </div>
-<%
-        if (user.getType().equals("admin") || user.getType().equals("lecture")) {
-%>
     <br/>
-    <a href="adm-page.jsp?pgprt=0&pedt=1">
+    <a href="<%= user.getType().equals("admin") || user.getType().equals("lecture") ? "adm-page.jsp" : "std-page.jsp" %>?pgprt=0&pedt=1">
         <span class="form-button" style="background-color: #d3d3d3; border: none; border-radius: 12px; padding: 10px 20px; font-size: 16px; color: #000; cursor: pointer;">
             Edit Profile
         </span>
     </a>
 <%
-        } else {
-%>
-    <br/>
-    <a href="std-page.jsp?pgprt=0&pedt=1">
-        <span class="form-button" style="background-color: #d3d3d3; border: none; border-radius: 12px; padding: 10px 20px; font-size: 16px; color: #000; cursor: pointer;">
-            Edit Profile
-        </span>
-    </a>
-<%
-        }
     } else {
 %>
-    <!-- Start of Edit Form -->
-    <div class="title">Edit Profile</div>
-    <div class="central-div form-style-6" style="position:inherit;margin-top: 70px;">
-        <form action="controller.jsp">
-            <input type="hidden" name="page" value="profile">
-            <input type="hidden" name="utype" value="<%= user.getType() %>">
-            
-            <!-- Hidden fields for First Name, Last Name, Email, and Password -->
-            <input type="hidden" name="fname" value="<%= user.getUserName() %>">
-            <input type="hidden" name="fname" value="<%= user.getFirstName() %>">
-            <input type="hidden" name="lname" value="<%= user.getLastName() %>">
-            <input type="hidden" name="email" value="<%= user.getEmail() %>">
-            <input type="hidden" name="pass" value="<%= user.getPassword() %>">
-
-            <table>
-                <tr>
-                    <td><label>Contact No</label></td>
-                    <td><input type="text" name="contactno" value="<%= user.getContact() %>" class="text" placeholder="Contact No"></td>
-                </tr>
-                <tr>
-                    <td><label>City</label></td>
-                    <td><input type="text" name="city" value="<%= user.getCity() %>" class="text" placeholder="City"></td>
-                </tr>
-                <tr>
-                    <td><label>Address</label></td>
-                    <td><input type="text" name="address" value="<%= user.getAddress() %>" class="text" placeholder="Address"></td>
-                </tr>
-                <tr>
-                    <td></td>
-                    <td>
-                        <center>
-                            <input type="submit" class="form-button" value="Done" 
-                                style="background-color: #d3d3d3; border: none; border-radius: 12px; padding: 10px 20px; font-size: 16px; color: #000; cursor: pointer;">
-                        </center>
-                    </td>
-                </tr>
-            </table>
-        </form>
-    </div>
+<!-- Start of Edit Form -->
+<div class="title">Edit Profile</div>
+<div class="central-div form-style-6" style="position:inherit;margin-top: 70px;">
+    <form action="controller.jsp">
+        <input type="hidden" name="page" value="profile">
+        <input type="hidden" name="utype" value="<%= user.getType() %>">
+        <table>
+            <tr>
+                <td><label>First Name</label></td>
+                <td><input type="text" name="fname" value="<%= user.getFirstName() %>" class="text" 
+                         placeholder="First Name" readonly></td>
+            </tr>
+            <tr>
+                <td><label>Last Name</label></td>
+                <td><input type="text" name="lname" value="<%= user.getLastName() %>" class="text" 
+                         placeholder="Last Name" readonly></td>
+            </tr>
+            <tr>
+                <td><label>User Name</label></td>
+                <td><input type="text" name="uname" value="<%= user.getUserName() %>" class="text" 
+                         placeholder="User Name" readonly></td>
+            </tr>
+            <tr>
+                <td><label>Email</label></td>
+                <td><input type="email" name="email" value="<%= user.getEmail() %>" class="text" 
+                         placeholder="Email" readonly></td>
+            </tr>
+            <tr>
+                <td><label>Password</label></td>
+                <td><input type="password" name="pass" class="text" 
+                         placeholder="New Password (leave blank to keep current)"></td>
+            </tr>
+            <tr>
+                <td><label>Contact No</label></td>
+                <td><input type="text" name="contactno" value="<%= user.getContact() %>" class="text" 
+                         placeholder="Contact No" readonly></td>
+            </tr>
+            <tr>
+                <td><label>City</label></td>
+                <td><input type="text" name="city" value="<%= user.getCity() %>" class="text" 
+                         placeholder="City" readonly></td>
+            </tr>
+            <tr>
+                <td><label>Address</label></td>
+                <td><input type="text" name="address" value="<%= user.getAddress() %>" class="text" 
+                         placeholder="Address" readonly></td>
+            </tr>
+            <tr>
+                <td></td>
+                <td>
+                    <center>
+                        <input type="submit" class="form-button" value="Done" 
+                            style="background-color: #d3d3d3; border: none; border-radius: 12px; padding: 10px 20px; font-size: 16px; color: #000; cursor: pointer;">
+                    </center>
+                </td>
+            </tr>
+        </table>
+    </form>
+</div>
 <%
     }
 %>
