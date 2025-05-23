@@ -1,4 +1,4 @@
-
+<%@ page import="java.lang.*" %>
 <%@page import="myPackage.classes.Questions"%>
 <%@page import="java.time.LocalTime"%>
 <%@page import="myPackage.*"%>
@@ -32,17 +32,12 @@ if (request.getParameter("page").toString().equals("login")) {
     
     // Hash the password using BCrypt before saving to the database
     String hashedPass = PasswordUtils.bcryptHashPassword(pass);
-    System.out.println("My hashed pass: "+ hashedPass);
+    
 
     // Check if the lecturer's email exists
     boolean lecturerExists = pDAO.checkLecturerByEmail(email);
     
-    // Log to console whether it exists or not
-    if (lecturerExists) {
-        System.out.println("Lecturer with email " + email + " exists.");
-    } else {
-        System.out.println("Lecturer with email " + email + " does not exist.");
-    }
+
 
     // Assume you generate or retrieve studentId from somewhere
     String studentId = "STD-" + UUID.randomUUID().toString(); // Example of generating a student ID
@@ -215,7 +210,7 @@ else if(request.getParameter("page").toString().equals("exams")){
             
             pDAO.insertAnswer(eId,qid,question,ans);
         }
-        System.out.println(tMarks+" conn\t Size: "+size);
+//        System.out.println(tMarks+" conn\t Size: "+size);
         pDAO.calculateResult(eId,tMarks,time,size);
         
         response.sendRedirect("std-page.jsp?pgprt=1&eid="+eId+"&showresult=1");

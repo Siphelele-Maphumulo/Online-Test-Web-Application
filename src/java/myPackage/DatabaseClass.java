@@ -30,7 +30,13 @@ public class DatabaseClass {
 
     private void establishConnection() throws ClassNotFoundException, SQLException {
         Class.forName("com.mysql.cj.jdbc.Driver"); // Updated to MySQL Connector/J 8.x
-        conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/exam_system", "root", "");
+       conn = DriverManager.getConnection(
+    "jdbc:mysql://sql12.freesqldatabase.com:3306/sql12780651?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC",
+    "sql12780651",
+    "kKbrYBKgkA"
+);
+
+//        conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/exam_system", "root", "");
     }
 
     String user_Type = "";
