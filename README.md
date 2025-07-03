@@ -7,7 +7,7 @@ It's me again, and I’m excited to share something I’ve been working on — a
 Deploying a 5-year-old project wasn't easy, but I made it work using tools like GlassFish, Tomcat, and Docker, and hosted it via Render.
 👉 Try it out, explore the features, and let me know what you think! Feedback is welcome — tell me what works, what doesn’t, and what features you'd like to see added.
 
-https://github.com/Siphelele-Maphumulo/Online-Test-Web-Application/blob/main/Screenshot.png?raw=true
+[https://github.com/Siphelele-Maphumulo/Online-Test-Web-Application/blob/main/Screenshot.png?raw=true](https://raw.githubusercontent.com/Siphelele-Maphumulo/Online-Test-Web-Application/refs/heads/main/Screenshot.png)
 
 # Online-Examination-System
 This project is developed using java server pages (jsp) and MySQL is used for backend.
