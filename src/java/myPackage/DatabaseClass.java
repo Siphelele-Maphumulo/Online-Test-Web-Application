@@ -28,19 +28,21 @@ public class DatabaseClass {
         establishConnection();
     }
 
-private void establishConnection() throws ClassNotFoundException, SQLException {
-    Class.forName("com.mysql.cj.jdbc.Driver"); // Load the JDBC driver
+    private void establishConnection() throws ClassNotFoundException, SQLException {
+        Class.forName("com.mysql.cj.jdbc.Driver"); // Load the JDBC driver
 
-    this.conn = DriverManager.getConnection(
-        "jdbc:mysql://bxzxsvhozwjmrsqgfxrj-mysql.services.clever-cloud.com:3306/bxzxsvhozwjmrsqgfxrj?useSSL=true&requireSSL=false&serverTimezone=UTC",
-        "uolxxqid2kpzpm9g",
-        "BJ9DSZG0UdBJxjqhZgto"
-    );
+        // Read connection details from environment variables
+        String url = System.getenv("DB_URL");
+        String user = System.getenv("DB_USER");
+        String pass = System.getenv("DB_PASS");
 
+        if (url == null || user == null || pass == null) {
+            throw new SQLException("Database environment variables DB_URL, DB_USER, or DB_PASS not set.");
+        }
 
-
-        //conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/exam_system", "root", "");
+        this.conn = DriverManager.getConnection(url, user, pass);
     }
+}
 
     String user_Type = "";
     
