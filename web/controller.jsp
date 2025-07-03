@@ -7,227 +7,227 @@
 <jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>
 
 <%
-if (request.getParameter("page").toString().equals("login")) {
-    String userName = request.getParameter("username").toString();
-    String userPass = request.getParameter("password").toString();
+try {
+    String pageParam = request.getParameter("page");
+    if (pageParam == null) {
+        response.sendRedirect("login.jsp");
+        return;
+    }
 
-    if (pDAO.loginValidate(userName, userPass)) {
-        session.setAttribute("userStatus", "1");
-        session.setAttribute("userId", pDAO.getUserId(userName));
+    // Login Handling
+    if ("login".equals(pageParam)) {
+        String userName = request.getParameter("username");
+        String userPass = request.getParameter("password");
+
+        if (pDAO.loginValidate(userName, userPass)) {
+            session.setAttribute("userStatus", "1");
+            session.setAttribute("userId", pDAO.getUserId(userName));
+            response.sendRedirect("dashboard.jsp");
+        } else {
+            session.setAttribute("error", "Invalid username or password");
+            response.sendRedirect("login.jsp");
+        }
+
+    // Registration Handling
+    } else if ("register".equals(pageParam)) {
+        String fName = request.getParameter("fname");
+        String lName = request.getParameter("lname");
+        String uName = request.getParameter("uname");  
+        String email = request.getParameter("email");
+        String pass = request.getParameter("pass");
+        String contactNo = request.getParameter("contactno");
+        String city = request.getParameter("city");
+        String address = request.getParameter("address");
+        
+        // Hash the password using BCrypt
+        String hashedPass = PasswordUtils.bcryptHashPassword(pass);
+        
+        // Generate student ID
+        String studentId = "STD-" + UUID.randomUUID().toString().substring(0, 8);
+
+        // Proceed with registration
+        pDAO.addNewUser(fName, lName, uName, email, hashedPass, contactNo, city, address, studentId);
+        session.setAttribute("message", "Registration successful! Please login");
+        response.sendRedirect("login.jsp");
+
+    // Profile Update Handling
+    } else if ("profile".equals(pageParam)) {
+        if (session.getAttribute("userId") == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+        
+        int uid = Integer.parseInt(session.getAttribute("userId").toString());
+        String fName = request.getParameter("fname");
+        String lName = request.getParameter("lname");
+        String uName = request.getParameter("uname");
+        String email = request.getParameter("email");
+        String pass = request.getParameter("pass");
+        String contactNo = request.getParameter("contactno");
+        String city = request.getParameter("city");
+        String address = request.getParameter("address");
+        String uType = request.getParameter("utype");
+        
+        pDAO.updateStudent(uid, fName, lName, uName, email, pass, contactNo, city, address, uType);
+        session.setAttribute("message", "Profile updated successfully");
         response.sendRedirect("dashboard.jsp");
+
+    // Courses Management
+    } else if ("courses".equals(pageParam)) {
+        String operation = request.getParameter("operation");
+        if (operation == null) {
+            response.sendRedirect("adm-page.jsp?pgprt=2");
+            return;
+        }
+        
+        if ("addnew".equals(operation)) {
+            String courseName = request.getParameter("coursename");
+            int totalMarks = Integer.parseInt(request.getParameter("totalmarks"));
+            String time = request.getParameter("time");
+            String examDate = request.getParameter("examdate");
+            
+            pDAO.addNewCourse(courseName, totalMarks, time, examDate);
+            session.setAttribute("message", "Course added successfully");
+            response.sendRedirect("adm-page.jsp?pgprt=2");
+        } else if ("del".equals(operation)) {
+            String cname = request.getParameter("cname");
+            if (cname != null) {
+                pDAO.delCourse(cname);
+                session.setAttribute("message", "Course deleted successfully");
+            }
+            response.sendRedirect("adm-page.jsp?pgprt=2");
+        }
+
+    // Accounts Management
+    } else if ("accounts".equals(pageParam)) {
+        String operation = request.getParameter("operation");
+        String uidParam = request.getParameter("uid");
+        
+        if ("del".equals(operation) && uidParam != null) {
+            int userId = Integer.parseInt(uidParam);
+            pDAO.delStudent(userId);
+            session.setAttribute("message", "Account deleted successfully");
+        }
+        response.sendRedirect("adm-page.jsp?pgprt=1");
+
+    // Lecturers Accounts Management
+    } else if ("Lecturers_accounts".equals(pageParam)) {
+        String operation = request.getParameter("operation");
+        String uidParam = request.getParameter("uid");
+        
+        if ("del".equals(operation) && uidParam != null) {
+            int userId = Integer.parseInt(uidParam);
+            pDAO.deleteLecturer(userId);
+            session.setAttribute("message", "Lecturer deleted successfully");
+        }
+        response.sendRedirect("adm-page.jsp?pgprt=6");
+
+    // Questions Management
+    } else if ("questions".equals(pageParam)) {
+        String operation = request.getParameter("operation");
+        if (operation == null) {
+            response.sendRedirect("adm-page.jsp?pgprt=3");
+            return;
+        }
+
+        if ("del".equals(operation)) {
+            String questionIdParam = request.getParameter("qid");
+            if (questionIdParam != null && !questionIdParam.isEmpty()) {
+                int questionId = Integer.parseInt(questionIdParam);
+                pDAO.deleteQuestion(questionId);
+                session.setAttribute("message", "Question deleted successfully");
+            }
+            response.sendRedirect("adm-page.jsp?pgprt=3");
+        } else if ("edit".equals(operation)) {
+            String questionIdParam = request.getParameter("qid");
+            if (questionIdParam != null && !questionIdParam.isEmpty()) {
+                int questionId = Integer.parseInt(questionIdParam);
+                Questions question = pDAO.getQuestionById(questionId);
+                if (question != null) {
+                    question.setQuestion(request.getParameter("question"));
+                    question.setOpt1(request.getParameter("opt1"));
+                    question.setOpt2(request.getParameter("opt2"));
+                    question.setOpt3(request.getParameter("opt3"));
+                    question.setOpt4(request.getParameter("opt4"));
+                    question.setCorrect(request.getParameter("correct"));
+                    question.setCourseName(request.getParameter("coursename"));
+                    
+                    pDAO.updateQuestion(question);
+                    session.setAttribute("message", "Question updated successfully");
+                }
+            }
+            response.sendRedirect("adm-page.jsp?pgprt=3");
+        } else if ("addnew".equals(operation)) {
+            String questionText = request.getParameter("question");
+            String opt1 = request.getParameter("opt1");
+            String opt2 = request.getParameter("opt2");
+            String opt3 = request.getParameter("opt3");
+            String opt4 = request.getParameter("opt4");
+            String correctAnswer = request.getParameter("correct");
+            String courseName = request.getParameter("coursename");
+            String questionType = request.getParameter("questionType");
+
+            pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType);
+            session.setAttribute("message", "Question added successfully");
+            response.sendRedirect("adm-page.jsp?pgprt=3");
+        }
+
+    // Exams Handling
+    } else if ("exams".equals(pageParam)) {
+        String operation = request.getParameter("operation");
+        if (operation == null) {
+            response.sendRedirect("std-page.jsp");
+            return;
+        }
+        
+        if ("startexam".equals(operation)) {
+            String cName = request.getParameter("coursename");
+            if (session.getAttribute("userId") != null && cName != null) {
+                int userId = Integer.parseInt(session.getAttribute("userId").toString());
+                int examId = pDAO.startExam(cName, userId);
+                session.setAttribute("examId", examId);
+                session.setAttribute("examStarted", "1");
+                response.sendRedirect("std-page.jsp?pgprt=1&coursename="+cName);
+            } else {
+                response.sendRedirect("std-page.jsp");
+            }
+        } else if ("submitted".equals(operation)) {
+            try {
+                String time = LocalTime.now().toString();
+                int size = Integer.parseInt(request.getParameter("size"));
+                if (session.getAttribute("examId") != null) {
+                    int eId = Integer.parseInt(session.getAttribute("examId").toString());
+                    int tMarks = Integer.parseInt(request.getParameter("totalmarks"));
+                    session.removeAttribute("examId");
+                    session.removeAttribute("examStarted");
+                    
+                    for(int i=0; i<size; i++) {
+                        String question = request.getParameter("question"+i);
+                        String ans = request.getParameter("ans"+i);
+                        int qid = Integer.parseInt(request.getParameter("qid"+i));
+                        pDAO.insertAnswer(eId, qid, question, ans);
+                    }
+                    
+                    pDAO.calculateResult(eId, tMarks, time, size);
+                    response.sendRedirect("std-page.jsp?pgprt=1&eid="+eId+"&showresult=1");
+                }
+            } catch(Exception e) {
+                session.setAttribute("error", "Error submitting exam: " + e.getMessage());
+                response.sendRedirect("std-page.jsp");
+            }
+        }
+
+    // Logout Handling
+    } else if ("logout".equals(pageParam)) {
+        session.invalidate();
+        response.sendRedirect("login.jsp");
+
+    // Default case for unknown page parameters
     } else {
-        request.getSession().setAttribute("userStatus", "-1");
         response.sendRedirect("login.jsp");
     }
-
-    }else if (request.getParameter("page").toString().equals("register")) {
-    String fName = request.getParameter("fname");
-    String lName = request.getParameter("lname");
-    String uName = request.getParameter("uname");  
-    String email = request.getParameter("email");
-    String pass = request.getParameter("pass");
-    String contactNo = request.getParameter("contactno");
-    String city = request.getParameter("city");
-    String address = request.getParameter("address");
-    
-    // Hash the password using BCrypt before saving to the database
-    String hashedPass = PasswordUtils.bcryptHashPassword(pass);
-    
-
-    // Check if the lecturer's email exists
-    boolean lecturerExists = pDAO.checkLecturerByEmail(email);
-    
-
-
-    // Assume you generate or retrieve studentId from somewhere
-    String studentId = "STD-" + UUID.randomUUID().toString(); // Example of generating a student ID
-
-    // Proceed with student registration using the hashed password and studentId
-    pDAO.addNewUser(fName, lName, uName, email, hashedPass, contactNo, city, address, studentId);
-
-    // Redirect to login.jsp after successful registration
-    response.sendRedirect("login.jsp");
+} catch (Exception e) {
+    session.setAttribute("error", "An error occurred: " + e.getMessage());
+    response.sendRedirect("error.jsp"); // You should create an error.jsp page
 }
-
-else if(request.getParameter("page").toString().equals("profile")){
-        
-        String fName =request.getParameter("fname");
-        String lName =request.getParameter("lname");
-        String uName=request.getParameter("uname");
-        String email=request.getParameter("email");
-        String pass=request.getParameter("pass");
-        String contactNo =request.getParameter("contactno");
-        String city =request.getParameter("city");
-        String address =request.getParameter("address");
-         String uType =request.getParameter("utype");
-        int uid=Integer.parseInt(session.getAttribute("userId").toString());
-    
-         
-    pDAO.updateStudent(uid,fName,lName,uName,email,pass,contactNo,city,address,uType);
-    response.sendRedirect("dashboard.jsp");
-}else if(request.getParameter("page").toString().equals("courses")) {
-    if(request.getParameter("operation").toString().equals("addnew")) {
-        String courseName = request.getParameter("coursename");
-        int totalMarks = Integer.parseInt(request.getParameter("totalmarks"));
-        String time = request.getParameter("time");
-        String examDate = request.getParameter("examdate"); // New exam date parameter
-
-        // Pass the examDate to the addNewCourse method
-        pDAO.addNewCourse(courseName, totalMarks, time, examDate);
-        
-        response.sendRedirect("adm-page.jsp?pgprt=2");
-    } else if(request.getParameter("operation").toString().equals("del")) {
-        pDAO.delCourse(request.getParameter("cname").toString());
-        response.sendRedirect("adm-page.jsp?pgprt=2");
-    }
-}
-else if(request.getParameter("page").toString().equals("accounts")) {
-    String operation = request.getParameter("operation");
-    int userId = Integer.parseInt(request.getParameter("uid"));
-
-    if (operation.equals("del")) {
-        pDAO.delStudent(userId);
-        response.sendRedirect("adm-page.jsp?pgprt=1"); // Redirect to the accounts page after deletion
-    }
-
-}
-
-else if(request.getParameter("page").toString().equals("Lecturers_accounts")) {
-    if (request.getParameter("operation").equals("del")) {
-        int userId = Integer.parseInt(request.getParameter("uid"));
-        pDAO.deleteLecturer(userId);
-        response.sendRedirect("adm-page.jsp?pgprt=6"); // Redirect back to the lecturers accounts page after deletion
-    }
-}
-
-if (request.getParameter("page") != null && request.getParameter("page").equals("questions")) {
-    String operation = request.getParameter("operation");
-
-    // Handling delete operation
-    if (operation != null && operation.equals("del")) {
-        String questionIdParam = request.getParameter("qid");
-        if (questionIdParam != null && !questionIdParam.isEmpty()) {
-            try {
-                int questionId = Integer.parseInt(questionIdParam);
-                pDAO.deleteQuestion(questionId); // Call the delete method
-                response.sendRedirect("adm-page.jsp?pgprt=3"); // Redirect after deletion
-            } catch (NumberFormatException e) {
-                out.println("Error: Invalid question ID format.");
-            } catch (Exception e) {
-                out.println("Error: An exception occurred while deleting the question.");
-            }
-        } else {
-            out.println("Error: Question ID is invalid.");
-        }
-    }
-    
-    // Handling edit operation
-else if (operation != null && operation.equals("edit")) {
-    String questionIdParam = request.getParameter("qid");
-    if (questionIdParam != null && !questionIdParam.isEmpty()) {
-        try {
-            int questionId = Integer.parseInt(questionIdParam);
-            Questions question = pDAO.getQuestionById(questionId);
-            if (question != null) {
-                // Retrieve updated parameters from the form
-                String updatedQuestionText = request.getParameter("question");
-                String updatedOpt1 = request.getParameter("opt1");
-                String updatedOpt2 = request.getParameter("opt2");
-                String updatedOpt3 = request.getParameter("opt3");
-                String updatedOpt4 = request.getParameter("opt4");
-                String updatedCorrectAnswer = request.getParameter("correct");
-                String courseName = request.getParameter("coursename"); // Get selected course
-
-                // Update the question object with new values
-                question.setQuestion(updatedQuestionText);
-                question.setOpt1(updatedOpt1);
-                question.setOpt2(updatedOpt2);
-                question.setOpt3(updatedOpt3);
-                question.setOpt4(updatedOpt4);
-                question.setCorrect(updatedCorrectAnswer);
-                question.setCourseName(courseName); // Set the new course name
-
-                // Save changes to the database
-                boolean success = pDAO.updateQuestion(question);
-                if (success) {
-                    response.sendRedirect("adm-page.jsp?pgprt=3"); 
-                } else {
-                    out.println("Error: Could not update the question.");
-                }
-            } else {
-                out.println("Error: Question not found.");
-            }
-        } catch (NumberFormatException e) {
-            out.println("Error: Invalid question ID format.");
-        } catch (Exception e) {
-            out.println("Error: An exception occurred while editing the question.");
-        }
-    } else {
-        out.println("Error: Question ID is invalid.");
-    }
-}
-
-    // Handling add operation
-    else if (operation != null && operation.equals("addnew")) {
-        String questionText = request.getParameter("question");
-        String opt1 = request.getParameter("opt1");
-        String opt2 = request.getParameter("opt2");
-        String opt3 = request.getParameter("opt3");
-        String opt4 = request.getParameter("opt4");
-        String correctAnswer = request.getParameter("correct");
-        String courseName = request.getParameter("coursename");
-        String questionType = request.getParameter("questionType");
-
-        pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType);
-        response.sendRedirect("adm-page.jsp?pgprt=3"); // Redirect after adding the question
-    }
-}
-
-
-
-else if(request.getParameter("page").toString().equals("exams")){
-    if(request.getParameter("operation").toString().equals("startexam")){
-        String cName=request.getParameter("coursename");
-        int userId=Integer.parseInt(session.getAttribute("userId").toString());
-        
-        int examId=pDAO.startExam(cName,userId);
-        session.setAttribute("examId",examId);
-        session.setAttribute("examStarted","1");
-        response.sendRedirect("std-page.jsp?pgprt=1&coursename="+cName);
-    }else if(request.getParameter("operation").toString().equals("submitted")){
-        try{
-        String time=LocalTime.now().toString();
-        int size=Integer.parseInt(request.getParameter("size"));
-        int eId=Integer.parseInt(session.getAttribute("examId").toString());
-        int tMarks=Integer.parseInt(request.getParameter("totalmarks"));
-        session.removeAttribute("examId");
-        session.removeAttribute("examStarted");
-        for(int i=0;i<size;i++){
-            String question=request.getParameter("question"+i);
-            String ans=request.getParameter("ans"+i);
-            
-            int qid=Integer.parseInt(request.getParameter("qid"+i));
-            
-            pDAO.insertAnswer(eId,qid,question,ans);
-        }
-//        System.out.println(tMarks+" conn\t Size: "+size);
-        pDAO.calculateResult(eId,tMarks,time,size);
-        
-        response.sendRedirect("std-page.jsp?pgprt=1&eid="+eId+"&showresult=1");
-        }catch(Exception e){
-            e.printStackTrace();
-        }
-        
-        
-    }
-
-}else if(request.getParameter("page").toString().equals("logout")){
-    session.setAttribute("userStatus","0");
-    session.removeAttribute("examId");
-    session.removeAttribute("examStarted");
-    response.sendRedirect("login.jsp");
-}
-
-
-
 %>
