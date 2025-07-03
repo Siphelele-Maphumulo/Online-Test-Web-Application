@@ -42,7 +42,7 @@ public class DatabaseClass {
 
         this.conn = DriverManager.getConnection(url, user, pass);
     }
-}
+
 
     String user_Type = "";
     
