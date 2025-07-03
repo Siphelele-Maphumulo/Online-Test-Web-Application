@@ -44,6 +44,7 @@ public class DatabaseClass {
     }
 }
 
+
     String user_Type = "";
     
     public boolean checkLecturerByEmail(String email) {
