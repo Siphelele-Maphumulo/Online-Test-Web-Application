@@ -161,6 +161,7 @@
   <h2><i class="fas fa-user-plus"></i> Register New User</h2>
 
   <form action="controller.jsp" method="POST" onsubmit="return validateForm();">
+      <input type="hidden" name="page" value="register">
     <div class="grid-container">
       <div class="grid-item">
         <div class="input-icon">
