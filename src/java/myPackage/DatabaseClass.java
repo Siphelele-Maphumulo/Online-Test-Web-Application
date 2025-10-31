@@ -3,6 +3,7 @@ package myPackage;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
 import java.text.SimpleDateFormat;
 import java.util.logging.Level;
@@ -29,18 +30,10 @@ public class DatabaseClass {
     }
 
 private void establishConnection() throws ClassNotFoundException, SQLException {
-    Class.forName("com.mysql.cj.jdbc.Driver"); // Load the JDBC driver
-
-    this.conn = DriverManager.getConnection(
-        "jdbc:mysql://bdsnprm5vq9h4edsklxk-mysql.services.clever-cloud.com:3306/bdsnprm5vq9h4edsklxk?useSSL=true&requireSSL=false&serverTimezone=UTC",
-        "ugkdapgfbsc11xgj",
-        "vioCKbicD0jgZ8pjeJAa"
-    );
+    Class.forName("com.mysql.cj.jdbc.Driver");
 
 
-
-
-        //conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/exam_system", "root", "");
+        conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/exam_system", "root", "");
     }
 
     String user_Type = "";
@@ -302,12 +295,11 @@ public void addNewUser(String fName, String lName, String uName, String email, S
         return false;
     }   
     
- public void updateStudent(int uId, String fName, String lName, String uName, String email, String pass,
-        String contact, String city, String address, String userType) {
-    try {
-        String sql = "UPDATE users SET first_name=?, last_name=?, user_name=?, email=?, password=?, user_type=?, contact_no=?, city=?, address=? WHERE user_id=?";
-        
-        PreparedStatement pstm = conn.prepareStatement(sql);
+// DatabaseClass.java
+public int updateStudent(int uId, String fName, String lName, String uName, String email, String pass,
+                         String contact, String city, String address, String userType) throws SQLException {
+    String sql = "UPDATE users SET first_name=?, last_name=?, user_name=?, email=?, password=?, user_type=?, contact_no=?, city=?, address=? WHERE user_id=?";
+    try (PreparedStatement pstm = conn.prepareStatement(sql)) {
         pstm.setString(1, fName);
         pstm.setString(2, lName);
         pstm.setString(3, uName);
@@ -318,11 +310,11 @@ public void addNewUser(String fName, String lName, String uName, String email, S
         pstm.setString(8, city);
         pstm.setString(9, address);
         pstm.setInt(10, uId);
-        pstm.executeUpdate();
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        return pstm.executeUpdate(); // 1 = updated, 0 = nothing changed
     }
 }
+
+
 public ArrayList<String> getAllCourseNames() {
     ArrayList<String> courseNames = new ArrayList<>();
     try {
@@ -345,13 +337,15 @@ public ArrayList<String> getAllCourseNames() {
 public ArrayList getAllCourses() {
     ArrayList list = new ArrayList();
     try {
-        String sql = "SELECT course_name, total_marks, exam_date FROM courses";
+        // Include all 4 fields that are stored and displayed
+        String sql = "SELECT course_name, total_marks, time, exam_date FROM courses";
         PreparedStatement pstm = conn.prepareStatement(sql);
         ResultSet rs = pstm.executeQuery();
         while (rs.next()) {
-            list.add(rs.getString(1));  // course_name
-            list.add(rs.getInt(2));     // total_marks
-            list.add(rs.getDate(3));    // exam_date
+            list.add(rs.getString("course_name"));    // course_name
+            list.add(rs.getInt("total_marks"));       // total_marks  
+            list.add(rs.getString("time"));           // time (duration)
+            list.add(rs.getString("exam_date"));      // exam_date
         }
         pstm.close();
     } catch (SQLException ex) {
@@ -361,19 +355,36 @@ public ArrayList getAllCourses() {
 }
 
     
-public void addNewCourse(String courseName, int tMarks, String time, String examDate) {
+public boolean addNewCourse(String courseName, int tMarks, String time, String examDate) {
     try {
+        // First check if course already exists
+        String checkSql = "SELECT COUNT(*) FROM courses WHERE course_name = ?";
+        PreparedStatement checkStmt = conn.prepareStatement(checkSql);
+        checkStmt.setString(1, courseName);
+        ResultSet rs = checkStmt.executeQuery();
+        
+        if (rs.next() && rs.getInt(1) > 0) {
+            System.out.println("Course already exists: " + courseName);
+            return false;
+        }
+        
+        // Insert new course
         String sql = "INSERT INTO courses(course_name, total_marks, time, exam_date) VALUES (?, ?, ?, ?)";
         PreparedStatement pstm = conn.prepareStatement(sql);
         pstm.setString(1, courseName);
         pstm.setInt(2, tMarks);
         pstm.setString(3, time);
-        pstm.setString(4, examDate); // Set the exam date
+        pstm.setString(4, examDate);
         
-        pstm.executeUpdate();
+        int rowsAffected = pstm.executeUpdate();
         pstm.close();
+        
+        System.out.println("Course added successfully: " + courseName);
+        return rowsAffected > 0;
+        
     } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error adding course: " + courseName, ex);
+        return false;
     }
 }
 
@@ -389,7 +400,7 @@ public void addNewCourse(String courseName, int tMarks, String time, String exam
         }
     }
     
-    
+// In DatabaseClass.java - Update the addNewQuestion method
 public void addNewQuestion(String questionText, String opt1, String opt2, String opt3, String opt4, String correctAnswer, String courseName, String questionType) {
     try {
         String sql;
@@ -405,6 +416,18 @@ public void addNewQuestion(String questionText, String opt1, String opt2, String
             pstm.setString(4, correctAnswer);
             pstm.setString(5, courseName);
             pstm.setString(6, questionType);
+        } else if ("MultipleSelect".equalsIgnoreCase(questionType)) {
+            // For multiple select questions, store multiple correct answers separated by |
+            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            pstm = conn.prepareStatement(sql);
+            pstm.setString(1, questionText);
+            pstm.setString(2, opt1);
+            pstm.setString(3, opt2);
+            pstm.setString(4, opt3);
+            pstm.setString(5, opt4);
+            pstm.setString(6, correctAnswer); // This should contain multiple answers separated by |
+            pstm.setString(7, courseName);
+            pstm.setString(8, "MultipleSelect");
         } else {
             // Otherwise, handle multiple-choice questions
             sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
@@ -416,7 +439,7 @@ public void addNewQuestion(String questionText, String opt1, String opt2, String
             pstm.setString(5, opt4);
             pstm.setString(6, correctAnswer);
             pstm.setString(7, courseName);
-            pstm.setString(8, questionType);
+            pstm.setString(8, "MCQ");
         }
 
         // Execute the update
@@ -428,7 +451,62 @@ public void addNewQuestion(String questionText, String opt1, String opt2, String
         System.out.println("Error inserting question: " + ex.getMessage());
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
     }
-}  
+}
+
+// Update the insertAnswer method to handle multiple answers
+public void insertAnswer(int eId, int qid, String question, String ans) {
+    try {
+        String correct = getCorrectAnswer(qid); // Fetch correct answer
+        
+        // For multiple select questions, check if any of the selected answers match
+        String status = "incorrect";
+        if (ans != null && !ans.trim().isEmpty()) {
+            // Check if this is a multi-select question (correct answer contains |)
+            if (correct != null && correct.contains("|")) {
+                // Split both correct and user answers
+                String[] correctAnswers = correct.split("\\|");
+                String[] userAnswers = ans.split("\\|");
+                
+                // Check if all selected answers are correct and no extra answers
+                boolean allCorrect = true;
+                if (userAnswers.length == correctAnswers.length) {
+                    for (String userAns : userAnswers) {
+                        boolean found = false;
+                        for (String correctAns : correctAnswers) {
+                            if (userAns.trim().equals(correctAns.trim())) {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            allCorrect = false;
+                            break;
+                        }
+                    }
+                } else {
+                    allCorrect = false;
+                }
+                
+                status = allCorrect ? "correct" : "incorrect";
+            } else {
+                // Single answer question
+                status = ans.equals(correct) ? "correct" : "incorrect";
+            }
+        }
+
+        PreparedStatement pstm = conn.prepareStatement(
+            "INSERT INTO answers (exam_id, question, answer, correct_answer, status) VALUES (?, ?, ?, ?, ?)"
+        );
+        pstm.setInt(1, eId); // Exam ID
+        pstm.setString(2, question); // Question text
+        pstm.setString(3, ans == null ? "N/A" : ans); // User's answer (or "N/A" if unanswered)
+        pstm.setString(4, correct); // Correct answer
+        pstm.setString(5, status); // Status (correct/incorrect)
+        pstm.executeUpdate();
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+    }
+}
     
 public Questions getQuestionById(int questionId) {
     Questions question = null;
@@ -672,7 +750,11 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
             PreparedStatement pstm = conn.prepareStatement(sql);
             pstm.setString(1, cName);
             pstm.setString(2, LocalDate.now().toString()); // Ensure consistent date format
-            pstm.setString(3, LocalTime.now().toString());
+            String nowHHmm = LocalTime.now()
+                    .truncatedTo(ChronoUnit.MINUTES)
+                    .format(DateTimeFormatter.ofPattern("HH:mm"));
+            pstm.setString(3, nowHHmm);
+
             pstm.setString(4, getCourseTimeByName(cName));
             pstm.setInt(5, sId);
             pstm.setInt(6, getTotalMarksByName(cName));
@@ -840,24 +922,6 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
     }
     
     
-    public void insertAnswer(int eId, int qid, String question, String ans) {
-        try {
-            String correct = getCorrectAnswer(qid); // Fetch correct answer
-            String status = getAnswerStatus(ans == null ? "" : ans, correct); // Handle null answers
-
-            PreparedStatement pstm = conn.prepareStatement(
-                "INSERT INTO answers (exam_id, question, answer, correct_answer, status) VALUES (?, ?, ?, ?, ?)"
-            );
-            pstm.setInt(1, eId); // Exam ID
-            pstm.setString(2, question); // Question text
-            pstm.setString(3, ans == null ? "N/A" : ans); // User's answer (or "N/A" if unanswered)
-            pstm.setString(4, correct); // Correct answer
-            pstm.setString(5, status); // Status (correct/incorrect)
-            pstm.executeUpdate();
-        } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
 
 
     private String getCorrectAnswer(int qid) {
@@ -1132,22 +1196,34 @@ private int getObtMarks(int examId, int tMarks, int size) {
 
 
 
-/* Add this method in your DatabaseClass */
-
 public String getLastCourseName() {
     String lastCourseName = null;
     try {
-        String query = "SELECT course_name FROM questions ORDER BY question_id DESC LIMIT 1"; // Your SQL query
+        String query = "SELECT course_name FROM questions ORDER BY question_id DESC LIMIT 1";
         PreparedStatement pstmt = conn.prepareStatement(query);
         ResultSet rs = pstmt.executeQuery();
 
         if (rs.next()) {
             lastCourseName = rs.getString("course_name");
         }
+        
+        // If no questions exist, get the first course from courses table as fallback
+        if (lastCourseName == null) {
+            query = "SELECT course_name FROM courses ORDER BY course_id ASC LIMIT 1";
+            pstmt = conn.prepareStatement(query);
+            rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                lastCourseName = rs.getString("course_name");
+            }
+        }
+        
+        rs.close();
+        pstmt.close();
     } catch (SQLException e) {
         e.printStackTrace();
     }
-    return lastCourseName;
+    return lastCourseName; // This could still be null if no courses exist
 }
 
     // Method to close resources
