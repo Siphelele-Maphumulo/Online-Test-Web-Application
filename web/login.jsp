@@ -9,6 +9,7 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
+    
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -206,6 +207,13 @@
 <body>
     <!-- Include the header -->
     <jsp:include page="header.jsp" />
+    
+        <%-- Flash messages from controller.jsp --%>
+    <%
+        String toastError   = (String) session.getAttribute("error");
+        String toastSuccess = (String) session.getAttribute("message");
+    %>
+
 
     <div class="login-container">
         <div class="card login-card">
@@ -251,6 +259,24 @@
 
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Show error toast if present
+    <% if (toastError != null) { %>
+      var errToastEl = document.getElementById('toastError');
+      if (errToastEl) new bootstrap.Toast(errToastEl).show();
+      <% session.removeAttribute("error"); %>
+    <% } %>
+
+    // Show success/info toast if present (optional)
+    <% if (toastSuccess != null) { %>
+      var okToastEl = document.getElementById('toastSuccess');
+      if (okToastEl) new bootstrap.Toast(okToastEl).show();
+      <% session.removeAttribute("message"); %>
+    <% } %>
+  });
+</script>
+
     
     <script>
         // Focus on first input field when page loads
@@ -261,5 +287,28 @@
             }
         });
     </script>
+    <!-- Toasts -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 1080;">
+  <!-- Error toast -->
+  <div id="toastError" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
+    <div class="d-flex">
+      <div class="toast-body">
+        <% if (toastError != null) { out.print(toastError); } %>
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+
+  <!-- Success / info toast (optional) -->
+  <div id="toastSuccess" class="toast align-items-center text-bg-success border-0 mt-2" role="alert" aria-live="polite" aria-atomic="true" data-bs-delay="4000">
+    <div class="d-flex">
+      <div class="toast-body">
+        <% if (toastSuccess != null) { out.print(toastSuccess); } %>
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

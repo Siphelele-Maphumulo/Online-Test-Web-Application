@@ -16,7 +16,7 @@
     <style>
         body {
             transform-origin: top left;
-            width: 125%;
+            width: 100%;
         }
 
         .container {
@@ -49,6 +49,11 @@
             <a href="login.jsp" class="btn btn-primary">START</a>
         </div>
     </div>
+
+        <div class="callout_row callout_row_text">
+            <br>
+            Create by Siphelele Maphumulo.
+        </div>
 
     <!-- Required scripts for Bootstrap -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>

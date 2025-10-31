@@ -55,45 +55,82 @@
         String pgprt = request.getParameter("pgprt");
 %>
 
+    <div class="menu">
         <%
+            if (currentUser.getType().equalsIgnoreCase("admin") || currentUser.getType().equalsIgnoreCase("lecture")) {
+        %>
+                <a href="adm-page.jsp?pgprt=0" class="button">Profile</a>
+                <a href="adm-page.jsp?pgprt=1" class="button">Accounts</a>
+                <a href="adm-page.jsp?pgprt=2" class="button">Courses</a>
+                <a href="adm-page.jsp?pgprt=3" class="button">Questions</a>
+                <a href="adm-page.jsp?pgprt=5" class="button">Results</a>
+                <a href="adm-page.jsp?pgprt=6" class="button">Lecturers</a>
+        <%
+            } else {
+        %>
+                <a href="std-page.jsp?pgprt=0" class="button">Profile</a>
+                <a href="std-page.jsp?pgprt=1" class="button">Exams</a>
+                <a href="std-page.jsp?pgprt=2" class="button">Results</a>
+        <%
+            }
+        %>
+        <a href="controller.jsp?page=logout" class="button" style="float: right;background:crimson;color:white">Logout</a>
+    </div>
+
+    <%
+        //pgpart = pagepart
+        if (pgprt != null) {
             if ("1".equals(pgprt)) {
-        %>
+    %>
                 <jsp:include page="accounts.jsp" />
-        <%
+    <%
             } else if ("2".equals(pgprt)) {
-        %>
+    %>
                 <jsp:include page="courses.jsp" />
-        <%
+    <%
             } else if ("3".equals(pgprt)) {
-        %>
+    %>
                 <jsp:include page="questions.jsp" />
-        <%
+    <%
             } else if ("4".equals(pgprt)) {
-        %>
+    %>
                 <jsp:include page="showall.jsp" />
-        <%
+    <%
             } else if ("5".equals(pgprt)) {
-        %>
+    %>
                 <jsp:include page="admin-results.jsp" />
-        <%
+    <%
             } else if ("6".equals(pgprt)) {
-        %>
+    %>
                 <jsp:include page="Lecturers_accounts.jsp" />
-        <%
+    <%
             } else {
                 // Default page: Profile
                 if (currentUser.getType().equalsIgnoreCase("admin")
                     || currentUser.getType().equalsIgnoreCase("lecture")) {
-        %>
+    %>
                     <jsp:include page="profile_staff.jsp" />
-        <%
+    <%
                 } else {
-        %>
+    %>
                     <jsp:include page="profile.jsp" />
-        <%
+    <%
                 }
             }
-        %>
+        } else {
+            // Default page when no pgprt parameter
+            if (currentUser.getType().equalsIgnoreCase("admin")
+                || currentUser.getType().equalsIgnoreCase("lecture")) {
+    %>
+                <jsp:include page="profile_staff.jsp" />
+    <%
+            } else {
+    %>
+                <jsp:include page="profile.jsp" />
+    <%
+            }
+        }
+    %>
 
 <%
     } else {
