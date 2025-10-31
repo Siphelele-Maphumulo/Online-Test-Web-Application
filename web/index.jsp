@@ -16,7 +16,7 @@
     <style>
         body {
             transform-origin: top left;
-            width: 125%;
+            width: 100%;
         }
 
         .container {
