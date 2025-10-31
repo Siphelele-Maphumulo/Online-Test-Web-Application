@@ -1,0 +1,18 @@
+{
+    "java.project.sourcePaths": [
+        "src\\java"
+    ],
+    "java.project.referencedLibraries": [
+        "c:\\xampp\\htdocs\\Online-Test-Web-Application\\lib\\mysql-connector-java-5.1.22-bin.jar",
+        "c:\\xampp\\htdocs\\Online-Test-Web-Application\\lib\\javaee-endorsed-api-6.0\\webservices-api-osgi.jar",
+        "c:\\xampp\\htdocs\\Online-Test-Web-Application\\lib\\javaee-endorsed-api-6.0\\javaee-doc-api.jar",
+        "c:\\xampp\\htdocs\\Online-Test-Web-Application\\lib\\mysql-connector-j-9.1.0.jar",
+        "c:\\xampp\\htdocs\\Online-Test-Web-Application\\lib\\spring-security-core-6.3.3.jar",
+        "c:\\xampp\\htdocs\\Online-Test-Web-Application\\lib\\javaee-endorsed-api-6.0\\jaxb-api-osgi.jar",
+        "c:\\xampp\\htdocs\\Online-Test-Web-Application\\lib\\CopyLibs\\org-netbeans-modules-java-j2seproject-copylibstask.jar",
+        "c:\\xampp\\htdocs\\Online-Test-Web-Application\\lib\\jbcrypt-0.4.jar",
+        "c:\\xampp\\htdocs\\Online-Test-Web-Application\\lib\\spring-security-core-5.8.0.jar",
+        "c:\\xampp\\htdocs\\Online-Test-Web-Application\\lib\\javaee-endorsed-api-6.0\\javax.annotation.jar"
+    ],
+    "java.format.settings.url": ".vscode/java-formatter.xml"
+}

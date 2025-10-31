@@ -31,16 +31,16 @@ public class DatabaseClass {
 private void establishConnection() throws ClassNotFoundException, SQLException {
     Class.forName("com.mysql.cj.jdbc.Driver"); // Load the JDBC driver
 
-    this.conn = DriverManager.getConnection(
-        "jdbc:mysql://bdsnprm5vq9h4edsklxk-mysql.services.clever-cloud.com:3306/bdsnprm5vq9h4edsklxk?useSSL=true&requireSSL=false&serverTimezone=UTC",
-        "ugkdapgfbsc11xgj",
-        "vioCKbicD0jgZ8pjeJAa"
-    );
+//    this.conn = DriverManager.getConnection(
+//        "jdbc:mysql://bdsnprm5vq9h4edsklxk-mysql.services.clever-cloud.com:3306/bdsnprm5vq9h4edsklxk?useSSL=true&requireSSL=false&serverTimezone=UTC",
+//        "ugkdapgfbsc11xgj",
+//        "vioCKbicD0jgZ8pjeJAa"
+//    );
 
 
 
 
-        //conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/exam_system", "root", "");
+        conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/exam_system", "root", "");
     }
 
     String user_Type = "";
