@@ -145,7 +145,7 @@
   }
   
   .mut-logo {
-    max-height: 80px;
+    max-height: 150px;
   }
   
   .edit-card {
