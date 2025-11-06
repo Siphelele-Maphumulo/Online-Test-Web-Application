@@ -1,7 +1,7 @@
 
 # 🎓 Online Examination System
 
-![App Screenshot](https://online-test-web-application-7mu3.onrender.com)
+![App Screenshot](https://raw.githubusercontent.com/Siphelele-Maphumulo/Online-Test-Web-Application/refs/heads/main/Screenshot.png)
 
 ## 🚀 Hey everyone!
 
