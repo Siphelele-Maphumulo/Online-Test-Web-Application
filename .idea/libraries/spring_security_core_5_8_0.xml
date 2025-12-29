@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="spring-security-core-5.8.0">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/spring-security-core-5.8.0.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
