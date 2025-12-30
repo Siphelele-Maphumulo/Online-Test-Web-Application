@@ -954,7 +954,7 @@ public int updateLecturer(int uId, String fName, String lName, String uName, Str
 public ArrayList<String> getAllCourseNames() {
     ArrayList<String> courses = new ArrayList<>();
     // CORRECTED: The courses table has 'course_name' field as per your schema
-    String sql = "SELECT DISTINCT course_name FROM courses WHERE course_name IS NOT NULL AND course_name != '' ORDER BY course_name";
+    String sql = "SELECT DISTINCT course_name FROM courses WHERE is_active = 1 AND course_name IS NOT NULL AND course_name != '' ORDER BY course_name";
 
     try (PreparedStatement pstmt = conn.prepareStatement(sql);
          ResultSet rs = pstmt.executeQuery()) {
