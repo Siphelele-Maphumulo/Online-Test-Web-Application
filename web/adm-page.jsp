@@ -7,6 +7,7 @@
  
 <% 
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+pDAO.autoActivateExams();
 %>
 <!DOCTYPE html>
 <html>

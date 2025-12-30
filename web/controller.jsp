@@ -162,6 +162,14 @@ try {
                 session.setAttribute("message","Course deleted successfully");
             }
             response.sendRedirect("adm-page.jsp?pgprt=2");
+        } else if ("toggle_status".equalsIgnoreCase(operation)) {
+            String courseName = nz(request.getParameter("courseName"), "");
+            boolean isActive = request.getParameter("is_active") != null;
+            if (!courseName.isEmpty()) {
+                pDAO.toggleCourseStatus(courseName, isActive);
+                session.setAttribute("message", "Status for '" + courseName + "' updated successfully.");
+            }
+            response.sendRedirect("adm-page.jsp?pgprt=2");
         }
 
     /* =========================
@@ -334,6 +342,12 @@ try {
         if ("startexam".equalsIgnoreCase(operation)) {
             String cName = nz(request.getParameter("coursename"), "");
             if (session.getAttribute("userId") != null && !cName.isEmpty()) {
+                if (!pDAO.isCourseActive(cName)) {
+                    session.setAttribute("error", "This exam is not active. Please contact your lecturer.");
+                    response.sendRedirect("std-page.jsp?pgprt=1");
+                    return;
+                }
+
                 int userId = Integer.parseInt(session.getAttribute("userId").toString());
 
                 // Finalize any in-progress exams for this student and course

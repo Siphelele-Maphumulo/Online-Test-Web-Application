@@ -979,15 +979,16 @@ public ArrayList<String> getAllCourseNames() {
 public ArrayList getAllCourses() {
     ArrayList list = new ArrayList();
     try {
-        String sql = "SELECT course_name, total_marks, time, exam_date FROM courses";
+        String sql = "SELECT course_name, total_marks, time, exam_date, is_active FROM courses";
         PreparedStatement pstm = conn.prepareStatement(sql);
         ResultSet rs = pstm.executeQuery();
 
         while (rs.next()) {
             list.add(rs.getString("course_name")); // 0
             list.add(rs.getInt("total_marks"));    // 1
-            list.add(rs.getString("time"));        // 2 ✅ FIX
+            list.add(rs.getString("time"));        // 2
             list.add(rs.getDate("exam_date"));     // 3
+            list.add(rs.getBoolean("is_active"));  // 4
         }
 
         rs.close();
@@ -2175,6 +2176,42 @@ public void deleteExamCascade(int examId) {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+}
+
+public boolean toggleCourseStatus(String courseName, boolean isActive) {
+    String sql = "UPDATE courses SET is_active = ? WHERE course_name = ?";
+    try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        pstmt.setBoolean(1, isActive);
+        pstmt.setString(2, courseName);
+        return pstmt.executeUpdate() > 0;
+    } catch (SQLException e) {
+        e.printStackTrace();
+        return false;
+    }
+}
+
+public boolean isCourseActive(String courseName) {
+    String sql = "SELECT is_active FROM courses WHERE course_name = ?";
+    try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        pstmt.setString(1, courseName);
+        try (ResultSet rs = pstmt.executeQuery()) {
+            if (rs.next()) {
+                return rs.getBoolean("is_active");
+            }
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return false;
+}
+
+public void autoActivateExams() {
+    String sql = "UPDATE courses SET is_active = TRUE WHERE exam_date = CURDATE() AND is_active = FALSE";
+    try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        pstmt.executeUpdate();
+    } catch (SQLException e) {
+        e.printStackTrace();
     }
 }
 

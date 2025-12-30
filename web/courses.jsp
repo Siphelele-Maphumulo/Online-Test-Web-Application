@@ -491,6 +491,66 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
+
+    /* Toggle Switch CSS */
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 34px;
+    }
+
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        -webkit-transition: .4s;
+        transition: .4s;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        -webkit-transition: .4s;
+        transition: .4s;
+    }
+
+    input:checked + .slider {
+        background-color: var(--success);
+    }
+
+    input:focus + .slider {
+        box-shadow: 0 0 1px var(--success);
+    }
+
+    input:checked + .slider:before {
+        -webkit-transform: translateX(26px);
+        -ms-transform: translateX(26px);
+        transform: translateX(26px);
+    }
+
+    .slider.round {
+        border-radius: 34px;
+    }
+
+    .slider.round:before {
+        border-radius: 50%;
+    }
 </style>
 
 <div class="dashboard-container">
@@ -535,8 +595,7 @@
                 <i class="fas fa-graduation-cap"></i>
                 <%
                     ArrayList list = pDAO.getAllCourses();
-                    // Fix: Since we're now storing 4 fields per course, divide by 4
-                    int courseCount = list.size() / 4;
+                    int courseCount = list.size() / 5;
                 %>
                 <%= courseCount %> Courses
             </div>
@@ -559,6 +618,7 @@
                             <th>Total Marks</th>
                             <th>Duration</th>
                             <th>Exam Date</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -567,26 +627,39 @@
                         if (list.isEmpty()) {
                         %>
                             <tr>
-                                <td colspan="5" class="no-courses">
+                                <td colspan="6" class="no-courses">
                                     <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 16px; display: block; opacity: 0.5;"></i>
                                     No courses available. Add your first course to get started.
                                 </td>
                             </tr>
                         <%
                         } else {
-                            for (int i = 0; i < list.size(); i += 4) {
-                                if (i + 3 < list.size()) {
+                            for (int i = 0; i < list.size(); i += 5) {
+                                if (i + 4 < list.size()) {
+                                    String courseName = (String) list.get(i);
+                                    boolean isActive = (Boolean) list.get(i + 4);
                         %>
                         <tr>
                             <td>
                                 <div class="course-name">
                                     <i class="fas fa-book" style="color: var(--accent-blue); margin-right: 8px;"></i>
-                                    <%= list.get(i) %>
+                                    <%= courseName %>
                                 </div>
                             </td>
                             <td><span class="badge badge-success"><%= list.get(i + 1) %> Marks</span></td>
                             <td><span class="badge badge-info"><%= list.get(i + 2) %> mins</span></td>
                             <td><span class="badge badge-neutral"><%= list.get(i + 3) %></span></td>
+                            <td>
+                                <form action="controller.jsp" method="post" class="toggle-form">
+                                    <input type="hidden" name="page" value="courses">
+                                    <input type="hidden" name="operation" value="toggle_status">
+                                    <input type="hidden" name="courseName" value="<%= courseName %>">
+                                    <label class="switch">
+                                        <input type="checkbox" name="is_active" <%= isActive ? "checked" : "" %> onchange="this.form.submit()">
+                                        <span class="slider round"></span>
+                                    </label>
+                                </form>
+                            </td>
                             <td>
                                 <% if (currentUser.getType().equalsIgnoreCase("admin")) { %>
                                     <a href="controller.jsp?page=courses&operation=del&cname=<%= list.get(i) %>"

@@ -2357,52 +2357,68 @@
         <input type="hidden" name="page" value="exams">
         <input type="hidden" name="operation" value="startexam">
         <label class="form-label"><i class="fas fa-book"></i> Select Course</label>
-        <select name="coursename" class="form-select" required>
-          <option value="">Choose a course...</option>
-          <% ArrayList<String> courseList=pDAO.getAllCourseNames();
-             for(String course:courseList){ %>
-            <option value="<%= course %>"><%= course %></option>
-          <% } %>
-        </select>
-        <button type="submit" class="start-exam-btn"><i class="fas fa-play"></i> Start Exam</button>
+        <form id="examStartForm" action="controller.jsp" method="post">
+          <input type="hidden" name="page" value="exams">
+          <input type="hidden" name="operation" value="startexam">
+          <label class="form-label"><i class="fas fa-book"></i> Select Course</label>
+          <select name="coursename" id="courseSelect" class="form-select" required>
+              <option value="">Choose a course...</option>
+              <% ArrayList courses = pDAO.getAllCourses();
+                  for (int i = 0; i < courses.size(); i += 5) {
+                      String courseName = (String) courses.get(i);
+                      String duration = (String) courses.get(i + 2);
+                      java.sql.Date examDate = (java.sql.Date) courses.get(i + 3);
+                      boolean isActive = (Boolean) courses.get(i + 4);
+              %>
+              <option value="<%= courseName %>" data-exam-date="<%= examDate %>" data-is-active="<%= isActive %>" data-duration="<%= duration %>"><%= courseName %></option>
+              <% } %>
+          </select>
+          <button type="submit" class="start-exam-btn"><i class="fas fa-play"></i> Start Exam</button>
       </form>
     </div>
             <script>
-                document.addEventListener('DOMContentLoaded', function () {
-                    const form = document.getElementById('examStartForm');
+                document.getElementById('examStartForm').addEventListener('submit', function (e) {
+                    e.preventDefault();
                     const courseSelect = document.getElementById('courseSelect');
-                    const modal = document.getElementById('confirmationModal');
-                    const modalCourseName = document.getElementById('modalCourseName');
-                    const modalDuration = document.getElementById('modalDuration');
-                    const beginButton = document.getElementById('beginButton');
-                    const cancelButton = document.getElementById('cancelButton');
+                    const selectedOption = courseSelect.options[courseSelect.selectedIndex];
+                    if (!selectedOption.value) {
+                        alert('Please select a course.');
+                        return;
+                    }
 
-                    form.addEventListener('submit', function (e) {
-                        e.preventDefault(); // Stop form submission
+                    const isActive = selectedOption.getAttribute('data-is-active') === 'true';
+                    const examDateStr = selectedOption.getAttribute('data-exam-date');
+                    const examDate = new Date(examDateStr);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
 
-                        if (!courseSelect.value) {
-                            alert('Please select a course.');
-                            return;
-                        }
+                    if (!isActive) {
+                        showModal('deactivated', 'This exam has been deactivated by the lecturer. Please contact them for more information.');
+                    } else if (examDate < today) {
+                        showModal('passed', 'The date for this exam has already passed. You can no longer start this exam.');
+                    } else if (examDate > today) {
+                        showModal('future', 'This exam is scheduled for a future date and is not yet active.');
+                    } else {
+                        // All checks passed, proceed to confirmation
+                        const modal = document.getElementById('confirmationModal');
+                        const modalCourseName = document.getElementById('modalCourseName');
+                        const modalDuration = document.getElementById('modalDuration');
+                        const beginButton = document.getElementById('beginButton');
+                        const cancelButton = document.getElementById('cancelButton');
+                        const form = this;
 
-                        const selectedOption = courseSelect.options[courseSelect.selectedIndex];
-                        const courseName = selectedOption.text.split(' (')[0];
-                        const duration = selectedOption.getAttribute('data-duration') || '60';
-
-                        // Populate and show the modal
-                        modalCourseName.textContent = courseName;
-                        modalDuration.textContent = duration;
+                        modalCourseName.textContent = selectedOption.value;
+                        modalDuration.textContent = selectedOption.getAttribute('data-duration') || 'N/A';
                         modal.style.display = 'flex';
-                    });
 
-                    beginButton.addEventListener('click', function () {
-                        sessionStorage.clear(); // Clear storage and submit
-                        form.submit();
-                    });
-
-                    cancelButton.addEventListener('click', function () {
-                        modal.style.display = 'none'; // Hide modal
-                    });
+                        beginButton.onclick = () => {
+                            sessionStorage.clear();
+                            form.submit();
+                        };
+                        cancelButton.onclick = () => {
+                            modal.style.display = 'none';
+                        };
+                    }
                 });
             </script>
   <% } %>
