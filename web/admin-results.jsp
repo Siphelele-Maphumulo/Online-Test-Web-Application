@@ -1151,6 +1151,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                 const [obtMarks, totalMarks] = marksText.split(' / ').map(Number);
 
                 marksCell.innerHTML = `<input type="number" class="form-control" value="${obtMarks}" style="width: 60px;"> / ${totalMarks}`;
+                row.setAttribute('data-total-marks', totalMarks);
 
                 this.style.display = 'none';
                 row.querySelector('.save-btn').style.display = 'inline-flex';
@@ -1163,7 +1164,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                 const marksCell = row.cells[6];
                 const obtMarksInput = marksCell.querySelector('input');
                 const obtMarks = obtMarksInput.value;
-                const totalMarks = marksCell.textContent.split('/ ')[1];
+                const totalMarks = row.getAttribute('data-total-marks');
                 const examId = row.querySelector('.btn-primary').href.split('eid=')[1];
 
                 const form = document.createElement('form');
