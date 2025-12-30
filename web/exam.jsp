@@ -2125,8 +2125,40 @@
     }
     updateProgress();
 
-    /* --- LEAVE PROTECTION --- */
-    window.onbeforeunload=function(){if(dirty)return"You have unsaved answers. Are you sure you want to leave?";};
+    /* --- ASYNC ANSWER SAVING --- */
+    function saveAnswer(qindex, answer) {
+        const questionCard = document.querySelector(`.question-card[data-qindex="${qindex}"]`);
+        if (!questionCard) return;
+
+        const qid = questionCard.querySelector('input[name="qid' + qindex + '"]').value;
+        const question = questionCard.querySelector('input[name="question' + qindex + '"]').value;
+
+        const formData = new FormData();
+        formData.append('page', 'saveAnswer');
+        formData.append('qid', qid);
+        formData.append('question', question);
+        formData.append('ans', answer);
+
+        navigator.sendBeacon('controller.jsp', new URLSearchParams(formData));
+    }
+
+    document.addEventListener('change', function(e) {
+        if (e.target.classList && e.target.classList.contains('answer-input')) {
+            const qindex = e.target.getAttribute('data-qindex');
+            let answer = '';
+            if (e.target.classList.contains('multi')) {
+                const wrapper = e.target.closest('.answers');
+                const selectedValues = [];
+                wrapper.querySelectorAll('input.multi:checked').forEach(function(ch) {
+                    selectedValues.push(ch.value);
+                });
+                answer = selectedValues.join('|');
+            } else {
+                answer = e.target.value;
+            }
+            saveAnswer(qindex, answer);
+        }
+    });
 
     /* --- SUBMIT BUTTON --- */
     document.getElementById('submitBtn').addEventListener('click',function(){
