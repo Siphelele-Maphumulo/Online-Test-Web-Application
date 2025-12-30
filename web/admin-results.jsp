@@ -78,7 +78,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     
     /* Sidebar Styles - Same as profile page */
     .sidebar {
-        width: 250px;
+        width: 200px;
         background: linear-gradient(180deg, var(--primary-blue), var(--secondary-blue));
         color: var(--white);
         flex-shrink: 0;

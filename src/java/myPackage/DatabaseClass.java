@@ -1457,6 +1457,28 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
         }
         return examId;
     }
+
+    public void finalizeInProgressExams(int studentId, String courseName) {
+        String selectSql = "SELECT exam_id, total_marks FROM exams WHERE std_id = ? AND course_name = ? AND status = 'in_progress'";
+
+        try (PreparedStatement selectStmt = conn.prepareStatement(selectSql)) {
+            selectStmt.setInt(1, studentId);
+            selectStmt.setString(2, courseName);
+
+            try (ResultSet rs = selectStmt.executeQuery()) {
+                while (rs.next()) {
+                    int examId = rs.getInt("exam_id");
+                    int totalMarks = rs.getInt("total_marks");
+
+                    int size = getQuestions(courseName, 100).size();
+
+                    calculateResult(examId, totalMarks, LocalTime.now().toString(), size);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
     
     public int getLastExamId(){
         int id=0;
@@ -1751,31 +1773,33 @@ public ArrayList<Exams> getResultsFromExams(Integer stdId) {
 }
 
 public int getExamDuration(String courseName) {
-    int duration = 120; // Default 2 hours in minutes
-    try {
-        String sql = "SELECT time FROM courses WHERE course_name = ?";
-        PreparedStatement pstm = conn.prepareStatement(sql);
+    int duration = 120; // Default 120 minutes
+    String sql = "SELECT time FROM courses WHERE course_name = ?";
+    try (PreparedStatement pstm = conn.prepareStatement(sql)) {
         pstm.setString(1, courseName);
-        ResultSet rs = pstm.executeQuery();
-        if (rs.next()) {
-            String timeStr = rs.getString("time");
-            // Parse time string like "02:00" or "1:30" to minutes
-            if (timeStr != null && timeStr.contains(":")) {
-                String[] parts = timeStr.split(":");
-                int hours = 0;
-                int minutes = 0;
-                
-                try {
-                    hours = Integer.parseInt(parts[0].trim());
-                    minutes = Integer.parseInt(parts[1].trim());
-                    duration = (hours * 60) + minutes;
-                } catch (NumberFormatException e) {
-                    System.out.println("Error parsing time format: " + timeStr);
+        try (ResultSet rs = pstm.executeQuery()) {
+            if (rs.next()) {
+                String timeStr = rs.getString("time");
+                if (timeStr != null) {
+                    if (timeStr.contains(":")) {
+                        String[] parts = timeStr.split(":");
+                        try {
+                            int hours = Integer.parseInt(parts[0].trim());
+                            int minutes = Integer.parseInt(parts[1].trim());
+                            duration = (hours * 60) + minutes;
+                        } catch (NumberFormatException e) {
+                            System.out.println("Error parsing HH:MM time format: " + timeStr);
+                        }
+                    } else {
+                        try {
+                            duration = Integer.parseInt(timeStr.trim());
+                        } catch (NumberFormatException e) {
+                            System.out.println("Error parsing integer time format: " + timeStr);
+                        }
+                    }
                 }
             }
         }
-        rs.close();
-        pstm.close();
     } catch (SQLException ex) {
         System.out.println("Error getting exam duration: " + ex.getMessage());
     }
@@ -2043,6 +2067,50 @@ public String getLastCourseName() {
         e.printStackTrace();
     }
     return lastCourseName;
+}
+
+public void upsertAnswer(int examId, int questionId, String question, String answer) {
+    String checkSql = "SELECT answer_id FROM answers WHERE exam_id = ? AND question = ?";
+    String insertSql = "INSERT INTO answers (exam_id, question, answer, correct_answer, status) VALUES (?, ?, ?, ?, ?)";
+    String updateSql = "UPDATE answers SET answer = ?, status = ? WHERE answer_id = ?";
+
+    try {
+        String correctAnswer = getCorrectAnswer(questionId);
+        String status = getAnswerStatus(answer == null ? "" : answer, correctAnswer);
+
+        int answerId = -1;
+        try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+            checkStmt.setInt(1, examId);
+            checkStmt.setString(2, question);
+            try (ResultSet rs = checkStmt.executeQuery()) {
+                if (rs.next()) {
+                    answerId = rs.getInt("answer_id");
+                }
+            }
+        }
+
+        if (answerId != -1) {
+            // Update existing answer
+            try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+                updateStmt.setString(1, answer);
+                updateStmt.setString(2, status);
+                updateStmt.setInt(3, answerId);
+                updateStmt.executeUpdate();
+            }
+        } else {
+            // Insert new answer
+            try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+                insertStmt.setInt(1, examId);
+                insertStmt.setString(2, question);
+                insertStmt.setString(3, answer);
+                insertStmt.setString(4, correctAnswer);
+                insertStmt.setString(5, status);
+                insertStmt.executeUpdate();
+            }
+        }
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+    }
 }
 
 public boolean updateExamResult(int examId, int obtMarks, int totalMarks) {

@@ -753,14 +753,14 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
         document.body.addEventListener('click', function(e) {
             // Handle Delete Button Clicks
-            if (e.target.closest('.btn-error')) {
+            if (e.target.closest('.btn-error, .btn-danger')) {
                 const deleteLink = e.target.closest('a');
                 if (deleteLink && deleteLink.href.includes('operation=del')) {
                     e.preventDefault();
                     deleteUrl = deleteLink.href;
                     const itemName = deleteLink.getAttribute('data-item-name');
                     if (itemName) {
-                        deleteModalText.textContent = `Are you sure you want to delete "${itemName}"? This action cannot be undone.`;
+                        deleteModalText.textContent = `Are you sure you want to delete? This action cannot be undone.`;
                     } else {
                         deleteModalText.textContent = 'Are you sure you want to delete this item? This action cannot be undone.';
                     }

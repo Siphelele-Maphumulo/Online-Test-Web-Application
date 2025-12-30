@@ -1,26 +1,20 @@
 <%@page import="myPackage.classes.User"%>
 <%@page import="java.util.ArrayList"%>
-<% 
-myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+<%
+    myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
-// Get current user details FIRST
-User currentUser = null;
+    // Get current user details FIRST
+    User currentUser = null;
+    if (session.getAttribute("userId") != null) {
+        currentUser = pDAO.getUserDetails(session.getAttribute("userId").toString());
+    }
 
-// Check if user is logged in
-if (session.getAttribute("userId") == null) {
-    response.sendRedirect("login.jsp");
-    return;
-}
-
-// Get current user details
-currentUser = pDAO.getUserDetails(session.getAttribute("userId").toString());
-
-if (currentUser == null) {
-    // User not found in database
-    session.invalidate();
-    response.sendRedirect("login.jsp");
-    return;
-}
+    if (currentUser == null) {
+        // User not found in database or session expired
+        session.invalidate();
+        response.sendRedirect("login.jsp");
+        return;
+    }
 
 // Now get student list
 ArrayList<User> studentList = pDAO.getAllStudents();
@@ -105,7 +99,7 @@ for (User user : studentList) {
     
     /* Sidebar Styles - Same as profile page */
     .sidebar {
-        width: 250px;
+        width: 200px;
         background: linear-gradient(180deg, var(--primary-blue), var(--secondary-blue));
         color: var(--white);
         flex-shrink: 0;
