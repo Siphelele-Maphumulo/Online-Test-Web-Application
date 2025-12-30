@@ -554,6 +554,17 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     <!-- Main Content Area -->
     <main class="dashboard-content">
         <div class="content-wrapper">
+             <!-- Delete Confirmation Modal -->
+            <div id="deleteConfirmationModal" class="modal" style="display:none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+                <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 400px; text-align: center; border-radius: 8px;">
+                    <h2 style="margin-bottom: 20px;">Confirm Deletion</h2>
+                    <p style="margin-bottom: 20px;" id="deleteModalText">Are you sure you want to delete this item? This action cannot be undone.</p>
+                    <div style="display: flex; justify-content: center; gap: 10px;">
+                        <button id="confirmDeleteBtn" class="btn btn-error">Delete</button>
+                        <button id="cancelDeleteBtn" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </div>
+            </div>
             <%
                 // Check if user is logged in
                 if (session.getAttribute("userStatus") != null && session.getAttribute("userStatus").equals("1")) {
@@ -713,6 +724,50 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                 
                 lastScroll = currentScroll;
             });
+        }
+    });
+
+    // Delete Confirmation Modal Logic
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('deleteConfirmationModal');
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        const cancelBtn = document.getElementById('cancelDeleteBtn');
+        const modalText = document.getElementById('deleteModalText');
+        let deleteUrl = '';
+
+        document.body.addEventListener('click', function(e) {
+            if (e.target.closest('.btn-error')) {
+                const deleteLink = e.target.closest('a');
+                if (deleteLink && deleteLink.href.includes('operation=del')) {
+                    e.preventDefault();
+                    deleteUrl = deleteLink.href;
+                    const studentName = deleteLink.getAttribute('data-student-name');
+                    if (studentName) {
+                        modalText.textContent = `Are you sure you want to delete student "${studentName}"? This action cannot be undone.`;
+                    } else {
+                        modalText.textContent = 'Are you sure you want to delete this item? This action cannot be undone.';
+                    }
+                    modal.style.display = 'block';
+                }
+            }
+        });
+
+        if(cancelBtn) {
+            cancelBtn.onclick = function() {
+                modal.style.display = 'none';
+            }
+        }
+
+        if(confirmBtn) {
+            confirmBtn.onclick = function() {
+                window.location.href = deleteUrl;
+            }
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
         }
     });
 </script>

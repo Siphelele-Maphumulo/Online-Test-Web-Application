@@ -844,8 +844,8 @@ int lecturerCount = lecturerList.size();
                             </td>
                             <td>
                                 <div class="action-buttons">
-                                    <a href="controller.jsp?page=Lecturers_accounts&operation=del&uid=<%= lecturer.getUserId() %>" 
-                                       onclick="return confirm('Are you sure you want to delete lecturer \"<%= lecturer.getFirstName() %> <%= lecturer.getLastName() %>\"? This action cannot be undone.');" 
+                                    <a href="controller.jsp?page=Lecturers_accounts&operation=del&uid=<%= lecturer.getUserId() %>"
+                                       data-student-name="<%= lecturer.getFirstName() %> <%= lecturer.getLastName() %>"
                                        class="btn btn-error" style="font-size: 13px; padding: 8px 16px;">
                                        <i class="fas fa-trash"></i>
                                        Delete
