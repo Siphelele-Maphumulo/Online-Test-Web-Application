@@ -1457,6 +1457,28 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
         }
         return examId;
     }
+
+    public void finalizeInProgressExams(int studentId, String courseName) {
+        String selectSql = "SELECT exam_id, total_marks FROM exams WHERE std_id = ? AND course_name = ? AND status = 'in_progress'";
+
+        try (PreparedStatement selectStmt = conn.prepareStatement(selectSql)) {
+            selectStmt.setInt(1, studentId);
+            selectStmt.setString(2, courseName);
+
+            try (ResultSet rs = selectStmt.executeQuery()) {
+                while (rs.next()) {
+                    int examId = rs.getInt("exam_id");
+                    int totalMarks = rs.getInt("total_marks");
+
+                    int size = getQuestions(courseName, 100).size();
+
+                    calculateResult(examId, totalMarks, LocalTime.now().toString(), size);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
     
     public int getLastExamId(){
         int id=0;

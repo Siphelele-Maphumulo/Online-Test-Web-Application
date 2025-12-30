@@ -335,6 +335,10 @@ try {
             String cName = nz(request.getParameter("coursename"), "");
             if (session.getAttribute("userId") != null && !cName.isEmpty()) {
                 int userId = Integer.parseInt(session.getAttribute("userId").toString());
+
+                // Finalize any in-progress exams for this student and course
+                pDAO.finalizeInProgressExams(userId, cName);
+
                 int examId = pDAO.startExam(cName, userId);
                 session.setAttribute("examId", examId);
                 session.setAttribute("examStarted","1");
@@ -377,6 +381,18 @@ try {
     /* =========================
        LOGOUT
        ========================= */
+        } else if ("saveAnswer".equalsIgnoreCase(pageParam)) {
+            if (session.getAttribute("examId") != null) {
+                int examId = Integer.parseInt(session.getAttribute("examId").toString());
+                int qid = Integer.parseInt(nz(request.getParameter("qid"), "0"));
+                String question = nz(request.getParameter("question"), "");
+                String ans = nz(request.getParameter("ans"), "");
+
+                pDAO.upsertAnswer(examId, qid, question, ans);
+            }
+            // No redirect needed as this is an async call
+            return;
+
         } else if ("logout".equalsIgnoreCase(pageParam)) {
 
             // Invalidate session immediately then forward to a transition page so the client loader can be visible
