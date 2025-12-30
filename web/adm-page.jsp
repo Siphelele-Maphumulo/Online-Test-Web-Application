@@ -753,7 +753,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
         document.body.addEventListener('click', function(e) {
             // Handle Delete Button Clicks
-            if (e.target.closest('.btn-error')) {
+            if (e.target.closest('.btn-error, .btn-danger')) {
                 const deleteLink = e.target.closest('a');
                 if (deleteLink && deleteLink.href.includes('operation=del')) {
                     e.preventDefault();
