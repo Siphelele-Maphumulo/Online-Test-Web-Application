@@ -1,8 +1,19 @@
 <%@ page import="java.util.ArrayList" %>
+<%@ page import="myPackage.classes.User" %>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
- 
-<% 
-myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+
+<%
+    myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+
+    User currentUser = null;
+    if (session.getAttribute("userId") != null) {
+        currentUser = pDAO.getUserDetails(session.getAttribute("userId").toString());
+    }
+
+    if (currentUser == null) {
+        response.sendRedirect("login.jsp");
+        return;
+    }
 %>
 
 <style>
