@@ -1891,6 +1891,81 @@
 .timer-badge.expired {
     background: linear-gradient(135deg, #6b7280, #4b5563);
 }
+
+/* Confirmation Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-modal);
+    backdrop-filter: blur(4px);
+}
+
+.modal-container {
+    background: var(--white);
+    padding: var(--spacing-xl);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    max-width: 500px;
+    width: 90%;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--medium-gray);
+    padding-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.modal-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary-blue);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.modal-body ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.modal-body li {
+    padding: var(--spacing-sm) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    font-weight: 500;
+    color: var(--text-dark);
+}
+
+.modal-body li i {
+    color: var(--accent-blue);
+    width: 20px;
+    text-align: center;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-xl);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--medium-gray);
+}
 </style>
 
 <div class="exam-wrapper">
@@ -2292,6 +2367,65 @@
         <button type="submit" class="start-exam-btn"><i class="fas fa-play"></i> Start Exam</button>
       </form>
     </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    const form = document.getElementById('examStartForm');
+                    const courseSelect = document.getElementById('courseSelect');
+                    const modal = document.getElementById('confirmationModal');
+                    const modalCourseName = document.getElementById('modalCourseName');
+                    const modalDuration = document.getElementById('modalDuration');
+                    const beginButton = document.getElementById('beginButton');
+                    const cancelButton = document.getElementById('cancelButton');
+
+                    form.addEventListener('submit', function (e) {
+                        e.preventDefault(); // Stop form submission
+
+                        if (!courseSelect.value) {
+                            alert('Please select a course.');
+                            return;
+                        }
+
+                        const selectedOption = courseSelect.options[courseSelect.selectedIndex];
+                        const courseName = selectedOption.text.split(' (')[0];
+                        const duration = selectedOption.getAttribute('data-duration') || '60';
+
+                        // Populate and show the modal
+                        modalCourseName.textContent = courseName;
+                        modalDuration.textContent = duration;
+                        modal.style.display = 'flex';
+                    });
+
+                    beginButton.addEventListener('click', function () {
+                        sessionStorage.clear(); // Clear storage and submit
+                        form.submit();
+                    });
+
+                    cancelButton.addEventListener('click', function () {
+                        modal.style.display = 'none'; // Hide modal
+                    });
+                });
+            </script>
   <% } %>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmationModal" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Exam Start</h3>
+      </div>
+      <div class="modal-body">
+        <p>Are you ready to start the "<strong id="modalCourseName"></strong>" exam?</p>
+        <ul>
+          <li><i class="fas fa-clock"></i><strong>Exam Duration:</strong> <span id="modalDuration"></span> minutes</li>
+          <li><i class="fas fa-hourglass-start"></i>The timer will start immediately.</li>
+          <li><i class="fas fa-lock"></i>You cannot leave the page until you submit.</li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelButton" class="btn-secondary">Cancel</button>
+        <button id="beginButton" class="btn-primary">Begin Exam</button>
+      </div>
+    </div>
+  </div>
   </main>
 </div>
