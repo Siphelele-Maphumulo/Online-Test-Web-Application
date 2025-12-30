@@ -240,7 +240,7 @@ try {
         String uidParam  = nz(request.getParameter("uid"), "");
         if ("del".equalsIgnoreCase(operation) && !uidParam.isEmpty()) {
             int userId = Integer.parseInt(uidParam);
-            pDAO.delStudent(userId);
+            pDAO.deleteUserCascade(userId);
             session.setAttribute("message","Account deleted successfully");
         }
         response.sendRedirect("adm-page.jsp?pgprt=1");
@@ -253,7 +253,7 @@ try {
         String uidParam  = nz(request.getParameter("uid"), "");
         if ("del".equalsIgnoreCase(operation) && !uidParam.isEmpty()) {
             int userId = Integer.parseInt(uidParam);
-            pDAO.deleteLecturer(userId);
+            pDAO.deleteUserCascade(userId);
             session.setAttribute("message","Lecturer deleted successfully");
         }
         response.sendRedirect("adm-page.jsp?pgprt=6");

@@ -1155,6 +1155,72 @@ public void delQuestion(int qId) {
     }
 }
 
+public void deleteUserCascade(int userId) {
+    try {
+        conn.setAutoCommit(false);
+
+        String userType = getUserType(String.valueOf(userId));
+
+        if ("student".equalsIgnoreCase(userType)) {
+            // Step 1: Get all exam_ids for the student
+            ArrayList<Integer> examIds = new ArrayList<>();
+            String selectExamsSql = "SELECT exam_id FROM exams WHERE std_id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(selectExamsSql)) {
+                pstmt.setInt(1, userId);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    while (rs.next()) {
+                        examIds.add(rs.getInt("exam_id"));
+                    }
+                }
+            }
+
+            // Step 2: Delete from answers table for each exam_id
+            if (!examIds.isEmpty()) {
+                String deleteAnswersSql = "DELETE FROM answers WHERE exam_id = ?";
+                try (PreparedStatement pstmt = conn.prepareStatement(deleteAnswersSql)) {
+                    for (int examId : examIds) {
+                        pstmt.setInt(1, examId);
+                        pstmt.executeUpdate();
+                    }
+                }
+            }
+
+            // Step 3: Delete from exams table
+            String deleteExamsSql = "DELETE FROM exams WHERE std_id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(deleteExamsSql)) {
+                pstmt.setInt(1, userId);
+                pstmt.executeUpdate();
+            }
+
+            // Step 4: Delete from students table
+            delStudent(userId);
+
+        } else if ("lecture".equalsIgnoreCase(userType)) {
+            // For a lecturer, we just remove their association from the 'lectures' table.
+            // We do NOT delete the course or questions as they might be shared with other lecturers.
+            delLecture(userId);
+        }
+
+        // Finally, delete from the main users table for all user types
+        deleteUser(userId);
+
+        conn.commit();
+    } catch (SQLException ex) {
+        try {
+            conn.rollback();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+    } finally {
+        try {
+            conn.setAutoCommit(true);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
 public void deleteQuestion(int questionId) {
     String sql = "DELETE FROM questions WHERE question_id = ?";
     
