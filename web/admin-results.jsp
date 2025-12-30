@@ -343,6 +343,27 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         border-color: var(--dark-gray);
     }
     
+    .btn-success {
+    background: linear-gradient(90deg, var(--success), #10b981);
+    color: var(--white);
+    }
+    
+    .btn-success:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+    }
+    
+    .btn-danger {
+        background: linear-gradient(90deg, var(--error), #ef4444);
+        color: var(--white);
+    }
+    
+    .btn-danger:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+    }
+    
+    
     .quick-filter-btn {
         background: var(--light-gray);
         border: 1px solid var(--medium-gray);
@@ -811,6 +832,16 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                                     <a class="btn btn-primary" href="adm-page.jsp?pgprt=5&eid=<%= e.getExamId() %>" style="font-size: 13px; padding: 8px 16px;">
                                         <i class="fas fa-eye"></i> Details
                                     </a>
+                                    <button class="btn btn-secondary edit-btn" style="font-size: 13px; padding: 8px 16px;">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <a href="controller.jsp?page=results&operation=del&eid=<%= e.getExamId() %>"
+                                       class="btn btn-danger" data-item-name="Exam ID: <%= e.getExamId() %>">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </a>
+                                    <button class="btn btn-success save-btn" style="display:none; font-size: 13px; padding: 8px 16px;">
+                                        <i class="fas fa-save"></i> Save
+                                    </button>
                                 </td>
                             </tr>
                             <% 
@@ -1128,4 +1159,72 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         // Reorder rows in DOM
         rows.forEach(row => tbody.appendChild(row));
     }
+
+    // Inline editing logic
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.edit-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const row = this.closest('tr');
+                const marksCell = row.cells[6];
+                const statusCell = row.cells[7];
+
+                const marksText = marksCell.textContent.trim();
+                const [obtMarks, totalMarks] = marksText.split(' / ').map(Number);
+
+                marksCell.innerHTML = `<input type="number" class="form-control" value="${obtMarks}" style="width: 60px;"> / ${totalMarks}`;
+                row.setAttribute('data-total-marks', totalMarks);
+
+                this.style.display = 'none';
+                row.querySelector('.save-btn').style.display = 'inline-flex';
+            });
+        });
+
+        document.querySelectorAll('.save-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const row = this.closest('tr');
+                const marksCell = row.cells[6];
+                const obtMarksInput = marksCell.querySelector('input');
+                const obtMarks = obtMarksInput.value;
+                const totalMarks = row.getAttribute('data-total-marks');
+                const examId = row.querySelector('.btn-primary').href.split('eid=')[1];
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'controller.jsp';
+
+                const pageInput = document.createElement('input');
+                pageInput.type = 'hidden';
+                pageInput.name = 'page';
+                pageInput.value = 'results';
+                form.appendChild(pageInput);
+
+                const operationInput = document.createElement('input');
+                operationInput.type = 'hidden';
+                operationInput.name = 'operation';
+                operationInput.value = 'edit';
+                form.appendChild(operationInput);
+
+                const examIdInput = document.createElement('input');
+                examIdInput.type = 'hidden';
+                examIdInput.name = 'eid';
+                examIdInput.value = examId;
+                form.appendChild(examIdInput);
+
+                const obtMarksField = document.createElement('input');
+                obtMarksField.type = 'hidden';
+                obtMarksField.name = 'obtMarks';
+                obtMarksField.value = obtMarks;
+                form.appendChild(obtMarksField);
+
+                const totalMarksField = document.createElement('input');
+                totalMarksField.type = 'hidden';
+                totalMarksField.name = 'totalMarks';
+                totalMarksField.value = totalMarks;
+                form.appendChild(totalMarksField);
+
+                document.body.appendChild(form);
+                form.submit();
+            });
+        });
+    });
 </script>

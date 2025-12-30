@@ -3,6 +3,22 @@
 <%@page import="myPackage.classes.Exams"%>
 <%
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+    
+    // CHECK IF USER IS TRYING TO ACCESS EXAM WITHOUT ACTIVE SESSION
+    String showExamForm = "true"; // Default to showing exam selection form
+    
+    // Only show active exam if BOTH conditions are met:
+    // 1. session has examStarted = "1"
+    // 2. URL has coursename parameter
+    if ("1".equals(String.valueOf(session.getAttribute("examStarted"))) && 
+        request.getParameter("coursename") != null && 
+        !request.getParameter("coursename").isEmpty()) {
+        showExamForm = "false"; // Show active exam
+    } else {
+        // Clear any stale exam session data
+        session.removeAttribute("examStarted");
+        session.removeAttribute("examId");
+    }
 %>
 <!-- Font Awesome for Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -140,29 +156,29 @@
         .sidebar::-webkit-scrollbar {
             width: 6px;
         }
-        
+
         .sidebar::-webkit-scrollbar-track {
             background: transparent;
         }
-        
+
         .sidebar::-webkit-scrollbar-thumb {
             background-color: rgba(255, 255, 255, 0.3);
             border-radius: var(--radius-full);
         }
-        
+
         .sidebar-header {
-            padding: var(--spacing-2xl) var(--spacing-lg) var(--spacing-xl);
+            padding-top: 35%;
             text-align: center;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
         }
+
         
         .mut-logo {
-            max-height: 120px;
+            max-height: 150px;
             width: auto;
             filter: brightness(0) invert(1);
-            transition: transform var(--transition-normal);
         }
         
         .mut-logo:hover {
@@ -170,12 +186,9 @@
         }
         
         .sidebar-nav {
-            padding: var(--spacing-xl) var(--spacing-sm);
-        }
-        
-        .sidebar-nav {
             padding: var(--spacing-lg) 0;
         }
+        
         
         .nav-item {
             display: flex;
@@ -378,7 +391,7 @@
         .fixed-bottom-panel {
             position: fixed;
             bottom: 0;
-            left: 0;
+            left: 20%;
             right: 0;
             background: var(--white);
             border-top: 1px solid var(--medium-gray);
@@ -1045,12 +1058,13 @@
             }
             
             .fixed-bottom-panel {
-                left: 0;
+                padding-right: 20%;
             }
             
             .timer-progress-wrapper {
                 flex-direction: column;
                 gap: var(--spacing-md);
+                
             }
             
             .progress-section {
@@ -1819,7 +1833,7 @@
 
 .progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
+    background: var(--success);
     border-radius: var(--radius-sm);
     transition: width 0.3s ease;
 }
@@ -1864,6 +1878,12 @@
     gap: 8px;
 }
 
+/* Make the time/icon appear first */
+.timer-badge span.time {
+    order: -1; /* Moves this element to the front */
+}
+
+/* Variants */
 .timer-badge.warning {
     background: linear-gradient(135deg, #f59e0b, #d97706);
 }
@@ -1875,6 +1895,7 @@
 .timer-badge.expired {
     background: linear-gradient(135deg, #6b7280, #4b5563);
 }
+
 </style>
 
 <div class="exam-wrapper">
@@ -1894,71 +1915,103 @@
 
   <!--  MAIN CONTENT  -->
   <main class="content-area">
-  <% if ("1".equals(String.valueOf(session.getAttribute("examStarted")))) { %>
+  
+  <% if ("false".equals(showExamForm)) { 
+       // SHOW ACTIVE EXAM
+       String courseName = request.getParameter("coursename");
+       ArrayList<Questions> questionsList = pDAO.getQuestions(courseName, 20);
+       int totalQ = questionsList.size();
+  %>
     <!--  EXAM ACTIVE  -->
     <div class="page-header">
-      <div class="page-title"><i class="fas fa-file-alt"></i> <%= request.getParameter("coursename")!=null?request.getParameter("coursename"):"Selected Course" %> Exam</div>
+      <div class="page-title"><i class="fas fa-file-alt"></i> <%= courseName %> Exam</div>
     </div>
 
-    <%
-      ArrayList<Questions> questionsList = pDAO.getQuestions(request.getParameter("coursename"),20);
-      int totalQ = questionsList.size();
-    %>
     <form id="myform" action="controller.jsp" method="post">
       <input type="hidden" name="page" value="exams">
       <input type="hidden" name="operation" value="submitted">
       <input type="hidden" name="size" value="<%= totalQ %>">
-      <input type="hidden" name="totalmarks" value="<%= pDAO.getTotalMarksByName(request.getParameter("coursename")) %>">
+      <input type="hidden" name="totalmarks" value="<%= pDAO.getTotalMarksByName(courseName) %>">
+      <input type="hidden" name="coursename" value="<%= courseName %>">
 
       <div class="questions-container">
-      <% for (int i=0;i<totalQ;i++){
+      <% for (int i=0; i<totalQ; i++){
            Questions q = questionsList.get(i);
-           boolean isMultiTwo=false;
+           boolean isMultiTwo = false;
            try{
-             String qt=q.getQuestion().toLowerCase();
-             isMultiTwo=qt.contains("select two")||qt.contains("choose two")||qt.contains("pick two")||qt.contains("multiple answers")||qt.contains("two options");
-           }catch(Exception e){isMultiTwo=false;}
+             String qt = q.getQuestion().toLowerCase();
+             isMultiTwo = qt.contains("select two") || qt.contains("choose two") || 
+                         qt.contains("pick two") || qt.contains("multiple answers") || 
+                         qt.contains("two options");
+           } catch(Exception e) { isMultiTwo = false; }
 
-           String fullQuestion=q.getQuestion(),questionPart="",codePart="";
+           String fullQuestion = q.getQuestion(), questionPart = "", codePart = "";
            if(fullQuestion.contains("```")){
-               String[] parts=fullQuestion.split("```");
-               if(parts.length>=2){questionPart=parts[0].trim();codePart=parts[1].trim();}
-               else{questionPart=fullQuestion.replace("```","").trim();}
-           }else{
-               boolean isCodeQuestion=fullQuestion.contains("def ")||fullQuestion.contains("function ")||fullQuestion.contains("public ")||fullQuestion.contains("class ")||
-                                      fullQuestion.contains("print(")||fullQuestion.contains("console.")||fullQuestion.contains("<?php")||fullQuestion.contains("import ")||
-                                      fullQuestion.contains("int ")||fullQuestion.contains("String ")||fullQuestion.contains("printf(")||fullQuestion.contains("cout ");
-               if(isCodeQuestion){codePart=fullQuestion;questionPart="What is the output/result of this code?";}
-               else{questionPart=fullQuestion;}
+               String[] parts = fullQuestion.split("```");
+               if(parts.length >= 2) {
+                   questionPart = parts[0].trim();
+                   codePart = parts[1].trim();
+               } else {
+                   questionPart = fullQuestion.replace("```", "").trim();
+               }
+           } else {
+               boolean isCodeQuestion = fullQuestion.contains("def ") || fullQuestion.contains("function ") || 
+                                       fullQuestion.contains("public ") || fullQuestion.contains("class ") ||
+                                       fullQuestion.contains("print(") || fullQuestion.contains("console.") || 
+                                       fullQuestion.contains("<?php") || fullQuestion.contains("import ") ||
+                                       fullQuestion.contains("int ") || fullQuestion.contains("String ") || 
+                                       fullQuestion.contains("printf(") || fullQuestion.contains("cout ");
+               if(isCodeQuestion) {
+                   codePart = fullQuestion;
+                   questionPart = "What is the output/result of this code?";
+               } else {
+                   questionPart = fullQuestion;
+               }
            }
-           java.util.List<String> opts=new java.util.ArrayList<>();
-           if(q.getOpt1()!=null&&!q.getOpt1().trim().isEmpty()) opts.add(q.getOpt1());
-           if(q.getOpt2()!=null&&!q.getOpt2().trim().isEmpty()) opts.add(q.getOpt2());
-           if(q.getOpt3()!=null&&!q.getOpt3().trim().isEmpty()) opts.add(q.getOpt3());
-           if(q.getOpt4()!=null&&!q.getOpt4().trim().isEmpty()) opts.add(q.getOpt4());
+           
+           java.util.List<String> opts = new java.util.ArrayList<>();
+           if(q.getOpt1() != null && !q.getOpt1().trim().isEmpty()) opts.add(q.getOpt1());
+           if(q.getOpt2() != null && !q.getOpt2().trim().isEmpty()) opts.add(q.getOpt2());
+           if(q.getOpt3() != null && !q.getOpt3().trim().isEmpty()) opts.add(q.getOpt3());
+           if(q.getOpt4() != null && !q.getOpt4().trim().isEmpty()) opts.add(q.getOpt4());
       %>
         <div class="question-card" data-qindex="<%= i %>">
           <div class="question-header">
             <div class="question-label"><%= i+1 %></div>
             <div class="question-content">
-              <% if(!questionPart.isEmpty()&&!questionPart.equals("What is the output/result of this code?")){ %><p class="question-text"><%= questionPart %></p><% } %>
+              <% if(!questionPart.isEmpty() && !questionPart.equals("What is the output/result of this code?")){ %>
+                <p class="question-text"><%= questionPart %></p>
+              <% } %>
               <% if(!codePart.isEmpty()){ %>
                 <div class="code-question-indicator"><i class="fas fa-code"></i><strong>Code Analysis Question</strong></div>
-                <div class="code-snippet"><div class="code-header"><i class="fas fa-code"></i><span>Code to Analyze</span></div><pre><%= codePart %></pre></div>
+                <div class="code-snippet">
+                  <div class="code-header"><i class="fas fa-code"></i><span>Code to Analyze</span></div>
+                  <pre><%= codePart %></pre>
+                </div>
               <% } %>
             </div>
           </div>
           <div class="answers" data-max-select="<%= isMultiTwo?"2":"1" %>">
-            <% if(isMultiTwo){ %><div class="multi-select-note"><i class="fas fa-check-double"></i><strong>Choose up to 2 answers</strong></div><% } %>
-            <% for(int oi=0;oi<opts.size();oi++){
-                 String optVal=opts.get(oi),inputId="q"+i+"o"+(oi+1);
+            <% if(isMultiTwo){ %>
+              <div class="multi-select-note"><i class="fas fa-check-double"></i><strong>Choose up to 2 answers</strong></div>
+            <% } %>
+            <% for(int oi=0; oi<opts.size(); oi++){
+                 String optVal = opts.get(oi);
+                 String inputId = "q"+i+"o"+(oi+1);
             %>
               <div class="form-check">
-                <input class="form-check-input answer-input <%= isMultiTwo?"multi":"single" %>" type="<%= isMultiTwo?"checkbox":"radio" %>" id="<%= inputId %>" name="<%= isMultiTwo?("ans"+i+"_"+oi):("ans"+i) %>" value="<%= optVal %>" data-qindex="<%= i %>">
+                <input class="form-check-input answer-input <%= isMultiTwo?"multi":"single" %>" 
+                       type="<%= isMultiTwo?"checkbox":"radio" %>" 
+                       id="<%= inputId %>" 
+                       name="<%= isMultiTwo ? ("ans"+i+"_"+oi) : ("ans"+i) %>" 
+                       value="<%= optVal %>" 
+                       data-qindex="<%= i %>">
                 <label class="form-check-label" for="<%= inputId %>"><%= optVal %></label>
               </div>
             <% } %>
-            <% if(isMultiTwo){ %><input type="hidden" id="ans<%= i %>-hidden" name="ans<%= i %>" value=""><% } %>
+            <% if(isMultiTwo){ %>
+              <input type="hidden" id="ans<%= i %>-hidden" name="ans<%= i %>" value="">
+            <% } %>
           </div>
           <input type="hidden" name="question<%= i %>" value="<%= q.getQuestion() %>">
           <input type="hidden" name="qid<%= i %>" value="<%= q.getQuestionId() %>">
@@ -2013,7 +2066,10 @@
           <div class="submit-content">
             <div class="warning-box">
               <div class="warning-icon"><i class="fas fa-exclamation-triangle"></i></div>
-              <div class="warning-text"><strong>Final Review Required</strong><p>Unanswered questions will be marked as incorrect. Please review all answers before submission.</p></div>
+              <div class="warning-text">
+                <strong>Final Review Required</strong>
+                <p>Unanswered questions will be marked as incorrect. Please review all answers before submission.</p>
+              </div>
             </div>
             <div class="submit-stats">
               <div class="stat-item"><span class="stat-number" id="submitAnswered">0</span><span class="stat-label">Answered</span></div>
@@ -2050,143 +2106,378 @@
 
     <!--  SCRIPT BLOCK  -->
     <script>
-    /* --- TIMER --- */
-    (function(){
-      document.addEventListener('DOMContentLoaded',function(){
-        var timerEl=document.getElementById('remainingTime');
-        if(!timerEl){console.warn('Timer element not found, timer disabled');return;}
-        var examDuration=<%= pDAO.getExamDuration(request.getParameter("coursename")) %>; // minutes
-        var timeInSeconds=examDuration>0?examDuration*60:120*60; // fallback 120 min
-        var time=timeInSeconds;
-        var formEl=document.getElementById('myform');
-        function fmt(n){return String(n).padStart(2,'0');}
-        timerEl.textContent=fmt(Math.floor(time/60))+':'+fmt(time%60);
-        var tick=setInterval(function(){
-          time--;
-          if(time<=0){clearInterval(tick);timerEl.textContent="00:00";timerEl.classList.add('expired');
-            document.querySelectorAll('.answers[data-max-select="2"]').forEach(function(box){
-              var qindex=box.closest('.question-card').getAttribute('data-qindex');
-              if(qindex)updateHiddenForMulti(qindex);
-            });
-            window.onbeforeunload=null;if(formEl)formEl.submit();return;
-          }
-          timerEl.textContent=fmt(Math.floor(time/60))+':'+fmt(time%60);
-          timerEl.classList.remove('warning','critical');
-          if(time<300)timerEl.classList.add('warning');
-          if(time<60)timerEl.classList.add('critical');
-        },1000);
-      });
-    })();
+    /* --- GLOBAL VARIABLES --- */
+    var examActive = true;
+    var warningGiven = false;
+    var dirty = false;
+    var timerInterval = null;
+    var examDuration = <%= pDAO.getExamDuration(courseName) %>;
+    var totalQuestions = <%= totalQ %>;
+    var currentCourseName = '<%= courseName %>';
 
     /* --- MULTI-SELECT HIDDEN FIELD --- */
     function updateHiddenForMulti(qindex){
-      var box=document.querySelector('.question-card[data-qindex="'+qindex+'"] .answers');
-      if(!box)return;
-      var selectedValues=[];
-      box.querySelectorAll('input.multi:checked').forEach(function(ch){selectedValues.push(ch.value);});
-      var hidden=document.getElementById('ans'+qindex+'-hidden');
-      if(hidden){hidden.value=selectedValues.join('|');}
+        var box = document.querySelector('.question-card[data-qindex="'+qindex+'"] .answers');
+        if(!box) return;
+        var selectedValues = [];
+        box.querySelectorAll('input.multi:checked').forEach(function(ch){
+            selectedValues.push(ch.value);
+        });
+        var hidden = document.getElementById('ans'+qindex+'-hidden');
+        if(hidden){
+            hidden.value = selectedValues.join('|');
+        }
     }
 
     /* --- ANSWER SELECTION & PROGRESS --- */
-    var dirty=false;
-    document.addEventListener('change',function(e){
-      if(!e.target.classList||!e.target.classList.contains('answer-input'))return;
-      var wrapper=e.target.closest('.answers');
-      if(!wrapper)return;
-      var maxSel=parseInt(wrapper.getAttribute('data-max-select')||'1',10);
-      if(e.target.classList.contains('multi')){
-        var checkedBoxes=wrapper.querySelectorAll('input.multi:checked');
-        if(checkedBoxes.length>maxSel){e.target.checked=false;alert('You can only select up to '+maxSel+' options for this question.');return;}
-        var qindex=e.target.getAttribute('data-qindex');
-        updateHiddenForMulti(qindex);
-      }
-      document.querySelectorAll('.form-check').forEach(function(c){c.classList.remove('selected');});
-      document.querySelectorAll('.answer-input:checked').forEach(function(inp){var fc=inp.closest('.form-check');if(fc)fc.classList.add('selected');});
-      updateProgress();dirty=true;
+    document.addEventListener('change', function(e){
+        if(!e.target.classList || !e.target.classList.contains('answer-input')) return;
+        
+        var wrapper = e.target.closest('.answers');
+        if(!wrapper) return;
+        
+        var maxSel = parseInt(wrapper.getAttribute('data-max-select') || '1', 10);
+        
+        if(e.target.classList.contains('multi')){
+            var checkedBoxes = wrapper.querySelectorAll('input.multi:checked');
+            if(checkedBoxes.length > maxSel){
+                e.target.checked = false;
+                alert('You can only select up to ' + maxSel + ' options for this question.');
+                return;
+            }
+            var qindex = e.target.getAttribute('data-qindex');
+            updateHiddenForMulti(qindex);
+        }
+        
+        document.querySelectorAll('.form-check').forEach(function(c){
+            c.classList.remove('selected');
+        });
+        document.querySelectorAll('.answer-input:checked').forEach(function(inp){
+            var fc = inp.closest('.form-check');
+            if(fc) fc.classList.add('selected');
+        });
+        
+        updateProgress();
+        dirty = true;
     });
 
     function updateProgress(){
-      var cards=document.querySelectorAll('.question-card');
-      var answered=0;
-      cards.forEach(function(card){
-        var box=card.querySelector('.answers');
-        if(!box)return;
-        var maxSel=parseInt(box.getAttribute('data-max-select')||'1',10);
-        if(maxSel===1){if(box.querySelector('input.single:checked'))answered++;}
-        else{if(box.querySelectorAll('input.multi:checked').length>=1)answered++;}
-      });
-      var total=cards.length;
-      var pct=total?Math.round((answered/total)*100):0;
-      document.getElementById('progressBar').style.width=pct+'%';
-      document.getElementById('progressLabel').textContent=pct+'%';
-      document.getElementById('submitAnswered').textContent=answered;
-      document.getElementById('submitUnanswered').textContent=total-answered;
+        var cards = document.querySelectorAll('.question-card');
+        var answered = 0;
+        
+        cards.forEach(function(card){
+            var box = card.querySelector('.answers');
+            if(!box) return;
+            
+            var maxSel = parseInt(box.getAttribute('data-max-select') || '1', 10);
+            if(maxSel === 1){
+                if(box.querySelector('input.single:checked')) answered++;
+            } else {
+                if(box.querySelectorAll('input.multi:checked').length >= 1) answered++;
+            }
+        });
+        
+        var total = cards.length;
+        var pct = total ? Math.round((answered / total) * 100) : 0;
+        
+        // Update progress bars
+        var progressBar = document.getElementById('progressBar');
+        var modalProgressBar = document.getElementById('modalProgressBar');
+        if(progressBar) progressBar.style.width = pct + '%';
+        if(modalProgressBar) modalProgressBar.style.width = pct + '%';
+        
+        // Update labels
+        var progressLabel = document.getElementById('progressLabel');
+        var progressPercent = document.querySelector('.progress-percent');
+        if(progressLabel) progressLabel.textContent = pct + '%';
+        if(progressPercent) progressPercent.textContent = pct + '%';
+        
+        // Update counters
+        var submitAnswered = document.getElementById('submitAnswered');
+        var submitUnanswered = document.getElementById('submitUnanswered');
+        var floatCounter = document.getElementById('floatCounter');
+        var modalAnswered = document.getElementById('modalAnswered');
+        var modalUnanswered = document.getElementById('modalUnanswered');
+        var modalProgressText = document.getElementById('modalProgressText');
+        
+        if(submitAnswered) submitAnswered.textContent = answered;
+        if(submitUnanswered) submitUnanswered.textContent = total - answered;
+        if(floatCounter) floatCounter.textContent = answered + '/' + total;
+        if(modalAnswered) modalAnswered.textContent = answered;
+        if(modalUnanswered) modalUnanswered.textContent = total - answered;
+        if(modalProgressText) modalProgressText.textContent = answered + ' / ' + total;
+        
+        // Update circular progress
+        var circumference = 2 * Math.PI * 34;
+        var offset = circumference - (pct / 100) * circumference;
+        var progressRing = document.querySelector('.progress-ring-progress');
+        if(progressRing) progressRing.style.strokeDashoffset = offset;
     }
-    updateProgress();
 
-    /* --- LEAVE PROTECTION --- */
-    window.onbeforeunload=function(){if(dirty)return"You have unsaved answers. Are you sure you want to leave?";};
+    /* --- TIMER MANAGEMENT --- */
+    function startTimer() {
+        var timerEl = document.getElementById('remainingTime');
+        if(!timerEl) {
+            console.warn('Timer element not found, timer disabled');
+            return;
+        }
+        
+        // Calculate initial time
+        var timeInSeconds = examDuration > 0 ? examDuration * 60 : 60 * 60;
+        
+        // Check if we have a saved start time
+        var storageKey = 'examStartTime_' + currentCourseName;
+        var startTime = sessionStorage.getItem(storageKey);
+        var elapsedSeconds = 0;
+        
+        if(startTime) {
+            // Resume from saved time
+            elapsedSeconds = Math.floor((Date.now() - parseInt(startTime)) / 1000);
+            timeInSeconds = Math.max(0, timeInSeconds - elapsedSeconds);
+        } else {
+            // Start new timer
+            sessionStorage.setItem(storageKey, Date.now().toString());
+        }
+        
+        var time = timeInSeconds;
+        
+        function fmt(n) {
+            return String(n).padStart(2, '0');
+        }
+        
+        function updateTimerDisplay() {
+            var minutes = Math.floor(time / 60);
+            var seconds = time % 60;
+            timerEl.textContent = fmt(minutes) + ':' + fmt(seconds);
+            
+            // Color coding
+            timerEl.classList.remove('warning', 'critical', 'expired');
+            if(time <= 300) timerEl.classList.add('warning'); // 5 minutes
+            if(time <= 60) timerEl.classList.add('critical'); // 1 minute
+        }
+        
+        updateTimerDisplay();
+        
+        // Clear any existing interval
+        if(timerInterval) clearInterval(timerInterval);
+        
+        // Start new interval
+        timerInterval = setInterval(function() {
+            time--;
+            
+            if(time <= 0) {
+                clearInterval(timerInterval);
+                timerEl.textContent = "00:00";
+                timerEl.classList.add('expired');
+                autoSubmitExam();
+                return;
+            }
+            
+            updateTimerDisplay();
+        }, 1000);
+    }
 
-    /* --- SUBMIT BUTTON --- */
-    document.getElementById('submitBtn').addEventListener('click',function(){
-      document.querySelectorAll('.answers[data-max-select="2"]').forEach(function(box){
-        var qindex=box.closest('.question-card').getAttribute('data-qindex');
-        updateHiddenForMulti(qindex);
-      });
-      var totalQuestions=<%= totalQ %>;
-      var answeredQuestions=0;
-      document.querySelectorAll('.question-card').forEach(function(card){
-        var box=card.querySelector('.answers');
-        if(!box)return;
-        var maxSel=parseInt(box.getAttribute('data-max-select')||'1',10);
-        if(maxSel===1){if(box.querySelector('input.single:checked'))answeredQuestions++;}
-        else{if(box.querySelectorAll('input.multi:checked').length>=1)answeredQuestions++;}
-      });
-      if(answeredQuestions<totalQuestions){
-        var unanswered=totalQuestions-answeredQuestions;
-        if(!confirm("You have "+unanswered+" unanswered question"+(unanswered>1?"s":"")+". Submit anyway?"))return;
-      }
-      if(confirm("Are you sure you want to submit your exam? This action cannot be undone.")){
-        window.onbeforeunload=null;
-        var btn=this;
-        btn.disabled=true;btn.classList.add('loading');
-        setTimeout(function(){document.getElementById('myform').submit();},500);
-      }
-    });
+    function autoSubmitExam() {
+        // Save all answers before submitting
+        document.querySelectorAll('.answers[data-max-select="2"]').forEach(function(box){
+            var qindex = box.closest('.question-card').getAttribute('data-qindex');
+            if(qindex) updateHiddenForMulti(qindex);
+        });
+        
+        // Alert user
+        alert('Time is up! Your exam will be submitted automatically.');
+        
+        // Clean up and submit
+        cleanupExam();
+        setTimeout(function() {
+            document.getElementById('myform').submit();
+        }, 1000);
+    }
+
+    /* --- EXAM SUBMISSION --- */
+    function submitExam() {
+        // Save all multi-select answers
+        document.querySelectorAll('.answers[data-max-select="2"]').forEach(function(box){
+            var qindex = box.closest('.question-card').getAttribute('data-qindex');
+            updateHiddenForMulti(qindex);
+        });
+        
+        var answeredQuestions = 0;
+        
+        document.querySelectorAll('.question-card').forEach(function(card){
+            var box = card.querySelector('.answers');
+            if(!box) return;
+            
+            var maxSel = parseInt(box.getAttribute('data-max-select') || '1', 10);
+            if(maxSel === 1) {
+                if(box.querySelector('input.single:checked')) answeredQuestions++;
+            } else {
+                if(box.querySelectorAll('input.multi:checked').length >= 1) answeredQuestions++;
+            }
+        });
+        
+        // Check for unanswered questions
+        if(answeredQuestions < totalQuestions) {
+            var unanswered = totalQuestions - answeredQuestions;
+            if(!confirm("You have " + unanswered + " unanswered question" + 
+                       (unanswered > 1 ? "s" : "") + ". Submit anyway?")) {
+                return;
+            }
+        }
+        
+        // Final confirmation
+        if(confirm("Are you sure you want to submit your exam? This action cannot be undone.")) {
+            cleanupExam();
+            
+            // Show loading state
+            var btn = document.getElementById('submitBtn');
+            if(btn) {
+                btn.disabled = true;
+                btn.classList.add('loading');
+                var btnText = btn.querySelector('.btn-text');
+                var btnLoading = btn.querySelector('.btn-loading');
+                if(btnText) btnText.style.display = 'none';
+                if(btnLoading) btnLoading.style.display = 'inline';
+            }
+            
+            // Submit form
+            setTimeout(function() {
+                document.getElementById('myform').submit();
+            }, 500);
+        }
+    }
+
+    /* --- CLEANUP FUNCTION --- */
+    function cleanupExam() {
+        examActive = false;
+        dirty = false;
+        
+        // Clear session storage
+        var storageKey = 'examStartTime_' + currentCourseName;
+        sessionStorage.removeItem(storageKey);
+        
+        // Clear all exam session storage
+        Object.keys(sessionStorage).forEach(function(key) {
+            if(key.startsWith('examStartTime_')) {
+                sessionStorage.removeItem(key);
+            }
+        });
+        
+        // Clear timer interval
+        if(timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+        
+        // Remove navigation protection
+        window.onbeforeunload = null;
+    }
+
+    /* --- NAVIGATION PROTECTION --- */
+    function setupNavigationProtection() {
+        // Prevent leaving the page
+        window.onbeforeunload = function(e) {
+            if(examActive && dirty && !warningGiven) {
+                var message = 'You have an active exam in progress. If you leave, your answers may not be saved.';
+                e.returnValue = message;
+                return message;
+            }
+        };
+        
+        // Intercept navigation clicks
+        document.addEventListener('click', function(e) {
+            if(!examActive) return;
+            
+            var link = e.target.closest('a');
+            if(link && link.href) {
+                // Check if it's navigation away from exam page
+                var currentUrl = window.location.href;
+                var targetUrl = link.href;
+                
+                // Allow navigation within exam pages
+                if(!targetUrl.includes('std-page.jsp?pgprt=1') && 
+                   !targetUrl.includes('controller.jsp?page=exams')) {
+                    
+                    e.preventDefault();
+                    
+                    // Show warning modal
+                    showNavigationWarning(function(proceed) {
+                        if(proceed) {
+                            warningGiven = true;
+                            cleanupExam();
+                            window.location.href = link.href;
+                        }
+                    });
+                }
+            }
+        });
+    }
 
     /* --- FLOATING PROGRESS BUTTON & MODAL --- */
-    document.addEventListener('DOMContentLoaded',function(){
-      var floatBtn=document.getElementById('progressFloatBtn');
-      var modal=document.getElementById('progressModal');
-      var closeModal=document.querySelectorAll('.close-modal');
-      var modalSubmitBtn=document.getElementById('modalSubmitBtn');
-      var mainSubmitBtn=document.getElementById('submitBtn');
-      function updateFloatingCounter(){
-        var total=<%= totalQ %>;
-        var answered=document.querySelectorAll('.answer-input:checked').length;
-        document.getElementById('floatCounter').textContent=answered+'/'+total;
-        document.getElementById('modalAnswered').textContent=answered;
-        document.getElementById('modalUnanswered').textContent=total-answered;
-        document.getElementById('modalProgressText').textContent=answered+' / '+total;
-        var percentage=total>0?Math.round((answered/total)*100):0;
-        document.getElementById('modalProgressBar').style.width=percentage+'%';
-        document.querySelector('.progress-percent').textContent=percentage+'%';
-        var circumference=2*Math.PI*34;
-        var offset=circumference-(percentage/100)*circumference;
-        document.querySelector('.progress-ring-progress').style.strokeDashoffset=offset;
-      }
-      floatBtn.addEventListener('click',function(){modal.classList.add('active');updateFloatingCounter();});
-      closeModal.forEach(function(btn){btn.addEventListener('click',function(){modal.classList.remove('active');});});
-      modal.addEventListener('click',function(e){if(e.target===modal)modal.classList.remove('active');});
-      modalSubmitBtn.addEventListener('click',function(){modal.classList.remove('active');mainSubmitBtn.click();});
-      document.addEventListener('change',updateFloatingCounter);
-      updateFloatingCounter();
+    function setupProgressModal() {
+        var floatBtn = document.getElementById('progressFloatBtn');
+        var modal = document.getElementById('progressModal');
+        var closeModal = document.querySelectorAll('.close-modal');
+        var modalSubmitBtn = document.getElementById('modalSubmitBtn');
+        
+        if(floatBtn && modal) {
+            floatBtn.addEventListener('click', function() {
+                modal.classList.add('active');
+                updateProgress();
+            });
+            
+            closeModal.forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    modal.classList.remove('active');
+                });
+            });
+            
+            modal.addEventListener('click', function(e) {
+                if(e.target === modal) {
+                    modal.classList.remove('active');
+                }
+            });
+            
+            if(modalSubmitBtn) {
+                modalSubmitBtn.addEventListener('click', function() {
+                    modal.classList.remove('active');
+                    submitExam();
+                });
+            }
+        }
+    }
+
+    /* --- INITIALIZATION --- */
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize components
+        updateProgress();
+        startTimer();
+        setupNavigationProtection();
+        setupProgressModal();
+        
+        // Set up submit button handlers
+        var submitBtn = document.getElementById('submitBtn');
+        if(submitBtn) {
+            submitBtn.addEventListener('click', submitExam);
+        }
+        
+        // Clear session storage when page unloads (if exam is not active)
+        window.addEventListener('beforeunload', function() {
+            if(!examActive) {
+                var storageKey = 'examStartTime_' + currentCourseName;
+                sessionStorage.removeItem(storageKey);
+            }
+        });
     });
     </script>
 
   <% } else if ("1".equals(request.getParameter("showresult"))) {
+       // SHOW RESULTS PAGE
        Exams result = pDAO.getResultByExamId(Integer.parseInt(request.getParameter("eid")));
+       
+       // IMPORTANT: Clear exam session when showing results
+       session.removeAttribute("examStarted");
+       session.removeAttribute("examId");
   %>
     <!--  RESULTS  -->
     <div class="page-header">
@@ -2210,34 +2501,137 @@
         <div class="result-item">
           <strong><i class="fas fa-chart-pie"></i> Percentage</strong>
           <div class="result-value">
-            <% double percentage=0;if(result.gettMarks()>0)percentage=(double)result.getObtMarks()/result.gettMarks()*100; %>
-            <span class="percentage-badge"><%= String.format("%.1f",percentage) %>%</span>
+            <% 
+               double percentage = 0;
+               if(result.gettMarks() > 0) {
+                   percentage = (double)result.getObtMarks() / result.gettMarks() * 100;
+               }
+            %>
+            <span class="percentage-badge"><%= String.format("%.1f", percentage) %>%</span>
           </div>
         </div>
       </div>
+      
+      <!-- RELAUNCH SECTION -->
+      <div style="margin-top: 30px; padding: 20px; background: #f8fafc; border-radius: 10px; text-align: center; border-top: 2px solid #e2e8f0;">
+        <h3 style="margin-bottom: 15px; color: #1e293b;"><i class="fas fa-redo"></i> Start New Exam</h3>
+        <p style="margin-bottom: 20px; color: #64748b;">Ready to take another exam? Select a course below.</p>
+        <a href="std-page.jsp?pgprt=1" class="btn-primary" style="padding: 12px 30px; font-size: 16px;">
+          <i class="fas fa-play"></i> Start New Exam Session
+        </a>
+      </div>
     </div>
+    
+    <!-- CLEAR EXAM SESSION DATA -->
+    <script>
+        // Clear all exam session data when viewing results
+        Object.keys(sessionStorage).forEach(function(key) {
+            if(key.startsWith('examStartTime_')) {
+                sessionStorage.removeItem(key);
+            }
+        });
+        
+        // Also clear any other exam-related data
+        sessionStorage.clear();
+    </script>
 
-  <% } else { %>
+  <% } else { 
+       // SHOW COURSE SELECTION FORM (DEFAULT VIEW)
+       // Clear any stale session data
+       session.removeAttribute("examStarted");
+       session.removeAttribute("examId");
+  %>
     <!--  COURSE PICKER  -->
     <div class="page-header">
       <div class="page-title"><i class="fas fa-pencil-alt"></i> Start New Exam</div>
       <div class="stats-badge"><i class="fas fa-play-circle"></i> Ready to Start</div>
     </div>
+    
     <div class="course-card">
-      <form action="controller.jsp" method="post">
+      <form action="controller.jsp" method="post" id="examStartForm">
         <input type="hidden" name="page" value="exams">
         <input type="hidden" name="operation" value="startexam">
         <label class="form-label"><i class="fas fa-book"></i> Select Course</label>
-        <select name="coursename" class="form-select" required>
+        <select name="coursename" class="form-select" required id="courseSelect">
           <option value="">Choose a course...</option>
-          <% ArrayList<String> courseList=pDAO.getAllCourseNames();
-             for(String course:courseList){ %>
-            <option value="<%= course %>"><%= course %></option>
+          <% 
+             ArrayList<String> courseList = pDAO.getAllCourseNames();
+             for(String course : courseList){ 
+                int duration = pDAO.getExamDuration(course);
+          %>
+            <option value="<%= course %>" data-duration="<%= duration %>">
+              <%= course %> (<%= duration %> minutes)
+            </option>
           <% } %>
         </select>
-        <button type="submit" class="start-exam-btn"><i class="fas fa-play"></i> Start Exam</button>
+        
+        <!-- Course Info Display -->
+        <div id="courseInfo" style="margin-top: 10px; padding: 10px; background: #f0f9ff; border-radius: 6px; display: none;">
+          <i class="fas fa-info-circle" style="color: #3b82f6;"></i>
+          <span id="courseInfoText"></span>
+        </div>
+        
+        <button type="submit" class="start-exam-btn" id="startExamBtn">
+          <i class="fas fa-play"></i> Start Exam
+        </button>
       </form>
     </div>
+    
+    <!-- CLEAR EXAM SESSION DATA -->
+    <script>
+        // Clear all exam session data when on course selection page
+        Object.keys(sessionStorage).forEach(function(key) {
+            if(key.startsWith('examStartTime_')) {
+                sessionStorage.removeItem(key);
+            }
+        });
+        
+        // Clear all session storage to ensure clean state
+        sessionStorage.clear();
+        
+        // Show course info when selected
+        document.getElementById('courseSelect').addEventListener('change', function() {
+            var selectedOption = this.options[this.selectedIndex];
+            var courseInfo = document.getElementById('courseInfo');
+            var courseInfoText = document.getElementById('courseInfoText');
+            
+            if(selectedOption.value) {
+                var duration = selectedOption.getAttribute('data-duration') || '60';
+                courseInfoText.textContent = 'This exam has a duration of ' + duration + ' minutes.';
+                courseInfo.style.display = 'block';
+            } else {
+                courseInfo.style.display = 'none';
+            }
+        });
+        
+        // Confirm before starting exam
+        document.getElementById('examStartForm').addEventListener('submit', function(e) {
+            var courseSelect = document.getElementById('courseSelect');
+            if(!courseSelect.value) {
+                e.preventDefault();
+                alert('Please select a course.');
+                return;
+            }
+            
+            // Show confirmation dialog
+            var selectedOption = courseSelect.options[courseSelect.selectedIndex];
+            var courseName = selectedOption.text.split(' (')[0];
+            var duration = selectedOption.getAttribute('data-duration') || '60';
+            
+            var confirmMsg = 'Are you ready to start the "' + courseName + '" exam?\n\n' +
+                           '? Exam Duration: ' + duration + ' minutes\n' +
+                           '? Timer will start immediately\n' +
+                           '? You cannot leave until you submit\n\n' +
+                           'Click OK to begin the exam.';
+            
+            if(!confirm(confirmMsg)) {
+                e.preventDefault();
+            } else {
+                // Clear any previous exam data
+                sessionStorage.clear();
+            }
+        });
+    </script>
   <% } %>
   </main>
 </div>

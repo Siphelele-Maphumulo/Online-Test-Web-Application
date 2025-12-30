@@ -10,75 +10,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <style>
-    
-.logout-loader {
-    position: fixed;
-    inset: 0;
-    background: #09294d;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 99999;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.6s ease;
-}
 
-.logout-loader.show {
-    opacity: 1;
-    pointer-events: all;
-}
-
-.loader-content { text-align: center; }
-
-.loader-wave {
-    width: 14vmin;
-    height: 14vmin;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.15);
-    position: relative;
-    animation: breath 2.2s infinite ease-in-out;
-    margin: 0 auto;
-}
-.loader-wave::before,
-.loader-wave::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: inherit;
-    animation: breath 2.2s infinite ease-in-out;
-}
-.loader-wave::before { animation-delay: 0.7s; }
-.loader-wave::after { animation-delay: 1.4s; }
-
-@keyframes breath {
-    0%, 100% { transform: scale(1); opacity: 0.4; }
-    50% { transform: scale(1.4); opacity: 0.8; }
-}
-
-.loader-text {
-    color: #fff;
-    font-size: 1.1rem;
-    margin-top: 2.5rem;
-    letter-spacing: 0.5px;
-    font-family: 'Segoe UI', 'Roboto', sans-serif;
-}
-
-.dot {
-    animation: dotPulse 1.2s infinite;
-    opacity: 0.3;
-}
-.dot:nth-child(2) { animation-delay: 0.2s; }
-.dot:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes dotPulse {
-    0%, 60%, 100% { opacity: 0.3; }
-    30% { opacity: 1; }
-}
-
-    
-    
          /* CSS Variables for Maintainability - PROFESSIONAL THEME */
         :root {
             /* Primary Colors - Professional Blue Theme */
@@ -147,14 +79,9 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         }
         
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             line-height: 1.5;
-            color: var(--text-dark);
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            min-height: 100vh;
-            font-weight: 400;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
+            background-color: var(--light-gray);
         }
         
         /* Dashboard Container */
@@ -222,7 +149,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         }
 
         .sidebar-header {
-            padding: var(--spacing-2xl) var(--spacing-lg) var(--spacing-xl);
+            padding-top: 35%;
             text-align: center;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             background: rgba(255, 255, 255, 0.05);
@@ -231,10 +158,9 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
         
         .mut-logo {
-            max-height: 120px;
+            max-height: 150px;
             width: auto;
             filter: brightness(0) invert(1);
-            transition: transform var(--transition-normal);
         }
         
         .mut-logo:hover {
@@ -242,7 +168,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         }
         
         .sidebar-nav {
-            padding: var(--spacing-xl) var(--spacing-sm);
+            padding: var(--spacing-lg) 0;
         }
         
         .nav-item {

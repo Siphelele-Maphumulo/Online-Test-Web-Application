@@ -1,8 +1,19 @@
 <%@ page import="java.util.ArrayList" %>
+<%@ page import="myPackage.classes.User" %>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
- 
-<% 
-myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+
+<%
+    myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+
+    User currentUser = null;
+    if (session.getAttribute("userId") != null) {
+        currentUser = pDAO.getUserDetails(session.getAttribute("userId").toString());
+    }
+
+    if (currentUser == null) {
+        response.sendRedirect("login.jsp");
+        return;
+    }
 %>
 
 <style>
@@ -577,12 +588,19 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             <td><span class="badge badge-info"><%= list.get(i + 2) %> mins</span></td>
                             <td><span class="badge badge-neutral"><%= list.get(i + 3) %></span></td>
                             <td>
-                                <a href="controller.jsp?page=courses&operation=del&cname=<%= list.get(i) %>"
-                                   onclick="return confirm('Are you sure you want to delete \"<%= list.get(i) %>\"? This action cannot be undone.');" 
-                                   class="btn btn-danger">
-                                   <i class="fas fa-trash"></i>
-                                   Delete
-                                </a>
+                                <% if (currentUser.getType().equalsIgnoreCase("admin")) { %>
+                                    <a href="controller.jsp?page=courses&operation=del&cname=<%= list.get(i) %>"
+                                       data-item-name="<%= list.get(i) %>"
+                                       class="btn btn-danger">
+                                       <i class="fas fa-trash"></i>
+                                       Delete
+                                    </a>
+                                <% } else { %>
+                                    <a href="#" class="btn btn-danger permission-check">
+                                        <i class="fas fa-trash"></i>
+                                        Delete
+                                    </a>
+                                <% } %>
                             </td>
                         </tr>
                         <%

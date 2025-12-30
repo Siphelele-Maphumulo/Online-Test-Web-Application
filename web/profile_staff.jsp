@@ -158,7 +158,7 @@
         
         /* Sidebar Styles */
         .sidebar {
-            width: 250px;
+            width: 200px;
             background: linear-gradient(180deg, var(--primary-blue), var(--secondary-blue));
             color: var(--white);
             flex-shrink: 0;
@@ -177,6 +177,10 @@
             max-height: 150px;
             width: auto;
             filter: brightness(0) invert(1);
+        }
+        
+        .mut-logo:hover {
+            transform: scale(1.05);
         }
         
         .sidebar-nav {

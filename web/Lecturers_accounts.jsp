@@ -844,12 +844,19 @@ int lecturerCount = lecturerList.size();
                             </td>
                             <td>
                                 <div class="action-buttons">
-                                    <a href="controller.jsp?page=Lecturers_accounts&operation=del&uid=<%= lecturer.getUserId() %>" 
-                                       onclick="return confirm('Are you sure you want to delete lecturer \"<%= lecturer.getFirstName() %> <%= lecturer.getLastName() %>\"? This action cannot be undone.');" 
-                                       class="btn btn-error" style="font-size: 13px; padding: 8px 16px;">
-                                       <i class="fas fa-trash"></i>
-                                       Delete
-                                    </a>
+                                    <% if (currentUser.getType().equalsIgnoreCase("admin")) { %>
+                                        <a href="controller.jsp?page=Lecturers_accounts&operation=del&uid=<%= lecturer.getUserId() %>"
+                                           data-item-name="<%= lecturer.getFirstName() %> <%= lecturer.getLastName() %>"
+                                           class="btn btn-error" style="font-size: 13px; padding: 8px 16px;">
+                                           <i class="fas fa-trash"></i>
+                                           Delete
+                                        </a>
+                                    <% } else { %>
+                                        <a href="#" class="btn btn-error permission-check" style="font-size: 13px; padding: 8px 16px;">
+                                            <i class="fas fa-trash"></i>
+                                            Delete
+                                        </a>
+                                    <% } %>
                                 </div>
                             </td>
                         </tr>

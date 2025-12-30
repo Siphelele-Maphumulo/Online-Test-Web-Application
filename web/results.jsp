@@ -151,7 +151,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
     
     /* Sidebar - Modern Design */
         .sidebar {
-            width: 200px;;
+            width: 200px;
             background: linear-gradient(180deg, var(--primary-blue) 0%, #0d3060 100%);
             color: var(--white);
             flex-shrink: 0;
@@ -196,41 +196,42 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
             }
         }
     
-    .sidebar::-webkit-scrollbar {
-        width: 6px;
-    }
-    
-    .sidebar::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    
-    .sidebar::-webkit-scrollbar-thumb {
-        background-color: rgba(255, 255, 255, 0.3);
-        border-radius: var(--radius-full);
-    }
-    
-    .sidebar-header {
-        padding: var(--spacing-2xl) var(--spacing-lg) var(--spacing-xl);
-        text-align: center;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(10px);
-    }
-    
-    .mut-logo {
-        max-height: 120px;
-        width: auto;
-        filter: brightness(0) invert(1);
-        transition: transform var(--transition-normal);
-    }
-    
-    .mut-logo:hover {
-        transform: scale(1.05);
-    }
-    
-    .sidebar-nav {
-        padding: var(--spacing-xl) var(--spacing-sm);
-    }
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: var(--radius-full);
+        }
+
+        .sidebar-header {
+            padding-top: 35%;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        
+        .mut-logo {
+            max-height: 150px;
+            width: auto;
+            filter: brightness(0) invert(1);
+        }
+        
+        .mut-logo:hover {
+            transform: scale(1.05);
+        }
+        
+        .sidebar-nav {
+            padding: var(--spacing-lg) 0;
+        }
+        
     
     .nav-item {
         display: flex;
