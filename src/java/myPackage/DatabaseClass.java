@@ -1440,14 +1440,14 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
         String sql = "INSERT INTO exams(course_name, date, start_time, exam_time, std_id, total_marks, status, result_status) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement pstm = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            pstm.setString(1, cName);               // cleaned name
+            pstm.setString(1, cName);
             pstm.setString(2, LocalDate.now().toString());
             pstm.setString(3, LocalTime.now().toString());
             pstm.setString(4, getCourseTimeByName(cName));
             pstm.setInt(5, sId);
             pstm.setInt(6, getTotalMarksByName(cName));
-            pstm.setString(7, "in_progress");       // Set initial status
-            pstm.setNull(8, Types.VARCHAR);         // result_status is NULL initially
+            pstm.setString(7, "Terminated");
+            pstm.setNull(8, Types.VARCHAR);
 
             pstm.executeUpdate();
 
@@ -1458,8 +1458,26 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
         return examId;
     }
 
-    public void finalizeInProgressExams(int studentId, String courseName) {
-        String selectSql = "SELECT exam_id, total_marks FROM exams WHERE std_id = ? AND course_name = ? AND status = 'in_progress'";
+    public String getActiveExamCourse(int studentId) {
+        String courseName = null;
+        String sql = "SELECT course_name FROM exams WHERE std_id = ? AND status = 'Terminated' ORDER BY start_time DESC LIMIT 1";
+
+        try (PreparedStatement pstm = conn.prepareStatement(sql)) {
+            pstm.setInt(1, studentId);
+            try (ResultSet rs = pstm.executeQuery()) {
+                if (rs.next()) {
+                    courseName = rs.getString("course_name");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return courseName;
+    }
+
+    public void finalizeTerminatedExams(int studentId, String courseName) {
+        String selectSql = "SELECT exam_id, total_marks FROM exams WHERE std_id = ? AND course_name = ? AND status = 'Terminated'";
 
         try (PreparedStatement selectStmt = conn.prepareStatement(selectSql)) {
             selectStmt.setInt(1, studentId);

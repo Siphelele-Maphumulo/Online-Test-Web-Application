@@ -337,7 +337,7 @@ try {
                 int userId = Integer.parseInt(session.getAttribute("userId").toString());
 
                 // Finalize any in-progress exams for this student and course
-                pDAO.finalizeInProgressExams(userId, cName);
+                pDAO.finalizeTerminatedExams(userId, cName);
 
                 int examId = pDAO.startExam(cName, userId);
                 session.setAttribute("examId", examId);
