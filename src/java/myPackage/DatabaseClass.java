@@ -1017,17 +1017,70 @@ public boolean addNewCourse(String courseName, int tMarks, String time, String e
 }
 
 
-    public void delCourse(String cName){
+public void deleteCourseCascade(String courseName) {
+    try {
+        conn.setAutoCommit(false);
+
+        // 1. Delete questions associated with the course
+        String deleteQuestionsSql = "DELETE FROM questions WHERE course_name = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(deleteQuestionsSql)) {
+            pstmt.setString(1, courseName);
+            pstmt.executeUpdate();
+        }
+
+        // 2. Find all exams for the course
+        ArrayList<Integer> examIds = new ArrayList<>();
+        String selectExamsSql = "SELECT exam_id FROM exams WHERE course_name = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(selectExamsSql)) {
+            pstmt.setString(1, courseName);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    examIds.add(rs.getInt("exam_id"));
+                }
+            }
+        }
+
+        // 3. Delete answers for each exam
+        if (!examIds.isEmpty()) {
+            String deleteAnswersSql = "DELETE FROM answers WHERE exam_id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(deleteAnswersSql)) {
+                for (int examId : examIds) {
+                    pstmt.setInt(1, examId);
+                    pstmt.executeUpdate();
+                }
+            }
+        }
+
+        // 4. Delete all exams for the course
+        String deleteExamsSql = "DELETE FROM exams WHERE course_name = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(deleteExamsSql)) {
+            pstmt.setString(1, courseName);
+            pstmt.executeUpdate();
+        }
+
+        // 5. Delete the course itself
+        String deleteCourseSql = "DELETE FROM courses WHERE course_name = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(deleteCourseSql)) {
+            pstmt.setString(1, courseName);
+            pstmt.executeUpdate();
+        }
+
+        conn.commit();
+    } catch (SQLException ex) {
         try {
-            String sql="DELETE from courses where course_name=?";
-            PreparedStatement pstm=conn.prepareStatement(sql);
-            pstm.setString(1,cName);
-            pstm.executeUpdate();
-            pstm.close();
-        } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+            conn.rollback();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+    } finally {
+        try {
+            conn.setAutoCommit(true);
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
+}
     
     
 public void addNewQuestion(String questionText, String opt1, String opt2, String opt3, String opt4, String correctAnswer, String courseName, String questionType) {

@@ -158,7 +158,7 @@ try {
         } else if ("del".equalsIgnoreCase(operation)) {
             String cname = nz(request.getParameter("cname"), "");
             if (!cname.isEmpty()) {
-                pDAO.delCourse(cname);
+                pDAO.deleteCourseCascade(cname);
                 session.setAttribute("message","Course deleted successfully");
             }
             response.sendRedirect("adm-page.jsp?pgprt=2");
