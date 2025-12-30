@@ -990,6 +990,22 @@
             font-size: 13px;
             display: inline-block;
         }
+
+        .action-btn {
+            background: var(--primary-blue);
+            color: var(--white);
+            padding: 10px 15px;
+            border-radius: var(--radius-sm);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            transition: background-color var(--transition-fast);
+        }
+
+        .action-btn:hover {
+            background: var(--secondary-blue);
+        }
         
         /* Responsive Design */
         @media (max-width: 768px) {
@@ -2246,6 +2262,12 @@
             <span class="percentage-badge"><%= String.format("%.1f",percentage) %>%</span>
           </div>
         </div>
+      </div>
+      <div style="text-align: center; margin-top: 20px;">
+        <a href="std-page.jsp?pgprt=2&eid=<%= result.getExamId() %>" class="action-btn">
+          <i class="fas fa-eye"></i>
+          View
+        </a>
       </div>
     </div>
 
