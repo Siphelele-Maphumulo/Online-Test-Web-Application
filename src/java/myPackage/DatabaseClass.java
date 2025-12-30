@@ -979,15 +979,16 @@ public ArrayList<String> getAllCourseNames() {
 public ArrayList getAllCourses() {
     ArrayList list = new ArrayList();
     try {
-        String sql = "SELECT course_name, total_marks, time, exam_date FROM courses";
+        String sql = "SELECT course_name, total_marks, time, exam_date, is_active FROM courses";
         PreparedStatement pstm = conn.prepareStatement(sql);
         ResultSet rs = pstm.executeQuery();
 
         while (rs.next()) {
             list.add(rs.getString("course_name")); // 0
             list.add(rs.getInt("total_marks"));    // 1
-            list.add(rs.getString("time"));        // 2 ✅ FIX
+            list.add(rs.getString("time"));        // 2
             list.add(rs.getDate("exam_date"));     // 3
+            list.add(rs.getBoolean("is_active"));  // 4
         }
 
         rs.close();
@@ -996,6 +997,38 @@ public ArrayList getAllCourses() {
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
     }
     return list;
+}
+
+public boolean updateCourse(String originalCourseName, String newCourseName, int tMarks, String time, String examDate) {
+    try {
+        String sql = "UPDATE courses SET course_name=?, total_marks=?, time=?, exam_date=? WHERE course_name=?";
+        PreparedStatement pstm = conn.prepareStatement(sql);
+        pstm.setString(1, newCourseName);
+        pstm.setInt(2, tMarks);
+        pstm.setString(3, time);
+        pstm.setString(4, examDate);
+        pstm.setString(5, originalCourseName);
+        int rows = pstm.executeUpdate();
+        pstm.close();
+        return rows > 0;
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        return false;
+    }
+}
+
+public boolean toggleCourseStatus(String courseName) {
+    try {
+        String sql = "UPDATE courses SET is_active = NOT is_active WHERE course_name = ?";
+        PreparedStatement pstm = conn.prepareStatement(sql);
+        pstm.setString(1, courseName);
+        int rows = pstm.executeUpdate();
+        pstm.close();
+        return rows > 0;
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        return false;
+    }
 }
 
    

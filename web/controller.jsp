@@ -162,6 +162,22 @@ try {
                 session.setAttribute("message","Course deleted successfully");
             }
             response.sendRedirect("adm-page.jsp?pgprt=2");
+        } else if ("update_course".equalsIgnoreCase(operation)) {
+            String originalCourseName = nz(request.getParameter("original_course_name"), "");
+            String newCourseName = nz(request.getParameter("coursename"), "");
+            int totalMarks = Integer.parseInt(nz(request.getParameter("totalmarks"), "0"));
+            String time = nz(request.getParameter("time"), "");
+            String examDate = nz(request.getParameter("examdate"), "");
+
+            boolean success = pDAO.updateCourse(originalCourseName, newCourseName, totalMarks, time, examDate);
+            session.setAttribute("message", success ? "Course updated successfully" : "Error updating course");
+            response.sendRedirect("adm-page.jsp?pgprt=2");
+        } else if ("toggle_status".equalsIgnoreCase(operation)) {
+            String cname = nz(request.getParameter("cname"), "");
+            if (!cname.isEmpty()) {
+                pDAO.toggleCourseStatus(cname);
+            }
+            response.sendRedirect("adm-page.jsp?pgprt=2");
         }
 
     /* =========================

@@ -44,6 +44,8 @@ CREATE TABLE `courses` (
   `course_name` varchar(25) NOT NULL,
   `total_marks` int(11) NOT NULL,
   `time` varchar(45) NOT NULL,
+  `exam_date` date DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`course_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;

@@ -480,6 +480,39 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
+
+    /* Modal Styles */
+    .modal {
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.5);
+    }
+    .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 500px;
+        border-radius: var(--radius-md);
+    }
+    .close-btn {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+    .close-btn:hover,
+    .close-btn:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
 </style>
 
 <div class="dashboard-container">
@@ -524,8 +557,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                 <i class="fas fa-graduation-cap"></i>
                 <%
                     ArrayList list = pDAO.getAllCourses();
-                    // Fix: Since we're now storing 4 fields per course, divide by 4
-                    int courseCount = list.size() / 4;
+                    int courseCount = list.size() / 5;
                 %>
                 <%= courseCount %> Courses
             </div>
@@ -548,6 +580,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             <th>Total Marks</th>
                             <th>Duration</th>
                             <th>Exam Date</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -556,37 +589,49 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         if (list.isEmpty()) {
                         %>
                             <tr>
-                                <td colspan="5" class="no-courses">
+                                <td colspan="6" class="no-courses">
                                     <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 16px; display: block; opacity: 0.5;"></i>
                                     No courses available. Add your first course to get started.
                                 </td>
                             </tr>
                         <%
                         } else {
-                            for (int i = 0; i < list.size(); i += 4) {
-                                if (i + 3 < list.size()) {
+                            for (int i = 0; i < list.size(); i += 5) {
+                                String courseName = (String) list.get(i);
+                                boolean isActive = (Boolean) list.get(i + 4);
                         %>
                         <tr>
                             <td>
                                 <div class="course-name">
                                     <i class="fas fa-book" style="color: var(--accent-blue); margin-right: 8px;"></i>
-                                    <%= list.get(i) %>
+                                    <%= courseName %>
                                 </div>
                             </td>
                             <td><span class="badge badge-success"><%= list.get(i + 1) %> Marks</span></td>
                             <td><span class="badge badge-info"><%= list.get(i + 2) %> mins</span></td>
                             <td><span class="badge badge-neutral"><%= list.get(i + 3) %></span></td>
                             <td>
-                                <a href="controller.jsp?page=courses&operation=del&cname=<%= list.get(i) %>"
-                                   onclick="return confirm('Are you sure you want to delete \"<%= list.get(i) %>\"? This action cannot be undone.');" 
+                                <span class="badge <%= isActive ? "badge-success" : "badge-neutral" %>">
+                                    <%= isActive ? "Active" : "Inactive" %>
+                                </span>
+                            </td>
+                            <td>
+                                <a href="controller.jsp?page=courses&operation=toggle_status&cname=<%= courseName %>" class="btn btn-outline">
+                                    <i class="fas fa-power-off"></i> Toggle
+                                </a>
+                                <button class="btn btn-primary edit-btn" data-course-name="<%= courseName %>"
+                                        data-total-marks="<%= list.get(i + 1) %>" data-time="<%= list.get(i + 2) %>"
+                                        data-exam-date="<%= list.get(i + 3) %>">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <a href="controller.jsp?page=courses&operation=del&cname=<%= courseName %>"
+                                   onclick="return confirm('Are you sure you want to delete \'<%= courseName %>\'? This action cannot be undone.');"
                                    class="btn btn-danger">
-                                   <i class="fas fa-trash"></i>
-                                   Delete
+                                   <i class="fas fa-trash"></i> Delete
                                 </a>
                             </td>
                         </tr>
                         <%
-                                }
                             }
                         }
                         %>
@@ -659,52 +704,72 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     </main>
 </div>
 
+<!-- Edit Course Modal -->
+<div id="edit-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <span class="close-btn">&times;</span>
+        <h2>Edit Course</h2>
+        <form id="edit-form" action="controller.jsp" method="post">
+            <input type="hidden" name="page" value="courses">
+            <input type="hidden" name="operation" value="update_course">
+            <input type="hidden" id="original-course-name" name="original_course_name">
+
+            <div class="form-group">
+                <label class="form-label">Course Name</label>
+                <input type="text" id="edit-course-name" name="coursename" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Total Marks</label>
+                <input type="number" id="edit-total-marks" name="totalmarks" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Exam Duration</label>
+                <input type="number" id="edit-time" name="time" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Exam Date</label>
+                <input type="date" id="edit-exam-date" name="examdate" class="form-control" required>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Font Awesome for Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <!-- JavaScript for enhanced functionality -->
 <script>
-    // Form validation
     document.addEventListener('DOMContentLoaded', function() {
-        const forms = document.querySelectorAll('form');
+        const modal = document.getElementById('edit-modal');
+        const closeBtn = document.querySelector('.close-btn');
+        const editForm = document.getElementById('edit-form');
         
-        forms.forEach(form => {
-            form.addEventListener('submit', function(e) {
-                // Add loading state
-                const submitBtn = this.querySelector('button[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.classList.add('loading');
-                    submitBtn.disabled = true;
-                }
-                
-                // Additional validation can be added here
+        document.querySelectorAll('.edit-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                document.getElementById('original-course-name').value = this.dataset.courseName;
+                document.getElementById('edit-course-name').value = this.dataset.courseName;
+                document.getElementById('edit-total-marks').value = this.dataset.totalMarks;
+                document.getElementById('edit-time').value = this.dataset.time;
+                document.getElementById('edit-exam-date').value = this.dataset.examDate;
+                modal.style.display = 'block';
             });
         });
         
-        // Reset form handler
-        const resetButtons = document.querySelectorAll('button[type="reset"]');
-        resetButtons.forEach(btn => {
-            btn.addEventListener('click', function() {
-                const form = this.closest('form');
-                form.reset();
-            });
-        });
+        closeBtn.onclick = function() {
+            modal.style.display = 'none';
+        }
         
-        // Handle delete confirmation
-        const deleteButtons = document.querySelectorAll('.btn-danger');
-        deleteButtons.forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                const courseName = this.closest('tr').querySelector('.course-name').textContent.trim();
-                const confirmation = confirm(`Are you sure you want to delete "${courseName}"? This action cannot be undone.`);
-                if (!confirmation) {
-                    e.preventDefault();
-                }
-            });
-        });
-    });
-    
-    // Handle window resize for responsive adjustments
-    window.addEventListener('resize', function() {
-        // Add any responsive adjustments here
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
     });
 </script>
