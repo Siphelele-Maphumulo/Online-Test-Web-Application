@@ -757,21 +757,6 @@
 <script>
     // Form validation
     document.addEventListener('DOMContentLoaded', function() {
-        const forms = document.querySelectorAll('form');
-        
-        forms.forEach(form => {
-            form.addEventListener('submit', function(e) {
-                // Add loading state
-                const submitBtn = this.querySelector('button[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.classList.add('loading');
-                    submitBtn.disabled = true;
-                }
-                
-                // Additional validation can be added here
-            });
-        });
-        
         // Reset form handler
         const resetButtons = document.querySelectorAll('button[type="reset"]');
         resetButtons.forEach(btn => {
