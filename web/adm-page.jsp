@@ -565,6 +565,17 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                     </div>
                 </div>
             </div>
+
+            <!-- Permission Denied Modal -->
+            <div id="permissionDeniedModal" class="modal" style="display:none; position: fixed; z-index: 1002; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+                <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 400px; text-align: center; border-radius: 8px;">
+                    <h2 style="margin-bottom: 20px; color: var(--error);">Permission Denied</h2>
+                    <p style="margin-bottom: 20px;">You do not have the required permissions to perform this action. Please contact an administrator.</p>
+                    <div style="display: flex; justify-content: center;">
+                        <button id="closePermissionModalBtn" class="btn btn-primary">OK</button>
+                    </div>
+                </div>
+            </div>
             <%
                 // Check if user is logged in
                 if (session.getAttribute("userStatus") != null && session.getAttribute("userStatus").equals("1")) {
@@ -727,46 +738,72 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         }
     });
 
-    // Delete Confirmation Modal Logic
+    // Modal Logic
     document.addEventListener('DOMContentLoaded', function() {
-        const modal = document.getElementById('deleteConfirmationModal');
-        const confirmBtn = document.getElementById('confirmDeleteBtn');
-        const cancelBtn = document.getElementById('cancelDeleteBtn');
-        const modalText = document.getElementById('deleteModalText');
+        // Delete Confirmation Modal
+        const deleteModal = document.getElementById('deleteConfirmationModal');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+        const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+        const deleteModalText = document.getElementById('deleteModalText');
         let deleteUrl = '';
 
+        // Permission Denied Modal
+        const permissionModal = document.getElementById('permissionDeniedModal');
+        const closePermissionBtn = document.getElementById('closePermissionModalBtn');
+
         document.body.addEventListener('click', function(e) {
+            // Handle Delete Button Clicks
             if (e.target.closest('.btn-error')) {
                 const deleteLink = e.target.closest('a');
                 if (deleteLink && deleteLink.href.includes('operation=del')) {
                     e.preventDefault();
                     deleteUrl = deleteLink.href;
-                    const studentName = deleteLink.getAttribute('data-student-name');
-                    if (studentName) {
-                        modalText.textContent = `Are you sure you want to delete student "${studentName}"? This action cannot be undone.`;
+                    const itemName = deleteLink.getAttribute('data-item-name');
+                    if (itemName) {
+                        deleteModalText.textContent = `Are you sure you want to delete "${itemName}"? This action cannot be undone.`;
                     } else {
-                        modalText.textContent = 'Are you sure you want to delete this item? This action cannot be undone.';
+                        deleteModalText.textContent = 'Are you sure you want to delete this item? This action cannot be undone.';
                     }
-                    modal.style.display = 'block';
+                    deleteModal.style.display = 'block';
+                }
+            }
+
+            // Handle Permission Check Clicks
+            if (e.target.closest('.permission-check')) {
+                const link = e.target.closest('a');
+                if (link) {
+                    e.preventDefault();
+                    permissionModal.style.display = 'block';
                 }
             }
         });
 
-        if(cancelBtn) {
-            cancelBtn.onclick = function() {
-                modal.style.display = 'none';
+        // Event Listeners for Buttons
+        if (cancelDeleteBtn) {
+            cancelDeleteBtn.onclick = function() {
+                deleteModal.style.display = 'none';
             }
         }
 
-        if(confirmBtn) {
-            confirmBtn.onclick = function() {
+        if (confirmDeleteBtn) {
+            confirmDeleteBtn.onclick = function() {
                 window.location.href = deleteUrl;
             }
         }
 
+        if (closePermissionBtn) {
+            closePermissionBtn.onclick = function() {
+                permissionModal.style.display = 'none';
+            }
+        }
+
+        // Handle clicks outside of the modals
         window.onclick = function(event) {
-            if (event.target == modal) {
-                modal.style.display = 'none';
+            if (event.target == deleteModal) {
+                deleteModal.style.display = 'none';
+            }
+            if (event.target == permissionModal) {
+                permissionModal.style.display = 'none';
             }
         }
     });

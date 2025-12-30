@@ -577,12 +577,19 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             <td><span class="badge badge-info"><%= list.get(i + 2) %> mins</span></td>
                             <td><span class="badge badge-neutral"><%= list.get(i + 3) %></span></td>
                             <td>
-                                <a href="controller.jsp?page=courses&operation=del&cname=<%= list.get(i) %>"
-                                   onclick="return confirm('Are you sure you want to delete \"<%= list.get(i) %>\"? This action cannot be undone.');" 
-                                   class="btn btn-danger">
-                                   <i class="fas fa-trash"></i>
-                                   Delete
-                                </a>
+                                <% if (currentUser.getType().equalsIgnoreCase("admin")) { %>
+                                    <a href="controller.jsp?page=courses&operation=del&cname=<%= list.get(i) %>"
+                                       data-item-name="<%= list.get(i) %>"
+                                       class="btn btn-danger">
+                                       <i class="fas fa-trash"></i>
+                                       Delete
+                                    </a>
+                                <% } else { %>
+                                    <a href="#" class="btn btn-danger permission-check">
+                                        <i class="fas fa-trash"></i>
+                                        Delete
+                                    </a>
+                                <% } %>
                             </td>
                         </tr>
                         <%

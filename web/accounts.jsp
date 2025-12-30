@@ -909,12 +909,19 @@ for (User user : studentList) {
                                         <i class="fas fa-edit"></i>
                                         Edit
                                     </a>
-                                    <a href="controller.jsp?page=accounts&operation=del&uid=<%= user.getUserId() %>"
-                                       data-student-name="<%= user.getFirstName() %> <%= user.getLastName() %>"
-                                       class="btn btn-error" style="font-size: 13px; padding: 8px 16px;">
-                                       <i class="fas fa-trash"></i>
-                                       Delete
-                                    </a>
+                                    <% if (currentUser.getType().equalsIgnoreCase("admin")) { %>
+                                        <a href="controller.jsp?page=accounts&operation=del&uid=<%= user.getUserId() %>"
+                                           data-item-name="<%= user.getFirstName() %> <%= user.getLastName() %>"
+                                           class="btn btn-error" style="font-size: 13px; padding: 8px 16px;">
+                                           <i class="fas fa-trash"></i>
+                                           Delete
+                                        </a>
+                                    <% } else { %>
+                                        <a href="#" class="btn btn-error permission-check" style="font-size: 13px; padding: 8px 16px;">
+                                            <i class="fas fa-trash"></i>
+                                            Delete
+                                        </a>
+                                    <% } %>
                                 </div>
                             </td>
                         </tr>
