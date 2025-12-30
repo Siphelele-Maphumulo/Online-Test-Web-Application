@@ -1992,6 +1992,53 @@ public String getLastCourseName() {
     return lastCourseName;
 }
 
+public boolean updateExamResult(int examId, int obtMarks, int totalMarks) {
+    String resultStatus = ((double) obtMarks / totalMarks) * 100 >= 45 ? "Pass" : "Fail";
+    String sql = "UPDATE exams SET obt_marks = ?, result_status = ? WHERE exam_id = ?";
+    try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        pstmt.setInt(1, obtMarks);
+        pstmt.setString(2, resultStatus);
+        pstmt.setInt(3, examId);
+        return pstmt.executeUpdate() > 0;
+    } catch (SQLException e) {
+        e.printStackTrace();
+        return false;
+    }
+}
+
+public void deleteExamCascade(int examId) {
+    try {
+        conn.setAutoCommit(false);
+
+        String deleteAnswersSql = "DELETE FROM answers WHERE exam_id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(deleteAnswersSql)) {
+            pstmt.setInt(1, examId);
+            pstmt.executeUpdate();
+        }
+
+        String deleteExamSql = "DELETE FROM exams WHERE exam_id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(deleteExamSql)) {
+            pstmt.setInt(1, examId);
+            pstmt.executeUpdate();
+        }
+
+        conn.commit();
+    } catch (SQLException ex) {
+        try {
+            conn.rollback();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+    } finally {
+        try {
+            conn.setAutoCommit(true);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
     // Method to close resources
     private void closeResources(Statement stmt, ResultSet rs) {
         try {

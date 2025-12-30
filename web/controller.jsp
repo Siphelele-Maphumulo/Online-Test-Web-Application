@@ -259,6 +259,25 @@ try {
         response.sendRedirect("adm-page.jsp?pgprt=6");
 
     /* =========================
+       RESULTS
+       ========================= */
+    } else if ("results".equalsIgnoreCase(pageParam)) {
+        String operation = nz(request.getParameter("operation"), "");
+        String eidParam  = nz(request.getParameter("eid"), "");
+        if ("del".equalsIgnoreCase(operation) && !eidParam.isEmpty()) {
+            int examId = Integer.parseInt(eidParam);
+            pDAO.deleteExamCascade(examId);
+            session.setAttribute("message","Result deleted successfully");
+        } else if ("edit".equalsIgnoreCase(operation) && !eidParam.isEmpty()) {
+            int examId = Integer.parseInt(eidParam);
+            int obtMarks = Integer.parseInt(nz(request.getParameter("obtMarks"), "0"));
+            int totalMarks = Integer.parseInt(nz(request.getParameter("totalMarks"), "0"));
+            pDAO.updateExamResult(examId, obtMarks, totalMarks);
+            session.setAttribute("message","Result updated successfully");
+        }
+        response.sendRedirect("adm-page.jsp?pgprt=5");
+
+    /* =========================
        QUESTIONS
        ========================= */
     } else if ("questions".equalsIgnoreCase(pageParam)) {
