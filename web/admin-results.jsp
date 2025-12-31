@@ -619,6 +619,8 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     }
 </style>
 
+<%@ include file="header-messages.jsp" %>
+
 <div class="dashboard-container">
     <!-- Sidebar Navigation - Same as profile page -->
     <aside class="sidebar">
@@ -951,7 +953,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     </main>
 </div>
 
-<!-- Modal for delete confirmation -->
+<!-- Delete Confirmation Modal -->
 <div id="deleteModal" class="modal" style="display: none;">
     <div class="modal-content" style="max-width: 500px;">
         <div class="modal-header">
@@ -1034,6 +1036,47 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     border-top: 1px solid #dee2e6;
     border-radius: 0 0 8px 8px;
     text-align: right;
+}
+
+/* Update button styles to match your theme */
+.btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--medium-gray);
+    color: var(--dark-gray);
+}
+
+.btn-outline:hover {
+    background: var(--light-gray);
+    border-color: var(--dark-gray);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: white;
+    border: none;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #b91c1c, #991b1b);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.btn-danger:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 </style>
 

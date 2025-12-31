@@ -479,6 +479,40 @@ try {
         return;
         
     /* =========================
+       ADMIN RESULTS
+       ========================= */
+    } else if ("admin-results".equalsIgnoreCase(pageParam)) {
+        String operation = nz(request.getParameter("operation"), "");
+        if ("delete_result".equalsIgnoreCase(operation)) {
+            String submittedToken = request.getParameter("csrf_token");
+            String sessionToken = (String) session.getAttribute("csrf_token");
+
+            if (sessionToken == null || !sessionToken.equals(submittedToken)) {
+                session.setAttribute("error", "Invalid request. Please try again.");
+                response.sendRedirect("adm-page.jsp?pgprt=5");
+                return;
+            }
+
+            try {
+                int examId = Integer.parseInt(nz(request.getParameter("examId"), "0"));
+                if (examId > 0) {
+                    boolean success = pDAO.deleteExamResult(examId);
+                    if (success) {
+                        session.setAttribute("message", "Exam result deleted successfully.");
+                    } else {
+                        session.setAttribute("error", "Failed to delete exam result.");
+                    }
+                } else {
+                    session.setAttribute("error", "Invalid Exam ID.");
+                }
+            } catch (NumberFormatException e) {
+                session.setAttribute("error", "Invalid Exam ID format.");
+            }
+            response.sendRedirect("adm-page.jsp?pgprt=5");
+        }
+    
+        
+    /* =========================
        LOGOUT
        ========================= */
     } else if ("logout".equalsIgnoreCase(pageParam)) {

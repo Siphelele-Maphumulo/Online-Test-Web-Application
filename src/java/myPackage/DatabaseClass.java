@@ -1897,18 +1897,41 @@ public int getExamDuration(String courseName) {
         ResultSet rs = pstm.executeQuery();
         if (rs.next()) {
             String timeStr = rs.getString("time");
-            // Parse time string like "02:00" or "1:30" to minutes
-            if (timeStr != null && timeStr.contains(":")) {
-                String[] parts = timeStr.split(":");
-                int hours = 0;
-                int minutes = 0;
+            
+            // Handle different time formats
+            if (timeStr != null && !timeStr.trim().isEmpty()) {
+                timeStr = timeStr.trim();
                 
+                // Case 1: Already in minutes (just a number)
                 try {
-                    hours = Integer.parseInt(parts[0].trim());
-                    minutes = Integer.parseInt(parts[1].trim());
-                    duration = (hours * 60) + minutes;
-                } catch (NumberFormatException e) {
-                    System.out.println("Error parsing time format: " + timeStr);
+                    // Try to parse as just minutes
+                    duration = Integer.parseInt(timeStr);
+                    System.out.println("Parsed as minutes: " + duration + " for course: " + courseName);
+                } catch (NumberFormatException e1) {
+                    // Case 2: Try to parse as "hh:mm" format
+                    if (timeStr.contains(":")) {
+                        String[] parts = timeStr.split(":");
+                        int hours = 0;
+                        int minutes = 0;
+                        
+                        try {
+                            hours = Integer.parseInt(parts[0].trim());
+                            minutes = Integer.parseInt(parts[1].trim());
+                            duration = (hours * 60) + minutes;
+                            System.out.println("Parsed as hh:mm: " + duration + " minutes for course: " + courseName);
+                        } catch (NumberFormatException e2) {
+                            System.out.println("Error parsing time format: " + timeStr);
+                        }
+                    } else {
+                        // Case 3: Try to parse as decimal hours (e.g., "1.5" = 1.5 hours)
+                        try {
+                            double decimalHours = Double.parseDouble(timeStr);
+                            duration = (int) Math.round(decimalHours * 60);
+                            System.out.println("Parsed as decimal hours: " + duration + " minutes for course: " + courseName);
+                        } catch (NumberFormatException e3) {
+                            System.out.println("Could not parse time format: " + timeStr);
+                        }
+                    }
                 }
             }
         }
@@ -1919,7 +1942,6 @@ public int getExamDuration(String courseName) {
     }
     return duration;
 }
-
 // Method to get an Exam by Exam ID
 public Exams getResultByExamId(int examId) {
     Exams exam = null;
@@ -2165,6 +2187,72 @@ public void calculateResult(int eid, int tMarks, String endTime, int size) {
 }
 
 
+
+// Method to delete an exam result and its associated answers
+public boolean deleteExamResult(int examId) {
+    PreparedStatement deleteAnswersStmt = null;
+    PreparedStatement deleteExamStmt = null;
+    
+    try {
+        // Start transaction
+        conn.setAutoCommit(false);
+        
+        // 1. Delete associated answers from the 'answers' table
+        String deleteAnswersSql = "DELETE FROM answers WHERE exam_id = ?";
+        deleteAnswersStmt = conn.prepareStatement(deleteAnswersSql);
+        deleteAnswersStmt.setInt(1, examId);
+        deleteAnswersStmt.executeUpdate();
+        
+        // 2. Delete the exam from the 'exams' table
+        String deleteExamSql = "DELETE FROM exams WHERE exam_id = ?";
+        deleteExamStmt = conn.prepareStatement(deleteExamSql);
+        deleteExamStmt.setInt(1, examId);
+        int rowsAffected = deleteExamStmt.executeUpdate();
+        
+        // Commit transaction
+        conn.commit();
+        
+        return rowsAffected > 0;
+        
+    } catch (SQLException ex) {
+        try {
+            // Rollback transaction in case of an error
+            if (conn != null) {
+                conn.rollback();
+            }
+        } catch (SQLException rollbackEx) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Rollback failed", rollbackEx);
+        }
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to delete exam result for ID: " + examId, ex);
+        return false;
+    } finally {
+        try {
+            // Close statements and restore auto-commit mode
+            if (deleteAnswersStmt != null) deleteAnswersStmt.close();
+            if (deleteExamStmt != null) deleteExamStmt.close();
+            if (conn != null) {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, e);
+        }
+    }
+}
+
+    public void toggleCourseStatus(String cName) {
+        try {
+            String sql = "UPDATE courses SET is_active = !is_active WHERE course_name=?";
+            PreparedStatement pstm = conn.prepareStatement(sql);
+            pstm.setString(1, cName);
+            pstm.executeUpdate();
+            pstm.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+
+
 /* Add this method in your DatabaseClass */
 
 public String getLastCourseName() {
@@ -2222,15 +2310,4 @@ public String getLastCourseName() {
         }
     }
     
-    public void toggleCourseStatus(String cName) {
-        try {
-            String sql = "UPDATE courses SET is_active = !is_active WHERE course_name=?";
-            PreparedStatement pstm = conn.prepareStatement(sql);
-            pstm.setString(1, cName);
-            pstm.executeUpdate();
-            pstm.close();
-        } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
 }

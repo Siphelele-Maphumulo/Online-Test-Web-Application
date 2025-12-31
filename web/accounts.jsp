@@ -693,6 +693,8 @@ for (User user : studentList) {
     }
 </style>
 
+<%@ include file="header-messages.jsp" %>
+
 <div class="dashboard-container">
     <!-- Sidebar Navigation - Same as profile page -->
     <aside class="sidebar">

@@ -731,6 +731,8 @@ int lecturerCount = lecturerList.size();
                 <%= lecturerCount %> Lecturers
             </div>
         </header>
+            
+        <%@ include file="header-messages.jsp" %>
         
         <!-- Lecturers Accounts Card -->
         <div class="accounts-card">

@@ -1,8 +1,16 @@
+<!-- Font Awesome for Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <%@page import="java.util.ArrayList"%>
 <%@page import="myPackage.classes.Questions"%>
 <%@page import="myPackage.classes.Exams"%>
 <%
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+    
+    // Generate CSRF token if not exists
+    if (session.getAttribute("csrf_token") == null) {
+        String csrfToken = java.util.UUID.randomUUID().toString();
+        session.setAttribute("csrf_token", csrfToken);
+    }
     
     // CHECK IF USER IS TRYING TO ACCESS EXAM WITHOUT ACTIVE SESSION
     String showExamForm = "true"; // Default to showing exam selection form
@@ -20,8 +28,25 @@
         session.removeAttribute("examId");
     }
 %>
-<!-- Font Awesome for Icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<%!
+    // Helper method to format duration in minutes to readable format
+    private String formatDuration(int minutes) {
+        if (minutes < 60) {
+            return minutes + " minute" + (minutes != 1 ? "s" : "");
+        } else {
+            int hours = minutes / 60;
+            int remainingMinutes = minutes % 60;
+            if (remainingMinutes == 0) {
+                return hours + " hour" + (hours != 1 ? "s" : "");
+            } else {
+                return hours + " hour" + (hours != 1 ? "s" : "") + " " + 
+                       remainingMinutes + " minute" + (remainingMinutes != 1 ? "s" : "");
+            }
+        }
+    }
+%>
+
 
 <style>
     /* CSS Variables for Maintainability - PROFESSIONAL THEME */
@@ -1397,6 +1422,126 @@
         border-top: 1px solid var(--medium-gray);
     }
     
+    /* DELETE MODAL STYLES */
+    .delete-modal {
+        display: none;
+        position: fixed;
+        z-index: 1100;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .delete-modal .modal-content {
+        background-color: #fff;
+        margin: 10% auto;
+        padding: 0;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        max-width: 500px;
+        width: 90%;
+        animation: modalSlideIn 0.3s ease-out;
+    }
+    
+    .delete-modal .modal-header {
+        padding: 16px 20px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        border-radius: 8px 8px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .delete-modal .modal-header h3 {
+        margin: 0;
+        color: #333;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .delete-modal .close-modal {
+        color: #aaa;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        line-height: 20px;
+    }
+    
+    .delete-modal .close-modal:hover {
+        color: #000;
+    }
+    
+    .delete-modal .modal-body {
+        padding: 20px;
+        color: #333;
+        font-size: 16px;
+        line-height: 1.5;
+    }
+    
+    .delete-modal .modal-footer {
+        padding: 16px 20px;
+        background-color: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+        border-radius: 0 0 8px 8px;
+        text-align: right;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+    
+    /* Delete Modal Button Styles */
+    .btn-outline {
+        background: transparent;
+        border: 1px solid var(--medium-gray);
+        color: var(--dark-gray);
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-outline:hover {
+        background: var(--light-gray);
+        border-color: var(--dark-gray);
+    }
+    
+    .btn-danger {
+        background: linear-gradient(135deg, #dc2626, #b91c1c);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .btn-danger:hover {
+        background: linear-gradient(135deg, #b91c1c, #991b1b);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+    }
+    
+    .btn-danger:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+    
     /* Responsive Design */
     @media (max-width: 768px) {
         .exam-wrapper {
@@ -1497,6 +1642,10 @@
         }
         
         .modal-container .modal-footer {
+            flex-direction: column;
+        }
+        
+        .delete-modal .modal-footer {
             flex-direction: column;
         }
     }
@@ -2183,31 +2332,198 @@
                 });
             </script>
 
-        <% } else if ("1".equals(request.getParameter("showresult"))) {
-            // SHOW RESULTS PAGE
-            Exams result = pDAO.getResultByExamId(Integer.parseInt(request.getParameter("eid")));
-            
-            // IMPORTANT: Clear exam session when showing results
-            session.removeAttribute("examStarted");
-            session.removeAttribute("examId");
-        %>
+            <% } else if ("1".equals(request.getParameter("showresult"))) {
+                        // SHOW RESULTS PAGE
+                        Exams result = pDAO.getResultByExamId(Integer.parseInt(request.getParameter("eid")));
+                        
+                        // IMPORTANT: Clear exam session when showing results
+                        session.removeAttribute("examStarted");
+                        session.removeAttribute("examId");
+                        
+                        // Clear any pending exam timer data
+                        session.removeAttribute("remainingTime");
+                        session.removeAttribute("courseName");
+                        
+                        // Get student name - FIXED to use actual getters from Exams class
+                        String studentFullName = "";
+                        String courseName = "";
+                        String examDate = "";
+                        String startTime = "";
+                        String endTime = "";
+                        int obtainedMarks = 0;
+                        int totalMarks = 0;
+                        String resultStatus = "";
+                        
+                        if (result != null) {
+                            try {
+                                // Get the actual values from the Exams object
+                                // Try different possible getter method names
+                                
+                                // Get first name
+                                String firstName = "";
+                                try {
+                                    java.lang.reflect.Method getFirstNameMethod = result.getClass().getMethod("getFirstName");
+                                    firstName = (String) getFirstNameMethod.invoke(result);
+                                } catch (Exception e1) {
+                                    try {
+                                        java.lang.reflect.Method getFirst_nameMethod = result.getClass().getMethod("getFirst_name");
+                                        firstName = (String) getFirst_nameMethod.invoke(result);
+                                    } catch (Exception e2) {
+                                        firstName = "";
+                                    }
+                                }
+                                
+                                // Get last name
+                                String lastName = "";
+                                try {
+                                    java.lang.reflect.Method getLastNameMethod = result.getClass().getMethod("getLastName");
+                                    lastName = (String) getLastNameMethod.invoke(result);
+                                } catch (Exception e1) {
+                                    try {
+                                        java.lang.reflect.Method getLast_nameMethod = result.getClass().getMethod("getLast_name");
+                                        lastName = (String) getLast_nameMethod.invoke(result);
+                                    } catch (Exception e2) {
+                                        lastName = "";
+                                    }
+                                }
+                                
+                                studentFullName = (firstName + " " + lastName).trim();
+                                
+                                // If empty, try user_name
+                                if (studentFullName.isEmpty()) {
+                                    try {
+                                        java.lang.reflect.Method getUserNameMethod = result.getClass().getMethod("getUserName");
+                                        studentFullName = (String) getUserNameMethod.invoke(result);
+                                    } catch (Exception e) {
+                                        // Try email as last resort
+                                        try {
+                                            java.lang.reflect.Method getEmailMethod = result.getClass().getMethod("getEmail");
+                                            studentFullName = (String) getEmailMethod.invoke(result);
+                                        } catch (Exception ex) {
+                                            studentFullName = "Student";
+                                        }
+                                    }
+                                }
+                                
+                                // Get course name
+                                try {
+                                    java.lang.reflect.Method getCourseNameMethod = result.getClass().getMethod("getCourseName");
+                                    courseName = (String) getCourseNameMethod.invoke(result);
+                                } catch (Exception e1) {
+                                    try {
+                                        java.lang.reflect.Method getcNameMethod = result.getClass().getMethod("getcName");
+                                        courseName = (String) getcNameMethod.invoke(result);
+                                    } catch (Exception e2) {
+                                        courseName = "Unknown Course";
+                                    }
+                                }
+                                
+                                // Get exam date
+                                try {
+                                    java.lang.reflect.Method getDateMethod = result.getClass().getMethod("getDate");
+                                    examDate = (String) getDateMethod.invoke(result);
+                                } catch (Exception e) {
+                                    examDate = "N/A";
+                                }
+                                
+                                // Get start time
+                                try {
+                                    java.lang.reflect.Method getStartTimeMethod = result.getClass().getMethod("getStartTime");
+                                    startTime = (String) getStartTimeMethod.invoke(result);
+                                } catch (Exception e1) {
+                                    try {
+                                        java.lang.reflect.Method getStart_timeMethod = result.getClass().getMethod("getStart_time");
+                                        startTime = (String) getStart_timeMethod.invoke(result);
+                                    } catch (Exception e2) {
+                                        startTime = "N/A";
+                                    }
+                                }
+                                
+                                // Get end time
+                                try {
+                                    java.lang.reflect.Method getEndTimeMethod = result.getClass().getMethod("getEndTime");
+                                    endTime = (String) getEndTimeMethod.invoke(result);
+                                } catch (Exception e1) {
+                                    try {
+                                        java.lang.reflect.Method getEnd_timeMethod = result.getClass().getMethod("getEnd_time");
+                                        endTime = (String) getEnd_timeMethod.invoke(result);
+                                    } catch (Exception e2) {
+                                        endTime = "N/A";
+                                    }
+                                }
+                                
+                                // Get obtained marks
+                                try {
+                                    java.lang.reflect.Method getObtMarksMethod = result.getClass().getMethod("getObtMarks");
+                                    obtainedMarks = (Integer) getObtMarksMethod.invoke(result);
+                                } catch (Exception e) {
+                                    obtainedMarks = 0;
+                                }
+                                
+                                // Get total marks
+                                try {
+                                    java.lang.reflect.Method getTotalMarksMethod = result.getClass().getMethod("getTotalMarks");
+                                    totalMarks = (Integer) getTotalMarksMethod.invoke(result);
+                                } catch (Exception e1) {
+                                    try {
+                                        java.lang.reflect.Method gettMarksMethod = result.getClass().getMethod("gettMarks");
+                                        totalMarks = (Integer) gettMarksMethod.invoke(result);
+                                    } catch (Exception e2) {
+                                        totalMarks = 0;
+                                    }
+                                }
+                                
+                                // Get result status
+                                try {
+                                    java.lang.reflect.Method getStatusMethod = result.getClass().getMethod("getStatus");
+                                    resultStatus = (String) getStatusMethod.invoke(result);
+                                    if (resultStatus == null || resultStatus.isEmpty()) {
+                                        // Calculate status based on marks if not set
+                                        double percentage = 0;
+                                        if (totalMarks > 0) {
+                                            percentage = (double) obtainedMarks / totalMarks * 100;
+                                        }
+                                        resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
+                                    }
+                                } catch (Exception e) {
+                                    // Calculate status based on marks
+                                    double percentage = 0;
+                                    if (totalMarks > 0) {
+                                        percentage = (double) obtainedMarks / totalMarks * 100;
+                                    }
+                                    resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
+                                }
+                                
+                            } catch (Exception e) {
+                                // If reflection fails, use defaults
+                                studentFullName = "Student";
+                                courseName = "Unknown Course";
+                                examDate = "N/A";
+                                startTime = "N/A";
+                                endTime = "N/A";
+                                obtainedMarks = 0;
+                                totalMarks = 0;
+                                resultStatus = "Unknown";
+                            }
+                        }
+                    %>
             <!-- RESULTS -->
             <div class="page-header">
                 <div class="page-title"><i class="fas fa-chart-line"></i> Exam Result</div>
-                <div class="stats-badge"><i class="fas fa-graduation-cap"></i> <%= result.getStatus() %></div>
+                <div class="stats-badge"><i class="fas fa-graduation-cap"></i> <%= resultStatus %></div>
             </div>
             <div class="result-card">
                 <div class="result-grid">
-                    <div class="result-item"><strong><i class="fas fa-calendar-alt"></i> Exam Date</strong><div class="result-value"><%= result.getDate() %></div></div>
-                    <div class="result-item"><strong><i class="fas fa-book"></i> Course Name</strong><div class="result-value"><%= result.getcName() %></div></div>
-                    <div class="result-item"><strong><i class="fas fa-clock"></i> Start Time</strong><div class="result-value"><%= result.getStartTime() %></div></div>
-                    <div class="result-item"><strong><i class="fas fa-clock"></i> End Time</strong><div class="result-value"><%= result.getEndTime() %></div></div>
-                    <div class="result-item"><strong><i class="fas fa-star"></i> Obtained Marks</strong><div class="result-value"><%= result.getObtMarks() %></div></div>
-                    <div class="result-item"><strong><i class="fas fa-star-half-alt"></i> Total Marks</strong><div class="result-value"><%= result.gettMarks() %></div></div>
+                    <div class="result-item"><strong><i class="fas fa-calendar-alt"></i> Exam Date</strong><div class="result-value"><%= examDate %></div></div>
+                    <div class="result-item"><strong><i class="fas fa-book"></i> Course Name</strong><div class="result-value"><%= courseName %></div></div>
+                    <div class="result-item"><strong><i class="fas fa-clock"></i> Start Time</strong><div class="result-value"><%= startTime %></div></div>
+                    <div class="result-item"><strong><i class="fas fa-clock"></i> End Time</strong><div class="result-value"><%= endTime %></div></div>
+                    <div class="result-item"><strong><i class="fas fa-star"></i> Obtained Marks</strong><div class="result-value"><%= obtainedMarks %></div></div>
+                    <div class="result-item"><strong><i class="fas fa-star-half-alt"></i> Total Marks</strong><div class="result-value"><%= totalMarks %></div></div>
                     <div class="result-item">
                         <strong><i class="fas fa-flag"></i> Result Status</strong>
-                        <div class="result-value <%= result.getStatus().equalsIgnoreCase("Pass")?"status-pass":"status-fail" %>">
-                            <i class="fas <%= result.getStatus().equalsIgnoreCase("Pass")?"fa-check-circle":"fa-times-circle" %>"></i> <%= result.getStatus() %>
+                        <div class="result-value <%= resultStatus.equalsIgnoreCase("Pass")?"status-pass":"status-fail" %>">
+                            <i class="fas <%= resultStatus.equalsIgnoreCase("Pass")?"fa-check-circle":"fa-times-circle" %>"></i> <%= resultStatus %>
                         </div>
                     </div>
                     <div class="result-item">
@@ -2215,21 +2531,27 @@
                         <div class="result-value">
                             <% 
                                 double percentage = 0;
-                                if(result.gettMarks() > 0) {
-                                    percentage = (double)result.getObtMarks() / result.gettMarks() * 100;
+                                if(totalMarks > 0) {
+                                    percentage = (double)obtainedMarks / totalMarks * 100;
                                 }
                             %>
                             <span class="percentage-badge"><%= String.format("%.1f", percentage) %>%</span>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Action Buttons -->
+
+                <!-- Action Buttons
                 <div style="text-align: center; margin-top: 20px;">
-                    <a href="std-page.jsp?pgprt=2&eid=<%= result.getExamId() %>" class="action-btn" style="background: linear-gradient(135deg, #4a90e2, #357abd); margin-right: 10px;">
+                    <a href="std-page.jsp?pgprt=2&eid=<%= request.getParameter("eid") %>" class="action-btn" style="background: linear-gradient(135deg, #4a90e2, #357abd); margin-right: 10px;">
                         <i class="fas fa-eye"></i>
                         View Details
-                    </a>
+                    </a> -->
+                </div>
+<!--                    <button class="btn-danger" 
+                            onclick="showDeleteModal(<%= result.getExamId() %>, '<%= studentFullName.replace("'", "\\'") %>', '<%= result.getcName().replace("'", "\\'") %>')"
+                            style="padding: 10px 20px; border-radius: 6px; border: none; color: white; cursor: pointer; margin-left: 10px;">
+                        <i class="fas fa-trash"></i> Delete Result
+                    </button>-->
                 </div>
                 
                 <!-- RELAUNCH SECTION -->
@@ -2263,6 +2585,8 @@
             // Clear any stale session data
             session.removeAttribute("examStarted");
             session.removeAttribute("examId");
+            session.removeAttribute("remainingTime");
+            session.removeAttribute("courseName");
         %>
             <!-- COURSE PICKER -->
             <div class="page-header">
@@ -2274,6 +2598,7 @@
                 <form action="controller.jsp" method="post" id="examStartForm">
                     <input type="hidden" name="page" value="exams">
                     <input type="hidden" name="operation" value="startexam">
+                    <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") != null ? session.getAttribute("csrf_token") : "" %>">
                     <label class="form-label"><i class="fas fa-book"></i> Select Course</label>
                     <select name="coursename" class="form-select" required id="courseSelect">
                         <option value="">Choose a course...</option>
@@ -2282,9 +2607,9 @@
                             for(String course : courseList){ 
                                 int duration = pDAO.getExamDuration(course);
                         %>
-                            <option value="<%= course %>" data-duration="<%= duration %>">
-                                <%= course %> (<%= duration %> minutes)
-                            </option>
+                        <option value="<%= course %>" data-duration="<%= duration %>">
+                            <%= course %> (<%= formatDuration(duration) %>)
+                        </option>
                         <% } %>
                     </select>
                     
@@ -2372,6 +2697,25 @@
     </div>
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="delete-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i> Delete Exam Result</h3>
+            <span class="close-modal" onclick="closeDeleteModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p id="deleteModalMessage">Are you sure you want to delete this exam result?</p>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeDeleteModal()" class="btn-outline">Cancel</button>
+            <button onclick="confirmDelete()" class="btn-danger">
+                <i class="fas fa-trash"></i> Delete
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
     // Confirmation Modal JavaScript
     document.addEventListener('DOMContentLoaded', function () {
@@ -2405,6 +2749,127 @@
                     modal.style.display = 'none';
                 }
             });
+        }
+    });
+
+    // Global variables for delete modal
+    let deleteExamId = null;
+    let deleteStudentName = null;
+    let deleteCourseName = null;
+
+    function showDeleteModal(examId, studentName, courseName) {
+        deleteExamId = examId;
+        deleteStudentName = studentName;
+        deleteCourseName = courseName;
+        
+        console.log('Showing delete modal for:', {examId, studentName, courseName});
+        
+        const modal = document.getElementById('deleteModal');
+        if (!modal) {
+            console.error('Delete modal not found!');
+            alert('Error: Delete modal not found.');
+            return;
+        }
+        
+        const modalMessage = document.getElementById('deleteModalMessage');
+        if (!modalMessage) {
+            console.error('Modal message element not found!');
+            return;
+        }
+        
+        // Clean up text
+        const cleanStudentName = studentName ? studentName.replace(/'/g, "\\'") : 'Unknown Student';
+        const cleanCourseName = courseName ? courseName.replace(/'/g, "\\'") : 'Unknown Course';
+        
+        modalMessage.innerHTML = `Are you sure you want to delete the exam result for:<br><br>
+                                 <strong>Student:</strong> ${cleanStudentName}<br>
+                                 <strong>Course:</strong> ${cleanCourseName}<br>
+                                 <strong>Exam ID:</strong> ${examId}<br><br>
+                                 <span style="color: #dc3545; font-weight: bold;">
+                                 <i class="fas fa-exclamation-triangle"></i> This action cannot be undone!</span>`;
+        
+        modal.style.display = 'flex';
+    }
+    
+    function closeDeleteModal() {
+        const modal = document.getElementById('deleteModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        deleteExamId = null;
+        deleteStudentName = null;
+        deleteCourseName = null;
+    }
+    
+    function confirmDelete() {
+        if (!deleteExamId) {
+            alert('No exam selected for deletion.');
+            return;
+        }
+        
+        console.log('Confirming delete for exam ID:', deleteExamId);
+        
+        // Show loading state
+        const deleteBtn = document.querySelector('#deleteModal .modal-footer .btn-danger');
+        if (deleteBtn) {
+            const originalText = deleteBtn.innerHTML;
+            deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+            deleteBtn.disabled = true;
+            
+            // Revert button after 5 seconds if something goes wrong
+            setTimeout(() => {
+                deleteBtn.innerHTML = originalText;
+                deleteBtn.disabled = false;
+            }, 5000);
+        }
+
+        // Submit delete request
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'controller.jsp';
+
+        // Add CSRF token
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = '<%= session.getAttribute("csrf_token") != null ? session.getAttribute("csrf_token") : "" %>';
+        form.appendChild(csrfInput);
+
+        const pageInput = document.createElement('input');
+        pageInput.type = 'hidden';
+        pageInput.name = 'page';
+        pageInput.value = 'results';
+        form.appendChild(pageInput);
+
+        const operationInput = document.createElement('input');
+        operationInput.type = 'hidden';
+        operationInput.name = 'operation';
+        operationInput.value = 'delete';
+        form.appendChild(operationInput);
+
+        const examIdInput = document.createElement('input');
+        examIdInput.type = 'hidden';
+        examIdInput.name = 'eid';
+        examIdInput.value = deleteExamId;
+        form.appendChild(examIdInput);
+
+        console.log('Submitting delete form for exam ID:', deleteExamId);
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    // Close delete modal when clicking outside
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('deleteModal');
+        if (event.target === modal) {
+            closeDeleteModal();
+        }
+    });
+
+    // Add keyboard support for delete modal
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeDeleteModal();
         }
     });
 </script>
