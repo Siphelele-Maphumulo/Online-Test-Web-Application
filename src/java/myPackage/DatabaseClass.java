@@ -571,102 +571,7 @@ public void addNewStaff(String staffNum, String email, String fullNames, String 
     }
 }
 
-public boolean addNewUserToUsersTable(String fName, String lName, String uName, String email, 
-                                     String password, String contactNo, String city, 
-                                     String address, String userType) {
-    try {
-        String sql = "INSERT INTO users (first_name, last_name, user_name, email, password, " +
-                     "contact_no, city, address, user_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        PreparedStatement pstm = conn.prepareStatement(sql);
-        pstm.setString(1, fName);
-        pstm.setString(2, lName);
-        pstm.setString(3, uName);
-        pstm.setString(4, email);
-        pstm.setString(5, password);
-        pstm.setString(6, contactNo);
-        pstm.setString(7, city);
-        pstm.setString(8, address);
-        pstm.setString(9, userType);
-        
-        int rows = pstm.executeUpdate();
-        pstm.close();
-        return rows > 0;
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-        return false;
-    }
-}
 
-public boolean addNewStudent(int userId, String fName, String lName, String uName, String email, 
-                            String password, String contactNo, String city, 
-                            String address, String userType) {
-    try {
-        String sql = "INSERT INTO students (user_id, first_name, last_name, user_name, email, " +
-                     "password, user_type, contact_no, city, address) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        PreparedStatement pstm = conn.prepareStatement(sql);
-        pstm.setInt(1, userId);
-        pstm.setString(2, fName);
-        pstm.setString(3, lName);
-        pstm.setString(4, uName);
-        pstm.setString(5, email);
-        pstm.setString(6, password);
-        pstm.setString(7, userType);
-        pstm.setString(8, contactNo);
-        pstm.setString(9, city);
-        pstm.setString(10, address);
-        
-        int rows = pstm.executeUpdate();
-        pstm.close();
-        return rows > 0;
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-        return false;
-    }
-}
-
-public boolean addNewLecture(int userId, String fName, String lName, String uName, String email, 
-                            String password, String contactNo, String city, 
-                            String address, String userType, String courseName) {
-    try {
-        String sql = "INSERT INTO lectures (user_id, first_name, last_name, user_name, email, " +
-                     "password, user_type, contact_no, city, address, course_name) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        PreparedStatement pstm = conn.prepareStatement(sql);
-        pstm.setInt(1, userId);
-        pstm.setString(2, fName);
-        pstm.setString(3, lName);
-        pstm.setString(4, uName);
-        pstm.setString(5, email);
-        pstm.setString(6, password);
-        pstm.setString(7, userType);
-        pstm.setString(8, contactNo);
-        pstm.setString(9, city);
-        pstm.setString(10, address);
-        pstm.setString(11, courseName);
-        
-        int rows = pstm.executeUpdate();
-        pstm.close();
-        return rows > 0;
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-        return false;
-    }
-}
-
-public boolean deleteUserFromUsersTable(int userId) {
-    try {
-        String sql = "DELETE FROM users WHERE user_id = ?";
-        PreparedStatement pstm = conn.prepareStatement(sql);
-        pstm.setInt(1, userId);
-        int rows = pstm.executeUpdate();
-        pstm.close();
-        return rows > 0;
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-        return false;
-    }
-}
     
 public void addNewUser(String fName, String lName, String uName, String email, String pass,
                        String contact, String city, String address, String staffNum) {
@@ -895,6 +800,20 @@ public boolean updateUser(User user) {
     }
 }
 
+    public boolean checkUserExists(String username) {
+        String sql = "SELECT 1 FROM users WHERE user_name = ? LIMIT 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, username);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "checkUserExists failed", e);
+            return false;
+        }
+    }
+
+
     
 public int updateStudent(int uId, String fName, String lName, String uName, String email, String pass,
         String contact, String city, String address, String userType) {
@@ -1074,16 +993,15 @@ public ArrayList<String> getAllCourseNames() {
 public ArrayList getAllCourses() {
     ArrayList list = new ArrayList();
     try {
-        String sql = "SELECT course_name, total_marks, time, exam_date, is_active FROM courses";
+        String sql = "SELECT course_name, total_marks, time, exam_date FROM courses";
         PreparedStatement pstm = conn.prepareStatement(sql);
         ResultSet rs = pstm.executeQuery();
 
         while (rs.next()) {
             list.add(rs.getString("course_name")); // 0
             list.add(rs.getInt("total_marks"));    // 1
-            list.add(rs.getString("time"));        // 2
+            list.add(rs.getString("time"));        // 2 ✅ FIX
             list.add(rs.getDate("exam_date"));     // 3
-            list.add(rs.getBoolean("is_active"));  // 4
         }
 
         rs.close();
@@ -1094,95 +1012,6 @@ public ArrayList getAllCourses() {
     return list;
 }
 
-public boolean updateCourse(String originalCourseName, String newCourseName, int tMarks, String time, String examDate) {
-    try {
-        // Check if new course name already exists
-        if (!originalCourseName.equals(newCourseName)) {
-            String checkSql = "SELECT COUNT(*) FROM courses WHERE course_name = ?";
-            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
-                checkStmt.setString(1, newCourseName);
-                ResultSet rs = checkStmt.executeQuery();
-                if (rs.next() && rs.getInt(1) > 0) {
-                    return false;
-                }
-            }
-        }
-        
-        // Update the course (cascade will handle the rest)
-        String sql = "UPDATE courses SET course_name=?, total_marks=?, time=?, exam_date=? WHERE course_name=?";
-        try (PreparedStatement pstm = conn.prepareStatement(sql)) {
-            pstm.setString(1, newCourseName);
-            pstm.setInt(2, tMarks);
-            pstm.setString(3, time);
-            pstm.setString(4, examDate);
-            pstm.setString(5, originalCourseName);
-            int rows = pstm.executeUpdate();
-            return rows > 0;
-        }
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-        return false;
-    }
-}
-
-public boolean toggleCourseStatus(String courseName) {
-    try {
-        String sql = "UPDATE courses SET is_active = NOT is_active WHERE course_name = ?";
-        try (PreparedStatement pstm = conn.prepareStatement(sql)) {
-            pstm.setString(1, courseName);
-            int rows = pstm.executeUpdate();
-            return rows > 0;
-        }
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-        return false;
-    }
-}
-
-public boolean isEmailInStaffTable(String email) {
-    try {
-        String sql = "SELECT COUNT(*) FROM staff WHERE email = ?";
-        PreparedStatement pstm = conn.prepareStatement(sql);
-        pstm.setString(1, email);
-        ResultSet rs = pstm.executeQuery();
-        boolean exists = false;
-        if (rs.next()) {
-            exists = rs.getInt(1) > 0;
-        }
-        rs.close();
-        pstm.close();
-        return exists;
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-        return false;
-    }
-}
-
-public boolean addNewUserWithType(String fName, String lName, String uName, String email, 
-                                  String password, String contactNo, String city, 
-                                  String address, String userType) {
-    try {
-        String sql = "INSERT INTO users (firstname, lastname, username, email, password, contactno, city, address, type) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        PreparedStatement pstm = conn.prepareStatement(sql);
-        pstm.setString(1, fName);
-        pstm.setString(2, lName);
-        pstm.setString(3, uName);
-        pstm.setString(4, email);
-        pstm.setString(5, password);
-        pstm.setString(6, contactNo);
-        pstm.setString(7, city);
-        pstm.setString(8, address);
-        pstm.setString(9, userType);
-        
-        int rows = pstm.executeUpdate();
-        pstm.close();
-        return rows > 0;
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-        return false;
-    }
-}
    
 public boolean addNewCourse(String courseName, int tMarks, String time, String examDate) {
     try {

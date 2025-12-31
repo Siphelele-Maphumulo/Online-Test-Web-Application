@@ -23,61 +23,50 @@
     .form-row > .col-md-6{ margin-bottom:1rem; }
     .btn-auth{ background:linear-gradient(135deg, var(--primary), #1e4580); border:none; }
     .btn-auth:hover{ background:#1e4580; }
-    .back-button{ background:#09294D; color:white; border:none; margin-bottom: 15px; display: inline-block; }
-    .back-button:hover{ background:#6c757d; }
-    .user-type-badge{ background:#09294D; color:white; padding:5px 15px; border-radius:20px; font-size:0.9rem; }
-    .course-field { display: none; }
     @media (max-width:575.98px){ .auth-card{ border-radius:.75rem; } .auth-title{ font-size:1.25rem; } }
   </style>
 </head>
 <%
-    // Get parameters
+    // Get the user_type from request parameter
     String userType = request.getParameter("user_type");
-    String fromPage = request.getParameter("from");
-
-    // Check if should show back button
-    boolean showBackButton = false;
-    String backUrl = "index.jsp";
-
-    // Show back button for admin / lecturer contexts
-    if ("admin".equals(userType) || "lecture".equals(userType) || "admin".equals(fromPage) ||
-        (session.getAttribute("userRole") != null && 
-         ("admin".equals(session.getAttribute("userRole")) || "lecture".equals(session.getAttribute("userRole"))))) {
-        showBackButton = true;
-        
-        // Set appropriate back URL
-        if (session.getAttribute("userRole") != null) {
-            String role = session.getAttribute("userRole").toString();
-            if ("admin".equals(role)) {
-                backUrl = "adm-page.jsp";
-            } else if ("lecture".equals(role)) {
-                backUrl = "lecture_dashboard.jsp";
-            }
-        } else if ("admin".equals(fromPage)) {
-            backUrl = "adm-page.jsp";
-        }
+    if (userType == null) {
+        userType = "student"; // Default to student
     }
-
-    // Store in session
+    String fromPage = request.getParameter("from");
+    
+    // Store these in session or hidden fields for use after registration
     if (userType != null) {
         session.setAttribute("signup_user_type", userType);
     }
     if (fromPage != null) {
         session.setAttribute("signup_from_page", fromPage);
     }
-
-    // Determine display user type
-    String displayUserType = "Student";
-    if ("admin".equals(userType)) {
-        displayUserType = "Administrator";
-    } else if ("lecture".equals(userType)) {
-        displayUserType = "Lecturer";
+    
+    String title = "Create your account";
+    String subtitle = "Please fill in your details to sign up.";
+    if ("student".equalsIgnoreCase(userType)) {
+        title = "Creating Student Account";
+        subtitle = "You are creating a student account.";
+    } else if ("lecture".equalsIgnoreCase(userType)) {
+        title = "Creating Lecturer Account";
+        subtitle = "You are creating a lecturer account with elevated privileges.";
+    } else if ("admin".equalsIgnoreCase(userType)) {
+        title = "Creating Administrator Account";
+        subtitle = "You are creating an administrator account with elevated privileges.";
+    }
+    
+    String emailLabel = "Email";
+    if ("student".equalsIgnoreCase(userType)) {
+        emailLabel = "Student account email";
+    } else if ("lecture".equalsIgnoreCase(userType)) {
+        emailLabel = "Lecturer account email";
+    } else if ("admin".equalsIgnoreCase(userType)) {
+        emailLabel = "Administrator account email";
     }
 %>
 
-
 <body>
-    <%@ include file="header-messages.jsp" %>
+
   <!-- Header -->
   <jsp:include page="header.jsp" />
 
@@ -87,59 +76,22 @@
       <div class="row justify-content-center">
         <div class="col-12 col-md-10 col-lg-8 col-xl-6">
           <div class="auth-card p-4 p-md-5">
-            
-            <!-- Back Button (Conditional) -->
-            
-            <% if (showBackButton) { %>
-                <a href="index.jsp"
-                   class="btn back-button btn-sm"
-                   onclick="history.back(); return false;">
-                    <i class="fas fa-arrow-left mr-1"></i>
-                    Back
-                </a>
-            <% } %>
+            <%@ include file="header-messages.jsp" %>
+            <h2 class="auth-title h4 mb-3 text-center"><%= title %></h2>
+            <p class="text-center text-muted mb-4"><%= subtitle %></p>
 
-            
-            <h2 class="auth-title h4 mb-3 text-center">Create your account</h2>
-            
-            <!-- User Type Badge -->
-            <% if ("admin".equals(userType) || "lecture".equals(userType)) { %>
-            <div class="text-center mb-3">
-              <span class="user-type-badge">
-                <i class="fas fa-user-shield mr-1"></i> Creating <%= displayUserType %> Account
-              </span>
-            </div>
-            <% } %>
-            
-            <p class="text-center text-muted mb-4">Please fill in your details to sign up.</p>
-
+            <!-- Add hidden fields for user_type and from_page -->
             <form action="controller.jsp" method="POST" onsubmit="return validateForm();">
               <input type="hidden" name="page" value="register"/>
+              <input type="hidden" name="user_type" value="<%= userType != null ? userType : "" %>"/>
+              <input type="hidden" name="from_page" value="<%= fromPage != null ? fromPage : "" %>"/>
               
-              <!-- User type parameter -->
-              <% if (userType != null && !userType.isEmpty()) { %>
-              <input type="hidden" name="user_type" value="<%= userType %>"/>
-              <% } %>
-              
-              <!-- From page parameter -->
-              <% if (fromPage != null && !fromPage.isEmpty()) { %>
-              <input type="hidden" name="from_page" value="<%= fromPage %>"/>
-              <% } %>
-              
-              <!-- Pass the referrer ID if creating from admin/lecture account -->
-              <% 
-                Object userId = session.getAttribute("userId");
-                Object userRole = session.getAttribute("userRole");
-                if (userId != null && ("admin".equals(userRole) || "lecture".equals(userRole))) {
-              %>
-              <input type="hidden" name="created_by" value="<%= userId %>"/>
-              <input type="hidden" name="creator_role" value="<%= userRole %>"/>
-              <input type="hidden" name="is_admin_creation" value="true"/>
-              <% } %>
+              <!-- You might also want to pass the referrer for admin/lecture users -->
+              <input type="hidden" name="referrer_id" value="<%= session.getAttribute("userId") != null ? session.getAttribute("userId") : "" %>"/>
 
               <div class="form-row">
                 <div class="col-12 col-md-6">
-                  <label class="sr-only" for="fname">First Name *</label>
+                  <label class="sr-only" for="fname">First Name</label>
                   <div class="input-icon">
                     <i class="fas fa-user"></i>
                     <input id="fname" type="text" name="fname" class="form-control" placeholder="First Name" required/>
@@ -148,7 +100,7 @@
                 </div>
 
                 <div class="col-12 col-md-6">
-                  <label class="sr-only" for="lname">Last Name *</label>
+                  <label class="sr-only" for="lname">Last Name</label>
                   <div class="input-icon">
                     <i class="fas fa-user"></i>
                     <input id="lname" type="text" name="lname" class="form-control" placeholder="Last Name" required/>
@@ -157,17 +109,16 @@
                 </div>
 
                 <div class="col-12 col-md-6">
-                  <label class="sr-only" for="uname">Username/ID *</label>
+                  <label class="sr-only" for="uname">8 digits of ID Number</label>
                   <div class="input-icon">
                     <i class="fas fa-id-badge"></i>
-                    <input id="uname" type="text" name="uname" class="form-control" placeholder="Username (Unique)" required/>
+                    <input id="uname" type="text" name="uname" class="form-control" placeholder="8 digits of ID Number" required/>
                   </div>
                   <span id="errorUsername" class="error-message"></span>
-                  <small class="form-text text-muted">Must be unique across all users</small>
                 </div>
 
                 <div class="col-12 col-md-6">
-                  <label class="sr-only" for="contactno">Contact No *</label>
+                  <label class="sr-only" for="contactno">Contact No</label>
                   <div class="input-icon">
                     <i class="fas fa-phone"></i>
                     <input id="contactno" type="tel" name="contactno" class="form-control" placeholder="Contact No" required/>
@@ -175,89 +126,38 @@
                   <span id="errorContact" class="error-message"></span>
                 </div>
 
-                <div class="col-12">
-                  <label class="sr-only" for="email">Email *</label>
+                  <div class="col-12 ">
+                  <label class="sr-only" for="email"><%= emailLabel %></label>
                   <div class="input-icon">
                     <i class="fas fa-envelope"></i>
-                    <input id="email" type="email" name="email" class="form-control" placeholder="Email" required/>
+                    <input id="email" type="email" name="email" class="form-control" placeholder="<%= emailLabel %>" required/>
                   </div>
                   <span id="errorEmail" class="error-message"></span>
-                  <small class="form-text text-muted">
-                    <% if ("admin".equals(userType) || "lecture".equals(userType)) { %>
-                    <i class="fas fa-info-circle"></i> <%= displayUserType %> account email
-                    <% } else { %>
-                    <i class="fas fa-info-circle"></i> Use your institutional email
-                    <% } %>
-                  </small>
                 </div>
-                
-                <!-- Course Field for Lecturers -->
-                <div id="courseField" class="col-12 <%= "lecture".equals(userType) ? "" : "course-field" %>">
-                  <label class="sr-only" for="course_name">Course Name</label>
-                  <div class="input-icon">
-                    <i class="fas fa-book"></i>
-                    <input id="course_name" type="text" name="course_name" class="form-control" 
-                           placeholder="Course Name (for lecturers)" 
-                           <%= "lecture".equals(userType) ? "" : "disabled" %>/>
-                  </div>
-                  <small class="form-text text-muted">Optional: Assign a course to this lecturer</small>
-                </div>
-                
-                <!-- Additional fields for admin/lecture creation -->
-                <% if ("admin".equals(userType) || "lecture".equals(userType)) { %>
-                <div class="col-12">
-                  <div class="alert alert-warning p-2 mb-3">
-                    <i class="fas fa-exclamation-triangle mr-1"></i>
-                    <small>You are creating a <strong><%= displayUserType %></strong> account with elevated privileges.</small>
-                  </div>
-                </div>
-                <% } %>
-                
-                <!-- Address fields -->
+                  <br><br>
                 <div class="col-12 col-md-6">
-                  <label class="sr-only" for="city">City</label>
-                  <div class="input-icon">
-                    <i class="fas fa-city"></i>
-                    <input id="city" type="text" name="city" class="form-control" placeholder="City"/>
-                  </div>
-                </div>
-
-                <div class="col-12 col-md-6">
-                  <label class="sr-only" for="address">Address</label>
-                  <div class="input-icon">
-                    <i class="fas fa-home"></i>
-                    <input id="address" type="text" name="address" class="form-control" placeholder="Address"/>
-                  </div>
-                </div>
-                
-                <div class="col-12 col-md-6">
-                  <label class="sr-only" for="pass">Password *</label>
+                  <label class="sr-only" for="pass">Password</label>
                   <div class="input-icon">
                     <i class="fas fa-lock"></i>
                     <input id="pass" type="password" name="pass" class="form-control" placeholder="Password" required/>
-                    <i class="fas fa-eye toggle-password" onclick="togglePassword('pass', this)"></i>
+                    <i class=" toggle-password" onclick="togglePassword('pass', this)"></i>
                   </div>
                   <span id="errorPassword" class="error-message"></span>
                 </div>
 
                 <div class="col-12 col-md-6">
-                  <label class="sr-only" for="cpass">Confirm Password *</label>
+                  <label class="sr-only" for="cpass">Confirm Password</label>
                   <div class="input-icon">
                     <i class="fas fa-lock"></i>
                     <input id="cpass" type="password" name="cpass" class="form-control" placeholder="Confirm Password" required/>
-                    <i class="fas fa-eye toggle-password" onclick="togglePassword('cpass', this)"></i>
+                    <i class="toggle-password" onclick="togglePassword('cpass', this)"></i>
                   </div>
                   <span id="errorConfirmPassword" class="error-message"></span>
                 </div>
 
                 <div class="col-12 mt-2">
                   <button type="submit" class="btn btn-primary btn-auth btn-block">
-                    <i class="fa-solid fa-user-plus mr-1"></i> 
-                    <% if ("admin".equals(userType) || "lecture".equals(userType)) { %>
-                    Create <%= displayUserType %> Account
-                    <% } else { %>
-                    Sign Up
-                    <% } %>
+                    <i class="fa-solid fa-user-plus mr-1"></i> Sign Up
                   </button>
                 </div>
 
@@ -291,34 +191,15 @@
       const email = document.getElementById("email");
       const pass = document.getElementById("pass");
       const cpass = document.getElementById("cpass");
-      const setErr = (id,msg)=>{ 
-          const elem = document.getElementById(id);
-          if(elem) {
-              elem.textContent = msg; 
-              if(msg) valid=false;
-          }
-      };
+      const setErr = (id,msg)=>{ document.getElementById(id).textContent = msg; if(msg) valid=false; };
 
-      // Validate username (not empty)
-      setErr("errorUsername", uname.value.trim() ? "" : "Username is required.");
-      
-      // Validate contact (at least 10 digits)
-      const contactRegex = /^\d{10,}$/;
-      const cleanContact = contact.value.trim().replace(/[^\d]/g, '');
-      setErr("errorContact", contactRegex.test(cleanContact) ? "" : "Contact must be at least 10 digits.");
-      
-      // Validate email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      setErr("errorEmail", emailRegex.test(email.value.trim()) ? "" : "Enter a valid email address.");
-      
-      // Validate names
       setErr("errorFirstName", fname.value.trim() ? "" : "First name is required.");
       setErr("errorLastName",  lname.value.trim() ? "" : "Last name is required.");
-      
-      // Validate password
+      setErr("errorUsername",  uname.value.trim() ? "" : "Identity number is required.");
+      setErr("errorContact", /^[0-9+()\s-]{7,}$/.test(contact.value.trim()) ? "" : "Enter a valid contact number.");
+      setErr("errorEmail", /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim()) ? "" : "Enter a valid email address.");
       setErr("errorPassword", pass.value.length >= 6 ? "" : "Password must be at least 6 characters.");
       setErr("errorConfirmPassword", pass.value === cpass.value ? "" : "Passwords do not match.");
-      
       return valid;
     }
 
@@ -329,23 +210,19 @@
       icon.classList.toggle("fa-eye");
       icon.classList.toggle("fa-eye-slash");
     }
-    
-    // Real-time contact validation
-    document.getElementById('contactno')?.addEventListener('input', function() {
-        const value = this.value.replace(/\D/g, '');
-        this.value = value;
-    });
-    
-    // Show/hide course field based on user type
-    document.addEventListener('DOMContentLoaded', function() {
-        const userType = '<%= userType %>';
-        const courseField = document.getElementById('courseField');
-        const courseInput = document.getElementById('course_name');
-        
-        if (userType === 'lecture') {
-            courseField.classList.remove('course-field');
-            courseInput.disabled = false;
-            courseInput.required = false; // Make optional
+
+    document.getElementById('uname').addEventListener('blur', function() {
+        const username = this.value;
+        if (username.length > 0) {
+            fetch('controller.jsp?page=check_username&username=' + username)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exists) {
+                        document.getElementById('errorUsername').textContent = 'Username already exists.';
+                    } else {
+                        document.getElementById('errorUsername').textContent = '';
+                    }
+                });
         }
     });
   </script>
@@ -355,3 +232,5 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
+<!--I want the signup to know how to register users as staff or students by first checking if the email of the user signing up exists on the staff table-->

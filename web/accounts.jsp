@@ -1,20 +1,26 @@
 <%@page import="myPackage.classes.User"%>
 <%@page import="java.util.ArrayList"%>
-<%
-    myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+<% 
+myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
-    // Get current user details FIRST
-    User currentUser = null;
-    if (session.getAttribute("userId") != null) {
-        currentUser = pDAO.getUserDetails(session.getAttribute("userId").toString());
-    }
+// Get current user details FIRST
+User currentUser = null;
 
-    if (currentUser == null) {
-        // User not found in database or session expired
-        session.invalidate();
-        response.sendRedirect("login.jsp");
-        return;
-    }
+// Check if user is logged in
+if (session.getAttribute("userId") == null) {
+    response.sendRedirect("login.jsp");
+    return;
+}
+
+// Get current user details
+currentUser = pDAO.getUserDetails(session.getAttribute("userId").toString());
+
+if (currentUser == null) {
+    // User not found in database
+    session.invalidate();
+    response.sendRedirect("login.jsp");
+    return;
+}
 
 // Now get student list
 ArrayList<User> studentList = pDAO.getAllStudents();
@@ -99,7 +105,7 @@ for (User user : studentList) {
     
     /* Sidebar Styles - Same as profile page */
     .sidebar {
-        width: 200px;
+        width: 250px;
         background: linear-gradient(180deg, var(--primary-blue), var(--secondary-blue));
         color: var(--white);
         flex-shrink: 0;
@@ -804,7 +810,7 @@ for (User user : studentList) {
             
             <!-- Search and Actions Bar -->
             <div class="actions-bar">
-                <a href="signup.jsp?from=account&user_type=<%= currentUser.getType() %>" class="btn btn-success">
+                <a href="signup.jsp?from=account&user_type=student" class="btn btn-success">
                     <i class="fas fa-plus-circle"></i>
                     Add New Student
                 </a>
@@ -903,19 +909,12 @@ for (User user : studentList) {
                                         <i class="fas fa-edit"></i>
                                         Edit
                                     </a>
-                                    <% if (currentUser.getType().equalsIgnoreCase("admin")) { %>
-                                        <a href="controller.jsp?page=accounts&operation=del&uid=<%= user.getUserId() %>"
-                                           data-item-name="<%= user.getFirstName() %> <%= user.getLastName() %>"
-                                           class="btn btn-error" style="font-size: 13px; padding: 8px 16px;">
-                                           <i class="fas fa-trash"></i>
-                                           Delete
-                                        </a>
-                                    <% } else { %>
-                                        <a href="#" class="btn btn-error permission-check" style="font-size: 13px; padding: 8px 16px;">
-                                            <i class="fas fa-trash"></i>
-                                            Delete
-                                        </a>
-                                    <% } %>
+                                    <a href="controller.jsp?page=accounts&operation=del&uid=<%= user.getUserId() %>" 
+                                       onclick="return confirm('Are you sure you want to delete student \"<%= user.getFirstName() %> <%= user.getLastName() %>\"? This action cannot be undone.');" 
+                                       class="btn btn-error" style="font-size: 13px; padding: 8px 16px;">
+                                       <i class="fas fa-trash"></i>
+                                       Delete
+                                    </a>
                                 </div>
                             </td>
                         </tr>
