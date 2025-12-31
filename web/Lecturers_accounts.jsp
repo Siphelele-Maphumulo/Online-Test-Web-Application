@@ -744,7 +744,7 @@ int lecturerCount = lecturerList.size();
             
             <!-- Search and Actions Bar -->
             <div class="actions-bar">
-                <a href="staff_Numbers.jsp?from=account&user_type=<%= currentUserType %>" class="btn btn-success">
+                <a href="signup.jsp?from=account&user_type=lecture" class="btn btn-success">
                     <i class="fas fa-plus-circle"></i>
                     Add New Lecturer
                 </a>

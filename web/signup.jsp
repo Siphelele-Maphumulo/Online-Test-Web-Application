@@ -82,11 +82,11 @@
                   <span id="errorLastName" class="error-message"></span>
                 </div>
 
-                <div class="col-12 col-md-6">
-                  <label class="sr-only" for="uname">8 digits of ID Number</label>
+                <div class="col-12 col-md-6" id="student-number-field">
+                  <label class="sr-only" for="uname">Student Number</label>
                   <div class="input-icon">
                     <i class="fas fa-id-badge"></i>
-                    <input id="uname" type="text" name="uname" class="form-control" placeholder="8 digits of ID Number" required/>
+                    <input id="uname" type="text" name="uname" class="form-control" placeholder="Student Number" required/>
                   </div>
                   <span id="errorUsername" class="error-message"></span>
                 </div>
@@ -156,6 +156,20 @@
   </footer>
 
   <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const userType = "<%= userType %>";
+        const unameInput = document.getElementById("uname");
+        const unameLabel = document.querySelector('label[for="uname"]');
+
+        if (userType === "lecture") {
+            unameInput.placeholder = "Staff Number";
+            unameLabel.textContent = "Staff Number";
+        } else {
+            unameInput.placeholder = "Student Number";
+            unameLabel.textContent = "Student Number";
+        }
+    });
+
     function validateForm(){
       let valid = true;
       const fname = document.getElementById("fname");
