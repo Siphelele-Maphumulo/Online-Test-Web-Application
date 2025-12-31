@@ -5,6 +5,12 @@
 <%@ page import="java.util.*" %>
 <%@ page import="java.io.*" %>
 
+<!-- Add these SQL imports -->
+<%@ page import="java.sql.Connection" %>
+<%@ page import="java.sql.PreparedStatement" %>
+<%@ page import="java.sql.SQLException" %>
+<%@ page import="java.sql.ResultSet" %>
+
 <%@ page import="myPackage.*" %>
 <%@ page import="myPackage.classes.User" %>
 <%@ page import="myPackage.classes.Questions" %>
@@ -168,6 +174,19 @@ try {
                 session.setAttribute("message","Course status updated successfully");
             }
             response.sendRedirect("adm-page.jsp?pgprt=2");
+        } else if ("update_course".equalsIgnoreCase(operation)) {
+            String originalCourseName = nz(request.getParameter("original_course_name"), "");
+            String courseName = nz(request.getParameter("coursename"), "");
+            int totalMarks = Integer.parseInt(nz(request.getParameter("totalmarks"), "0"));
+            String time = nz(request.getParameter("time"), "");
+            String examDate = nz(request.getParameter("examdate"), "");
+            
+            boolean success = pDAO.updateCourse(originalCourseName, courseName, totalMarks, time, examDate);
+            session.setAttribute("message", success ? "Course updated successfully" : "Error updating course");
+            response.sendRedirect("adm-page.jsp?pgprt=2");
+        } else {
+            session.setAttribute("error", "Invalid operation for courses");
+            response.sendRedirect("adm-page.jsp?pgprt=2");
         }
 
     /* =========================
@@ -246,8 +265,9 @@ try {
         String uidParam  = nz(request.getParameter("uid"), "");
         if ("del".equalsIgnoreCase(operation) && !uidParam.isEmpty()) {
             int userId = Integer.parseInt(uidParam);
-            pDAO.delStudent(userId);
-            session.setAttribute("message","Account deleted successfully");
+            // Use cascade delete instead of simple delete
+            pDAO.deleteUserCascade(userId);
+            session.setAttribute("message","Account and all associated data deleted successfully");
         }
         response.sendRedirect("adm-page.jsp?pgprt=1");
 
@@ -259,8 +279,9 @@ try {
         String uidParam  = nz(request.getParameter("uid"), "");
         if ("del".equalsIgnoreCase(operation) && !uidParam.isEmpty()) {
             int userId = Integer.parseInt(uidParam);
-            pDAO.deleteLecturer(userId);
-            session.setAttribute("message","Lecturer deleted successfully");
+            // Use cascade delete for consistency
+            pDAO.deleteUserCascade(userId);
+            session.setAttribute("message","Lecturer and all associated data deleted successfully");
         }
         response.sendRedirect("adm-page.jsp?pgprt=6");
 
@@ -311,6 +332,79 @@ try {
             pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType);
             session.setAttribute("message","Question added successfully");
             response.sendRedirect("adm-page.jsp?pgprt=3");
+        } else {
+            session.setAttribute("error", "Invalid operation for questions");
+            response.sendRedirect("adm-page.jsp?pgprt=3");
+        }
+
+    /* =========================
+       RESULTS
+       ========================= */
+    } else if ("results".equalsIgnoreCase(pageParam)) {
+        String operation = nz(request.getParameter("operation"), "");
+        
+        if ("edit".equalsIgnoreCase(operation)) {
+            int examId = Integer.parseInt(nz(request.getParameter("eid"), "0"));
+            int obtMarks = Integer.parseInt(nz(request.getParameter("obtMarks"), "0"));
+            int totalMarks = Integer.parseInt(nz(request.getParameter("totalMarks"), "0"));
+            String status = nz(request.getParameter("status"), "");
+            
+            // Calculate percentage
+            double percentage = 0;
+            if (totalMarks > 0) {
+                percentage = ((double) obtMarks / totalMarks) * 100;
+            }
+            
+            // Update result status based on percentage if not manually set
+            if (status.isEmpty()) {
+                status = (percentage >= 45.0) ? "Pass" : "Fail";
+            }
+            
+            // Update the exam in database
+            try {
+                Connection conn = pDAO.getConnection();
+                String sql = "UPDATE exams SET obt_marks=?, result_status=? WHERE exam_id=?";
+                PreparedStatement pstm = conn.prepareStatement(sql);
+                pstm.setInt(1, obtMarks);
+                pstm.setString(2, status);
+                pstm.setInt(3, examId);
+                pstm.executeUpdate();
+                pstm.close();
+                
+                session.setAttribute("message", "Result updated successfully!");
+            } catch (SQLException ex) {
+                session.setAttribute("error", "Error updating result: " + ex.getMessage());
+            }
+            response.sendRedirect("adm-page.jsp?pgprt=5");
+            
+        } else if ("delete".equalsIgnoreCase(operation)) {
+            int examId = Integer.parseInt(nz(request.getParameter("eid"), "0"));
+            
+            try {
+                Connection conn = pDAO.getConnection();
+                
+                // First delete answers for this exam
+                String deleteAnswersSql = "DELETE FROM answers WHERE exam_id=?";
+                PreparedStatement pstm1 = conn.prepareStatement(deleteAnswersSql);
+                pstm1.setInt(1, examId);
+                pstm1.executeUpdate();
+                pstm1.close();
+                
+                // Then delete the exam
+                String deleteExamSql = "DELETE FROM exams WHERE exam_id=?";
+                PreparedStatement pstm2 = conn.prepareStatement(deleteExamSql);
+                pstm2.setInt(1, examId);
+                pstm2.executeUpdate();
+                pstm2.close();
+                
+                session.setAttribute("message", "Exam result deleted successfully!");
+            } catch (SQLException ex) {
+                session.setAttribute("error", "Error deleting result: " + ex.getMessage());
+            }
+            response.sendRedirect("adm-page.jsp?pgprt=5");
+        } else {
+            session.setAttribute("error", "Invalid operation for results");
+            response.sendRedirect("adm-page.jsp?pgprt=5");
         }
 
     /* =========================
@@ -359,6 +453,9 @@ try {
                 session.setAttribute("error","Error submitting exam: "+e.getMessage());
                 response.sendRedirect("std-page.jsp");
             }
+        } else {
+            session.setAttribute("error", "Invalid operation for exams");
+            response.sendRedirect("std-page.jsp");
         }
 
     /* =========================
@@ -370,21 +467,24 @@ try {
         response.setContentType("application/json");
         response.getWriter().write("{\"exists\": " + exists + "}");
         return;
+        
     /* =========================
        LOGOUT
        ========================= */
-        } else if ("logout".equalsIgnoreCase(pageParam)) {
-
-            // Invalidate session immediately then forward to a transition page so the client loader can be visible
-            session.invalidate();
-            request.setAttribute("targetUrl", "login.jsp");
-            request.setAttribute("message", "Securely logging you out...");
-            request.setAttribute("delayMs", Integer.valueOf(3000));
-            request.getRequestDispatcher("transition.jsp").forward(request, response);
-            return;
-        }
-
-
+    } else if ("logout".equalsIgnoreCase(pageParam)) {
+        // Invalidate session immediately then forward to a transition page so the client loader can be visible
+        session.invalidate();
+        request.setAttribute("targetUrl", "login.jsp");
+        request.setAttribute("message", "Securely logging you out...");
+        request.setAttribute("delayMs", Integer.valueOf(3000));
+        request.getRequestDispatcher("transition.jsp").forward(request, response);
+        return;
+        
+    } else {
+        // Handle case when page parameter is not recognized
+        session.setAttribute("error", "Invalid page parameter: " + pageParam);
+        response.sendRedirect("login.jsp");
+    }
 
 } catch(Exception e){
     session.setAttribute("error","An unexpected error occurred: "+e.getMessage());

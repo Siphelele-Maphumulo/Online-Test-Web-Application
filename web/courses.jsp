@@ -18,6 +18,7 @@
     int courseCount = list.size() / 5;
 %>
 
+
 <style>
     /* Use the same CSS Variables as the profile page */
     :root {
@@ -528,7 +529,6 @@
     }
 </style>
 
-
 <div class="dashboard-container">
     <!-- Sidebar Navigation - Same as profile page -->
     <aside class="sidebar">
@@ -546,7 +546,7 @@
             </a>
             <a href="adm-page.jsp?pgprt=3" class="nav-item">
                 <i class="fas fa-question-circle"></i>
-                                <h2>Questions</h2>
+                <h2>Questions</h2>
             </a>
             <a href="adm-page.jsp?pgprt=5" class="nav-item">
                 <i class="fas fa-chart-bar"></i>
@@ -609,6 +609,16 @@
                             for (int i = 0; i < list.size(); i += 5) {
                                 String courseName = (String) list.get(i);
                                 boolean isActive = (Boolean) list.get(i + 4);
+                                
+                                // Format date for display and data attribute
+                                java.sql.Date sqlDate = (java.sql.Date) list.get(i + 3);
+                                String displayDate = "";
+                                String dataDate = "";
+                                if (sqlDate != null) {
+                                    displayDate = sqlDate.toString();
+                                    // Convert to YYYY-MM-DD format for input[type=date]
+                                    dataDate = sqlDate.toLocalDate().toString();
+                                }
                         %>
                         <tr id="course-row-<%= i %>">
                             <td>
@@ -619,7 +629,7 @@
                             </td>
                             <td><span class="badge badge-success" id="total-marks-<%= i %>"><%= list.get(i + 1) %> Marks</span></td>
                             <td><span class="badge badge-info" id="time-<%= i %>"><%= list.get(i + 2) %> mins</span></td>
-                            <td><span class="badge badge-neutral" id="exam-date-<%= i %>"><%= list.get(i + 3) %></span></td>
+                            <td><span class="badge badge-neutral" id="exam-date-<%= i %>"><%= displayDate %></span></td>
                             <td>
                                 <form action="controller.jsp" method="post" class="toggle-form" style="display: inline;">
                                     <input type="hidden" name="page" value="courses">
@@ -643,11 +653,11 @@
                                             data-course-name="<%= courseName %>"
                                             data-total-marks="<%= list.get(i + 1) %>" 
                                             data-time="<%= list.get(i + 2) %>"
-                                            data-exam-date="<%= list.get(i + 3) %>">
+                                            data-exam-date="<%= dataDate %>">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
                                     <a href="controller.jsp?page=courses&operation=del&cname=<%= courseName %>"
-                                       onclick="return confirm('Are you sure you want to delete \'<%= courseName %>\'? This will also delete all associated exams. This action cannot be undone.');" 
+                                       onclick="return confirmDelete('<%= courseName %>');" 
                                        class="btn btn-danger">
                                        <i class="fas fa-trash"></i> Delete
                                     </a>
@@ -729,7 +739,6 @@
                 </form>
             </div>
         </div>
-        </div>
     </main>
 </div>
 
@@ -744,82 +753,59 @@
     let currentIndex = null;
 
     // Function to handle edit button click
-    document.addEventListener('DOMContentLoaded', function() {
-        const editButtons = document.querySelectorAll('.edit-btn');
+    function handleEditButtonClick() {
+        console.log('Edit button clicked:', this.dataset);
         
-        editButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                isEditing = true;
-                currentIndex = this.dataset.index;
-                originalCourseName = this.dataset.courseName;
-                
-                // Populate form fields
-                document.getElementById('original-course-name').value = originalCourseName;
-                document.getElementById('courseName').value = this.dataset.courseName;
-                document.getElementById('totalMarks').value = this.dataset.totalMarks;
-                document.getElementById('time').value = this.dataset.time;
-                document.getElementById('examDate').value = this.dataset.examDate;
-                
-                // Change form operation
-                document.getElementById('operation').value = 'update_course';
-                
-                // Update UI
-                document.getElementById('form-title').innerHTML = '<i class="fas fa-edit"></i> Edit Course';
-                document.getElementById('submit-btn').innerHTML = '<i class="fas fa-save"></i> Update Course';
-                document.getElementById('cancel-edit').style.display = 'inline-block';
-                
-                // Show warning about course name change
-                showCourseNameWarning();
-                
-                // Scroll to form
-                document.querySelector('.add-course-form').scrollIntoView({ behavior: 'smooth' });
-            });
-        });
+        isEditing = true;
+        currentIndex = this.dataset.index;
+        originalCourseName = this.dataset.courseName;
         
-        // Cancel edit button handler
-        document.getElementById('cancel-edit').addEventListener('click', function() {
-            resetForm();
-        });
+        // Populate form fields
+        document.getElementById('original-course-name').value = originalCourseName;
+        document.getElementById('courseName').value = this.dataset.courseName || '';
+        document.getElementById('totalMarks').value = this.dataset.totalMarks || '';
+        document.getElementById('time').value = this.dataset.time || '';
         
-        // Form submission handler
-        document.getElementById('course-form').addEventListener('submit', function(e) {
-            const submitBtn = this.querySelector('#submit-btn');
-            if (submitBtn) {
-                submitBtn.classList.add('loading');
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        // Handle exam date - ensure it's in YYYY-MM-DD format
+        let examDateValue = this.dataset.examDate || '';
+        console.log('Exam date from data:', examDateValue);
+        
+        if (examDateValue) {
+            // If date is in a different format, convert it
+            const date = new Date(examDateValue);
+            if (!isNaN(date.getTime())) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                examDateValue = `${year}-${month}-${day}`;
             }
-            
-            // If editing and course name changed, show confirmation
-            if (isEditing) {
-                const newCourseName = document.getElementById('courseName').value;
-                if (newCourseName !== originalCourseName) {
-                    const confirmed = confirm('Warning: Changing the course name will update all related exams. Are you sure you want to continue?');
-                    if (!confirmed) {
-                        e.preventDefault();
-                        if (submitBtn) {
-                            submitBtn.classList.remove('loading');
-                            submitBtn.disabled = false;
-                            submitBtn.innerHTML = '<i class="fas fa-save"></i> Update Course';
-                        }
-                    }
-                }
-            }
+        }
+        
+        document.getElementById('examDate').value = examDateValue;
+        console.log('Exam date set to:', document.getElementById('examDate').value);
+        
+        // Change form operation
+        document.getElementById('operation').value = 'update_course';
+        
+        // Update UI
+        document.getElementById('form-title').innerHTML = '<i class="fas fa-edit"></i> Edit Course';
+        document.getElementById('submit-btn').innerHTML = '<i class="fas fa-save"></i> Update Course';
+        document.getElementById('cancel-edit').style.display = 'inline-block';
+        
+        // Show warning about course name change
+        showCourseNameWarning();
+        
+        // Scroll to form
+        document.querySelector('.add-course-form').scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
         });
         
-        // Delete button confirmation
-        const deleteButtons = document.querySelectorAll('.btn-danger');
-        deleteButtons.forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                const courseName = this.getAttribute('href').split('cname=')[1];
-                const decodedCourseName = decodeURIComponent(courseName);
-                const confirmation = confirm(`Are you sure you want to delete "${decodedCourseName}"?\n\nThis will delete:\n1. The course itself\n2. All associated exams\n3. All exam results\n\nThis action cannot be undone!`);
-                if (!confirmation) {
-                    e.preventDefault();
-                }
-            });
-        });
-    });
+        // Focus on the course name field
+        setTimeout(() => {
+            document.getElementById('courseName').focus();
+        }, 300);
+    }
 
     // Function to reset form
     function resetForm() {
@@ -844,6 +830,11 @@
         
         // Hide warning
         hideCourseNameWarning();
+        
+        // Focus on course name field
+        setTimeout(() => {
+            document.getElementById('courseName').focus();
+        }, 300);
     }
 
     // Function to show warning about course name change
@@ -854,7 +845,7 @@
             warningDiv.id = 'course-name-warning';
             warningDiv.className = 'alert alert-warning';
             warningDiv.style.cssText = 'background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; border-radius: 4px; margin-bottom: 16px; font-size: 13px;';
-            warningDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <strong>Warning:</strong> Changing the course name will update all related exams.';
+            warningDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <strong>Warning:</strong> Changing the course name will update all related exams and questions.';
             
             const formGrid = document.querySelector('.form-grid');
             formGrid.parentNode.insertBefore(warningDiv, formGrid);
@@ -868,6 +859,106 @@
             warningDiv.remove();
         }
     }
+
+    // Function for delete confirmation
+    function confirmDelete(courseName) {
+        const decodedCourseName = decodeURIComponent(courseName);
+        const confirmation = confirm(`?? DELETE CONFIRMATION\n\n` +
+                                   `Are you sure you want to delete "${decodedCourseName}"?\n\n` +
+                                   `This will permanently delete:\n` +
+                                   `? The course itself\n` +
+                                   `? All associated questions\n` +
+                                   `? All related exams\n` +
+                                   `? All exam answers and results\n\n` +
+                                   `This action cannot be undone!`);
+        return confirmation;
+    }
+
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Course management page loaded');
+        
+        // Attach event listeners to edit buttons
+        const editButtons = document.querySelectorAll('.edit-btn');
+        console.log('Found edit buttons:', editButtons.length);
+        
+        editButtons.forEach(button => {
+            button.addEventListener('click', handleEditButtonClick);
+        });
+        
+        // Cancel edit button handler
+        const cancelEditBtn = document.getElementById('cancel-edit');
+        if (cancelEditBtn) {
+            cancelEditBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                resetForm();
+            });
+        }
+        
+        // Form submission handler
+        const courseForm = document.getElementById('course-form');
+        if (courseForm) {
+            courseForm.addEventListener('submit', function(e) {
+                const submitBtn = this.querySelector('#submit-btn');
+                if (submitBtn) {
+                    submitBtn.classList.add('loading');
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                }
+                
+                // If editing and course name changed, show confirmation
+                if (isEditing) {
+                    const newCourseName = document.getElementById('courseName').value.trim();
+                    if (newCourseName !== originalCourseName) {
+                        const confirmed = confirm('?? WARNING: Changing the course name will update:\n\n' +
+                                                 '? All related questions in the database\n' +
+                                                 '? All existing exams and results\n' +
+                                                 '? This change cannot be undone!\n\n' +
+                                                 'Are you sure you want to continue?');
+                        if (!confirmed) {
+                            e.preventDefault();
+                            if (submitBtn) {
+                                submitBtn.classList.remove('loading');
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = '<i class="fas fa-save"></i> Update Course';
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Set min date for exam date to today
+        const examDateInput = document.getElementById('examDate');
+        if (examDateInput) {
+            const today = new Date().toISOString().split('T')[0];
+            examDateInput.min = today;
+            
+            // If not editing, set default to today
+            if (!isEditing) {
+                examDateInput.value = today;
+            }
+        }
+        
+        console.log('Course management initialized successfully');
+    });
+
+    // Also initialize if DOM is already loaded
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(() => {
+            document.querySelectorAll('.edit-btn').forEach(button => {
+                button.addEventListener('click', handleEditButtonClick);
+            });
+        }, 100);
+    }
+    
+    // Close modal when clicking outside (if you have modals)
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('course-name-warning');
+        if (event.target === modal) {
+            hideCourseNameWarning();
+        }
+    });
 </script>
 
 <style>
@@ -941,5 +1032,24 @@
     
     .fa-spinner {
         animation: spin 1s linear infinite;
+    }
+    
+    /* Alert styling */
+    .alert {
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 16px;
+        font-size: 13px;
+    }
+    
+    .alert-warning {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        color: #856404;
+    }
+    
+    .alert-warning i {
+        color: #856404;
+        margin-right: 8px;
     }
 </style>

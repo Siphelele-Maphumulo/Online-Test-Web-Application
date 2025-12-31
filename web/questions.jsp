@@ -6,6 +6,34 @@
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 %>
 
+<!-- Modal for validation messages -->
+<div id="validationModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle"><i class="fas fa-exclamation-triangle"></i> Validation Error</h3>
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p id="modalMessage"></p>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeModal()" class="btn btn-primary">OK</button>
+        </div>
+    </div>
+</div>
+
+<!-- Success/Error Toast -->
+<div id="toast" class="toast" style="display: none;">
+    <div class="toast-content">
+        <i id="toastIcon" class="fas"></i>
+        <div class="toast-message">
+            <strong id="toastTitle"></strong>
+            <span id="toastText"></span>
+        </div>
+        <button class="toast-close" onclick="hideToast()">&times;</button>
+    </div>
+</div>
+
 <style>
     /* Use the same CSS Variables as the profile page */
     :root {
@@ -576,6 +604,175 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 }
 </style>
 
+<style>
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 0;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    animation: slideDown 0.3s;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    padding: 16px 20px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 18px;
+}
+
+.close-modal {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 20px;
+}
+
+.close-modal:hover {
+    color: #000;
+}
+
+.modal-body {
+    padding: 20px;
+    color: #333;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.modal-footer {
+    padding: 16px 20px;
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    border-radius: 0 0 8px 8px;
+    text-align: right;
+}
+
+/* Toast Styles */
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1001;
+    min-width: 300px;
+    max-width: 400px;
+    animation: slideInRight 0.3s;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.toast-content {
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: flex-start;
+    border-left: 4px solid;
+}
+
+.toast.success {
+    border-left-color: #28a745;
+}
+
+.toast.error {
+    border-left-color: #dc3545;
+}
+
+.toast.warning {
+    border-left-color: #ffc107;
+}
+
+.toast.info {
+    border-left-color: #17a2b8;
+}
+
+.toast-message {
+    flex: 1;
+    margin-left: 12px;
+}
+
+.toast-message strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #333;
+}
+
+.toast-message span {
+    color: #666;
+    font-size: 14px;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 12px;
+    line-height: 1;
+}
+
+.toast-close:hover {
+    color: #666;
+}
+
+/* Form Validation Styles */
+.input-error {
+    border-color: #dc3545 !important;
+    background-color: #fff5f5 !important;
+}
+
+.error-message {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 4px;
+    display: none;
+}
+
+.form-group.has-error .error-message {
+    display: block;
+}
+</style>
+
 <div class="dashboard-container">
     <!-- Sidebar Navigation - Same as profile page -->
     <aside class="sidebar">
@@ -731,7 +928,8 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             <i class="fas fa-pencil-alt" style="color: var(--success);"></i>
                             Your Question
                         </label>
-                        <textarea name="question" class="question-input" placeholder="Type your question here" required rows="3"></textarea>
+                        <textarea name="question" id="questionText" class="question-input" placeholder="Type your question here" required rows="3"></textarea>
+                        <div class="error-message" id="questionError">Question is required</div>
                     </div>
                     
                     <div id="mcqOptions">
@@ -741,10 +939,22 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                                 Options
                             </label>
                             <div class="options-grid">
-                                <input type="text" name="opt1" class="option-input" placeholder="First Option" id="opt1" required>
-                                <input type="text" name="opt2" class="option-input" placeholder="Second Option" id="opt2" required>
-                                <input type="text" name="opt3" class="option-input" placeholder="Third Option" id="opt3">
-                                <input type="text" name="opt4" class="option-input" placeholder="Fourth Option" id="opt4">
+                                <div class="option-container">
+                                    <input type="text" name="opt1" class="option-input" placeholder="First Option" id="opt1" required>
+                                    <div class="error-message" id="opt1Error">First option is required</div>
+                                </div>
+                                <div class="option-container">
+                                    <input type="text" name="opt2" class="option-input" placeholder="Second Option" id="opt2" required>
+                                    <div class="error-message" id="opt2Error">Second option is required</div>
+                                </div>
+                                <div class="option-container">
+                                    <input type="text" name="opt3" class="option-input" placeholder="Third Option" id="opt3">
+                                    <div class="error-message" id="opt3Error"></div>
+                                </div>
+                                <div class="option-container">
+                                    <input type="text" name="opt4" class="option-input" placeholder="Fourth Option" id="opt4">
+                                    <div class="error-message" id="opt4Error"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -758,6 +968,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         <!-- Single Answer Input (for MCQ and True/False) -->
                         <div id="correctAnswerContainer">
                             <input type="text" id="correctAnswer" name="correct" class="form-control" placeholder="Enter correct answer" required>
+                            <div class="error-message" id="correctAnswerError">Correct answer is required</div>
                             <small id="correctAnswerHint" class="form-hint">Enter the correct answer (must match one of the options exactly)</small>
                         </div>
                         
@@ -783,6 +994,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             </div>
                             <!-- Hidden field that will store the combined correct answers -->
                             <input type="hidden" id="multipleCorrectAnswer" name="correctMultiple">
+                            <div class="error-message" id="multipleCorrectError">Select exactly 2 correct answers</div>
                             <small id="multipleCorrectHint" class="form-hint">Select exactly 2 correct answers</small>
                         </div>
                     </div>
@@ -795,7 +1007,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             <i class="fas fa-redo"></i>
                             Reset Form
                         </button>
-                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <button type="button" class="btn btn-primary" id="submitBtn" onclick="validateAndSubmit()">
                             <i class="fas fa-plus"></i>
                             Add Question
                         </button>
@@ -814,9 +1026,230 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 <!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-
 <!-- JavaScript for enhanced functionality -->
 <script>
+// Modal functions
+function showModal(title, message) {
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + title;
+    document.getElementById('modalMessage').textContent = message;
+    document.getElementById('validationModal').style.display = 'block';
+}
+
+function closeModal() {
+    document.getElementById('validationModal').style.display = 'none';
+}
+
+// Toast functions
+function showToast(type, title, message) {
+    const toast = document.getElementById('toast');
+    const toastIcon = document.getElementById('toastIcon');
+    const toastTitle = document.getElementById('toastTitle');
+    const toastText = document.getElementById('toastText');
+    
+    toast.className = 'toast ' + type;
+    toastTitle.textContent = title;
+    toastText.textContent = message;
+    
+    switch(type) {
+        case 'success':
+            toastIcon.className = 'fas fa-check-circle';
+            toastIcon.style.color = '#28a745';
+            break;
+        case 'error':
+            toastIcon.className = 'fas fa-times-circle';
+            toastIcon.style.color = '#dc3545';
+            break;
+        case 'warning':
+            toastIcon.className = 'fas fa-exclamation-triangle';
+            toastIcon.style.color = '#ffc107';
+            break;
+        case 'info':
+            toastIcon.className = 'fas fa-info-circle';
+            toastIcon.style.color = '#17a2b8';
+            break;
+    }
+    
+    toast.style.display = 'block';
+    setTimeout(hideToast, 5000);
+}
+
+function hideToast() {
+    document.getElementById('toast').style.display = 'none';
+}
+
+// Form validation functions
+function validateQuestionForm() {
+    let isValid = true;
+    const type = document.getElementById("questionType").value;
+    const question = document.getElementById("questionText").value.trim();
+    const course = document.getElementById("courseSelectAddNew").value;
+    
+    // Clear previous errors
+    clearErrors();
+    
+    // Basic validations
+    if (!question) {
+        showError('questionText', 'questionError', 'Question is required');
+        isValid = false;
+    }
+    
+    if (!course) {
+        showError('courseSelectAddNew', null, 'Please select a course');
+        isValid = false;
+    }
+    
+    // Type-specific validations
+    if (type === "TrueFalse") {
+        const correctAnswer = document.getElementById("correctAnswer").value.trim();
+        if (!correctAnswer) {
+            showError('correctAnswer', 'correctAnswerError', 'Correct answer is required');
+            isValid = false;
+        } else if (correctAnswer !== "True" && correctAnswer !== "False") {
+            showError('correctAnswer', 'correctAnswerError', 'Correct answer must be "True" or "False"');
+            isValid = false;
+        }
+        
+    } else if (type === "MultipleSelect") {
+        // Check options
+        const opt1 = document.getElementById("opt1").value.trim();
+        const opt2 = document.getElementById("opt2").value.trim();
+        
+        if (!opt1) {
+            showError('opt1', 'opt1Error', 'First option is required');
+            isValid = false;
+        }
+        if (!opt2) {
+            showError('opt2', 'opt2Error', 'Second option is required');
+            isValid = false;
+        }
+        
+        // Check for duplicate options
+        const options = [opt1, opt2];
+        if (document.getElementById("opt3").value.trim()) options.push(document.getElementById("opt3").value.trim());
+        if (document.getElementById("opt4").value.trim()) options.push(document.getElementById("opt4").value.trim());
+        
+        const uniqueOptions = [...new Set(options)];
+        if (uniqueOptions.length !== options.length) {
+            showModal('Duplicate Options', 'Options must be unique. Please provide different values for each option.');
+            isValid = false;
+        }
+        
+        // Check correct answers
+        const selectedCheckboxes = document.querySelectorAll('.correct-checkbox:checked');
+        const selectedCount = selectedCheckboxes.length;
+        
+        if (selectedCount !== 2) {
+            showError('multipleCorrectContainer', 'multipleCorrectError', 'Select exactly 2 correct answers');
+            isValid = false;
+        } else {
+            // Validate that selected answers match actual options
+            const selectedValues = Array.from(selectedCheckboxes).map(cb => cb.value.trim());
+            const allOptions = [opt1, opt2, 
+                               document.getElementById("opt3").value.trim(),
+                               document.getElementById("opt4").value.trim()].filter(opt => opt !== "");
+            
+            for (const selectedValue of selectedValues) {
+                if (!allOptions.includes(selectedValue)) {
+                    showModal('Invalid Selection', 'Selected correct answer does not match any of the provided options.');
+                    isValid = false;
+                    break;
+                }
+            }
+            
+            updateMultipleCorrectAnswer();
+        }
+        
+    } else { // MCQ or Code
+        // Check required options
+        const opt1 = document.getElementById("opt1").value.trim();
+        const opt2 = document.getElementById("opt2").value.trim();
+        
+        if (!opt1) {
+            showError('opt1', 'opt1Error', 'First option is required');
+            isValid = false;
+        }
+        if (!opt2) {
+            showError('opt2', 'opt2Error', 'Second option is required');
+            isValid = false;
+        }
+        
+        // Check for duplicate options
+        const options = [opt1, opt2];
+        if (document.getElementById("opt3").value.trim()) options.push(document.getElementById("opt3").value.trim());
+        if (document.getElementById("opt4").value.trim()) options.push(document.getElementById("opt4").value.trim());
+        
+        const uniqueOptions = [...new Set(options)];
+        if (uniqueOptions.length !== options.length) {
+            showModal('Duplicate Options', 'Options must be unique. Please provide different values for each option.');
+            isValid = false;
+        }
+        
+        // Check correct answer
+        const correctAnswer = document.getElementById("correctAnswer").value.trim();
+        if (!correctAnswer) {
+            showError('correctAnswer', 'correctAnswerError', 'Correct answer is required');
+            isValid = false;
+        } else {
+            // Check if correct answer matches one of the options
+            const allOptions = [opt1, opt2, 
+                               document.getElementById("opt3").value.trim(),
+                               document.getElementById("opt4").value.trim()].filter(opt => opt !== "");
+            
+            if (!allOptions.includes(correctAnswer)) {
+                showModal('Invalid Correct Answer', 'Correct answer must match one of the provided options.');
+                isValid = false;
+            }
+        }
+    }
+    
+    return isValid;
+}
+
+function showError(elementId, errorId, message) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.classList.add('input-error');
+        element.parentElement.classList.add('has-error');
+    }
+    
+    if (errorId) {
+        const errorElement = document.getElementById(errorId);
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+        }
+    }
+}
+
+function clearErrors() {
+    // Remove error classes
+    document.querySelectorAll('.input-error').forEach(el => {
+        el.classList.remove('input-error');
+        el.parentElement.classList.remove('has-error');
+    });
+    
+    // Hide error messages
+    document.querySelectorAll('.error-message').forEach(el => {
+        el.style.display = 'none';
+    });
+}
+
+function validateAndSubmit() {
+    if (validateQuestionForm()) {
+        // Show loading state
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding Question...';
+        submitBtn.disabled = true;
+        
+        // Submit the form
+        document.getElementById('questionForm').submit();
+    } else {
+        // Focus on first error
+        const firstError = document.querySelector('.input-error');
+        if (firstError) firstError.focus();
+    }
+}
+
 function toggleOptions() {
     const questionType = document.getElementById("questionType").value;
     const mcqOptions = document.getElementById("mcqOptions");
@@ -825,6 +1258,9 @@ function toggleOptions() {
     const correctAnswer = document.getElementById("correctAnswer");
     const correctAnswerHint = document.getElementById("correctAnswerHint");
     const multipleCorrectHint = document.getElementById("multipleCorrectHint");
+
+    // Clear errors when changing type
+    clearErrors();
 
     if (questionType === "TrueFalse") {
         mcqOptions.style.display = "none";
@@ -893,8 +1329,10 @@ function toggleOptions() {
 function updateCorrectOptionLabels() {
     ['opt1','opt2','opt3','opt4'].forEach((id,i)=>{
         const val = document.getElementById(id).value || `Option ${i+1}`;
-        document.querySelector(`label[for="correctOpt${i+1}"]`).textContent = val;
-        document.getElementById(`correctOpt${i+1}`).value = val;
+        const label = document.querySelector(`label[for="correctOpt${i+1}"]`);
+        const checkbox = document.getElementById(`correctOpt${i+1}`);
+        if (label) label.textContent = val;
+        if (checkbox) checkbox.value = val;
     });
 }
 
@@ -923,29 +1361,8 @@ function resetQuestionForm() {
     ['opt1','opt2','opt3','opt4'].forEach((id,i)=>{
         document.getElementById(id).placeholder = ["First Option","Second Option","Third Option","Fourth Option"][i];
     });
+    clearErrors();
     toggleOptions();
-}
-
-function validateQuestionForm() {
-    const type = document.getElementById("questionType").value;
-    const correctAnswer = document.getElementById("correctAnswer").value.trim();
-    const opts = ['opt1','opt2','opt3','opt4'].map(id => document.getElementById(id).value.trim());
-    
-    if (type === "TrueFalse" && correctAnswer !== "True" && correctAnswer !== "False") {
-        alert("Correct answer must be 'True' or 'False'");
-        return false;
-    }
-    if (type === "MultipleSelect") {
-        const selectedCount = document.querySelectorAll('.correct-checkbox:checked').length;
-        if (selectedCount !== 2) {
-            alert("Select exactly 2 correct answers.");
-            return false;
-        } else updateMultipleCorrectAnswer();
-    } else if (opts.indexOf(correctAnswer) === -1) {
-        alert("Correct answer must match one of the provided options.");
-        return false;
-    }
-    return true;
 }
 
 function syncCourseDropdowns() {
@@ -969,31 +1386,60 @@ function updateScrollIndicator(){
     else{indicator.innerHTML='<i class="fas fa-arrow-up"></i>'; indicator.onclick = scrollToAddQuestion;}
 }
 
+// Initialize on page load
 document.addEventListener("DOMContentLoaded",()=>{
     toggleOptions();
+    
+    // Add input listeners for real-time validation
     ['opt1','opt2','opt3','opt4'].forEach(id=>{
         const el=document.getElementById(id);
-        el?.addEventListener('input',()=>{updateCorrectOptionLabels(); updateSubmitButton();});
-    });
-    document.querySelectorAll('.correct-checkbox').forEach(cb=>{
-        cb.addEventListener('change', function(){
-            if(document.querySelectorAll('.correct-checkbox:checked').length>2){this.checked=false; alert("Select only 2 correct answers.");}
-            updateMultipleCorrectAnswer();
+        el?.addEventListener('input',()=>{
+            updateCorrectOptionLabels();
             updateSubmitButton();
+            clearErrors();
         });
     });
-    document.getElementById('correctAnswer')?.addEventListener('input', updateSubmitButton);
+    
+    document.querySelectorAll('.correct-checkbox').forEach(cb=>{
+        cb.addEventListener('change', function(){
+            const selectedCount = document.querySelectorAll('.correct-checkbox:checked').length;
+            if(selectedCount > 2){
+                this.checked=false;
+                showModal('Too Many Selections', 'Select only 2 correct answers.');
+            }
+            updateMultipleCorrectAnswer();
+            updateSubmitButton();
+            clearErrors();
+        });
+    });
+    
+    document.getElementById('correctAnswer')?.addEventListener('input', () => {
+        updateSubmitButton();
+        clearErrors();
+    });
+    
     document.getElementById('courseSelectAddNew')?.addEventListener('change', updateSubmitButton);
     document.getElementById('questionText')?.addEventListener('input', updateSubmitButton);
-    document.getElementById('questionForm')?.addEventListener('submit', e=>{
-        if(!validateQuestionForm()){e.preventDefault(); return false;}
-        sessionStorage.setItem('justAddedQuestion','true');
-    });
+    
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        const modal = document.getElementById('validationModal');
+        if (event.target == modal) {
+            closeModal();
+        }
+    };
+    
+    // Initialize other functions
     syncCourseDropdowns();
     updateSubmitButton();
     updateScrollIndicator();
     window.addEventListener("scroll", updateScrollIndicator);
     window.addEventListener("resize", updateScrollIndicator);
-    if(sessionStorage.getItem('justAddedQuestion')==='true'){window.scrollTo({top:0,behavior:'smooth'}); sessionStorage.removeItem('justAddedQuestion');}
+    
+    // Check for session messages
+    if(sessionStorage.getItem('justAddedQuestion')==='true'){
+        window.scrollTo({top:0,behavior:'smooth'});
+        sessionStorage.removeItem('justAddedQuestion');
+    }
 });
 </script>

@@ -956,6 +956,67 @@ public int updateLecturer(int uId, String fName, String lName, String uName, Str
     return rows;
 }
 
+
+public boolean updateCourse(String originalCourseName, String courseName, int tMarks, String time, String examDate) {
+    PreparedStatement pstm = null;
+    PreparedStatement pstmQuestions = null;
+    PreparedStatement pstmExams = null;
+    
+    try {
+        conn.setAutoCommit(false);
+        
+        // 1. Update the course in courses table
+        String sqlCourse = "UPDATE courses SET course_name=?, total_marks=?, time=?, exam_date=? WHERE course_name=?";
+        pstm = conn.prepareStatement(sqlCourse);
+        pstm.setString(1, courseName);
+        pstm.setInt(2, tMarks);
+        pstm.setString(3, time);
+        pstm.setString(4, examDate);
+        pstm.setString(5, originalCourseName);
+        
+        int rowsAffected = pstm.executeUpdate();
+        
+        // 2. Update course_name in questions table if it changed
+        if (!originalCourseName.equals(courseName)) {
+            String sqlQuestions = "UPDATE questions SET course_name=? WHERE course_name=?";
+            pstmQuestions = conn.prepareStatement(sqlQuestions);
+            pstmQuestions.setString(1, courseName);
+            pstmQuestions.setString(2, originalCourseName);
+            pstmQuestions.executeUpdate();
+        }
+        
+        // 3. Update course_name in exams table if it changed
+        if (!originalCourseName.equals(courseName)) {
+            String sqlExams = "UPDATE exams SET course_name=? WHERE course_name=?";
+            pstmExams = conn.prepareStatement(sqlExams);
+            pstmExams.setString(1, courseName);
+            pstmExams.setString(2, originalCourseName);
+            pstmExams.executeUpdate();
+        }
+        
+        conn.commit();
+        return rowsAffected > 0;
+        
+    } catch (SQLException ex) {
+        try {
+            if (conn != null) conn.rollback();
+        } catch (SQLException rollbackEx) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Rollback failed", rollbackEx);
+        }
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        return false;
+    } finally {
+        try {
+            if (pstm != null) pstm.close();
+            if (pstmQuestions != null) pstmQuestions.close();
+            if (pstmExams != null) pstmExams.close();
+            conn.setAutoCommit(true);
+        } catch (SQLException e) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, e);
+        }
+    }
+}
+
 public ArrayList<String> getAllCourseNames() {
     ArrayList<String> courses = new ArrayList<>();
     // CORRECTED: The courses table has 'course_name' field as per your schema
@@ -1180,23 +1241,213 @@ public void deleteQuestion(int questionId) {
 }
 
 
-public void deleteUser(int userId) {
-    String sql = "DELETE FROM users WHERE user_id = ?";
+public void deleteUserCascade(int userId) {
+    PreparedStatement pstmt = null;
+    ResultSet rs = null;
     
     try {
-        // Prepare the SQL statement
-        PreparedStatement pstmt = conn.prepareStatement(sql);
-        pstmt.setInt(1, userId);
+        conn.setAutoCommit(false);
+
+        String userType = getUserType(String.valueOf(userId));
+        System.out.println("Deleting user ID: " + userId + ", Type: " + userType);
+
+        if ("student".equalsIgnoreCase(userType)) {
+            // Step 1: Get all exam_ids for the student
+            ArrayList<Integer> examIds = new ArrayList<>();
+            String selectExamsSql = "SELECT exam_id FROM exams WHERE std_id = ?";
+            try (PreparedStatement pstmtExams = conn.prepareStatement(selectExamsSql)) {
+                pstmtExams.setInt(1, userId);
+                try (ResultSet rsExams = pstmtExams.executeQuery()) {
+                    while (rsExams.next()) {
+                        examIds.add(rsExams.getInt("exam_id"));
+                    }
+                }
+            }
+
+            // Step 2: Delete from answers table for each exam_id
+            if (!examIds.isEmpty()) {
+                String deleteAnswersSql = "DELETE FROM answers WHERE exam_id = ?";
+                try (PreparedStatement pstmtAnswers = conn.prepareStatement(deleteAnswersSql)) {
+                    for (int examId : examIds) {
+                        pstmtAnswers.setInt(1, examId);
+                        pstmtAnswers.executeUpdate();
+                    }
+                }
+            }
+
+            // Step 3: Delete from exams table
+            String deleteExamsSql = "DELETE FROM exams WHERE std_id = ?";
+            try (PreparedStatement pstmtExams = conn.prepareStatement(deleteExamsSql)) {
+                pstmtExams.setInt(1, userId);
+                pstmtExams.executeUpdate();
+            }
+
+            // Step 4: Delete from students table
+            delStudent(userId);
+
+        } else if ("lecture".equalsIgnoreCase(userType)) {
+            // For a lecturer, we need to handle their course associations
+            
+            // Step 1: Get the lecturer's course information for logging
+            String getLecturerInfoSql = "SELECT course_name FROM lectures WHERE user_id = ?";
+            try (PreparedStatement pstmtInfo = conn.prepareStatement(getLecturerInfoSql)) {
+                pstmtInfo.setInt(1, userId);
+                try (ResultSet rsInfo = pstmtInfo.executeQuery()) {
+                    if (rsInfo.next()) {
+                        String courseName = rsInfo.getString("course_name");
+                        System.out.println("Deleting lecturer for course: " + courseName);
+                    }
+                }
+            }
+
+            // Step 2: Check if this lecturer is the only one assigned to their course(s)
+            String checkCourseAssignmentsSql = 
+                "SELECT course_name FROM lectures WHERE user_id != ? AND course_name IN " +
+                "(SELECT course_name FROM lectures WHERE user_id = ?)";
+            boolean hasMultipleLecturers = false;
+            try (PreparedStatement pstmtCheck = conn.prepareStatement(checkCourseAssignmentsSql)) {
+                pstmtCheck.setInt(1, userId);
+                pstmtCheck.setInt(2, userId);
+                try (ResultSet rsCheck = pstmtCheck.executeQuery()) {
+                    if (rsCheck.next()) {
+                        hasMultipleLecturers = true;
+                        System.out.println("Other lecturers teach the same course(s)");
+                    }
+                }
+            }
+
+            // Step 3: Delete from lectures table
+            delLecture(userId);
+
+            // Step 4: Optionally remove course assignments if no other lecturers
+            if (!hasMultipleLecturers) {
+                System.out.println("No other lecturers for this course - course remains active");
+            }
+
+        } else if ("admin".equalsIgnoreCase(userType)) {
+            // For admin users, we might want to prevent deletion or handle differently
+            System.out.println("Warning: Attempting to delete admin user ID: " + userId);
+            // Option: throw an exception or log a warning
+            // throw new SQLException("Cannot delete admin users");
+        }
+
+        // Step 5: Finally, delete from the main users table for all user types
+        int deletedFromUsers = deleteUser(userId);
+        System.out.println("Deleted " + deletedFromUsers + " row(s) from users table");
+
+        conn.commit();
+        System.out.println("User deletion completed successfully for ID: " + userId);
         
-        // Execute the statement
-        pstmt.executeUpdate();
-        
-        // Close the prepared statement
-        pstmt.close();
     } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        System.err.println("Error deleting user cascade for ID: " + userId);
+        ex.printStackTrace();
+        try {
+            if (conn != null) {
+                conn.rollback();
+                System.out.println("Transaction rolled back due to error");
+            }
+        } catch (SQLException rollbackEx) {
+            System.err.println("Rollback failed: " + rollbackEx.getMessage());
+            rollbackEx.printStackTrace();
+        }
+        throw new RuntimeException("Failed to delete user: " + ex.getMessage(), ex);
+    } finally {
+        // Clean up resources
+        try {
+            if (rs != null) rs.close();
+            if (pstmt != null) pstmt.close();
+            if (conn != null) conn.setAutoCommit(true);
+        } catch (SQLException e) {
+            System.err.println("Error cleaning up resources: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }
+
+// Helper method to delete user from users table
+public int deleteUser(int userId) {
+    String sql = "DELETE FROM users WHERE user_id = ?";
+    try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        pstmt.setInt(1, userId);
+        int rowsAffected = pstmt.executeUpdate();
+        return rowsAffected;
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        return 0;
+    }
+}
+
+public void deleteCourseCascade(String courseName) {
+    PreparedStatement pstmAnswers = null;
+    PreparedStatement pstmExams = null;
+    PreparedStatement pstmQuestions = null;
+    PreparedStatement pstmCourse = null;
+    
+    try {
+        conn.setAutoCommit(false);
+        
+        // 1. First get all exam IDs for this course
+        ArrayList<Integer> examIds = new ArrayList<>();
+        String getExamIdsSql = "SELECT exam_id FROM exams WHERE course_name = ?";
+        pstmExams = conn.prepareStatement(getExamIdsSql);
+        pstmExams.setString(1, courseName);
+        ResultSet rs = pstmExams.executeQuery();
+        while (rs.next()) {
+            examIds.add(rs.getInt("exam_id"));
+        }
+        rs.close();
+        
+        // 2. Delete answers for each exam
+        if (!examIds.isEmpty()) {
+            String deleteAnswersSql = "DELETE FROM answers WHERE exam_id = ?";
+            pstmAnswers = conn.prepareStatement(deleteAnswersSql);
+            for (int examId : examIds) {
+                pstmAnswers.setInt(1, examId);
+                pstmAnswers.executeUpdate();
+            }
+        }
+        
+        // 3. Delete exams for this course
+        String deleteExamsSql = "DELETE FROM exams WHERE course_name = ?";
+        pstmExams = conn.prepareStatement(deleteExamsSql);
+        pstmExams.setString(1, courseName);
+        pstmExams.executeUpdate();
+        
+        // 4. Delete questions for this course
+        String deleteQuestionsSql = "DELETE FROM questions WHERE course_name = ?";
+        pstmQuestions = conn.prepareStatement(deleteQuestionsSql);
+        pstmQuestions.setString(1, courseName);
+        pstmQuestions.executeUpdate();
+        
+        // 5. Finally delete the course
+        String deleteCourseSql = "DELETE FROM courses WHERE course_name = ?";
+        pstmCourse = conn.prepareStatement(deleteCourseSql);
+        pstmCourse.setString(1, courseName);
+        pstmCourse.executeUpdate();
+        
+        conn.commit();
+    } catch (SQLException ex) {
+        try {
+            conn.rollback();
+        } catch (SQLException rollbackEx) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Rollback failed", rollbackEx);
+        }
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+    } finally {
+        try {
+            if (pstmAnswers != null) pstmAnswers.close();
+            if (pstmExams != null) pstmExams.close();
+            if (pstmQuestions != null) pstmQuestions.close();
+            if (pstmCourse != null) pstmCourse.close();
+            conn.setAutoCommit(true);
+        } catch (SQLException e) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, e);
+        }
+    }
+}
+
+
+
 
     public void delStudent(int uid){
         try {
