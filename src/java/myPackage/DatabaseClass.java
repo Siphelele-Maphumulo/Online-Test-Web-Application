@@ -1981,4 +1981,46 @@ public String getLastCourseName() {
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+
+    public boolean deleteExamResult(int examId) {
+        String deleteAnswersSql = "DELETE FROM answers WHERE exam_id = ?";
+        String deleteExamSql = "DELETE FROM exams WHERE exam_id = ?";
+
+        try {
+            conn.setAutoCommit(false); // Start transaction
+
+            // Delete associated answers first
+            try (PreparedStatement psAnswers = conn.prepareStatement(deleteAnswersSql)) {
+                psAnswers.setInt(1, examId);
+                psAnswers.executeUpdate();
+            }
+
+            // Then delete the exam record
+            try (PreparedStatement psExam = conn.prepareStatement(deleteExamSql)) {
+                psExam.setInt(1, examId);
+                int rowsAffected = psExam.executeUpdate();
+                if (rowsAffected == 0) {
+                    conn.rollback(); // Rollback if the exam was not found
+                    return false;
+                }
+            }
+
+            conn.commit(); // Commit transaction
+            return true;
+        } catch (SQLException e) {
+            try {
+                conn.rollback(); // Rollback on error
+            } catch (SQLException rollbackEx) {
+                Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Transaction rollback failed", rollbackEx);
+            }
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to delete exam result for examId: " + examId, e);
+            return false;
+        } finally {
+            try {
+                conn.setAutoCommit(true); // Restore default behavior
+            } catch (SQLException e) {
+                Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to restore auto-commit", e);
+            }
+        }
+    }
 }

@@ -371,6 +371,32 @@ try {
         response.getWriter().write("{\"exists\": " + exists + "}");
         return;
     /* =========================
+       DELETE EXAM RESULT
+       ========================= */
+    } else if ("delete_exam_result".equalsIgnoreCase(pageParam)) {
+        String token = request.getParameter("csrfToken");
+        String sessionToken = (String) session.getAttribute("csrfToken");
+        User currentUser = pDAO.getUserDetails((String) session.getAttribute("userId"));
+
+        if (token == null || !token.equals(sessionToken)) {
+            session.setAttribute("error", "Invalid request.");
+        } else if (currentUser == null || !"admin".equalsIgnoreCase(currentUser.getType())) {
+            session.setAttribute("error", "You are not authorized to perform this action.");
+        } else {
+            try {
+                int examId = Integer.parseInt(request.getParameter("exam_id"));
+                if (pDAO.deleteExamResult(examId)) {
+                    session.setAttribute("message", "Exam result deleted successfully.");
+                } else {
+                    session.setAttribute("error", "Failed to delete exam result.");
+                }
+            } catch (NumberFormatException e) {
+                session.setAttribute("error", "Invalid exam ID.");
+            }
+        }
+        response.sendRedirect("adm-page.jsp?pgprt=5");
+        return;
+    /* =========================
        LOGOUT
        ========================= */
         } else if ("logout".equalsIgnoreCase(pageParam)) {

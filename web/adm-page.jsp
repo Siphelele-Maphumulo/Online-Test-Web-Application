@@ -3,10 +3,14 @@
 <%@page import="myPackage.DatabaseClass"%>
 <%@page import="myPackage.classes.Result"%>
 <%@page import="java.util.ArrayList"%>
+<%@page import="java.util.UUID"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
  
 <% 
-myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+    // Generate a CSRF token and store it in the session
+    String csrfToken = UUID.randomUUID().toString();
+    session.setAttribute("csrfToken", csrfToken);
+    myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 %>
 <!DOCTYPE html>
 <html>
@@ -554,6 +558,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     <!-- Main Content Area -->
     <main class="dashboard-content">
         <div class="content-wrapper">
+            <%@ include file="header-messages.jsp" %>
             <%
                 // Check if user is logged in
                 if (session.getAttribute("userStatus") != null && session.getAttribute("userStatus").equals("1")) {

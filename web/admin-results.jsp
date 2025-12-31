@@ -811,6 +811,9 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                                     <a class="btn btn-primary" href="adm-page.jsp?pgprt=5&eid=<%= e.getExamId() %>" style="font-size: 13px; padding: 8px 16px;">
                                         <i class="fas fa-eye"></i> Details
                                     </a>
+                                    <button class="btn btn-danger" onclick="confirmDelete(<%= e.getExamId() %>, '<%= fullName %>', '<%= e.getcName() %>')" style="font-size: 13px; padding: 8px 16px;">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
                                 </td>
                             </tr>
                             <% 
@@ -1128,4 +1131,59 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         // Reorder rows in DOM
         rows.forEach(row => tbody.appendChild(row));
     }
+
+    function confirmDelete(examId, studentName, courseName) {
+        const modal = document.getElementById('deleteConfirmationModal');
+        document.getElementById('modalStudentName').textContent = studentName;
+        document.getElementById('modalCourseName').textContent = courseName;
+        document.getElementById('modalExamId').textContent = examId;
+        modal.style.display = 'block';
+
+        document.getElementById('confirmDeleteBtn').onclick = function() {
+            const deleteBtn = this;
+            deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+            deleteBtn.disabled = true;
+
+            const form = document.createElement('form');
+            form.method = 'post';
+            form.action = 'controller.jsp';
+
+            const pageInput = document.createElement('input');
+            pageInput.type = 'hidden';
+            pageInput.name = 'page';
+            pageInput.value = 'delete_exam_result';
+            form.appendChild(pageInput);
+
+            const examIdInput = document.createElement('input');
+            examIdInput.type = 'hidden';
+            examIdInput.name = 'exam_id';
+            examIdInput.value = examId;
+            form.appendChild(examIdInput);
+
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfToken';
+            csrfInput.value = '<%= session.getAttribute("csrfToken") %>';
+            form.appendChild(csrfInput);
+
+            document.body.appendChild(form);
+            form.submit();
+        };
+    }
+
+    function closeModal() {
+        document.getElementById('deleteConfirmationModal').style.display = 'none';
+    }
 </script>
+<div id="deleteConfirmationModal" style="display:none; position:fixed; z-index:1001; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.4);">
+  <div style="background-color:#fefefe; margin:15% auto; padding:20px; border:1px solid #888; width:80%; max-width:500px; border-radius:8px; box-shadow:0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);">
+    <span onclick="closeModal()" style="color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer;">&times;</span>
+    <h2>Confirm Deletion</h2>
+    <p>Are you sure you want to delete the exam result for <strong id="modalStudentName"></strong> in the course <strong id="modalCourseName"></strong> (Exam ID: <strong id="modalExamId"></strong>)?</p>
+    <p>This action cannot be undone.</p>
+    <div style="text-align:right;">
+      <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+      <button id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+    </div>
+  </div>
+</div>
