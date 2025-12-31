@@ -479,8 +479,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 </style>
 </head>
 <body>
-    <!-- Include the header messages -->
-    <%@ include file="header-messages.jsp" %>
+
 <%
     // Get userId from session
     Object userIdObj = session.getAttribute("userId");

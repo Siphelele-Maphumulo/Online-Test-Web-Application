@@ -721,20 +721,20 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                 </div>
             </div>
             
- <!-- Quick Filters -->
+            <!-- Quick Filters -->
             <div class="quick-filter-row">
-            <button class="quick-filter-btn" onclick="setQuickFilter('pass')">
-                <i class="fas fa-check-circle"></i> Pass Only
-            </button>
-            <button class="quick-filter-btn" onclick="setQuickFilter('fail')">
-                <i class="fas fa-times-circle"></i> Fail Only
-            </button>
-            <button class="quick-filter-btn" onclick="setQuickFilter('high')">
-                <i class="fas fa-star"></i> High Scores (&gt;80%)
-            </button>
-            <button class="quick-filter-btn" onclick="setQuickFilter('low')">
-                <i class="fas fa-exclamation-triangle"></i> Low Scores (&lt;50%)
-            </button>
+                <button class="quick-filter-btn" onclick="setQuickFilter('pass')">
+                    <i class="fas fa-check-circle"></i> Pass Only
+                </button>
+                <button class="quick-filter-btn" onclick="setQuickFilter('fail')">
+                    <i class="fas fa-times-circle"></i> Fail Only
+                </button>
+                <button class="quick-filter-btn" onclick="setQuickFilter('high')">
+                    <i class="fas fa-star"></i> High Scores (&gt;80%)
+                </button>
+                <button class="quick-filter-btn" onclick="setQuickFilter('low')">
+                    <i class="fas fa-exclamation-triangle"></i> Low Scores (&lt;50%)
+                </button>
             </div>
         </div>
         
@@ -754,7 +754,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
             <div class="card-header">
                 <span><i class="fas fa-list"></i> All Student Results</span>
                 <div class="stats-badge">
-                    <span id="resultsCount">0</span> Results
+                    <span id="resultsCount"><%= allExamResults.size() %></span> Results
                 </div>
             </div>
             
@@ -792,14 +792,18 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                                         String status = (e.getStatus() != null) ? e.getStatus() : "Terminated";
                                         // Use getFullName() method as per Exams class
                                         String fullName = e.getFullName();
+                                        int examId = e.getExamId();
                             %>
                             <tr class="result-row" 
+                                data-index="<%= examId %>"
                                 data-name="<%= fullName.toLowerCase() %>"
                                 data-id="<%= e.getUserName().toLowerCase() %>"
                                 data-email="<%= e.getEmail().toLowerCase() %>"
                                 data-date="<%= e.getDate() %>"
                                 data-course="<%= e.getcName().toLowerCase() %>"
                                 data-time="<%= e.getStartTime() + " - " + e.getEndTime() %>"
+                                data-obt-marks="<%= e.getObtMarks() %>"
+                                data-total-marks="<%= e.gettMarks() %>"
                                 data-marks="<%= e.getObtMarks() + "/" + e.gettMarks() %>"
                                 data-percentage="<%= percentage %>"
                                 data-status="<%= status.toLowerCase() %>">
@@ -809,39 +813,72 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                                 <td><%= e.getDate() %></td>
                                 <td><%= e.getcName() %></td>
                                 <td><%= e.getStartTime() %> - <%= e.getEndTime() %></td>
-                                <td><%= e.getObtMarks() %> / <%= e.gettMarks() %></td>
+                                <td>
+                                    <span class="marks-display">
+                                        <%= e.getObtMarks() %> / <%= e.gettMarks() %>
+                                    </span>
+                                    <div class="marks-edit" style="display: none;">
+                                        <input type="number" class="form-control" 
+                                               value="<%= e.getObtMarks() %>" 
+                                               min="0" max="<%= e.gettMarks() %>"
+                                               style="width: 80px; display: inline-block;">
+                                        <span> / <%= e.gettMarks() %></span>
+                                    </div>
+                                </td>
                                 <td>
                                     <% if (status.equals("Pass")) { %>
-                                        <span class="badge badge-success">
+                                        <span class="badge badge-success status-display">
                                             <i class="fas fa-check-circle"></i> <%= status %>
                                         </span>
                                     <% } else if (status.equals("Fail")) { %>
-                                        <span class="badge badge-error">
+                                        <span class="badge badge-error status-display">
                                             <i class="fas fa-times-circle"></i> <%= status %>
                                         </span>
                                     <% } else { %>
-                                        <span class="badge badge-warning">
+                                        <span class="badge badge-warning status-display">
                                             <i class="fas fa-exclamation-triangle"></i> Terminated
                                         </span>
                                     <% } %>
+                                    <div class="status-edit" style="display: none;">
+                                        <select class="form-control" style="width: 120px; display: inline-block;">
+                                            <option value="Pass" <%= status.equals("Pass") ? "selected" : "" %>>Pass</option>
+                                            <option value="Fail" <%= status.equals("Fail") ? "selected" : "" %>>Fail</option>
+                                            <option value="Terminated" <%= status.equals("Terminated") ? "selected" : "" %>>Terminated</option>
+                                        </select>
+                                    </div>
                                 </td>
                                 <td>
                                     <span class="badge badge-info"><%= String.format("%.0f", percentage) %>%</span>
                                 </td>
                                 <td>
-                                    <button class="btn btn-secondary edit-btn" style="font-size: 13px; padding: 8px 16px; margin-top: 2%; margin-bottom: 2%;">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </button>
-                                    <a href="controller.jsp?page=results&operation=del&eid=<%= e.getExamId() %>"
-                                       class="btn btn-danger" data-item-name="Exam ID: <%= e.getExamId() %>" style=" margin-bottom: 2%;">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </a>
-                                    <button class="btn btn-success save-btn" style="display:none; font-size: 13px; padding: 8px 16px;">
-                                        <i class="fas fa-save"></i> Save
-                                    </button>
-                                    <a class="btn btn-primary" href="adm-page.jsp?pgprt=5&eid=<%= e.getExamId() %>" style="font-size: 13px; padding: 8px 16px;">
-                                        <i class="fas fa-eye"></i> Details
-                                    </a>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-secondary edit-btn" 
+                                                data-exam-id="<%= examId %>"
+                                                style="font-size: 13px; padding: 8px 16px; margin: 2px;">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+                                        <button class="btn btn-danger delete-btn" 
+                                                data-exam-id="<%= examId %>"
+                                                data-student-name="<%= fullName %>"
+                                                data-course-name="<%= e.getcName() %>"
+                                                onclick="showDeleteModal(<%= examId %>, '<%= fullName %>', '<%= e.getcName() %>')"
+                                                style="font-size: 13px; padding: 8px 16px; margin: 2px;">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                        <button class="btn btn-success save-btn" 
+                                                data-exam-id="<%= examId %>"
+                                                style="display:none; font-size: 13px; padding: 8px 16px; margin: 2px;">
+                                            <i class="fas fa-save"></i> Save
+                                        </button>
+                                        <button class="btn btn-warning cancel-btn" 
+                                                style="display:none; font-size: 13px; padding: 8px 16px; margin: 2px;">
+                                            <i class="fas fa-times"></i> Cancel
+                                        </button>
+                                        <a class="btn btn-primary" href="adm-page.jsp?pgprt=5&eid=<%= examId %>" 
+                                           style="font-size: 13px; padding: 8px 16px; margin: 2px;">
+                                            <i class="fas fa-eye"></i> Details
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                             <% 
@@ -851,7 +888,8 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                         </tbody>
                     </table>
                     <div class="results-count">
-                        Showing <span id="visibleCount">0</span> of <span id="totalCount">0</span> results
+                        Showing <span id="visibleCount"><%= allExamResults.size() %></span> of 
+                        <span id="totalCount"><%= allExamResults.size() %></span> results
                     </div>
                 </div>
             <% } else { %>
@@ -913,15 +951,120 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     </main>
 </div>
 
+<!-- Modal for delete confirmation -->
+<div id="deleteModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3><i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i> Delete Exam Result</h3>
+            <span class="close-modal" onclick="closeDeleteModal()">&times;</span>
+        </div>
+        <%
+        // Generate CSRF token if not exists
+        if (session.getAttribute("csrf_token") == null) {
+            String csrfToken = java.util.UUID.randomUUID().toString();
+            session.setAttribute("csrf_token", csrfToken);
+        }
+        %>
+        <div class="modal-body">
+            <p id="deleteModalMessage">Are you sure you want to delete this exam result?</p>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeDeleteModal()" class="btn btn-outline">Cancel</button>
+            <button onclick="confirmDelete()" class="btn btn-danger">
+                <i class="fas fa-trash"></i> Delete
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 0;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+    padding: 16px 20px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.close-modal {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 20px;
+}
+
+.close-modal:hover {
+    color: #000;
+}
+
+.modal-body {
+    padding: 20px;
+    color: #333;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.modal-footer {
+    padding: 16px 20px;
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    border-radius: 0 0 8px 8px;
+    text-align: right;
+}
+
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+
+.action-buttons .btn {
+    margin: 2px !important;
+}
+</style>
+
 <!-- Font Awesome for Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <!-- JavaScript for enhanced functionality -->
 <script>
-    // Global variables for sorting
+    // Global variables
     let currentSortColumn = -1;
-    let sortDirection = 1; // 1 = ascending, -1 = descending
-    
+    let sortDirection = 1;
+    let deleteExamId = null;
+
     // Initialize when page loads
     document.addEventListener('DOMContentLoaded', function() {
         updateResultsCount();
@@ -934,8 +1077,186 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         document.getElementById('filterDateFrom').value = thirtyDaysAgo.toISOString().split('T')[0];
+        
+        // Initialize edit/delete functionality
+        initializeEditDeleteHandlers();
     });
     
+    function initializeEditDeleteHandlers() {
+        // Edit button click handler
+        document.querySelectorAll('.edit-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const examId = this.getAttribute('data-exam-id');
+                const row = this.closest('tr');
+                enableEditMode(row, examId);
+            });
+        });
+        
+        // Save button click handler
+        document.querySelectorAll('.save-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const examId = this.getAttribute('data-exam-id');
+                const row = this.closest('tr');
+                saveChanges(row, examId);
+            });
+        });
+        
+        // Cancel button click handler
+        document.querySelectorAll('.cancel-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const row = this.closest('tr');
+                cancelEdit(row);
+            });
+        });
+        
+        // Delete button click handler
+        document.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const examId = this.getAttribute('data-exam-id');
+                const studentName = this.getAttribute('data-student-name');
+                const courseName = this.getAttribute('data-course-name');
+                showDeleteModal(examId, studentName, courseName);
+            });
+        });
+    }
+    
+    function enableEditMode(row, examId) {
+        // Show edit fields
+        row.querySelector('.marks-display').style.display = 'none';
+        row.querySelector('.marks-edit').style.display = 'block';
+        row.querySelector('.status-display').style.display = 'none';
+        row.querySelector('.status-edit').style.display = 'block';
+        
+        // Show/hide buttons
+        row.querySelector('.edit-btn').style.display = 'none';
+        row.querySelector('.delete-btn').style.display = 'none';
+        row.querySelector('.save-btn').style.display = 'inline-flex';
+        row.querySelector('.cancel-btn').style.display = 'inline-flex';
+        row.querySelector('.btn-primary').style.display = 'none';
+    }
+    
+    function cancelEdit(row) {
+        // Hide edit fields
+        row.querySelector('.marks-display').style.display = '';
+        row.querySelector('.marks-edit').style.display = 'none';
+        row.querySelector('.status-display').style.display = '';
+        row.querySelector('.status-edit').style.display = 'none';
+        
+        // Show/hide buttons
+        row.querySelector('.edit-btn').style.display = 'inline-flex';
+        row.querySelector('.delete-btn').style.display = 'inline-flex';
+        row.querySelector('.save-btn').style.display = 'none';
+        row.querySelector('.cancel-btn').style.display = 'none';
+        row.querySelector('.btn-primary').style.display = 'inline-flex';
+    }
+    
+    function saveChanges(row, examId) {
+        const obtMarksInput = row.querySelector('.marks-edit input');
+        const statusSelect = row.querySelector('.status-edit select');
+        
+        const obtMarks = parseInt(obtMarksInput.value);
+        const totalMarks = parseInt(row.getAttribute('data-total-marks'));
+        const status = statusSelect.value;
+        
+        // Validate marks
+        if (isNaN(obtMarks) || obtMarks < 0 || obtMarks > totalMarks) {
+            alert('Please enter valid marks between 0 and ' + totalMarks);
+            obtMarksInput.focus();
+            return;
+        }
+        
+        // Show loading state
+        const saveBtn = row.querySelector('.save-btn');
+        const originalText = saveBtn.innerHTML;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        saveBtn.disabled = true;
+        
+        // Create and submit form
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'controller.jsp';
+        
+        const fields = {
+            'page': 'results',
+            'operation': 'edit',
+            'eid': examId,
+            'obtMarks': obtMarks,
+            'totalMarks': totalMarks,
+            'status': status
+        };
+        
+        for (const [name, value] of Object.entries(fields)) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            form.appendChild(input);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+    
+    function showDeleteModal(examId, studentName, courseName) {
+        deleteExamId = examId;
+        const modalMessage = document.getElementById('deleteModalMessage');
+        modalMessage.innerHTML = `Are you sure you want to delete the exam result for:<br><br>
+                                 <strong>Student:</strong> ${studentName}<br>
+                                 <strong>Course:</strong> ${courseName}<br>
+                                 <strong>Exam ID:</strong> ${examId}<br><br>
+                                 This action cannot be undone!`;
+        
+        document.getElementById('deleteModal').style.display = 'block';
+    }
+    
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+        deleteExamId = null;
+    }
+    
+    function confirmDelete() {
+        if (!deleteExamId) return;
+
+        // Show loading state
+        const deleteBtn = document.querySelector('.modal-footer .btn-danger');
+        const originalText = deleteBtn.innerHTML;
+        deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+        deleteBtn.disabled = true;
+
+        // Submit delete request
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'controller.jsp';
+
+        // Add CSRF token if you have one
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = '<%= session.getAttribute("csrf_token") != null ? session.getAttribute("csrf_token") : "" %>';
+        form.appendChild(csrfInput);
+
+        const pageInput = document.createElement('input');
+        pageInput.type = 'hidden';
+        pageInput.name = 'page';
+        pageInput.value = 'results';
+        form.appendChild(pageInput);
+
+        const operationInput = document.createElement('input');
+        operationInput.type = 'hidden';
+        operationInput.name = 'operation';
+        operationInput.value = 'delete';
+        form.appendChild(operationInput);
+
+        const examIdInput = document.createElement('input');
+        examIdInput.type = 'hidden';
+        examIdInput.name = 'eid';
+        examIdInput.value = deleteExamId;
+        form.appendChild(examIdInput);
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+
     // Apply all filters
     function applyFilters() {
         const nameFilter = document.getElementById('filterName').value.toLowerCase();
@@ -1001,60 +1322,52 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         updateResultsCount(visibleCount);
     }
     
-        // Set quick filters
-        function setQuickFilter(filterType) {
-            resetAllFilters();
-
-            switch(filterType) {
-                case 'pass':
-                    // Set status filter to "Pass" and apply
-                    document.getElementById('filterStatus').value = 'Pass';
-                    applyFilters();
-                    break;
-
-                case 'fail':
-                    // Set status filter to "Fail" and apply
-                    document.getElementById('filterStatus').value = 'Fail';
-                    applyFilters();
-                    break;
-
-                case 'high':
-                    // Filter for high scores (>80%)
-                    const rowsHigh = document.querySelectorAll('#resultsTableBody tr.result-row');
-                    rowsHigh.forEach(row => {
-                        const percentage = parseFloat(row.getAttribute('data-percentage'));
-                        if (percentage < 80) {
-                            row.style.display = 'none';
-                        }
-                    });
-                    updateResultsCount();
-                    break;
-
-                case 'low':
-                    // Filter for low scores (<50%)
-                    const rowsLow = document.querySelectorAll('#resultsTableBody tr.result-row');
-                    rowsLow.forEach(row => {
-                        const percentage = parseFloat(row.getAttribute('data-percentage'));
-                        if (percentage > 50) {
-                            row.style.display = 'none';
-                        }
-                    });
-                    updateResultsCount();
-                    break;
-            }
-
-            // Add active class to the clicked button
-            const buttons = document.querySelectorAll('.quick-filter-btn');
-            buttons.forEach(btn => {
-                if (btn.textContent.includes(filterType === 'pass' ? 'Pass Only' : 
-                                            filterType === 'fail' ? 'Fail Only' :
-                                            filterType === 'high' ? 'High Scores' : 'Low Scores')) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
-            });
+    function setQuickFilter(filterType) {
+        resetAllFilters();
+        
+        switch(filterType) {
+            case 'pass':
+                document.getElementById('filterStatus').value = 'Pass';
+                applyFilters();
+                break;
+            case 'fail':
+                document.getElementById('filterStatus').value = 'Fail';
+                applyFilters();
+                break;
+            case 'high':
+                const rowsHigh = document.querySelectorAll('#resultsTableBody tr.result-row');
+                rowsHigh.forEach(row => {
+                    const percentage = parseFloat(row.getAttribute('data-percentage'));
+                    if (percentage < 80) {
+                        row.style.display = 'none';
+                    }
+                });
+                updateResultsCount();
+                break;
+            case 'low':
+                const rowsLow = document.querySelectorAll('#resultsTableBody tr.result-row');
+                rowsLow.forEach(row => {
+                    const percentage = parseFloat(row.getAttribute('data-percentage'));
+                    if (percentage > 50) {
+                        row.style.display = 'none';
+                    }
+                });
+                updateResultsCount();
+                break;
         }
+        
+        // Add active class to the clicked button
+        const buttons = document.querySelectorAll('.quick-filter-btn');
+        buttons.forEach(btn => {
+            if (btn.textContent.includes(filterType === 'pass' ? 'Pass Only' : 
+                                        filterType === 'fail' ? 'Fail Only' :
+                                        filterType === 'high' ? 'High Scores' : 'Low Scores')) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
     
     // Reset all filters
     function resetAllFilters() {
@@ -1131,10 +1444,10 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                     bValue = new Date(b.getAttribute('data-date'));
                     break;
                 case 6: // Marks
-                    const aMarks = aCell.textContent.split('/').map(Number);
-                    const bMarks = bCell.textContent.split('/').map(Number);
-                    aValue = aMarks[0] / aMarks[1];
-                    bValue = bMarks[0] / bMarks[1];
+                    const aMarks = a.getAttribute('data-obt-marks');
+                    const bMarks = b.getAttribute('data-obt-marks');
+                    aValue = parseInt(aMarks);
+                    bValue = parseInt(bMarks);
                     break;
                 case 7: // Status
                     const statusOrder = { 'pass': 1, 'fail': 2, 'terminated': 3 };
@@ -1159,72 +1472,12 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         // Reorder rows in DOM
         rows.forEach(row => tbody.appendChild(row));
     }
-
-    // Inline editing logic
-    document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.edit-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const row = this.closest('tr');
-                const marksCell = row.cells[6];
-                const statusCell = row.cells[7];
-
-                const marksText = marksCell.textContent.trim();
-                const [obtMarks, totalMarks] = marksText.split(' / ').map(Number);
-
-                marksCell.innerHTML = `<input type="number" class="form-control" value="${obtMarks}" style="width: 60px;"> / ${totalMarks}`;
-                row.setAttribute('data-total-marks', totalMarks);
-
-                this.style.display = 'none';
-                row.querySelector('.save-btn').style.display = 'inline-flex';
-            });
-        });
-
-        document.querySelectorAll('.save-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const row = this.closest('tr');
-                const marksCell = row.cells[6];
-                const obtMarksInput = marksCell.querySelector('input');
-                const obtMarks = obtMarksInput.value;
-                const totalMarks = row.getAttribute('data-total-marks');
-                const examId = row.querySelector('.btn-primary').href.split('eid=')[1];
-
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = 'controller.jsp';
-
-                const pageInput = document.createElement('input');
-                pageInput.type = 'hidden';
-                pageInput.name = 'page';
-                pageInput.value = 'results';
-                form.appendChild(pageInput);
-
-                const operationInput = document.createElement('input');
-                operationInput.type = 'hidden';
-                operationInput.name = 'operation';
-                operationInput.value = 'edit';
-                form.appendChild(operationInput);
-
-                const examIdInput = document.createElement('input');
-                examIdInput.type = 'hidden';
-                examIdInput.name = 'eid';
-                examIdInput.value = examId;
-                form.appendChild(examIdInput);
-
-                const obtMarksField = document.createElement('input');
-                obtMarksField.type = 'hidden';
-                obtMarksField.name = 'obtMarks';
-                obtMarksField.value = obtMarks;
-                form.appendChild(obtMarksField);
-
-                const totalMarksField = document.createElement('input');
-                totalMarksField.type = 'hidden';
-                totalMarksField.name = 'totalMarks';
-                totalMarksField.value = totalMarks;
-                form.appendChild(totalMarksField);
-
-                document.body.appendChild(form);
-                form.submit();
-            });
-        });
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('deleteModal');
+        if (event.target === modal) {
+            closeDeleteModal();
+        }
     });
 </script>
