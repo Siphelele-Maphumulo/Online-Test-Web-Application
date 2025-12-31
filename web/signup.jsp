@@ -23,9 +23,10 @@
     .form-row > .col-md-6{ margin-bottom:1rem; }
     .btn-auth{ background:linear-gradient(135deg, var(--primary), #1e4580); border:none; }
     .btn-auth:hover{ background:#1e4580; }
-    .back-button{ background:#09294D; color:white; border:none; }
+    .back-button{ background:#09294D; color:white; border:none; margin-bottom: 15px; display: inline-block; }
     .back-button:hover{ background:#6c757d; }
     .user-type-badge{ background:#09294D; color:white; padding:5px 15px; border-radius:20px; font-size:0.9rem; }
+    .course-field { display: none; }
     @media (max-width:575.98px){ .auth-card{ border-radius:.75rem; } .auth-title{ font-size:1.25rem; } }
   </style>
 </head>
@@ -36,24 +37,28 @@
 
     // Check if should show back button
     boolean showBackButton = false;
+    String backUrl = "index.jsp";
 
-    // Show back button for admin / lecturer
-    if (
-        "admin".equals(userType) ||
-        "lecture".equals(userType) ||
-        "admin".equals(fromPage) ||
-        (
-            session.getAttribute("userRole") != null &&
-            (
-                "admin".equals(session.getAttribute("userRole")) ||
-                "lecture".equals(session.getAttribute("userRole"))
-            )
-        )
-    ) {
+    // Show back button for admin / lecturer contexts
+    if ("admin".equals(userType) || "lecture".equals(userType) || "admin".equals(fromPage) ||
+        (session.getAttribute("userRole") != null && 
+         ("admin".equals(session.getAttribute("userRole")) || "lecture".equals(session.getAttribute("userRole"))))) {
         showBackButton = true;
+        
+        // Set appropriate back URL
+        if (session.getAttribute("userRole") != null) {
+            String role = session.getAttribute("userRole").toString();
+            if ("admin".equals(role)) {
+                backUrl = "adm-page.jsp";
+            } else if ("lecture".equals(role)) {
+                backUrl = "lecture_dashboard.jsp";
+            }
+        } else if ("admin".equals(fromPage)) {
+            backUrl = "adm-page.jsp";
+        }
     }
 
-    // Store in session (unchanged)
+    // Store in session
     if (userType != null) {
         session.setAttribute("signup_user_type", userType);
     }
@@ -72,7 +77,7 @@
 
 
 <body>
-
+    <%@ include file="header-messages.jsp" %>
   <!-- Header -->
   <jsp:include page="header.jsp" />
 
@@ -84,11 +89,13 @@
           <div class="auth-card p-4 p-md-5">
             
             <!-- Back Button (Conditional) -->
+            
             <% if (showBackButton) { %>
                 <a href="index.jsp"
-                   class="btn back-button btn-sm" 
+                   class="btn back-button btn-sm"
                    onclick="history.back(); return false;">
                     <i class="fas fa-arrow-left mr-1"></i>
+                    Back
                 </a>
             <% } %>
 
@@ -106,7 +113,6 @@
             
             <p class="text-center text-muted mb-4">Please fill in your details to sign up.</p>
 
-            <!-- Hidden field to indicate admin/lecture creation -->
             <form action="controller.jsp" method="POST" onsubmit="return validateForm();">
               <input type="hidden" name="page" value="register"/>
               
@@ -128,11 +134,12 @@
               %>
               <input type="hidden" name="created_by" value="<%= userId %>"/>
               <input type="hidden" name="creator_role" value="<%= userRole %>"/>
+              <input type="hidden" name="is_admin_creation" value="true"/>
               <% } %>
 
               <div class="form-row">
                 <div class="col-12 col-md-6">
-                  <label class="sr-only" for="fname">First Name</label>
+                  <label class="sr-only" for="fname">First Name *</label>
                   <div class="input-icon">
                     <i class="fas fa-user"></i>
                     <input id="fname" type="text" name="fname" class="form-control" placeholder="First Name" required/>
@@ -141,7 +148,7 @@
                 </div>
 
                 <div class="col-12 col-md-6">
-                  <label class="sr-only" for="lname">Last Name</label>
+                  <label class="sr-only" for="lname">Last Name *</label>
                   <div class="input-icon">
                     <i class="fas fa-user"></i>
                     <input id="lname" type="text" name="lname" class="form-control" placeholder="Last Name" required/>
@@ -150,16 +157,17 @@
                 </div>
 
                 <div class="col-12 col-md-6">
-                  <label class="sr-only" for="uname">8 digits of ID Number</label>
+                  <label class="sr-only" for="uname">Username/ID *</label>
                   <div class="input-icon">
                     <i class="fas fa-id-badge"></i>
-                    <input id="uname" type="text" name="uname" class="form-control" placeholder="8 digits of ID Number" required/>
+                    <input id="uname" type="text" name="uname" class="form-control" placeholder="Username (Unique)" required/>
                   </div>
                   <span id="errorUsername" class="error-message"></span>
+                  <small class="form-text text-muted">Must be unique across all users</small>
                 </div>
 
                 <div class="col-12 col-md-6">
-                  <label class="sr-only" for="contactno">Contact No</label>
+                  <label class="sr-only" for="contactno">Contact No *</label>
                   <div class="input-icon">
                     <i class="fas fa-phone"></i>
                     <input id="contactno" type="tel" name="contactno" class="form-control" placeholder="Contact No" required/>
@@ -168,20 +176,31 @@
                 </div>
 
                 <div class="col-12">
-                  <label class="sr-only" for="email">Email</label>
+                  <label class="sr-only" for="email">Email *</label>
                   <div class="input-icon">
                     <i class="fas fa-envelope"></i>
-                    <input id="email" type="email" name="email" class="form-control" placeholder="Email" required 
-                           onblur="checkEmailFormat(this.value)"/>
+                    <input id="email" type="email" name="email" class="form-control" placeholder="Email" required/>
                   </div>
                   <span id="errorEmail" class="error-message"></span>
-                  <small id="emailHint" class="form-text text-muted">
+                  <small class="form-text text-muted">
                     <% if ("admin".equals(userType) || "lecture".equals(userType)) { %>
-                    <i class="fas fa-info-circle"></i> For <%= displayUserType.toLowerCase() %> accounts, use your institutional email.
+                    <i class="fas fa-info-circle"></i> <%= displayUserType %> account email
                     <% } else { %>
-                    <i class="fas fa-info-circle"></i> Use your institutional email. System will detect your role automatically.
+                    <i class="fas fa-info-circle"></i> Use your institutional email
                     <% } %>
                   </small>
+                </div>
+                
+                <!-- Course Field for Lecturers -->
+                <div id="courseField" class="col-12 <%= "lecture".equals(userType) ? "" : "course-field" %>">
+                  <label class="sr-only" for="course_name">Course Name</label>
+                  <div class="input-icon">
+                    <i class="fas fa-book"></i>
+                    <input id="course_name" type="text" name="course_name" class="form-control" 
+                           placeholder="Course Name (for lecturers)" 
+                           <%= "lecture".equals(userType) ? "" : "disabled" %>/>
+                  </div>
+                  <small class="form-text text-muted">Optional: Assign a course to this lecturer</small>
                 </div>
                 
                 <!-- Additional fields for admin/lecture creation -->
@@ -189,13 +208,30 @@
                 <div class="col-12">
                   <div class="alert alert-warning p-2 mb-3">
                     <i class="fas fa-exclamation-triangle mr-1"></i>
-                    <small>You are creating a <strong><%= displayUserType %></strong> account. This account will have elevated privileges.</small>
+                    <small>You are creating a <strong><%= displayUserType %></strong> account with elevated privileges.</small>
                   </div>
                 </div>
                 <% } %>
                 
+                <!-- Address fields -->
                 <div class="col-12 col-md-6">
-                  <label class="sr-only" for="pass">Password</label>
+                  <label class="sr-only" for="city">City</label>
+                  <div class="input-icon">
+                    <i class="fas fa-city"></i>
+                    <input id="city" type="text" name="city" class="form-control" placeholder="City"/>
+                  </div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                  <label class="sr-only" for="address">Address</label>
+                  <div class="input-icon">
+                    <i class="fas fa-home"></i>
+                    <input id="address" type="text" name="address" class="form-control" placeholder="Address"/>
+                  </div>
+                </div>
+                
+                <div class="col-12 col-md-6">
+                  <label class="sr-only" for="pass">Password *</label>
                   <div class="input-icon">
                     <i class="fas fa-lock"></i>
                     <input id="pass" type="password" name="pass" class="form-control" placeholder="Password" required/>
@@ -205,7 +241,7 @@
                 </div>
 
                 <div class="col-12 col-md-6">
-                  <label class="sr-only" for="cpass">Confirm Password</label>
+                  <label class="sr-only" for="cpass">Confirm Password *</label>
                   <div class="input-icon">
                     <i class="fas fa-lock"></i>
                     <input id="cpass" type="password" name="cpass" class="form-control" placeholder="Confirm Password" required/>
@@ -263,9 +299,8 @@
           }
       };
 
-      // Validate ID number (8 digits)
-      const idRegex = /^\d{8}$/;
-      setErr("errorUsername", idRegex.test(uname.value.trim()) ? "" : "ID must be exactly 8 digits.");
+      // Validate username (not empty)
+      setErr("errorUsername", uname.value.trim() ? "" : "Username is required.");
       
       // Validate contact (at least 10 digits)
       const contactRegex = /^\d{10,}$/;
@@ -295,43 +330,24 @@
       icon.classList.toggle("fa-eye-slash");
     }
     
-    // Real-time ID validation
-    document.getElementById('uname')?.addEventListener('input', function() {
-        const value = this.value.replace(/\D/g, '').substring(0, 8);
-        this.value = value;
-        const errorElem = document.getElementById('errorUsername');
-        if (errorElem) {
-            errorElem.textContent = value.length === 8 ? '' : 'ID must be exactly 8 digits.';
-        }
-    });
-    
     // Real-time contact validation
     document.getElementById('contactno')?.addEventListener('input', function() {
         const value = this.value.replace(/\D/g, '');
         this.value = value;
     });
     
-    function checkEmailFormat(email) {
-        const emailHint = document.getElementById('emailHint');
-        if (!emailHint) return;
-        
+    // Show/hide course field based on user type
+    document.addEventListener('DOMContentLoaded', function() {
         const userType = '<%= userType %>';
+        const courseField = document.getElementById('courseField');
+        const courseInput = document.getElementById('course_name');
         
-        // For admin/lecture accounts
-        if (userType === 'admin' || userType === 'lecture') {
-            // Check if it looks like an institutional email
-            const eduDomains = ['edu', 'ac.', 'school', 'college', 'university'];
-            const isInstitutional = eduDomains.some(domain => email.includes(domain));
-            
-            if (!isInstitutional) {
-                emailHint.innerHTML = '<i class="fas fa-exclamation-triangle text-warning"></i> For <%= displayUserType.toLowerCase() %> accounts, please use your institutional email address.';
-                emailHint.className = 'form-text text-warning';
-            } else {
-                emailHint.innerHTML = '<i class="fas fa-check-circle text-success"></i> Valid institutional email for <%= displayUserType.toLowerCase() %> account.';
-                emailHint.className = 'form-text text-success';
-            }
+        if (userType === 'lecture') {
+            courseField.classList.remove('course-field');
+            courseInput.disabled = false;
+            courseInput.required = false; // Make optional
         }
-    }
+    });
   </script>
 
   <!-- If header.jsp already includes these, remove to avoid duplicates -->

@@ -571,7 +571,102 @@ public void addNewStaff(String staffNum, String email, String fullNames, String 
     }
 }
 
+public boolean addNewUserToUsersTable(String fName, String lName, String uName, String email, 
+                                     String password, String contactNo, String city, 
+                                     String address, String userType) {
+    try {
+        String sql = "INSERT INTO users (first_name, last_name, user_name, email, password, " +
+                     "contact_no, city, address, user_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        PreparedStatement pstm = conn.prepareStatement(sql);
+        pstm.setString(1, fName);
+        pstm.setString(2, lName);
+        pstm.setString(3, uName);
+        pstm.setString(4, email);
+        pstm.setString(5, password);
+        pstm.setString(6, contactNo);
+        pstm.setString(7, city);
+        pstm.setString(8, address);
+        pstm.setString(9, userType);
+        
+        int rows = pstm.executeUpdate();
+        pstm.close();
+        return rows > 0;
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        return false;
+    }
+}
 
+public boolean addNewStudent(int userId, String fName, String lName, String uName, String email, 
+                            String password, String contactNo, String city, 
+                            String address, String userType) {
+    try {
+        String sql = "INSERT INTO students (user_id, first_name, last_name, user_name, email, " +
+                     "password, user_type, contact_no, city, address) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        PreparedStatement pstm = conn.prepareStatement(sql);
+        pstm.setInt(1, userId);
+        pstm.setString(2, fName);
+        pstm.setString(3, lName);
+        pstm.setString(4, uName);
+        pstm.setString(5, email);
+        pstm.setString(6, password);
+        pstm.setString(7, userType);
+        pstm.setString(8, contactNo);
+        pstm.setString(9, city);
+        pstm.setString(10, address);
+        
+        int rows = pstm.executeUpdate();
+        pstm.close();
+        return rows > 0;
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        return false;
+    }
+}
+
+public boolean addNewLecture(int userId, String fName, String lName, String uName, String email, 
+                            String password, String contactNo, String city, 
+                            String address, String userType, String courseName) {
+    try {
+        String sql = "INSERT INTO lectures (user_id, first_name, last_name, user_name, email, " +
+                     "password, user_type, contact_no, city, address, course_name) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        PreparedStatement pstm = conn.prepareStatement(sql);
+        pstm.setInt(1, userId);
+        pstm.setString(2, fName);
+        pstm.setString(3, lName);
+        pstm.setString(4, uName);
+        pstm.setString(5, email);
+        pstm.setString(6, password);
+        pstm.setString(7, userType);
+        pstm.setString(8, contactNo);
+        pstm.setString(9, city);
+        pstm.setString(10, address);
+        pstm.setString(11, courseName);
+        
+        int rows = pstm.executeUpdate();
+        pstm.close();
+        return rows > 0;
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        return false;
+    }
+}
+
+public boolean deleteUserFromUsersTable(int userId) {
+    try {
+        String sql = "DELETE FROM users WHERE user_id = ?";
+        PreparedStatement pstm = conn.prepareStatement(sql);
+        pstm.setInt(1, userId);
+        int rows = pstm.executeUpdate();
+        pstm.close();
+        return rows > 0;
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        return false;
+    }
+}
     
 public void addNewUser(String fName, String lName, String uName, String email, String pass,
                        String contact, String city, String address, String staffNum) {

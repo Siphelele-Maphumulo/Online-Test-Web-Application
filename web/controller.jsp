@@ -52,130 +52,132 @@ try {
             response.sendRedirect("login.jsp");
         }
 
-    /* =========================
-       REGISTER (UPDATED - with email-based user type determination)
-       ========================= */
-    } else if ("register".equalsIgnoreCase(pageParam)) {
-        String fName     = nz(request.getParameter("fname"), "");
-        String lName     = nz(request.getParameter("lname"), "");
-        String uName     = nz(request.getParameter("uname"), "");
-        String email     = nz(request.getParameter("email"), "");
-        String pass      = nz(request.getParameter("pass"), "");
-        String contactNo = nz(request.getParameter("contactno"), "");
-        String city      = nz(request.getParameter("city"), "");
-        String address   = nz(request.getParameter("address"), "");
+        /* =========================
+           REGISTER (Updated for users/students/lectures tables)
+           ========================= */
+        } else if ("register".equalsIgnoreCase(pageParam)) {
+            String fName     = nz(request.getParameter("fname"), "");
+            String lName     = nz(request.getParameter("lname"), "");
+            String uName     = nz(request.getParameter("uname"), "");
+            String email     = nz(request.getParameter("email"), "");
+            String pass      = nz(request.getParameter("pass"), "");
+            String contactNo = nz(request.getParameter("contactno"), "");
+            String city      = nz(request.getParameter("city"), "");
+            String address   = nz(request.getParameter("address"), "");
+            String courseName= nz(request.getParameter("course_name"), "");
 
-        String userType = nz(request.getParameter("user_type"), "");
-        String fromPage = nz(request.getParameter("from_page"), "");
-        String createdBy = nz(request.getParameter("created_by"), "");
-        String creatorRole = nz(request.getParameter("creator_role"), "");
+            String userType = nz(request.getParameter("user_type"), "");
+            String fromPage = nz(request.getParameter("from_page"), "");
+            String createdBy = nz(request.getParameter("created_by"), "");
+            String creatorRole = nz(request.getParameter("creator_role"), "");
+            String isAdminCreation = nz(request.getParameter("is_admin_creation"), "");
 
-        // Validate required fields
-        if (fName.isEmpty() || lName.isEmpty() || uName.isEmpty() || email.isEmpty() || pass.isEmpty()) {
-            session.setAttribute("error", "Please fill in all required fields");
-            response.sendRedirect("signup.jsp?user_type=" + userType + "&from=" + fromPage);
-            return;
-        }
+            // Validate required fields
+            if (fName.isEmpty() || lName.isEmpty() || uName.isEmpty() || email.isEmpty() || pass.isEmpty()) {
+                session.setAttribute("error", "Please fill in all required fields");
+                response.sendRedirect("signup.jsp?user_type=" + userType + "&from=" + fromPage);
+                return;
+            }
 
-        // Check if username already exists
-        User existingUserByUsername = pDAO.getUserByUsername(uName);
-        if (existingUserByUsername != null) {
-            session.setAttribute("error", "Username already exists. Please choose a different username.");
-            response.sendRedirect("signup.jsp?user_type=" + userType + "&from=" + fromPage);
-            return;
-        }
+            // Check if username already exists in users table
+            User existingUserByUsername = pDAO.getUserByUsername(uName);
+            if (existingUserByUsername != null) {
+                session.setAttribute("error", "Username already exists. Please choose a different username.");
+                response.sendRedirect("signup.jsp?user_type=" + userType + "&from=" + fromPage);
+                return;
+            }
 
-        // Check if email already exists
-        User existingUserByEmail = pDAO.getUserByEmail(email);
-        if (existingUserByEmail != null) {
-            session.setAttribute("error", "Email already registered. Please use a different email.");
-            response.sendRedirect("signup.jsp?user_type=" + userType + "&from=" + fromPage);
-            return;
-        }
+            // Check if email already exists in users table
+            User existingUserByEmail = pDAO.getUserByEmail(email);
+            if (existingUserByEmail != null) {
+                session.setAttribute("error", "Email already registered. Please use a different email.");
+                response.sendRedirect("signup.jsp?user_type=" + userType + "&from=" + fromPage);
+                return;
+            }
 
-        // Determine user type based on various factors
-        String finalUserType = "student"; // Default
-        
-        // Factor 1: If admin/lecturer is creating the account (admin creation)
-        boolean isAdminCreation = createdBy != null && !createdBy.isEmpty() && 
-                                 (creatorRole != null && 
-                                  ("admin".equalsIgnoreCase(creatorRole) || "lecture".equalsIgnoreCase(creatorRole)));
-        
-        if (isAdminCreation) {
-            // Admin/Lecturer is creating - use specified user type
-            if ("admin".equalsIgnoreCase(userType) || "lecture".equalsIgnoreCase(userType)) {
+            // Determine user type
+            String finalUserType = "student"; // Default
+
+            // Factor 1: Admin/Lecturer creation
+            if ("true".equals(isAdminCreation)) {
+                if ("admin".equalsIgnoreCase(userType) || "lecture".equalsIgnoreCase(userType)) {
+                    finalUserType = userType;
+                }
+            }
+            // Factor 2: URL parameter
+            else if ("admin".equalsIgnoreCase(userType) || "lecture".equalsIgnoreCase(userType)) {
                 finalUserType = userType;
-            } else {
-                // If admin is creating but no specific type, check email against staff table
+            }
+            // Factor 3: Self-registration - check staff table
+            else {
                 boolean isStaffEmail = pDAO.isEmailInStaffTable(email);
                 finalUserType = isStaffEmail ? "lecture" : "student";
             }
-        } 
-        // Factor 2: If coming from admin/lecture page with user_type parameter
-        else if ("admin".equalsIgnoreCase(userType) || "lecture".equalsIgnoreCase(userType)) {
-            finalUserType = userType;
-        }
-        // Factor 3: Self-registration - check email against staff table
-        else {
-            boolean isStaffEmail = pDAO.isEmailInStaffTable(email);
-            finalUserType = isStaffEmail ? "lecture" : "student";
-        }
 
-        String hashedPass = PasswordUtils.bcryptHashPassword(pass);
-        
-        // Register the user with determined user type
-        boolean success = pDAO.addNewUserWithType(fName, lName, uName, email, hashedPass, contactNo, city, address, finalUserType);
-        
-        if (success) {
-            // If staff email but user type is lecture, also add to staff table if not exists
-            if ("lecture".equalsIgnoreCase(finalUserType)) {
-                // Check if already in staff table
-                boolean staffExists = pDAO.isEmailInStaffTable(email);
-                if (!staffExists) {
-                    // Generate staff number (first letter of first name + first letter of last name + last 4 digits of username)
-                    String staffNum = fName.substring(0,1).toUpperCase() + 
-                                     lName.substring(0,1).toUpperCase() + 
-                                     uName.substring(Math.max(0, uName.length() - 4));
-                    pDAO.addNewStaff(staffNum, email, fName + " " + lName, "Not Assigned");
-                }
+            String hashedPass = PasswordUtils.bcryptHashPassword(pass);
+
+            // Insert into users table (common for all)
+            boolean userAdded = pDAO.addNewUserToUsersTable(fName, lName, uName, email, hashedPass, 
+                                                            contactNo, city, address, finalUserType);
+
+            if (!userAdded) {
+                session.setAttribute("error", "Failed to create user account.");
+                response.sendRedirect("signup.jsp?user_type=" + userType + "&from=" + fromPage);
+                return;
             }
-            
-            // Set appropriate message based on user type
-            String userTypeDisplay = "admin".equalsIgnoreCase(finalUserType) ? "Administrator" : 
-                                    "lecture".equalsIgnoreCase(finalUserType) ? "Lecturer" : "Student";
-            
-            // Determine redirect based on context
-            boolean isAdminOrLectureContext = isAdminCreation || 
-                                             "account".equalsIgnoreCase(fromPage) || 
-                                             "admin".equalsIgnoreCase(userType) || 
-                                             "lecture".equalsIgnoreCase(userType);
-            
-            if (isAdminOrLectureContext) {
-                session.setAttribute("message", userTypeDisplay + " account created successfully!");
-                
-                // Redirect to appropriate page based on creator's role
-                if ("admin".equalsIgnoreCase(creatorRole)) {
-                    if ("admin".equalsIgnoreCase(finalUserType) || "lecture".equalsIgnoreCase(finalUserType)) {
-                        response.sendRedirect("adm-page.jsp?pgprt=6"); // Lecturers/Admins page
+
+            // Get the newly created user_id
+            User newUser = pDAO.getUserByUsername(uName);
+            if (newUser == null) {
+                session.setAttribute("error", "User created but could not retrieve user ID.");
+                response.sendRedirect("signup.jsp?user_type=" + userType + "&from=" + fromPage);
+                return;
+            }
+
+            int userId = newUser.getUserId();
+
+            // Insert into appropriate table (students or lectures)
+            boolean detailAdded = false;
+            if ("student".equalsIgnoreCase(finalUserType)) {
+                detailAdded = pDAO.addNewStudent(userId, fName, lName, uName, email, hashedPass, 
+                                                contactNo, city, address, finalUserType);
+            } else if ("lecture".equalsIgnoreCase(finalUserType) || "admin".equalsIgnoreCase(finalUserType)) {
+                detailAdded = pDAO.addNewLecture(userId, fName, lName, uName, email, hashedPass, 
+                                                contactNo, city, address, finalUserType, courseName);
+            }
+
+            if (detailAdded) {
+                String userTypeDisplay = "admin".equalsIgnoreCase(finalUserType) ? "Administrator" : 
+                                        "lecture".equalsIgnoreCase(finalUserType) ? "Lecturer" : "Student";
+
+                boolean isAdminContext = "true".equals(isAdminCreation) || 
+                                        "account".equalsIgnoreCase(fromPage) || 
+                                        "admin".equalsIgnoreCase(userType) || 
+                                        "lecture".equalsIgnoreCase(userType);
+
+                if (isAdminContext) {
+                    session.setAttribute("message", userTypeDisplay + " account created successfully!");
+
+                    if ("admin".equalsIgnoreCase(creatorRole)) {
+                        if ("admin".equalsIgnoreCase(finalUserType) || "lecture".equalsIgnoreCase(finalUserType)) {
+                            response.sendRedirect("adm-page.jsp?pgprt=6");
+                        } else {
+                            response.sendRedirect("adm-page.jsp?pgprt=1");
+                        }
                     } else {
-                        response.sendRedirect("adm-page.jsp?pgprt=1"); // Students page
+                        response.sendRedirect("accounts.jsp");
                     }
-                } else if ("lecture".equalsIgnoreCase(creatorRole)) {
-                    response.sendRedirect("lecture_dashboard.jsp");
                 } else {
-                    response.sendRedirect("accounts.jsp");
+                    session.setAttribute("message", "Registration successful! You are registered as a " + 
+                                  userTypeDisplay.toLowerCase() + ". Please login.");
+                    response.sendRedirect("login.jsp");
                 }
             } else {
-                // Self-registration
-                session.setAttribute("message", "Registration successful! You are registered as a " + 
-                              userTypeDisplay.toLowerCase() + ". Please login.");
-                response.sendRedirect("login.jsp");
+                // Rollback: delete from users table if details insertion failed
+                pDAO.deleteUserFromUsersTable(userId);
+                session.setAttribute("error", "Failed to create user details. Please try again.");
+                response.sendRedirect("signup.jsp?user_type=" + userType + "&from=" + fromPage);
             }
-        } else {
-            session.setAttribute("error", "Registration failed. Please try again.");
-            response.sendRedirect("signup.jsp?user_type=" + userType + "&from=" + fromPage);
-        }
-
     /* =========================
        STAFF REGISTER
        ========================= */
