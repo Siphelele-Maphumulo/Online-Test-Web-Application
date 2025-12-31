@@ -1205,10 +1205,9 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                                  <strong>Course:</strong> ${courseName}<br>
                                  <strong>Exam ID:</strong> ${examId}<br><br>
                                  This action cannot be undone!`;
-        
+
         document.getElementById('deleteModal').style.display = 'block';
     }
-    
     function closeDeleteModal() {
         document.getElementById('deleteModal').style.display = 'none';
         deleteExamId = null;
