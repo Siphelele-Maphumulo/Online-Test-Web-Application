@@ -69,11 +69,10 @@ try {
         String fromPage = nz(request.getParameter("from_page"), "");
 
         String hashedPass = PasswordUtils.bcryptHashPassword(pass);
-        String staffOrStudentId = "STD-" + UUID.randomUUID().toString().substring(0,8);
 
-        pDAO.addNewUser(fName, lName, uName, email, hashedPass, contactNo, city, address, "");
+        pDAO.addNewUser(fName, lName, uName, email, hashedPass, contactNo, city, address, userType);
 
-        boolean isAdminOrLecture = "admin".equalsIgnoreCase(userType) || "lecture".equalsIgnoreCase(userType) 
+        boolean isAdminOrLecture = "admin".equalsIgnoreCase(userType) || "lecture".equalsIgnoreCase(userType)
                                    || "account".equalsIgnoreCase(fromPage);
 
         if (isAdminOrLecture) {
@@ -160,6 +159,13 @@ try {
             if (!cname.isEmpty()) {
                 pDAO.delCourse(cname);
                 session.setAttribute("message","Course deleted successfully");
+            }
+            response.sendRedirect("adm-page.jsp?pgprt=2");
+        } else if ("toggle_status".equalsIgnoreCase(operation)) {
+            String cname = nz(request.getParameter("cname"), "");
+            if (!cname.isEmpty()) {
+                pDAO.toggleCourseStatus(cname);
+                session.setAttribute("message","Course status updated successfully");
             }
             response.sendRedirect("adm-page.jsp?pgprt=2");
         }

@@ -1,10 +1,13 @@
 <%@page import="myPackage.classes.User"%>
 <%@page import="java.util.ArrayList"%>
+<%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
+
 <% 
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
-// Get current user details FIRST
+// Get current user for user_type
 User currentUser = null;
+String currentUserType = "";
 
 // Check if user is logged in
 if (session.getAttribute("userId") == null) {
@@ -22,23 +25,15 @@ if (currentUser == null) {
     return;
 }
 
-// Now get student list
-ArrayList<User> studentList = pDAO.getAllStudents();
-int totalCount = 0;
-int displayCount = 0;
+currentUserType = currentUser.getType();
 
-// Count total students (excluding current user)
-for (User user : studentList) {
-    if (user.getUserId() != Integer.parseInt(session.getAttribute("userId").toString())) {
-        if (currentUser.getType().equalsIgnoreCase("lecture") && user.getType().equalsIgnoreCase("student") ||
-            currentUser.getType().equalsIgnoreCase("admin")) {
-            totalCount++;
-        }
-    }
-}
+// Get all lecturers
+ArrayList<User> lecturerList = pDAO.getAllLecturers();
+int lecturerCount = lecturerList.size();
 %>
 
 <!--style-->
+
 <style>
     /* Use the same CSS Variables as the profile page */
     :root {
@@ -708,19 +703,15 @@ for (User user : studentList) {
                 <i class="fas fa-book"></i>
                 <h2>Courses</h2>
             </a>
-            <a href="adm-page.jsp?pgprt=3" class="nav-item">
-                <i class="fas fa-question-circle"></i>
-                <h2>Questions</h2>
-            </a>
             <a href="adm-page.jsp?pgprt=5" class="nav-item">
                 <i class="fas fa-chart-bar"></i>
                 <h2>Results</h2>
             </a>
-            <a href="adm-page.jsp?pgprt=1" class="nav-item active">
+            <a href="adm-page.jsp?pgprt=1" class="nav-item">
                 <i class="fas fa-user-graduate"></i>
                 <h2>Student Accounts</h2>
             </a>
-            <a href="adm-page.jsp?pgprt=6" class="nav-item">
+            <a href="adm-page.jsp?pgprt=6" class="nav-item active">
                 <i class="fas fa-chalkboard-teacher"></i>
                 <h2>Lecture Accounts</h2>
             </a>
@@ -732,185 +723,129 @@ for (User user : studentList) {
         <!-- Page Header -->
         <header class="page-header">
             <div class="page-title">
-                <i class="fas fa-user-graduate"></i>
-                Student Accounts Management
+                <i class="fas fa-chalkboard-teacher"></i>
+                Lecture Accounts Management
             </div>
-            <div class="stats-badge" id="totalStudentsBadge">
+            <div class="stats-badge">
                 <i class="fas fa-users"></i>
-                <span id="totalStudentsCount">0</span> Students
+                <%= lecturerCount %> Lecturers
             </div>
         </header>
         
-        <!-- Student Accounts Card -->
+        <!-- Lecturers Accounts Card -->
         <div class="accounts-card">
             <div class="card-header">
-                <span><i class="fas fa-list"></i> All Registered Students</span>
-                <div class="students-count">
+                <span><i class="fas fa-list"></i> All Registered Lecturers</span>
+                <div class="lecturers-count">
                     <i class="fas fa-layer-group"></i>
-                    Showing: <span id="visibleStudentsCount">0</span> of <span id="totalCount">0</span>
-                </div>
-            </div>
-            
-            <!-- Filter Section -->
-            <div class="filter-container">
-                <div class="filter-grid">
-                    <div class="filter-group">
-                        <label class="filter-label">
-                            <i class="fas fa-user" style="color: var(--accent-blue);"></i>
-                            Student Name
-                        </label>
-                        <input type="text" id="searchName" class="filter-control" 
-                               placeholder="Search by name..." oninput="applyFilters()">
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label class="filter-label">
-                            <i class="fas fa-id-card" style="color: var(--info);"></i>
-                            Student Number
-                        </label>
-                        <input type="text" id="searchStudentNumber" class="filter-control" 
-                               placeholder="Search by student number..." oninput="applyFilters()">
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label class="filter-label">
-                            <i class="fas fa-envelope" style="color: var(--success);"></i>
-                            Email Address
-                        </label>
-                        <input type="text" id="searchEmail" class="filter-control" 
-                               placeholder="Search by email..." oninput="applyFilters()">
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label class="filter-label">
-                            <i class="fas fa-city" style="color: var(--dark-gray);"></i>
-                            City
-                        </label>
-                        <input type="text" id="searchCity" class="filter-control" 
-                               placeholder="Search by city..." oninput="applyFilters()">
-                    </div>
-                </div>
-                
-                <!-- Quick Filters -->
-                <div class="quick-filter-row">
-                    <button class="quick-filter-btn" onclick="setQuickFilter('recent')">
-                        <i class="fas fa-clock"></i> Recently Added
-                    </button>
-                    <button class="quick-filter-btn" onclick="setQuickFilter('missing-contact')">
-                        <i class="fas fa-phone-slash"></i> Missing Contact
-                    </button>
-                    <button class="quick-filter-btn" onclick="setQuickFilter('missing-address')">
-                        <i class="fas fa-map-marker-alt"></i> Missing Address
-                    </button>
-                    <button class="quick-filter-btn" onclick="setQuickFilter('all')">
-                        <i class="fas fa-list"></i> Show All
-                    </button>
+                    Total: <%= lecturerCount %>
                 </div>
             </div>
             
             <!-- Search and Actions Bar -->
             <div class="actions-bar">
-                <a href="signup.jsp?from=account&user_type=student" class="btn btn-success">
+                <a href="signup.jsp?from=account&user_type=lecture" class="btn btn-success">
                     <i class="fas fa-plus-circle"></i>
-                    Add New Student
+                    Add New Lecturer
                 </a>
                 
                 <div class="search-container">
-                    <input type="text" id="globalSearch" class="search-input" 
-                           placeholder="Search across all columns..." oninput="applyFilters()">
+                    <input type="text" id="lecturerSearch" class="search-input" 
+                           placeholder="Search by Staff No, Name, Email, or Course..."
+                           oninput="filterLecturers()">
                     <i class="fas fa-search search-icon"></i>
-                </div>
-                
-                <div class="action-buttons">
-                    <button onclick="applyFilters()" class="btn btn-primary">
-                        <i class="fas fa-filter"></i> Apply Filters
-                    </button>
-                    <button onclick="resetFilters()" class="btn btn-secondary">
-                        <i class="fas fa-redo"></i> Reset
-                    </button>
                 </div>
             </div>
             
             <div style="overflow-x: auto;">
-                <table class="accounts-table" id="studentTable">
+                <table class="accounts-table" id="lecturerTable">
                     <thead>
                         <tr>
-                            <th onclick="sortTable(0)">Student <span class="sort-indicator"></span></th>
-                            <th onclick="sortTable(1)">Student Number <span class="sort-indicator"></span></th>
-                            <th onclick="sortTable(2)">Email <span class="sort-indicator"></span></th>
-                            <th onclick="sortTable(3)">Contact <span class="sort-indicator"></span></th>
-                            <th onclick="sortTable(4)">Location <span class="sort-indicator"></span></th>
+                            <th onclick="sortTable(0)">Lecturer</th>
+                            <th onclick="sortTable(1)">Staff Number</th>
+                            <th onclick="sortTable(2)">Email</th>
+                            <th onclick="sortTable(3)">Course</th>
+                            <th onclick="sortTable(4)">Contact</th>
+                            <th onclick="sortTable(5)">Location</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="studentTableBody">
+                    <tbody id="lecturerTableBody">
                         <%
-                            // Note: currentUser is already defined above, so we don't redeclare it here
-                            // Just use the existing currentUser variable
-                            
-                            boolean hasStudents = false;
-                            int visibleCountInTable = 0;
-                            
-                            for (User user : studentList) {
-                                if (user.getUserId() != Integer.parseInt(session.getAttribute("userId").toString())) {
-                                    if (currentUser.getType().equalsIgnoreCase("lecture") && user.getType().equalsIgnoreCase("student") ||
-                                        currentUser.getType().equalsIgnoreCase("admin")) {
-                                        hasStudents = true;
-                                        visibleCountInTable++;
-                                        String initials = user.getFirstName().substring(0, 1) + user.getLastName().substring(0, 1);
+                            if (lecturerList.isEmpty()) {
                         %>
-                        <tr class="student-row" 
-                            data-id="<%= user.getUserId() %>"
-                            data-name="<%= (user.getFirstName() + " " + user.getLastName()).toLowerCase() %>"
-                            data-student-number="<%= user.getUserName().toLowerCase() %>"
-                            data-email="<%= user.getEmail().toLowerCase() %>"
-                            data-contact="<%= user.getContact() != null ? user.getContact().toLowerCase() : "" %>"
-                            data-city="<%= user.getCity() != null ? user.getCity().toLowerCase() : "" %>"
-                            data-address="<%= user.getAddress() != null ? user.getAddress().toLowerCase() : "" %>"
-                            data-fullname="<%= (user.getFirstName() + " " + user.getLastName()).toLowerCase() %>">
+                            <tr>
+                                <td colspan="7" class="no-results">
+                                    <i class="fas fa-users-slash" style="font-size: 3rem; margin-bottom: 16px; display: block; opacity: 0.5;"></i>
+                                    No lecturers registered yet. Add your first lecturer to get started.
+                                </td>
+                            </tr>
+                        <%
+                            } else {
+                                for (User lecturer : lecturerList) {
+                                    String initials = "";
+                                    if (lecturer.getFirstName() != null && lecturer.getFirstName().length() > 0 && 
+                                        lecturer.getLastName() != null && lecturer.getLastName().length() > 0) {
+                                        initials = lecturer.getFirstName().substring(0, 1) + lecturer.getLastName().substring(0, 1);
+                                    } else if (lecturer.getFirstName() != null && lecturer.getFirstName().length() > 0) {
+                                        initials = lecturer.getFirstName().substring(0, 1);
+                                    } else {
+                                        initials = "L";
+                                    }
+                        %>
+                        <tr class="lecturer-row" 
+                            data-name="<%= (lecturer.getFirstName() + " " + lecturer.getLastName()).toLowerCase() %>"
+                            data-staff-number="<%= lecturer.getUserName() != null ? lecturer.getUserName().toLowerCase() : "" %>"
+                            data-email="<%= lecturer.getEmail() != null ? lecturer.getEmail().toLowerCase() : "" %>"
+                            data-course="<%= lecturer.getCourseName() != null ? lecturer.getCourseName().toLowerCase() : "" %>"
+                            data-contact="<%= lecturer.getContact() != null ? lecturer.getContact().toLowerCase() : "" %>"
+                            data-city="<%= lecturer.getCity() != null ? lecturer.getCity().toLowerCase() : "" %>"
+                            data-address="<%= lecturer.getAddress() != null ? lecturer.getAddress().toLowerCase() : "" %>">
                             <td>
-                                <div class="student-name">
-                                    <div class="student-avatar">
+                                <div class="lecturer-name">
+                                    <div class="lecturer-avatar">
                                         <%= initials %>
                                     </div>
                                     <div>
-                                        <%= user.getFirstName() + " " + user.getLastName() %>
-                                        <span class="user-role">Student</span>
+                                        <%= lecturer.getFirstName() + " " + lecturer.getLastName() %>
+                                        <span class="user-role">Lecturer</span>
                                     </div>
                                 </div>
                             </td>
                             <td>
                                 <span class="badge badge-info">
                                     <i class="fas fa-id-card"></i>
-                                    <%= user.getUserName() %>
+                                    <%= lecturer.getUserName() != null ? lecturer.getUserName() : "N/A" %>
                                 </span>
                             </td>
                             <td>
                                 <div style="color: var(--dark-gray); font-size: 13px;">
                                     <i class="fas fa-envelope" style="color: var(--accent-blue); margin-right: 8px;"></i>
-                                    <%= user.getEmail() %>
+                                    <%= lecturer.getEmail() != null ? lecturer.getEmail() : "N/A" %>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="color: var(--dark-gray); font-size: 13px;">
+                                    <i class="fas fa-book" style="color: var(--warning); margin-right: 8px;"></i>
+                                    <%= lecturer.getCourseName() != null ? lecturer.getCourseName() : "Not assigned" %>
                                 </div>
                             </td>
                             <td>
                                 <div style="color: var(--dark-gray); font-size: 13px;">
                                     <i class="fas fa-phone" style="color: var(--success); margin-right: 8px;"></i>
-                                    <%= user.getContact() != null ? user.getContact() : "Not provided" %>
+                                    <%= lecturer.getContact() != null ? lecturer.getContact() : "Not provided" %>
                                 </div>
                             </td>
                             <td>
                                 <div style="color: var(--dark-gray); font-size: 13px;">
                                     <i class="fas fa-map-marker-alt" style="color: var(--info); margin-right: 8px;"></i>
-                                    <%= user.getCity() != null ? user.getCity() : "Unknown" %><%= user.getAddress() != null ? ", " + user.getAddress() : "" %>
+                                    <%= lecturer.getCity() != null ? lecturer.getCity() : "Unknown" %><%= lecturer.getAddress() != null ? ", " + lecturer.getAddress() : "" %>
                                 </div>
                             </td>
                             <td>
                                 <div class="action-buttons">
-                                    <a href="#" class="btn btn-primary" onclick="editStudent(<%= user.getUserId() %>)" style="font-size: 13px; padding: 8px 16px;">
-                                        <i class="fas fa-edit"></i>
-                                        Edit
-                                    </a>
-                                    <a href="controller.jsp?page=accounts&operation=del&uid=<%= user.getUserId() %>" 
-                                       onclick="return confirm('Are you sure you want to delete student \"<%= user.getFirstName() %> <%= user.getLastName() %>\"? This action cannot be undone.');" 
+                                    <a href="controller.jsp?page=Lecturers_accounts&operation=del&uid=<%= lecturer.getUserId() %>" 
+                                       onclick="return confirm('Are you sure you want to delete lecturer \"<%= lecturer.getFirstName() %> <%= lecturer.getLastName() %>\"? This action cannot be undone.');" 
                                        class="btn btn-error" style="font-size: 13px; padding: 8px 16px;">
                                        <i class="fas fa-trash"></i>
                                        Delete
@@ -919,27 +854,11 @@ for (User user : studentList) {
                             </td>
                         </tr>
                         <%
-                                    }
                                 }
-                            }
-                            
-                            if (!hasStudents) {
-                        %>
-                            <tr>
-                                <td colspan="6" class="no-results">
-                                    <i class="fas fa-user-graduate" style="font-size: 3rem; margin-bottom: 16px; display: block; opacity: 0.5;"></i>
-                                    No students registered yet. Add your first student to get started.
-                                </td>
-                            </tr>
-                        <%
                             }
                         %>
                     </tbody>
                 </table>
-                
-                <div class="results-count">
-                    Displaying <span id="visibleCount"><%= visibleCountInTable %></span> of <span id="totalStudents"><%= totalCount %></span> students
-                </div>
             </div>
         </div>
     </main>
@@ -954,165 +873,47 @@ for (User user : studentList) {
     let currentSortColumn = -1;
     let sortDirection = 1; // 1 = ascending, -1 = descending
     
-    // Initialize when page loads
-    document.addEventListener('DOMContentLoaded', function() {
-        updateStudentsCount();
-        setupQuickFilterButtons();
-    });
-    
-    // Update student counts
-    function updateStudentsCount() {
-        const totalRows = document.querySelectorAll('#studentTableBody tr.student-row').length;
-        const visibleRows = document.querySelectorAll('#studentTableBody tr.student-row:not([style*="display: none"])').length;
-        
-        document.getElementById('totalStudentsCount').textContent = totalRows;
-        document.getElementById('visibleStudentsCount').textContent = visibleRows;
-        document.getElementById('totalCount').textContent = totalRows;
-        document.getElementById('visibleCount').textContent = visibleRows;
-        document.getElementById('totalStudents').textContent = totalRows;
-    }
-    
-    // Setup quick filter buttons
-    function setupQuickFilterButtons() {
-        const quickFilterBtns = document.querySelectorAll('.quick-filter-btn');
-        quickFilterBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                quickFilterBtns.forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-            });
-        });
-    }
-    
-    // Apply all filters
-    function applyFilters() {
-        const nameFilter = document.getElementById('searchName').value.toLowerCase();
-        const studentNumberFilter = document.getElementById('searchStudentNumber').value.toLowerCase();
-        const emailFilter = document.getElementById('searchEmail').value.toLowerCase();
-        const cityFilter = document.getElementById('searchCity').value.toLowerCase();
-        const globalSearch = document.getElementById('globalSearch').value.toLowerCase();
-        
-        const rows = document.querySelectorAll('#studentTableBody tr.student-row');
-        let visibleCount = 0;
+    // Filter lecturers function
+    function filterLecturers() {
+        const searchInput = document.getElementById('lecturerSearch').value.toLowerCase();
+        const rows = document.querySelectorAll('#lecturerTableBody tr.lecturer-row');
         
         rows.forEach(row => {
-            let showRow = true;
+            const searchableData = [
+                row.getAttribute('data-name') || '',
+                row.getAttribute('data-staff-number') || '',
+                row.getAttribute('data-email') || '',
+                row.getAttribute('data-course') || '',
+                row.getAttribute('data-contact') || '',
+                row.getAttribute('data-city') || '',
+                row.getAttribute('data-address') || ''
+            ].join(' ');
             
-            // Name filter
-            if (nameFilter && !row.getAttribute('data-name').includes(nameFilter)) {
-                showRow = false;
+            if (searchInput === '' || searchableData.includes(searchInput)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
             }
-            
-            // Student number filter
-            if (studentNumberFilter && !row.getAttribute('data-student-number').includes(studentNumberFilter)) {
-                showRow = false;
-            }
-            
-            // Email filter
-            if (emailFilter && !row.getAttribute('data-email').includes(emailFilter)) {
-                showRow = false;
-            }
-            
-            // City filter
-            if (cityFilter && !row.getAttribute('data-city').includes(cityFilter)) {
-                showRow = false;
-            }
-            
-            // Global search (search across all data attributes)
-            if (globalSearch) {
-                const searchableData = [
-                    row.getAttribute('data-name'),
-                    row.getAttribute('data-student-number'),
-                    row.getAttribute('data-email'),
-                    row.getAttribute('data-contact'),
-                    row.getAttribute('data-city'),
-                    row.getAttribute('data-address'),
-                    row.getAttribute('data-fullname')
-                ].join(' ');
-                
-                if (!searchableData.includes(globalSearch)) {
-                    showRow = false;
-                }
-            }
-            
-            // Show/hide row
-            row.style.display = showRow ? '' : 'none';
-            if (showRow) visibleCount++;
         });
-        
-        updateStudentsCount();
-    }
-    
-    // Set quick filters
-    function setQuickFilter(filterType) {
-        resetFilters();
-        
-        const rows = document.querySelectorAll('#studentTableBody tr.student-row');
-        
-        switch(filterType) {
-            case 'recent':
-                // Show only last 10 added students (assuming recent ones have higher IDs)
-                const sortedRows = Array.from(rows).sort((a, b) => {
-                    return parseInt(b.getAttribute('data-id')) - parseInt(a.getAttribute('data-id'));
-                });
-                
-                rows.forEach(row => row.style.display = 'none');
-                sortedRows.slice(0, 10).forEach(row => row.style.display = '');
-                break;
-                
-            case 'missing-contact':
-                rows.forEach(row => {
-                    const contact = row.getAttribute('data-contact');
-                    if (contact && contact.length > 0 && !contact.includes('not provided')) {
-                        row.style.display = 'none';
-                    }
-                });
-                break;
-                
-            case 'missing-address':
-                rows.forEach(row => {
-                    const city = row.getAttribute('data-city');
-                    if (city && city.length > 0 && !city.includes('unknown')) {
-                        row.style.display = 'none';
-                    }
-                });
-                break;
-                
-            case 'all':
-                // Already handled by resetFilters()
-                break;
-        }
-        
-        updateStudentsCount();
-    }
-    
-    // Reset all filters
-    function resetFilters() {
-        document.getElementById('searchName').value = '';
-        document.getElementById('searchStudentNumber').value = '';
-        document.getElementById('searchEmail').value = '';
-        document.getElementById('searchCity').value = '';
-        document.getElementById('globalSearch').value = '';
-        
-        // Reset quick filter buttons
-        document.querySelectorAll('.quick-filter-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        
-        // Show all rows
-        document.querySelectorAll('#studentTableBody tr.student-row').forEach(row => {
-            row.style.display = '';
-        });
-        
-        updateStudentsCount();
     }
     
     // Sort table by column
     function sortTable(columnIndex) {
-        const tbody = document.getElementById('studentTableBody');
-        const rows = Array.from(tbody.querySelectorAll('tr.student-row:not([style*="display: none"])'));
+        const tbody = document.getElementById('lecturerTableBody');
+        const rows = Array.from(tbody.querySelectorAll('tr.lecturer-row:not([style*="display: none"])'));
         
         // Update sort indicators
-        const headers = document.querySelectorAll('#studentTable thead th');
+        const headers = document.querySelectorAll('#lecturerTable thead th');
+        headers.forEach((header, index) => {
+            const indicator = header.querySelector('.sort-indicator');
+            if (!indicator) {
+                const newIndicator = document.createElement('span');
+                newIndicator.className = 'sort-indicator';
+                header.appendChild(newIndicator);
+            }
+        });
+        
+        // Update current header indicators
         headers.forEach((header, index) => {
             const indicator = header.querySelector('.sort-indicator');
             indicator.innerHTML = '';
@@ -1134,25 +935,29 @@ for (User user : studentList) {
             const bCell = b.cells[columnIndex];
             
             switch(columnIndex) {
-                case 0: // Student Name
+                case 0: // Lecturer Name
                     aValue = a.getAttribute('data-name');
                     bValue = b.getAttribute('data-name');
                     break;
-                case 1: // Student Number
-                    aValue = a.getAttribute('data-student-number');
-                    bValue = b.getAttribute('data-student-number');
+                case 1: // Staff Number
+                    aValue = a.getAttribute('data-staff-number');
+                    bValue = b.getAttribute('data-staff-number');
                     break;
                 case 2: // Email
                     aValue = a.getAttribute('data-email');
                     bValue = b.getAttribute('data-email');
                     break;
-                case 3: // Contact
+                case 3: // Course
+                    aValue = a.getAttribute('data-course');
+                    bValue = b.getAttribute('data-course');
+                    break;
+                case 4: // Contact
                     aValue = a.getAttribute('data-contact');
                     bValue = b.getAttribute('data-contact');
                     break;
-                case 4: // Location
-                    const aLocation = a.getAttribute('data-city') + ' ' + a.getAttribute('data-address');
-                    const bLocation = b.getAttribute('data-city') + ' ' + b.getAttribute('data-address');
+                case 5: // Location
+                    const aLocation = (a.getAttribute('data-city') || '') + ' ' + (a.getAttribute('data-address') || '');
+                    const bLocation = (b.getAttribute('data-city') || '') + ' ' + (b.getAttribute('data-address') || '');
                     aValue = aLocation.toLowerCase();
                     bValue = bLocation.toLowerCase();
                     break;
@@ -1173,11 +978,44 @@ for (User user : studentList) {
         
         // Reorder rows in DOM
         rows.forEach(row => tbody.appendChild(row));
-        updateStudentsCount();
     }
     
-    // Edit student function
-    function editStudent(userId) {
-        window.location.href = 'edit-user.jsp?uid=' + userId;
-    }
+    // Initialize search functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add sort indicators to headers
+        const headers = document.querySelectorAll('#lecturerTable thead th');
+        headers.forEach((header, index) => {
+            if (index < 6) { // Add to all except Actions column
+                const indicator = document.createElement('span');
+                indicator.className = 'sort-indicator';
+                header.appendChild(indicator);
+                
+                // Add hover effect
+                header.style.cursor = 'pointer';
+                header.addEventListener('mouseenter', () => {
+                    header.style.backgroundColor = 'var(--medium-gray)';
+                });
+                header.addEventListener('mouseleave', () => {
+                    header.style.backgroundColor = '';
+                });
+            }
+        });
+        
+        // Add animation for rows
+        const rows = document.querySelectorAll('#lecturerTableBody tr.lecturer-row');
+        rows.forEach((row, index) => {
+            row.style.animationDelay = `${index * 0.1}s`;
+            row.style.animation = 'fadeIn 0.3s ease forwards';
+        });
+        
+        // Add CSS animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        `;
+        document.head.appendChild(style);
+    });
 </script>
