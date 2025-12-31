@@ -620,19 +620,6 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             </div>
         </header>
         
-        <!-- Display success/error messages -->
-        <% 
-            String message = (String) session.getAttribute("message");
-            if (message != null) {
-        %>
-            <div class="alert">
-                <i class="fas fa-check-circle"></i> <%= message %>
-            </div>
-        <%
-                session.removeAttribute("message");
-            }
-        %>
-        
         <!-- Show Questions Panel -->
         <div class="question-card" id="showQuestionsPanel">
             <div class="card-header">

@@ -5,6 +5,7 @@
  
 <% 
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+//pDAO.autoActivateExams();
 %>
 
 <!-- Font Awesome for Icons -->
@@ -470,6 +471,61 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     .dashboard-sidebar::-webkit-scrollbar-thumb:hover {
         background: #94a3b8;
     }
+
+    /* Status Modal Styles */
+    .status-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+    }
+
+    .status-modal {
+        background-color: #fff;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        text-align: center;
+        width: 90%;
+        max-width: 400px;
+    }
+
+    .status-modal-icon {
+        font-size: 50px;
+        margin-bottom: 20px;
+    }
+
+    .status-modal-icon.deactivated { color: #f87171; }
+    .status-modal-icon.passed { color: #fbbf24; }
+    .status-modal-icon.future { color: #60a5fa; }
+
+    .status-modal-title {
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+
+    .status-modal-message {
+        font-size: 16px;
+        color: #64748b;
+        margin-bottom: 25px;
+    }
+
+    .status-modal-close-btn {
+        background-color: var(--primary-blue);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+    }
 </style>
 
 <%
@@ -526,7 +582,10 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         </div>
     </div>
 </header>
-
+    <!-- Include the header messages -->
+    <%@ include file="header-messages.jsp" %>
+    
+    
 <div class="student-panel-container">
 
   <!-- MAIN CONTENT -->
@@ -585,6 +644,16 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
   </main>
 </div>
 
+<!-- Status Modals -->
+<div id="statusModal" class="status-modal-overlay">
+    <div class="status-modal">
+        <div id="modalIcon" class="status-modal-icon"></div>
+        <h2 id="modalTitle" class="status-modal-title"></h2>
+        <p id="modalMessage" class="status-modal-message"></p>
+        <button id="modalCloseBtn" class="status-modal-close-btn">Close</button>
+    </div>
+</div>
+
 <script>
     // Mobile sidebar functionality
     document.addEventListener('DOMContentLoaded', function() {
@@ -610,4 +679,43 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             }, 250);
         });
     });
+
+    // Modal functionality
+    const statusModal = document.getElementById('statusModal');
+    const modalIcon = document.getElementById('modalIcon');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMessage = document.getElementById('modalMessage');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+
+    function showModal(type, message) {
+        let iconClass, title;
+        switch (type) {
+            case 'deactivated':
+                iconClass = 'fas fa-times-circle deactivated';
+                title = 'Exam Deactivated';
+                break;
+            case 'passed':
+                iconClass = 'fas fa-exclamation-triangle passed';
+                title = 'Exam Date Passed';
+                break;
+            case 'future':
+                iconClass = 'fas fa-calendar-alt future';
+                title = 'Exam Not Yet Active';
+                break;
+        }
+        modalIcon.className = 'status-modal-icon ' + iconClass;
+        modalTitle.textContent = title;
+        modalMessage.textContent = message;
+        statusModal.style.display = 'flex';
+    }
+
+    modalCloseBtn.onclick = () => {
+        statusModal.style.display = 'none';
+    };
+
+    window.onclick = (event) => {
+        if (event.target == statusModal) {
+            statusModal.style.display = 'none';
+        }
+    };
 </script>

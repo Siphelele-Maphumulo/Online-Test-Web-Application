@@ -53,7 +53,7 @@ try {
         }
 
     /* =========================
-       REGISTER
+       REGISTER (UPDATED - with email-based user type determination)
        ========================= */
     } else if ("register".equalsIgnoreCase(pageParam)) {
         String fName     = nz(request.getParameter("fname"), "");
@@ -67,21 +67,113 @@ try {
 
         String userType = nz(request.getParameter("user_type"), "");
         String fromPage = nz(request.getParameter("from_page"), "");
+        String createdBy = nz(request.getParameter("created_by"), "");
+        String creatorRole = nz(request.getParameter("creator_role"), "");
+
+        // Validate required fields
+        if (fName.isEmpty() || lName.isEmpty() || uName.isEmpty() || email.isEmpty() || pass.isEmpty()) {
+            session.setAttribute("error", "Please fill in all required fields");
+            response.sendRedirect("signup.jsp?user_type=" + userType + "&from=" + fromPage);
+            return;
+        }
+
+        // Check if username already exists
+        User existingUserByUsername = pDAO.getUserByUsername(uName);
+        if (existingUserByUsername != null) {
+            session.setAttribute("error", "Username already exists. Please choose a different username.");
+            response.sendRedirect("signup.jsp?user_type=" + userType + "&from=" + fromPage);
+            return;
+        }
+
+        // Check if email already exists
+        User existingUserByEmail = pDAO.getUserByEmail(email);
+        if (existingUserByEmail != null) {
+            session.setAttribute("error", "Email already registered. Please use a different email.");
+            response.sendRedirect("signup.jsp?user_type=" + userType + "&from=" + fromPage);
+            return;
+        }
+
+        // Determine user type based on various factors
+        String finalUserType = "student"; // Default
+        
+        // Factor 1: If admin/lecturer is creating the account (admin creation)
+        boolean isAdminCreation = createdBy != null && !createdBy.isEmpty() && 
+                                 (creatorRole != null && 
+                                  ("admin".equalsIgnoreCase(creatorRole) || "lecture".equalsIgnoreCase(creatorRole)));
+        
+        if (isAdminCreation) {
+            // Admin/Lecturer is creating - use specified user type
+            if ("admin".equalsIgnoreCase(userType) || "lecture".equalsIgnoreCase(userType)) {
+                finalUserType = userType;
+            } else {
+                // If admin is creating but no specific type, check email against staff table
+                boolean isStaffEmail = pDAO.isEmailInStaffTable(email);
+                finalUserType = isStaffEmail ? "lecture" : "student";
+            }
+        } 
+        // Factor 2: If coming from admin/lecture page with user_type parameter
+        else if ("admin".equalsIgnoreCase(userType) || "lecture".equalsIgnoreCase(userType)) {
+            finalUserType = userType;
+        }
+        // Factor 3: Self-registration - check email against staff table
+        else {
+            boolean isStaffEmail = pDAO.isEmailInStaffTable(email);
+            finalUserType = isStaffEmail ? "lecture" : "student";
+        }
 
         String hashedPass = PasswordUtils.bcryptHashPassword(pass);
-        String staffOrStudentId = "STD-" + UUID.randomUUID().toString().substring(0,8);
-
-        pDAO.addNewUser(fName, lName, uName, email, hashedPass, contactNo, city, address, "");
-
-        boolean isAdminOrLecture = "admin".equalsIgnoreCase(userType) || "lecture".equalsIgnoreCase(userType) 
-                                   || "account".equalsIgnoreCase(fromPage);
-
-        if (isAdminOrLecture) {
-            session.setAttribute("message", "Student added successfully!");
-            response.sendRedirect("accounts.jsp");
+        
+        // Register the user with determined user type
+        boolean success = pDAO.addNewUserWithType(fName, lName, uName, email, hashedPass, contactNo, city, address, finalUserType);
+        
+        if (success) {
+            // If staff email but user type is lecture, also add to staff table if not exists
+            if ("lecture".equalsIgnoreCase(finalUserType)) {
+                // Check if already in staff table
+                boolean staffExists = pDAO.isEmailInStaffTable(email);
+                if (!staffExists) {
+                    // Generate staff number (first letter of first name + first letter of last name + last 4 digits of username)
+                    String staffNum = fName.substring(0,1).toUpperCase() + 
+                                     lName.substring(0,1).toUpperCase() + 
+                                     uName.substring(Math.max(0, uName.length() - 4));
+                    pDAO.addNewStaff(staffNum, email, fName + " " + lName, "Not Assigned");
+                }
+            }
+            
+            // Set appropriate message based on user type
+            String userTypeDisplay = "admin".equalsIgnoreCase(finalUserType) ? "Administrator" : 
+                                    "lecture".equalsIgnoreCase(finalUserType) ? "Lecturer" : "Student";
+            
+            // Determine redirect based on context
+            boolean isAdminOrLectureContext = isAdminCreation || 
+                                             "account".equalsIgnoreCase(fromPage) || 
+                                             "admin".equalsIgnoreCase(userType) || 
+                                             "lecture".equalsIgnoreCase(userType);
+            
+            if (isAdminOrLectureContext) {
+                session.setAttribute("message", userTypeDisplay + " account created successfully!");
+                
+                // Redirect to appropriate page based on creator's role
+                if ("admin".equalsIgnoreCase(creatorRole)) {
+                    if ("admin".equalsIgnoreCase(finalUserType) || "lecture".equalsIgnoreCase(finalUserType)) {
+                        response.sendRedirect("adm-page.jsp?pgprt=6"); // Lecturers/Admins page
+                    } else {
+                        response.sendRedirect("adm-page.jsp?pgprt=1"); // Students page
+                    }
+                } else if ("lecture".equalsIgnoreCase(creatorRole)) {
+                    response.sendRedirect("lecture_dashboard.jsp");
+                } else {
+                    response.sendRedirect("accounts.jsp");
+                }
+            } else {
+                // Self-registration
+                session.setAttribute("message", "Registration successful! You are registered as a " + 
+                              userTypeDisplay.toLowerCase() + ". Please login.");
+                response.sendRedirect("login.jsp");
+            }
         } else {
-            session.setAttribute("message", "Registration successful! Please login");
-            response.sendRedirect("login.jsp");
+            session.setAttribute("error", "Registration failed. Please try again.");
+            response.sendRedirect("signup.jsp?user_type=" + userType + "&from=" + fromPage);
         }
 
     /* =========================
@@ -158,8 +250,40 @@ try {
         } else if ("del".equalsIgnoreCase(operation)) {
             String cname = nz(request.getParameter("cname"), "");
             if (!cname.isEmpty()) {
-                pDAO.deleteCourseCascade(cname);
+                pDAO.delCourse(cname);
                 session.setAttribute("message","Course deleted successfully");
+            }
+            response.sendRedirect("adm-page.jsp?pgprt=2");
+        } else if ("update_course".equalsIgnoreCase(operation)) {
+            String originalCourseName = nz(request.getParameter("original_course_name"), "");
+            String newCourseName = nz(request.getParameter("coursename"), "");
+            int totalMarks = Integer.parseInt(nz(request.getParameter("totalmarks"), "0"));
+            String time = nz(request.getParameter("time"), "");
+            String examDate = nz(request.getParameter("examdate"), "");
+
+            // Validate parameters
+            if (originalCourseName.isEmpty() || newCourseName.isEmpty()) {
+                session.setAttribute("error", "Course name cannot be empty");
+                response.sendRedirect("adm-page.jsp?pgprt=2");
+                return;
+            }
+
+            boolean success = pDAO.updateCourse(originalCourseName, newCourseName, totalMarks, time, examDate);
+            if (success) {
+                session.setAttribute("message", "Course updated successfully");
+            } else {
+                session.setAttribute("error", "Failed to update course. The course name may already exist or there are related records.");
+            }
+            response.sendRedirect("adm-page.jsp?pgprt=2");
+        } else if ("toggle_status".equalsIgnoreCase(operation)) {
+            String cname = nz(request.getParameter("cname"), "");
+            if (!cname.isEmpty()) {
+                boolean success = pDAO.toggleCourseStatus(cname);
+                if (success) {
+                    session.setAttribute("message", "Course status updated successfully");
+                } else {
+                    session.setAttribute("error", "Failed to update course status");
+                }
             }
             response.sendRedirect("adm-page.jsp?pgprt=2");
         }
@@ -240,7 +364,7 @@ try {
         String uidParam  = nz(request.getParameter("uid"), "");
         if ("del".equalsIgnoreCase(operation) && !uidParam.isEmpty()) {
             int userId = Integer.parseInt(uidParam);
-            pDAO.deleteUserCascade(userId);
+            pDAO.delStudent(userId);
             session.setAttribute("message","Account deleted successfully");
         }
         response.sendRedirect("adm-page.jsp?pgprt=1");
@@ -253,29 +377,10 @@ try {
         String uidParam  = nz(request.getParameter("uid"), "");
         if ("del".equalsIgnoreCase(operation) && !uidParam.isEmpty()) {
             int userId = Integer.parseInt(uidParam);
-            pDAO.deleteUserCascade(userId);
+            pDAO.deleteLecturer(userId);
             session.setAttribute("message","Lecturer deleted successfully");
         }
         response.sendRedirect("adm-page.jsp?pgprt=6");
-
-    /* =========================
-       RESULTS
-       ========================= */
-    } else if ("results".equalsIgnoreCase(pageParam)) {
-        String operation = nz(request.getParameter("operation"), "");
-        String eidParam  = nz(request.getParameter("eid"), "");
-        if ("del".equalsIgnoreCase(operation) && !eidParam.isEmpty()) {
-            int examId = Integer.parseInt(eidParam);
-            pDAO.deleteExamCascade(examId);
-            session.setAttribute("message","Result deleted successfully");
-        } else if ("edit".equalsIgnoreCase(operation) && !eidParam.isEmpty()) {
-            int examId = Integer.parseInt(eidParam);
-            int obtMarks = Integer.parseInt(nz(request.getParameter("obtMarks"), "0"));
-            int totalMarks = Integer.parseInt(nz(request.getParameter("totalMarks"), "0"));
-            pDAO.updateExamResult(examId, obtMarks, totalMarks);
-            session.setAttribute("message","Result updated successfully");
-        }
-        response.sendRedirect("adm-page.jsp?pgprt=5");
 
     /* =========================
        QUESTIONS
@@ -335,10 +440,6 @@ try {
             String cName = nz(request.getParameter("coursename"), "");
             if (session.getAttribute("userId") != null && !cName.isEmpty()) {
                 int userId = Integer.parseInt(session.getAttribute("userId").toString());
-
-                // Finalize any in-progress exams for this student and course
-                pDAO.finalizeInProgressExams(userId, cName);
-
                 int examId = pDAO.startExam(cName, userId);
                 session.setAttribute("examId", examId);
                 session.setAttribute("examStarted","1");
@@ -381,32 +482,18 @@ try {
     /* =========================
        LOGOUT
        ========================= */
-        } else if ("saveAnswer".equalsIgnoreCase(pageParam)) {
-            if (session.getAttribute("examId") != null) {
-                int examId = Integer.parseInt(session.getAttribute("examId").toString());
-                int qid = Integer.parseInt(nz(request.getParameter("qid"), "0"));
-                String question = nz(request.getParameter("question"), "");
-                String ans = nz(request.getParameter("ans"), "");
-
-                pDAO.upsertAnswer(examId, qid, question, ans);
-            }
-            // No redirect needed as this is an async call
-            return;
-
-        } else if ("logout".equalsIgnoreCase(pageParam)) {
-
-            // Invalidate session immediately then forward to a transition page so the client loader can be visible
-            session.invalidate();
-            request.setAttribute("targetUrl", "login.jsp");
-            request.setAttribute("message", "Securely logging you out...");
-            request.setAttribute("delayMs", Integer.valueOf(3000));
-            request.getRequestDispatcher("transition.jsp").forward(request, response);
-            return;
-        }
-
-
+    } else if ("logout".equalsIgnoreCase(pageParam)) {
+        // Invalidate session immediately then forward to a transition page so the client loader can be visible
+        session.invalidate();
+        request.setAttribute("targetUrl", "login.jsp");
+        request.setAttribute("message", "Securely logging you out...");
+        request.setAttribute("delayMs", Integer.valueOf(3000));
+        request.getRequestDispatcher("transition.jsp").forward(request, response);
+        return;
+    }
 
 } catch(Exception e){
+    e.printStackTrace();
     session.setAttribute("error","An unexpected error occurred: "+e.getMessage());
     response.sendRedirect("error.jsp");
 }

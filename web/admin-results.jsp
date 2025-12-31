@@ -829,19 +829,19 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                                     <span class="badge badge-info"><%= String.format("%.0f", percentage) %>%</span>
                                 </td>
                                 <td>
-                                    <a class="btn btn-primary" href="adm-page.jsp?pgprt=5&eid=<%= e.getExamId() %>" style="font-size: 13px; padding: 8px 16px;">
-                                        <i class="fas fa-eye"></i> Details
-                                    </a>
-                                    <button class="btn btn-secondary edit-btn" style="font-size: 13px; padding: 8px 16px;">
+                                    <button class="btn btn-secondary edit-btn" style="font-size: 13px; padding: 8px 16px; margin-top: 2%; margin-bottom: 2%;">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
                                     <a href="controller.jsp?page=results&operation=del&eid=<%= e.getExamId() %>"
-                                       class="btn btn-danger" data-item-name="Exam ID: <%= e.getExamId() %>">
+                                       class="btn btn-danger" data-item-name="Exam ID: <%= e.getExamId() %>" style=" margin-bottom: 2%;">
                                         <i class="fas fa-trash"></i> Delete
                                     </a>
                                     <button class="btn btn-success save-btn" style="display:none; font-size: 13px; padding: 8px 16px;">
                                         <i class="fas fa-save"></i> Save
                                     </button>
+                                    <a class="btn btn-primary" href="adm-page.jsp?pgprt=5&eid=<%= e.getExamId() %>" style="font-size: 13px; padding: 8px 16px;">
+                                        <i class="fas fa-eye"></i> Details
+                                    </a>
                                 </td>
                             </tr>
                             <% 

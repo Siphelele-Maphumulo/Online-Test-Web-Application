@@ -123,6 +123,8 @@
         
         .back-button:hover {
             background-color: #b0b0b0;
+            text-decoration: none;
+            color: white;
         }
 
     </style>
@@ -171,7 +173,7 @@
 
         <div style="padding-top:50px; text-align: center;">
             <% if ("account".equals(fromPage)) { %>
-                <a href="accounts.jsp" class="back-button">Back to Accounts</a>
+                <a href="accounts.jsp" class="back-button" style="text-decoration: none;color:white">Back to Accounts</a>
             <% } else { %>
                 <a href="#" onclick="window.history.back()" class="back-button">Back</a>
             <% } %>

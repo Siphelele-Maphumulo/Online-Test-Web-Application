@@ -1,6 +1,5 @@
 <%@ page import="java.util.ArrayList" %>
 <%@ page import="myPackage.classes.User" %>
-<%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
 
 <%
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
@@ -14,6 +13,9 @@
         response.sendRedirect("login.jsp");
         return;
     }
+    
+    ArrayList list = pDAO.getAllCourses();
+    int courseCount = list.size() / 5;
 %>
 
 <style>
@@ -82,7 +84,7 @@
     
     /* Sidebar Styles - Same as profile page */
     .sidebar {
-        width: 250px;
+        width: 200px;
         background: linear-gradient(180deg, var(--primary-blue), var(--secondary-blue));
         color: var(--white);
         flex-shrink: 0;
@@ -491,7 +493,41 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
+
+    /* Modal Styles */
+    .modal {
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.5);
+    }
+    .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 500px;
+        border-radius: var(--radius-md);
+    }
+    .close-btn {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+    .close-btn:hover,
+    .close-btn:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
 </style>
+
 
 <div class="dashboard-container">
     <!-- Sidebar Navigation - Same as profile page -->
@@ -510,7 +546,7 @@
             </a>
             <a href="adm-page.jsp?pgprt=3" class="nav-item">
                 <i class="fas fa-question-circle"></i>
-                <h2>Questions</h2>
+                                <h2>Questions</h2>
             </a>
             <a href="adm-page.jsp?pgprt=5" class="nav-item">
                 <i class="fas fa-chart-bar"></i>
@@ -533,11 +569,6 @@
             </div>
             <div class="stats-badge">
                 <i class="fas fa-graduation-cap"></i>
-                <%
-                    ArrayList list = pDAO.getAllCourses();
-                    // Fix: Since we're now storing 4 fields per course, divide by 4
-                    int courseCount = list.size() / 4;
-                %>
                 <%= courseCount %> Courses
             </div>
         </header>
@@ -559,6 +590,7 @@
                             <th>Total Marks</th>
                             <th>Duration</th>
                             <th>Exam Date</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -567,44 +599,62 @@
                         if (list.isEmpty()) {
                         %>
                             <tr>
-                                <td colspan="5" class="no-courses">
+                                <td colspan="6" class="no-courses">
                                     <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 16px; display: block; opacity: 0.5;"></i>
                                     No courses available. Add your first course to get started.
                                 </td>
                             </tr>
                         <%
                         } else {
-                            for (int i = 0; i < list.size(); i += 4) {
-                                if (i + 3 < list.size()) {
+                            for (int i = 0; i < list.size(); i += 5) {
+                                String courseName = (String) list.get(i);
+                                boolean isActive = (Boolean) list.get(i + 4);
                         %>
-                        <tr>
+                        <tr id="course-row-<%= i %>">
                             <td>
                                 <div class="course-name">
                                     <i class="fas fa-book" style="color: var(--accent-blue); margin-right: 8px;"></i>
-                                    <%= list.get(i) %>
+                                    <span id="course-name-<%= i %>"><%= courseName %></span>
                                 </div>
                             </td>
-                            <td><span class="badge badge-success"><%= list.get(i + 1) %> Marks</span></td>
-                            <td><span class="badge badge-info"><%= list.get(i + 2) %> mins</span></td>
-                            <td><span class="badge badge-neutral"><%= list.get(i + 3) %></span></td>
+                            <td><span class="badge badge-success" id="total-marks-<%= i %>"><%= list.get(i + 1) %> Marks</span></td>
+                            <td><span class="badge badge-info" id="time-<%= i %>"><%= list.get(i + 2) %> mins</span></td>
+                            <td><span class="badge badge-neutral" id="exam-date-<%= i %>"><%= list.get(i + 3) %></span></td>
                             <td>
-                                <% if (currentUser.getType().equalsIgnoreCase("admin")) { %>
-                                    <a href="controller.jsp?page=courses&operation=del&cname=<%= list.get(i) %>"
-                                       data-item-name="<%= list.get(i) %>"
+                                <form action="controller.jsp" method="post" class="toggle-form" style="display: inline;">
+                                    <input type="hidden" name="page" value="courses">
+                                    <input type="hidden" name="operation" value="toggle_status">
+                                    <input type="hidden" name="cname" value="<%= courseName %>">
+                                    <label class="switch">
+                                        <input type="checkbox" name="is_active" 
+                                               <%= isActive ? "checked" : "" %> 
+                                               onchange="this.form.submit()">
+                                        <span class="slider round"></span>
+                                    </label>
+                                </form>
+                                <span class="badge <%= isActive ? "badge-success" : "badge-neutral" %>" style="margin-left: 8px;">
+                                    <%= isActive ? "Active" : "Inactive" %>
+                                </span>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-primary edit-btn" 
+                                            data-index="<%= i %>"
+                                            data-course-name="<%= courseName %>"
+                                            data-total-marks="<%= list.get(i + 1) %>" 
+                                            data-time="<%= list.get(i + 2) %>"
+                                            data-exam-date="<%= list.get(i + 3) %>">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <a href="controller.jsp?page=courses&operation=del&cname=<%= courseName %>"
+                                       onclick="return confirm('Are you sure you want to delete \'<%= courseName %>\'? This will also delete all associated exams. This action cannot be undone.');" 
                                        class="btn btn-danger">
-                                       <i class="fas fa-trash"></i>
-                                       Delete
+                                       <i class="fas fa-trash"></i> Delete
                                     </a>
-                                <% } else { %>
-                                    <a href="#" class="btn btn-danger permission-check">
-                                        <i class="fas fa-trash"></i>
-                                        Delete
-                                    </a>
-                                <% } %>
+                                </div>
                             </td>
                         </tr>
                         <%
-                                }
                             }
                         }
                         %>
@@ -613,21 +663,25 @@
             </div>
         </div>
 
-        <!-- Add New Course Panel -->
+        <!-- Add/Edit Course Panel -->
         <div class="courses-card">
             <div class="card-header">
-                <span><i class="fas fa-plus-circle"></i> Add New Course</span>
+                <span id="form-title"><i class="fas fa-plus-circle"></i> Add New Course</span>
                 <i class="fas fa-graduation-cap" style="opacity: 0.8;"></i>
             </div>
             <div class="add-course-form">
-                <form action="controller.jsp" method="post">
+                <form action="controller.jsp" method="post" id="course-form">
+                    <input type="hidden" id="original-course-name" name="original_course_name">
+                    <input type="hidden" name="page" value="courses">
+                    <input type="hidden" id="operation" name="operation" value="addnew">
+                    
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label">
                                 <i class="fas fa-book" style="color: var(--accent-blue);"></i>
                                 Course Name
                             </label>
-                            <input type="text" name="coursename" class="form-control" 
+                            <input type="text" id="courseName" name="coursename" class="form-control" 
                                    placeholder="Enter course name (e.g., Mathematics 101)" required>
                         </div>
                         
@@ -636,16 +690,16 @@
                                 <i class="fas fa-chart-line" style="color: var(--success);"></i>
                                 Total Marks
                             </label>
-                            <input type="number" name="totalmarks" class="form-control" 
+                            <input type="number" id="totalMarks" name="totalmarks" class="form-control" 
                                    placeholder="Enter total marks" required min="1" max="1000">
                         </div>
                         
                         <div class="form-group">
                             <label class="form-label">
                                 <i class="fas fa-clock" style="color: var(--info);"></i>
-                                Exam Duration
+                                Exam Duration (minutes)
                             </label>
-                            <input type="number" name="time" class="form-control" 
+                            <input type="number" id="time" name="time" class="form-control" 
                                    placeholder="Duration in minutes" required min="1" max="480">
                         </div>
                         
@@ -654,25 +708,27 @@
                                 <i class="fas fa-calendar-alt" style="color: var(--dark-gray);"></i>
                                 Exam Date
                             </label>
-                            <input type="date" name="examdate" class="form-control" required>
+                            <input type="date" id="examDate" name="examdate" class="form-control" required>
                         </div>
                     </div>
                     
-                    <input type="hidden" name="page" value="courses">
-                    <input type="hidden" name="operation" value="addnew">
-                    
                     <div class="form-actions">
-                        <button type="reset" class="btn btn-outline">
+                        <button type="button" id="cancel-edit" class="btn btn-outline" style="display: none;">
+                            <i class="fas fa-times"></i>
+                            Cancel Edit
+                        </button>
+                        <button type="reset" class="btn btn-outline" onclick="resetForm()">
                             <i class="fas fa-redo"></i>
                             Reset Form
                         </button>
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" id="submit-btn" class="btn btn-primary">
                             <i class="fas fa-plus"></i>
                             Add Course
                         </button>
                     </div>
                 </form>
             </div>
+        </div>
         </div>
     </main>
 </div>
@@ -682,47 +738,208 @@
 
 <!-- JavaScript for enhanced functionality -->
 <script>
-    // Form validation
+    // Global variable to track if we're editing
+    let isEditing = false;
+    let originalCourseName = null;
+    let currentIndex = null;
+
+    // Function to handle edit button click
     document.addEventListener('DOMContentLoaded', function() {
-        const forms = document.querySelectorAll('form');
+        const editButtons = document.querySelectorAll('.edit-btn');
         
-        forms.forEach(form => {
-            form.addEventListener('submit', function(e) {
-                // Add loading state
-                const submitBtn = this.querySelector('button[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.classList.add('loading');
-                    submitBtn.disabled = true;
-                }
+        editButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                isEditing = true;
+                currentIndex = this.dataset.index;
+                originalCourseName = this.dataset.courseName;
                 
-                // Additional validation can be added here
+                // Populate form fields
+                document.getElementById('original-course-name').value = originalCourseName;
+                document.getElementById('courseName').value = this.dataset.courseName;
+                document.getElementById('totalMarks').value = this.dataset.totalMarks;
+                document.getElementById('time').value = this.dataset.time;
+                document.getElementById('examDate').value = this.dataset.examDate;
+                
+                // Change form operation
+                document.getElementById('operation').value = 'update_course';
+                
+                // Update UI
+                document.getElementById('form-title').innerHTML = '<i class="fas fa-edit"></i> Edit Course';
+                document.getElementById('submit-btn').innerHTML = '<i class="fas fa-save"></i> Update Course';
+                document.getElementById('cancel-edit').style.display = 'inline-block';
+                
+                // Show warning about course name change
+                showCourseNameWarning();
+                
+                // Scroll to form
+                document.querySelector('.add-course-form').scrollIntoView({ behavior: 'smooth' });
             });
         });
         
-        // Reset form handler
-        const resetButtons = document.querySelectorAll('button[type="reset"]');
-        resetButtons.forEach(btn => {
-            btn.addEventListener('click', function() {
-                const form = this.closest('form');
-                form.reset();
-            });
+        // Cancel edit button handler
+        document.getElementById('cancel-edit').addEventListener('click', function() {
+            resetForm();
         });
         
-        // Handle delete confirmation
+        // Form submission handler
+        document.getElementById('course-form').addEventListener('submit', function(e) {
+            const submitBtn = this.querySelector('#submit-btn');
+            if (submitBtn) {
+                submitBtn.classList.add('loading');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            }
+            
+            // If editing and course name changed, show confirmation
+            if (isEditing) {
+                const newCourseName = document.getElementById('courseName').value;
+                if (newCourseName !== originalCourseName) {
+                    const confirmed = confirm('Warning: Changing the course name will update all related exams. Are you sure you want to continue?');
+                    if (!confirmed) {
+                        e.preventDefault();
+                        if (submitBtn) {
+                            submitBtn.classList.remove('loading');
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = '<i class="fas fa-save"></i> Update Course';
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Delete button confirmation
         const deleteButtons = document.querySelectorAll('.btn-danger');
         deleteButtons.forEach(btn => {
             btn.addEventListener('click', function(e) {
-                const courseName = this.closest('tr').querySelector('.course-name').textContent.trim();
-                const confirmation = confirm(`Are you sure you want to delete "${courseName}"? This action cannot be undone.`);
+                const courseName = this.getAttribute('href').split('cname=')[1];
+                const decodedCourseName = decodeURIComponent(courseName);
+                const confirmation = confirm(`Are you sure you want to delete "${decodedCourseName}"?\n\nThis will delete:\n1. The course itself\n2. All associated exams\n3. All exam results\n\nThis action cannot be undone!`);
                 if (!confirmation) {
                     e.preventDefault();
                 }
             });
         });
     });
-    
-    // Handle window resize for responsive adjustments
-    window.addEventListener('resize', function() {
-        // Add any responsive adjustments here
-    });
+
+    // Function to reset form
+    function resetForm() {
+        isEditing = false;
+        originalCourseName = null;
+        currentIndex = null;
+        
+        // Reset form fields
+        document.getElementById('original-course-name').value = '';
+        document.getElementById('courseName').value = '';
+        document.getElementById('totalMarks').value = '';
+        document.getElementById('time').value = '';
+        document.getElementById('examDate').value = '';
+        
+        // Reset form operation
+        document.getElementById('operation').value = 'addnew';
+        
+        // Reset UI
+        document.getElementById('form-title').innerHTML = '<i class="fas fa-plus-circle"></i> Add New Course';
+        document.getElementById('submit-btn').innerHTML = '<i class="fas fa-plus"></i> Add Course';
+        document.getElementById('cancel-edit').style.display = 'none';
+        
+        // Hide warning
+        hideCourseNameWarning();
+    }
+
+    // Function to show warning about course name change
+    function showCourseNameWarning() {
+        let warningDiv = document.getElementById('course-name-warning');
+        if (!warningDiv) {
+            warningDiv = document.createElement('div');
+            warningDiv.id = 'course-name-warning';
+            warningDiv.className = 'alert alert-warning';
+            warningDiv.style.cssText = 'background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; border-radius: 4px; margin-bottom: 16px; font-size: 13px;';
+            warningDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <strong>Warning:</strong> Changing the course name will update all related exams.';
+            
+            const formGrid = document.querySelector('.form-grid');
+            formGrid.parentNode.insertBefore(warningDiv, formGrid);
+        }
+    }
+
+    // Function to hide warning
+    function hideCourseNameWarning() {
+        const warningDiv = document.getElementById('course-name-warning');
+        if (warningDiv) {
+            warningDiv.remove();
+        }
+    }
 </script>
+
+<style>
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
+        vertical-align: middle;
+    }
+    
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+    }
+    
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+    }
+    
+    input:checked + .slider {
+        background-color: var(--success);
+    }
+    
+    input:checked + .slider:before {
+        transform: translateX(26px);
+    }
+    
+    .slider.round {
+        border-radius: 24px;
+    }
+    
+    .slider.round:before {
+        border-radius: 50%;
+    }
+    
+    .btn.loading {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .fa-spinner {
+        animation: spin 1s linear infinite;
+    }
+</style>

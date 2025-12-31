@@ -7,6 +7,7 @@
  
 <% 
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+
 %>
 <!DOCTYPE html>
 <html>
@@ -478,7 +479,8 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 </style>
 </head>
 <body>
-
+    <!-- Include the header messages -->
+    <%@ include file="header-messages.jsp" %>
 <%
     // Get userId from session
     Object userIdObj = session.getAttribute("userId");
@@ -760,7 +762,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                     deleteUrl = deleteLink.href;
                     const itemName = deleteLink.getAttribute('data-item-name');
                     if (itemName) {
-                        deleteModalText.textContent = `Are you sure you want to delete? This action cannot be undone.`;
+                        deleteModalText.textContent = `Are you sure you want to delete "${itemName}"? This action cannot be undone.`;
                     } else {
                         deleteModalText.textContent = 'Are you sure you want to delete this item? This action cannot be undone.';
                     }
