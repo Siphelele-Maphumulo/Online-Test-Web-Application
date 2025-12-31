@@ -20,6 +20,11 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.sql.Types;
+import java.util.Map;
+import java.util.HashMap;
+// Add these imports at the top of your DatabaseClass.java
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import myPackage.classes.Result;
 
 
@@ -31,7 +36,7 @@ public class DatabaseClass {
     private DatabaseClass() throws ClassNotFoundException, SQLException {
         establishConnection();
     }
-
+private static final Logger LOGGER = Logger.getLogger(DatabaseClass.class.getName()); 
 public boolean updateUserAccount(int userId,
                                  String firstName,
                                  String lastName,
@@ -2101,7 +2106,116 @@ public Exams getResultByExamId(int examId) {
     return exam;
 }
 
-// Add this method to DatabaseClass.java
+
+public boolean deleteExamResult(int examId) {
+    PreparedStatement psExam = null;
+    PreparedStatement psAnswers = null;
+    Connection conn = null;
+    boolean success = false;
+    
+    try {
+        conn = getConnection();
+        conn.setAutoCommit(false); // Start transaction
+        
+        // First, get exam details for logging/confirmation (optional)
+        String examDetailsSql = "SELECT e.*, s.name as student_name, c.cname as course_name " +
+                                "FROM exams e " +
+                                "JOIN students s ON e.stu_id = s.stu_id " +
+                                "JOIN courses c ON e.course_id = c.course_id " +
+                                "WHERE e.exam_id = ?";
+        
+        // 1. Delete answers associated with this exam
+        String deleteAnswersSql = "DELETE FROM answers WHERE exam_id = ?";
+        psAnswers = conn.prepareStatement(deleteAnswersSql);
+        psAnswers.setInt(1, examId);
+        int answersDeleted = psAnswers.executeUpdate();
+        
+        // 2. Delete the exam itself
+        String deleteExamSql = "DELETE FROM exams WHERE exam_id = ?";
+        psExam = conn.prepareStatement(deleteExamSql);
+        psExam.setInt(1, examId);
+        int examDeleted = psExam.executeUpdate();
+        
+        conn.commit(); // Commit transaction
+        success = (examDeleted > 0);
+        
+        // Log the deletion
+        if (success) {
+            System.out.println("Successfully deleted exam result ID: " + examId + 
+                             " and " + answersDeleted + " related answers");
+        }
+        
+    } catch (SQLException ex) {
+        try {
+            if (conn != null) {
+                conn.rollback(); // Rollback on error
+            }
+        } catch (SQLException rollbackEx) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Rollback failed", rollbackEx);
+        }
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "deleteExamResult failed for exam ID: " + examId, ex);
+        success = false;
+    } finally {
+        try {
+            if (psAnswers != null) psAnswers.close();
+            if (psExam != null) psExam.close();
+            if (conn != null) {
+                conn.setAutoCommit(true);
+                conn.close();
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources", ex);
+        }
+    }
+    
+    return success;
+}
+
+// Optional: Method to get exam details before deletion (for confirmation)
+public Map<String, String> getExamDetails(int examId) {
+    PreparedStatement ps = null;
+    ResultSet rs = null;
+    Map<String, String> details = new HashMap<>();
+    
+    try {
+        String sql = "SELECT e.exam_id, e.obt_marks, e.total_marks, e.result_status, " +
+                     "s.name as student_name, s.email, s.stu_id, " +
+                     "c.cname as course_name, e.exam_date " +
+                     "FROM exams e " +
+                     "JOIN students s ON e.stu_id = s.stu_id " +
+                     "JOIN courses c ON e.course_id = c.course_id " +
+                     "WHERE e.exam_id = ?";
+        
+        ps = getConnection().prepareStatement(sql);
+        ps.setInt(1, examId);
+        rs = ps.executeQuery();
+        
+        if (rs.next()) {
+            details.put("exam_id", String.valueOf(rs.getInt("exam_id")));
+            details.put("student_name", rs.getString("student_name"));
+            details.put("student_id", rs.getString("stu_id"));
+            details.put("email", rs.getString("email"));
+            details.put("course_name", rs.getString("course_name"));
+            details.put("obt_marks", String.valueOf(rs.getInt("obt_marks")));
+            details.put("total_marks", String.valueOf(rs.getInt("total_marks")));
+            details.put("result_status", rs.getString("result_status"));
+            details.put("exam_date", rs.getString("exam_date"));
+        }
+        
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "getExamDetails failed", ex);
+    } finally {
+        try {
+            if (rs != null) rs.close();
+            if (ps != null) ps.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources", ex);
+        }
+    }
+    
+    return details;
+}
+
 // Add this method to DatabaseClass.java to get ALL exam results (for admin)
 public ArrayList<Exams> getAllExamResults() {
     ArrayList<Exams> list = new ArrayList<>();
@@ -2158,6 +2272,14 @@ public ArrayList<Exams> getAllExamResults() {
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
     }
     return list;
+}
+
+public String generateDeviceIdentifier() {
+    // Generate a simple identifier without request info
+    String timestamp = String.valueOf(System.currentTimeMillis());
+    String random = String.valueOf((int)(Math.random() * 10000));
+    
+    return "device_" + timestamp.substring(timestamp.length() - 8) + "_" + random;
 }
 
 
@@ -2285,59 +2407,6 @@ public void calculateResult(int eid, int tMarks, String endTime, int size) {
     }
 }
 
-
-
-// Method to delete an exam result and its associated answers
-public boolean deleteExamResult(int examId) {
-    PreparedStatement deleteAnswersStmt = null;
-    PreparedStatement deleteExamStmt = null;
-    
-    try {
-        // Start transaction
-        conn.setAutoCommit(false);
-        
-        // 1. Delete associated answers from the 'answers' table
-        String deleteAnswersSql = "DELETE FROM answers WHERE exam_id = ?";
-        deleteAnswersStmt = conn.prepareStatement(deleteAnswersSql);
-        deleteAnswersStmt.setInt(1, examId);
-        deleteAnswersStmt.executeUpdate();
-        
-        // 2. Delete the exam from the 'exams' table
-        String deleteExamSql = "DELETE FROM exams WHERE exam_id = ?";
-        deleteExamStmt = conn.prepareStatement(deleteExamSql);
-        deleteExamStmt.setInt(1, examId);
-        int rowsAffected = deleteExamStmt.executeUpdate();
-        
-        // Commit transaction
-        conn.commit();
-        
-        return rowsAffected > 0;
-        
-    } catch (SQLException ex) {
-        try {
-            // Rollback transaction in case of an error
-            if (conn != null) {
-                conn.rollback();
-            }
-        } catch (SQLException rollbackEx) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Rollback failed", rollbackEx);
-        }
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to delete exam result for ID: " + examId, ex);
-        return false;
-    } finally {
-        try {
-            // Close statements and restore auto-commit mode
-            if (deleteAnswersStmt != null) deleteAnswersStmt.close();
-            if (deleteExamStmt != null) deleteExamStmt.close();
-            if (conn != null) {
-                conn.setAutoCommit(true);
-            }
-        } catch (SQLException e) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, e);
-        }
-    }
-}
-
     public void toggleCourseStatus(String cName) {
         try {
             String sql = "UPDATE courses SET is_active = !is_active WHERE course_name=?";
@@ -2350,7 +2419,134 @@ public boolean deleteExamResult(int examId) {
         }
     }
 
+// Add these methods to your DatabaseClass
 
+public boolean registerExamStart(int studentId, int examId, String courseName, String deviceIdentifier) 
+    throws SQLException {
+    
+    if (studentId <= 0 || examId <= 0 || courseName == null || courseName.trim().isEmpty() || 
+        deviceIdentifier == null || deviceIdentifier.trim().isEmpty()) {
+        return false;
+    }
+    
+    String sql = "INSERT INTO exam_register " +
+                 "(student_id, exam_id, course_name, exam_date, start_time, device_identifier) " +
+                 "VALUES (?, ?, ?, CURDATE(), CURTIME(), ?) " +
+                 "ON DUPLICATE KEY UPDATE " +
+                 "    start_time = CURTIME(), " +
+                 "    device_identifier = ?, " +
+                 "    updated_at = CURRENT_TIMESTAMP";
+    
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setInt(1, studentId);
+        ps.setInt(2, examId);
+        ps.setString(3, courseName.trim());
+        ps.setString(4, deviceIdentifier.trim());
+        ps.setString(5, deviceIdentifier.trim());
+        
+        return ps.executeUpdate() > 0;
+    }
+}
+
+public boolean registerExamCompletion(int studentId, int examId, String endTime) 
+    throws SQLException {
+    
+    if (studentId <= 0 || examId <= 0 || endTime == null || endTime.trim().isEmpty()) {
+        return false;
+    }
+    
+    String sql = "UPDATE exam_register " +
+                 "SET end_time = ?, " +
+                 "    updated_at = CURRENT_TIMESTAMP, " +
+                 "    duration_seconds = TIMESTAMPDIFF(SECOND, " +
+                 "        CONCAT(exam_date, ' ', start_time), " +
+                 "        CONCAT(exam_date, ' ', ?)) " +
+                 "WHERE student_id = ? " +
+                 "  AND exam_id = ? " +
+                 "  AND exam_date = CURDATE() " +
+                 "  AND end_time IS NULL " +
+                 "  AND start_time IS NOT NULL";
+    
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setString(1, endTime.trim());
+        ps.setString(2, endTime.trim());
+        ps.setInt(3, studentId);
+        ps.setInt(4, examId);
+        
+        return ps.executeUpdate() > 0;
+    }
+}
+
+// Add a method to get device identifier (you can enhance this based on your needs)
+public String getDeviceIdentifier(HttpServletRequest request) {
+    String userAgent = request.getHeader("User-Agent");
+    String ipAddress = request.getRemoteAddr();
+    
+    // Create a simple device identifier
+    String deviceIdentifier = ipAddress + "_" + 
+                             (userAgent != null ? userAgent.hashCode() : "unknown");
+    
+    return deviceIdentifier.substring(0, Math.min(deviceIdentifier.length(), 100));
+}
+
+// Add a method to get the register for a specific exam
+public ResultSet getExamRegister(int examId) throws SQLException {
+    String sql = "SELECT er.*, u.first_name, u.last_name, u.email, u.contact_no " +
+                 "FROM exam_register er " +
+                 "JOIN users u ON er.student_id = u.user_id " +
+                 "WHERE er.exam_id = ? " +
+                 "ORDER BY er.start_time DESC";
+    
+    PreparedStatement ps = conn.prepareStatement(sql);
+    ps.setInt(1, examId);
+    return ps.executeQuery();
+}
+
+public boolean registerExamCompletion(int studentId, int examId, LocalTime endTime) 
+    throws SQLException {
+    
+    // Validate inputs
+    if (studentId <= 0) {
+        throw new IllegalArgumentException("Invalid student ID");
+    }
+    if (examId <= 0) {
+        throw new IllegalArgumentException("Invalid exam ID");
+    }
+    if (endTime == null) {
+        throw new IllegalArgumentException("End time cannot be null");
+    }
+    
+    // Regular string concatenation for Java 8
+    String sql = "UPDATE exam_register " +
+                 "SET end_time = ?, " +
+                 "    updated_at = CURRENT_TIMESTAMP, " +
+                 "    duration_seconds = TIMESTAMPDIFF(SECOND, " +
+                 "        CONCAT(exam_date, ' ', start_time), " +
+                 "        CONCAT(exam_date, ' ', ?)) " +
+                 "WHERE student_id = ? " +
+                 "  AND exam_id = ? " +
+                 "  AND exam_date = CURDATE() " +
+                 "  AND end_time IS NULL " +
+                 "  AND start_time IS NOT NULL";
+    
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setString(1, endTime.toString());
+        ps.setString(2, endTime.toString()); // For duration calculation
+        ps.setInt(3, studentId);
+        ps.setInt(4, examId);
+        
+        int updated = ps.executeUpdate();
+        
+        if (updated == 0) {
+            // Log the issue but don't throw - this might be intentional (already completed)
+            LOGGER.warning("No active exam session found for student " + studentId 
+                + " and exam " + examId + " today. Might already be completed.");
+            return false;
+        }
+        
+        return true;
+    }
+}
 
 /* Add this method in your DatabaseClass */
 
@@ -2368,6 +2564,118 @@ public String getLastCourseName() {
         e.printStackTrace();
     }
     return lastCourseName;
+}
+
+// Add to DatabaseClass.java
+
+// Get filtered exam register
+public ResultSet getFilteredExamRegister(int examId, String courseName, String examDate) throws SQLException {
+    StringBuilder sql = new StringBuilder();
+    sql.append("SELECT er.*, u.first_name, u.last_name, u.email, u.contact_no ");
+    sql.append("FROM exam_register er ");
+    sql.append("JOIN users u ON er.student_id = u.user_id ");
+    sql.append("WHERE 1=1 ");
+    
+    ArrayList<Object> params = new ArrayList<>();
+    
+    if (examId > 0) {
+        sql.append("AND er.exam_id = ? ");
+        params.add(examId);
+    }
+    
+    if (courseName != null && !courseName.trim().isEmpty()) {
+        sql.append("AND er.course_name = ? ");
+        params.add(courseName.trim());
+    }
+    
+    if (examDate != null && !examDate.trim().isEmpty()) {
+        sql.append("AND er.exam_date = ? ");
+        params.add(java.sql.Date.valueOf(examDate));
+    }
+    
+    sql.append("ORDER BY er.exam_date DESC, er.start_time DESC");
+    
+    PreparedStatement ps = conn.prepareStatement(sql.toString(), 
+        ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+    
+    for (int i = 0; i < params.size(); i++) {
+        ps.setObject(i + 1, params.get(i));
+    }
+    
+    return ps.executeQuery();
+}
+
+// Get all exam register
+public ResultSet getAllExamRegister() throws SQLException {
+    String sql = "SELECT er.*, u.first_name, u.last_name, u.email, u.contact_no " +
+                 "FROM exam_register er " +
+                 "JOIN users u ON er.student_id = u.user_id " +
+                 "ORDER BY er.exam_date DESC, er.start_time DESC";
+    
+    PreparedStatement ps = conn.prepareStatement(sql, 
+        ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+    
+    return ps.executeQuery();
+}
+
+// Get exam register statistics
+public ResultSet getExamRegisterStatistics(int examId, String courseName, String examDate) throws SQLException {
+    StringBuilder sql = new StringBuilder();
+    sql.append("SELECT ");
+    sql.append("    COUNT(*) as total_students, ");
+    sql.append("    SUM(CASE WHEN end_time IS NOT NULL THEN 1 ELSE 0 END) as completed, ");
+    sql.append("    SUM(CASE WHEN end_time IS NULL THEN 1 ELSE 0 END) as in_progress, ");
+    sql.append("    AVG(CASE WHEN duration_seconds > 0 THEN duration_seconds ELSE NULL END) as avg_duration ");
+    sql.append("FROM exam_register er ");
+    sql.append("WHERE 1=1 ");
+    
+    ArrayList<Object> params = new ArrayList<>();
+    
+    if (examId > 0) {
+        sql.append("AND er.exam_id = ? ");
+        params.add(examId);
+    }
+    
+    if (courseName != null && !courseName.trim().isEmpty()) {
+        sql.append("AND er.course_name = ? ");
+        params.add(courseName.trim());
+    }
+    
+    if (examDate != null && !examDate.trim().isEmpty()) {
+        sql.append("AND er.exam_date = ? ");
+        params.add(java.sql.Date.valueOf(examDate));
+    }
+    
+    PreparedStatement ps = conn.prepareStatement(sql.toString());
+    
+    for (int i = 0; i < params.size(); i++) {
+        ps.setObject(i + 1, params.get(i));
+    }
+    
+    return ps.executeQuery();
+}
+
+// Get course list for dropdown
+public ArrayList<String> getCourseList() {
+    ArrayList<String> courses = new ArrayList<>();
+    try {
+        String sql = "SELECT DISTINCT course_name FROM courses WHERE course_status = 'Active' ORDER BY course_name";
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ResultSet rs = ps.executeQuery();
+        
+        while (rs.next()) {
+            String courseName = rs.getString("course_name");
+            if (courseName != null && !courseName.trim().isEmpty()) {
+                courses.add(courseName.trim());
+            }
+        }
+        
+        rs.close();
+        ps.close();
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return courses;
 }
 
     // Method to close resources

@@ -462,22 +462,134 @@
         }
     }
 
-    /* Scrollbar Styling */
-    .dashboard-sidebar::-webkit-scrollbar {
-        width: 4px; /* Thinner */
+        /* Scrollbar Styling */
+        .dashboard-sidebar::-webkit-scrollbar {
+            width: 4px; /* Thinner */
+        }
+
+        .dashboard-sidebar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        .dashboard-sidebar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 2px; /* Smaller radius */
+        }
+
+        .dashboard-sidebar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Exam Register Styles */
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    
-    .dashboard-sidebar::-webkit-scrollbar-track {
+
+    .filter-form .form-row {
+        display: flex;
+        gap: 15px;
+        align-items: flex-end;
+    }
+
+    .filter-form .form-group {
+        flex: 1;
+    }
+
+    .filter-form .form-group:last-child {
+        flex: 0 0 auto;
+    }
+
+    .data-table-container {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .table-header {
+        padding: 20px;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .table-info {
+        display: flex;
+        gap: 10px;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table th {
+        background: #f8fafc;
+        padding: 12px 15px;
+        text-align: left;
+        font-weight: 600;
+        color: #475569;
+        border-bottom: 2px solid #e2e8f0;
+    }
+
+    .data-table td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .data-table tr:hover {
         background: #f1f5f9;
     }
-    
-    .dashboard-sidebar::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 2px; /* Smaller radius */
+
+    .device-info {
+        font-family: monospace;
+        background: #f1f5f9;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.85em;
     }
-    
-    .dashboard-sidebar::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
+
+    .badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.85em;
+        font-weight: 500;
+    }
+
+    .badge-success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .badge-warning {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .badge-danger {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #64748b;
+    }
+
+    .empty-state i {
+        margin-bottom: 20px;
+        color: #cbd5e1;
+    }
+
+    .empty-state h3 {
+        margin-bottom: 10px;
+        color: #475569;
     }
 </style>
 </head>
@@ -621,6 +733,11 @@
                 }
             %>
         </div>
+        
+        <%-- Add this to your admin menu --%>
+        <a class="nav-item" href="exam-register.jsp">
+            <i class="fas fa-clipboard-list"></i><span>Exam Register</span>
+        </a>
     </main>
 </div>
 

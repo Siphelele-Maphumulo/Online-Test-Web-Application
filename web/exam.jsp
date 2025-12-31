@@ -2645,131 +2645,156 @@
             </form>
         </div>
             
-            <!-- CLEAR EXAM SESSION DATA -->
-            <script>
-                // Clear all exam session data when on course selection page
-                Object.keys(sessionStorage).forEach(function(key) {
-                    if(key.startsWith('examStartTime_')) {
-                        sessionStorage.removeItem(key);
-                    }
-                });
-                
-                // Clear all session storage to ensure clean state
-                sessionStorage.clear();
-                
-                // Show course info when selected
-                document.getElementById('courseSelect').addEventListener('change', function() {
-                    var selectedOption = this.options[this.selectedIndex];
-                    var courseInfo = document.getElementById('courseInfo');
-                    var courseInfoText = document.getElementById('courseInfoText');
-                    
-                    if(selectedOption.value) {
-                        var duration = selectedOption.getAttribute('data-duration') || '60';
-                        courseInfoText.textContent = 'This exam has a duration of ' + duration + ' minutes.';
-                        courseInfo.style.display = 'block';
-                    } else {
-                        courseInfo.style.display = 'none';
-                    }
-                });
-                
-                // Confirm before starting exam (using modal instead of alert)
-                document.getElementById('examStartForm').addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    var courseSelect = document.getElementById('courseSelect');
-                    if(!courseSelect.value) {
-                        alert('Please select a course.');
-                        return;
-                    }
-                    
-                    var selectedOption = courseSelect.options[courseSelect.selectedIndex];
-                    var courseName = selectedOption.value;
-                    var duration = selectedOption.getAttribute('data-duration');
-                    
-                    checkCourseStatus(courseName, function(isActive) {
-                        if (isActive) {
-                            document.getElementById('modalCourseName').textContent = courseName;
-                            document.getElementById('modalDuration').textContent = duration;
-                            document.getElementById('confirmationModal').style.display = 'flex';
-                        } else {
-                            document.getElementById('inactiveCourseName').textContent = courseName;
-                            document.getElementById('inactiveModal').style.display = 'flex';
-                        }
-                    });
-                });
-                
-                function checkCourseStatus(courseName, callback) {
-                console.log('Checking course status for:', courseName);
+<!-- CLEAR EXAM SESSION DATA -->
+<script>
+    // Clear all exam session data when on course selection page
+    Object.keys(sessionStorage).forEach(function(key) {
+        if(key.startsWith('examStartTime_')) {
+            sessionStorage.removeItem(key);
+        }
+    });
+    
+    // Clear all session storage to ensure clean state
+    sessionStorage.clear();
+    
+    // Show course info when selected
+    document.getElementById('courseSelect').addEventListener('change', function() {
+        var selectedOption = this.options[this.selectedIndex];
+        var courseInfo = document.getElementById('courseInfo');
+        var courseInfoText = document.getElementById('courseInfoText');
+        
+        if(selectedOption.value) {
+            var duration = selectedOption.getAttribute('data-duration') || '60';
+            courseInfoText.textContent = 'This exam has a duration of ' + duration + ' minutes.';
+            courseInfo.style.display = 'block';
+        } else {
+            courseInfo.style.display = 'none';
+        }
+    });
+    
+    // Check course status function
+    function checkCourseStatus(courseName, callback) {
+        console.log('Checking course status for:', courseName);
 
-                // Create form data
-                const formData = new FormData();
-                formData.append('page', 'exams');
-                formData.append('operation', 'checkCourseStatus');
-                formData.append('courseName', courseName);
-                formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+        // Get CSRF token
+        const csrfTokenInput = document.querySelector('input[name="csrf_token"]');
+        if (!csrfTokenInput || !csrfTokenInput.value) {
+            console.error('CSRF token not found');
+            callback(true); // Assume active on error
+            return;
+        }
 
-                console.log('Sending AJAX request to check course status...');
+        // Create form data
+        const formData = new FormData();
+        formData.append('page', 'exams');
+        formData.append('operation', 'checkCourseStatus');
+        formData.append('courseName', courseName);
+        formData.append('csrf_token', csrfTokenInput.value);
 
-                // Send AJAX request with timeout
-                const timeout = 5000; // 5 second timeout
+        console.log('Sending AJAX request to check course status...');
 
-                // Create abort controller for timeout
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), timeout);
+        // Send AJAX request with timeout
+        const timeout = 5000; // 5 second timeout
 
-                fetch('controller.jsp', {
-                    method: 'POST',
-                    body: formData,
-                    signal: controller.signal
-                })
-                .then(response => {
-                    clearTimeout(timeoutId);
-                    console.log('Response status:', response.status);
-                    console.log('Response ok:', response.ok);
+        // Create abort controller for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+            console.log('Request timeout');
+        }, timeout);
 
-                    if (!response.ok) {
-                        throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
-                    }
-                    return response.text();
-                })
-                .then(data => {
-                    console.log('Raw response data:', data);
-                    console.log('Response length:', data.length);
+        fetch('controller.jsp', {
+            method: 'POST',
+            body: formData,
+            signal: controller.signal
+        })
+        .then(response => {
+            clearTimeout(timeoutId);
+            console.log('Response status:', response.status);
+            console.log('Response ok:', response.ok);
 
-                    // Trim and parse response
-                    const trimmedData = data.trim();
-                    console.log('Trimmed data:', trimmedData);
-
-                    // Check if response is "true" or "false"
-                    if (trimmedData === 'true' || trimmedData === 'false') {
-                        const isActive = trimmedData === 'true';
-                        console.log('Course is active:', isActive);
-                        callback(isActive);
-                    } else {
-                        console.error('Unexpected response format:', trimmedData);
-                        // If we get an unexpected response, assume course is active
-                        // because getActiveCourseNames() already filtered inactive ones
-                        console.log('Assuming course is active due to unexpected response format');
-                        callback(true);
-                    }
-                })
-                .catch(error => {
-                    clearTimeout(timeoutId);
-                    console.error('Error checking course status:', error);
-                    console.error('Error name:', error.name);
-                    console.error('Error message:', error.message);
-
-                    // Show error message
-                    if (error.name === 'AbortError') {
-                        alert('Request timeout. Please try again.');
-                    } else {
-                        alert(`Error checking course status: ${error.message}. Please try again.`);
-                    }
-                    // Default to true on error (since getActiveCourseNames already filtered)
-                    callback(true);
-                });
+            if (!response.ok) {
+                throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
             }
-            </script>
+            return response.text();
+        })
+        .then(data => {
+            console.log('Raw response data:', data);
+            console.log('Response length:', data.length);
+
+            // Trim and parse response
+            const trimmedData = data.trim();
+            console.log('Trimmed data:', trimmedData);
+
+            // Check if response is "true" or "false"
+            if (trimmedData === 'true' || trimmedData === 'false') {
+                const isActive = trimmedData === 'true';
+                console.log('Course is active:', isActive);
+                callback(isActive);
+            } else {
+                console.error('Unexpected response format:', trimmedData);
+                // If we get an unexpected response, assume course is active
+                // because getActiveCourseNames() already filtered inactive ones
+                console.log('Assuming course is active due to unexpected response format');
+                callback(true);
+            }
+        })
+        .catch(error => {
+            clearTimeout(timeoutId);
+            console.error('Error checking course status:', error);
+            console.error('Error name:', error.name);
+            console.error('Error message:', error.message);
+
+            // Show error message only if it's not an abort error
+            if (error.name === 'AbortError') {
+                console.log('Request aborted due to timeout');
+            } else {
+                console.log('Error:', error.message);
+            }
+            // Default to true on error (since getActiveCourseNames already filtered)
+            callback(true);
+        });
+    }
+    
+    // Confirm before starting exam (using modal instead of alert)
+    document.getElementById('examStartForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        var courseSelect = document.getElementById('courseSelect');
+        if(!courseSelect || !courseSelect.value) {
+            alert('Please select a course.');
+            return;
+        }
+        
+        var selectedOption = courseSelect.options[courseSelect.selectedIndex];
+        var courseName = selectedOption.value;
+        var duration = selectedOption.getAttribute('data-duration') || '60';
+        
+        // Get modal elements
+        var confirmationModal = document.getElementById('confirmationModal');
+        var inactiveModal = document.getElementById('inactiveModal');
+        var modalCourseName = document.getElementById('modalCourseName');
+        var modalDuration = document.getElementById('modalDuration');
+        var inactiveCourseName = document.getElementById('inactiveCourseName');
+        
+        if (!confirmationModal || !inactiveModal || !modalCourseName || !modalDuration || !inactiveCourseName) {
+            console.error('Modal elements not found');
+            alert('System error: Modal elements not found. Please refresh the page.');
+            return;
+        }
+        
+        checkCourseStatus(courseName, function(isActive) {
+            if (isActive) {
+                modalCourseName.textContent = courseName;
+                modalDuration.textContent = duration + ' minutes';
+                confirmationModal.style.display = 'flex';
+            } else {
+                inactiveCourseName.textContent = courseName;
+                inactiveModal.style.display = 'flex';
+            }
+        });
+    });
+</script>
         <% } %>
     </main>
 </div>

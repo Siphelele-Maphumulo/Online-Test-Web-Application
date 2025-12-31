@@ -419,7 +419,7 @@ try {
     }
 
 /* =========================
-   EXAMS
+   EXAMS - START EXAM
    ========================= */
 } else if ("exams".equalsIgnoreCase(pageParam)) {
     String operation = nz(request.getParameter("operation"), "");
@@ -465,9 +465,24 @@ try {
         int examId = pDAO.startExam(coursename, userId);
         
         if (examId > 0) {
+            // REGISTER EXAM START
+            try {
+                String deviceIdentifier = pDAO.getDeviceIdentifier(request);
+                boolean registered = pDAO.registerExamStart(userId, examId, coursename, deviceIdentifier);
+                
+                // Optional: You can log to application log if needed
+                // application.log("Exam register entry created for student " + userId + " for exam " + examId);
+                
+            } catch (SQLException e) {
+                // Log error to application log
+                application.log("Error registering exam start: " + e.getMessage(), e);
+                // Continue even if registration fails - don't block exam start
+            }
+            
             // Set session attributes
             session.setAttribute("examStarted", "1");
             session.setAttribute("examId", examId);
+            session.setAttribute("examCourse", coursename);
             
             // Redirect to exam page with URL encoding
             String encodedCourseName = java.net.URLEncoder.encode(coursename, "UTF-8");
@@ -478,12 +493,20 @@ try {
         
     } else if ("submitted".equalsIgnoreCase(operation)) {
         try {
-            String time = java.time.LocalTime.now().truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
-                          .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+            String endTime = java.time.LocalTime.now().truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
+                           .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+            
             int size = Integer.parseInt(nz(request.getParameter("size"), "0"));
             if (session.getAttribute("examId") != null) {
                 int eId    = Integer.parseInt(session.getAttribute("examId").toString());
                 int tMarks = Integer.parseInt(nz(request.getParameter("totalmarks"), "0"));
+                
+                // Get student ID
+                int userId = 0;
+                Object userIdObj = session.getAttribute("userId");
+                if (userIdObj != null) {
+                    userId = Integer.parseInt(userIdObj.toString());
+                }
 
                 for (int i=0;i<size;i++){
                     String question = nz(request.getParameter("question"+i), "");
@@ -492,10 +515,24 @@ try {
                     pDAO.insertAnswer(eId, qid, question, ans);
                 }
 
-                pDAO.calculateResult(eId, tMarks, time, size);
+                pDAO.calculateResult(eId, tMarks, endTime, size);
+                
+                // REGISTER EXAM COMPLETION
+                if (userId > 0) {
+                    try {
+                        boolean registered = pDAO.registerExamCompletion(userId, eId, endTime);
+                        // Optional: Log completion
+                        // application.log("Exam completion registered for student " + userId + " for exam " + eId);
+                    } catch (SQLException e) {
+                        // Log error to application log
+                        application.log("Error registering exam completion: " + e.getMessage(), e);
+                        // Continue even if registration fails
+                    }
+                }
 
                 session.removeAttribute("examId");
                 session.removeAttribute("examStarted");
+                session.removeAttribute("examCourse");
 
                 response.sendRedirect("std-page.jsp?pgprt=1&eid="+eId+"&showresult=1");
             } else {
@@ -505,7 +542,6 @@ try {
             session.setAttribute("error","Error submitting exam: "+e.getMessage());
             response.sendRedirect("std-page.jsp");
         }
-        
     } else if ("checkCourseStatus".equalsIgnoreCase(operation)) {
         // Handle AJAX request to check if a course is active
         String courseNameToCheck = nz(request.getParameter("courseName"), "");

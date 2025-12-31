@@ -11,6 +11,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
 %>
 
+
 <!--Style-->
 <style>
     /* Use the same CSS Variables as the profile page */
@@ -863,7 +864,6 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                                                 data-exam-id="<%= examId %>"
                                                 data-student-name="<%= fullName %>"
                                                 data-course-name="<%= e.getcName() %>"
-                                                onclick="showDeleteModal(<%= examId %>, '<%= fullName %>', '<%= e.getcName() %>')"
                                                 style="font-size: 13px; padding: 8px 16px; margin: 2px;">
                                             <i class="fas fa-trash"></i> Delete
                                         </button>
@@ -1217,7 +1217,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
             });
         });
         
-        // Delete button click handler - UPDATED
+        // Delete button click handler - FIXED VERSION
         document.querySelectorAll('.delete-btn').forEach(button => {
             button.addEventListener('click', function(e) {
                 e.stopPropagation(); // Prevent event bubbling
@@ -1227,14 +1227,15 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                 let courseName = this.getAttribute('data-course-name');
                 
                 // Debug log
-                console.log('Delete clicked:', {examId, studentName, courseName});
+                console.log('Delete clicked - Raw data:', {examId, studentName, courseName});
                 
-                // If data attributes are empty, try to get from row
-                if (!studentName || !courseName) {
+                // If data attributes are empty or contain problematic characters, get from row
+                if (!studentName || studentName === 'null' || studentName.trim() === '') {
                     const row = this.closest('tr');
                     if (row) {
-                        studentName = row.querySelector('td:nth-child(1)')?.textContent || studentName;
-                        courseName = row.querySelector('td:nth-child(5)')?.textContent || courseName;
+                        studentName = row.querySelector('td:nth-child(1)')?.textContent.trim() || 'Unknown Student';
+                        courseName = row.querySelector('td:nth-child(5)')?.textContent.trim() || 'Unknown Course';
+                        console.log('Fetched from row:', {studentName, courseName});
                     }
                 }
                 
@@ -1321,11 +1322,13 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     }
     
     function showDeleteModal(examId, studentName, courseName) {
-        deleteExamId = examId;
-        deleteStudentName = studentName;
-        deleteCourseName = courseName;
+        console.log('showDeleteModal called with:', {
+            examId: examId,
+            studentName: studentName,
+            courseName: courseName
+        });
         
-        console.log('Showing modal with:', {examId, studentName, courseName});
+        deleteExamId = examId;
         
         const modal = document.getElementById('deleteModal');
         if (!modal) {
@@ -1333,33 +1336,77 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
             alert('Error: Modal not found. Please refresh the page.');
             return;
         }
-        
+
         const modalMessage = document.getElementById('deleteModalMessage');
         if (!modalMessage) {
             console.error('Modal message element not found!');
             alert('Error: Modal message element not found.');
             return;
         }
+
+        // Clean up text for display - handle empty/null values
+        const cleanStudentName = studentName && studentName !== 'null' ? 
+            escapeHtml(studentName.trim()) : 'Unknown Student';
+        const cleanCourseName = courseName && courseName !== 'null' ? 
+            escapeHtml(courseName.trim()) : 'Unknown Course';
         
-        // Clean up text - replace any problematic characters
-        const cleanStudentName = studentName ? studentName.replace(/'/g, "\\'") : 'Unknown Student';
-        const cleanCourseName = courseName ? courseName.replace(/'/g, "\\'") : 'Unknown Course';
-        
-        modalMessage.innerHTML = `Are you sure you want to delete the exam result for:<br><br>
-                                 <strong>Student:</strong> ${cleanStudentName}<br>
-                                 <strong>Course:</strong> ${cleanCourseName}<br>
-                                 <strong>Exam ID:</strong> ${examId}<br><br>
-                                 <span style="color: #dc3545; font-weight: bold;">
-                                 <i class="fas fa-exclamation-triangle"></i> This action cannot be undone!</span>`;
+        console.log('Cleaned values:', {cleanStudentName, cleanCourseName});
+
+        modalMessage.innerHTML = `
+            <div style="text-align: left;">
+                <p>Are you sure you want to delete the following exam result?</p>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                    <p><strong>Student:</strong> ${cleanStudentName}</p>
+                    <p><strong>Course:</strong> ${cleanCourseName}</p>
+                    <p><strong>Exam ID:</strong> ${examId}</p>
+                </div>
+                <p style="color: #dc3545; font-weight: bold;">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    This action will permanently delete:<br>
+                    ? The exam record<br>
+                    ? All related answers<br>
+                    ? This cannot be undone!
+                </p>
+            </div>`;
 
         modal.style.display = 'block';
-        console.log('Modal should now be visible');
+        
+        // Add fade-in animation
+        modal.style.opacity = 0;
+        modal.style.transition = 'opacity 0.3s';
+        setTimeout(() => {
+            modal.style.opacity = 1;
+        }, 10);
+    }
+
+    // Helper function to escape HTML special characters
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Optional: AJAX function to fetch exam details
+    function fetchExamDetails(examId) {
+        fetch(`controller.jsp?page=results&operation=getDetails&eid=${examId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update modal with additional details
+                    updateModalWithDetails(data.details);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching exam details:', error);
+            });
     }
     
     function closeDeleteModal() {
         const modal = document.getElementById('deleteModal');
         if (modal) {
             modal.style.display = 'none';
+            modal.style.opacity = 0;
         }
         deleteExamId = null;
         deleteStudentName = null;
@@ -1653,6 +1700,21 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
             closeDeleteModal();
         }
     });
+    
+    // Debug function to check button data attributes
+    function debugButtonData() {
+        document.querySelectorAll('.delete-btn').forEach((button, index) => {
+            console.log(`Button ${index}:`, {
+                examId: button.getAttribute('data-exam-id'),
+                studentName: button.getAttribute('data-student-name'),
+                courseName: button.getAttribute('data-course-name'),
+                innerHTML: button.innerHTML
+            });
+        });
+    }
+    
+    // Call debug function on load
+    setTimeout(debugButtonData, 1000);
 </script>
 
 <div id="deleteConfirmationModal" style="display:none; position:fixed; z-index:1001; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.4);">
