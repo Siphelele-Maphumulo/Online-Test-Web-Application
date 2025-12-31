@@ -810,7 +810,7 @@ for (User user : studentList) {
             
             <!-- Search and Actions Bar -->
             <div class="actions-bar">
-                <a href="signup.jsp?from=account&user_type=<%= currentUser.getType() %>" class="btn btn-success">
+                <a href="signup.jsp?from=account&user_type=student" class="btn btn-success">
                     <i class="fas fa-plus-circle"></i>
                     Add New Student
                 </a>
