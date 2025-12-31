@@ -847,75 +847,64 @@ public ArrayList<User> getAllLecturers() {
         return examId;
     }
 
-     public ArrayList<Exams> getActiveCourses() {
-        ArrayList<Exams> list = new ArrayList<>();
+    // In DatabaseClass.java
+    public ArrayList<String> getActiveCourseNames() {
+        ArrayList<String> courseNames = new ArrayList<>();
         PreparedStatement ps = null;
         ResultSet rs = null;
 
         try {
-            // Query courses table instead of exams table for active status
-            String sql = "SELECT c.course_id, c.course_name, c.total_marks, c.time, c.exam_date, " +
-                         "c.is_active, COALESCE(e.status, 'Inactive') as exam_status " +
-                         "FROM courses c " +
-                         "LEFT JOIN exams e ON c.course_name = e.cname " +
-                         "WHERE c.is_active = 1 " +  // Only active courses
-                         "ORDER BY c.course_name";
-
+            String sql = "SELECT DISTINCT course_name FROM courses WHERE is_active = 1 ORDER BY course_name";
             ps = conn.prepareStatement(sql);
             rs = ps.executeQuery();
 
             while(rs.next()){
-                Exams e = new Exams();
-                e.setcName(rs.getString("course_name"));
-                e.setStatus(rs.getString("exam_status")); // This comes from exams table or defaults to 'Inactive'
-                e.setTotalMarks(rs.getInt("total_marks"));
-                e.setExamDate(rs.getString("exam_date"));
-
-                // If you have these setters in your Exams class, add them:
-                // e.setCourseId(rs.getInt("course_id"));
-                // e.setDuration(rs.getInt("time"));
-
-                list.add(e);
+                courseNames.add(rs.getString("course_name"));
             }
         } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "getActiveCourses failed", ex);
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "getActiveCourseNames failed", ex);
         } finally {
             try {
                 if (rs != null) rs.close();
                 if (ps != null) ps.close();
             } catch (SQLException ex) {
-                Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in getActiveCourses", ex);
+                Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in getActiveCourseNames", ex);
             }
         }
 
-        return list;
+        return courseNames;
     }
 
-    public boolean isCourseActive(String courseName) {
-        PreparedStatement ps = null;
-        ResultSet rs = null;
+public boolean isCourseActive(String courseName) {
+    PreparedStatement ps = null;
+    ResultSet rs = null;
 
+    try {
+        // SIMPLIFIED: Just check is_active column in courses table
+        String sql = "SELECT is_active FROM courses WHERE course_name = ?";
+        ps = conn.prepareStatement(sql);
+        ps.setString(1, courseName);
+        rs = ps.executeQuery();
+
+        if (rs.next()) {
+            int isActive = rs.getInt("is_active");
+            return isActive == 1;
+        }
+        
+        return false; // Course not found
+
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "isCourseActive failed for course: " + courseName, ex);
+        return false;
+    } finally {
         try {
-            // Check if course is active in courses table
-            String sql = "SELECT 1 FROM courses WHERE course_name = ? AND is_active = 1 LIMIT 1";
-            ps = conn.prepareStatement(sql);
-            ps.setString(1, courseName);
-            rs = ps.executeQuery();
-
-            return rs.next(); // Returns true if active course exists
-
+            if (rs != null) rs.close();
+            if (ps != null) ps.close();
         } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "isCourseActive failed for course: " + courseName, ex);
-            return false;
-        } finally {
-            try {
-                if (rs != null) rs.close();
-                if (ps != null) ps.close();
-            } catch (SQLException ex) {
-                Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in isCourseActive", ex);
-            }
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in isCourseActive", ex);
         }
     }
+}
     
 public int updateStudent(int uId, String fName, String lName, String uName, String email, String pass,
         String contact, String city, String address, String userType) {
@@ -1148,9 +1137,6 @@ public ArrayList<String> getAllCourseNames() {
     
     return courses;
 }
-
-
-
 
     
 public ArrayList getAllCourses() {
@@ -1758,6 +1744,8 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
      
      return c;
     }
+    
+    
     public int getTotalMarksByName(String cName){
      int marks=0;
      try{

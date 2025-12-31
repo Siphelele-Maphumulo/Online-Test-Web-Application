@@ -2553,7 +2553,13 @@
                         <i class="fas fa-trash"></i> Delete Result
                     </button>-->
                 </div>
-                
+                                <!-- Action Buttons -->
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="std-page.jsp?pgprt=2&eid=<%= result.getExamId() %>" class="action-btn" style="background: linear-gradient(135deg, #4a90e2, #357abd); margin-right: 10px;">
+                        <i class="fas fa-eye"></i>
+                        View Details
+                    </a>
+                </div>
                 <!-- RELAUNCH SECTION -->
                 <div style="margin-top: 30px; padding: 20px; background: #f8fafc; border-radius: 10px; text-align: center; border-top: 2px solid #e2e8f0;">
                     <p style="margin-bottom: 20px; color: #64748b;">Ready to take another exam? Select a course below.</p>
@@ -2602,22 +2608,25 @@
                 <label class="form-label"><i class="fas fa-book"></i> Select Course</label>
                 <select name="coursename" class="form-select" required id="courseSelect">
                     <option value="">Choose a course...</option>
-                    <% 
-                        // Get only ACTIVE courses
-                        ArrayList<myPackage.classes.Exams> activeCourses = pDAO.getActiveCourses();
-                        if (activeCourses != null && !activeCourses.isEmpty()) {
-                            for(myPackage.classes.Exams course : activeCourses){ 
-                                int duration = pDAO.getExamDuration(course.getCourseName());
-                    %>
-                    <option value="<%= course.getCourseName() %>" data-duration="<%= duration %>">
-                        <%= course.getCourseName() %> (<%= formatDuration(duration) %>)
-                    </option>
-                    <% 
-                            }
-                        } else {
-                    %>
-                    <option value="" disabled>No active exams available</option>
-                    <% } %>
+        
+            <% 
+                // Get only ACTIVE courses - using the new method
+                ArrayList<String> activeCourseNames = pDAO.getActiveCourseNames();
+                if (activeCourseNames != null && !activeCourseNames.isEmpty()) {
+                    for(String courseName : activeCourseNames){ 
+                        if (courseName != null && !courseName.trim().isEmpty()) {
+                            int duration = pDAO.getExamDuration(courseName);
+            %>
+            <option value="<%= courseName %>" data-duration="<%= duration %>">
+                <%= courseName %> (<%= formatDuration(duration) %>)
+            </option>
+            <% 
+                        }
+                    }
+                } else {
+            %>
+            <option value="" disabled>No active exams available</option>
+            <% } %>
                 </select>
 
                 <!-- Course Info Display -->
@@ -2627,7 +2636,7 @@
                 </div>
 
                 <!-- No Exams Message -->
-                <% if (activeCourses == null || activeCourses.isEmpty()) { %>
+                <% if (activeCourseNames == null || activeCourseNames.isEmpty()) { %>
                 <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center; border: 1px solid #e2e8f0;">
                     <i class="fas fa-calendar-times" style="color: #64748b; font-size: 24px; margin-bottom: 10px;"></i>
                     <p style="color: #64748b; margin: 0;">No active exams are currently available. Please check back later.</p>
@@ -2635,11 +2644,10 @@
                 <% } %>
 
                 <button type="submit" class="start-exam-btn" id="startExamBtn" 
-                        <% if (activeCourses == null || activeCourses.isEmpty()) { %>disabled<% } %>>
+                        <% if (activeCourseNames == null || activeCourseNames.isEmpty()) { %>disabled<% } %>>
                     <i class="fas fa-play"></i> Start Exam
                 </button>
             </form>
-</div>
         </div>
             
             <!-- CLEAR EXAM SESSION DATA -->
@@ -2696,56 +2704,76 @@
                 });
                 
                 function checkCourseStatus(courseName, callback) {
-                    console.log('Checking course status for:', courseName);
+                console.log('Checking course status for:', courseName);
 
-                    // Create form data
-                    const formData = new FormData();
-                    formData.append('page', 'exams');
-                    formData.append('operation', 'checkCourseStatus');
-                    formData.append('courseName', courseName);
-                    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+                // Create form data
+                const formData = new FormData();
+                formData.append('page', 'exams');
+                formData.append('operation', 'checkCourseStatus');
+                formData.append('courseName', courseName);
+                formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
 
-                    console.log('Sending AJAX request to check course status...');
+                console.log('Sending AJAX request to check course status...');
 
-                    // Send AJAX request with timeout
-                    const timeout = 5000; // 5 second timeout
+                // Send AJAX request with timeout
+                const timeout = 5000; // 5 second timeout
 
-                    // Create abort controller for timeout
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), timeout);
+                // Create abort controller for timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-                    fetch('controller.jsp', {
-                        method: 'POST',
-                        body: formData,
-                        signal: controller.signal
-                    })
-                    .then(response => {
-                        clearTimeout(timeoutId);
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok');
-                        }
-                        return response.text();
-                    })
-                    .then(data => {
-                        console.log('Raw response data:', data);
-                        // Parse response (should be "true" or "false")
-                        const isActive = data.trim().toLowerCase() === 'true';
+                fetch('controller.jsp', {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal
+                })
+                .then(response => {
+                    clearTimeout(timeoutId);
+                    console.log('Response status:', response.status);
+                    console.log('Response ok:', response.ok);
+
+                    if (!response.ok) {
+                        throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
+                    }
+                    return response.text();
+                })
+                .then(data => {
+                    console.log('Raw response data:', data);
+                    console.log('Response length:', data.length);
+
+                    // Trim and parse response
+                    const trimmedData = data.trim();
+                    console.log('Trimmed data:', trimmedData);
+
+                    // Check if response is "true" or "false"
+                    if (trimmedData === 'true' || trimmedData === 'false') {
+                        const isActive = trimmedData === 'true';
                         console.log('Course is active:', isActive);
                         callback(isActive);
-                    })
-                    .catch(error => {
-                        clearTimeout(timeoutId);
-                        console.error('Error checking course status:', error);
-                        // Show error message
-                        if (error.name === 'AbortError') {
-                            alert('Request timeout. Please try again.');
-                        } else {
-                            alert('Error checking course status. Please try again.');
-                        }
-                        // Default to false on error
-                        callback(false);
-                    });
-                }
+                    } else {
+                        console.error('Unexpected response format:', trimmedData);
+                        // If we get an unexpected response, assume course is active
+                        // because getActiveCourseNames() already filtered inactive ones
+                        console.log('Assuming course is active due to unexpected response format');
+                        callback(true);
+                    }
+                })
+                .catch(error => {
+                    clearTimeout(timeoutId);
+                    console.error('Error checking course status:', error);
+                    console.error('Error name:', error.name);
+                    console.error('Error message:', error.message);
+
+                    // Show error message
+                    if (error.name === 'AbortError') {
+                        alert('Request timeout. Please try again.');
+                    } else {
+                        alert(`Error checking course status: ${error.message}. Please try again.`);
+                    }
+                    // Default to true on error (since getActiveCourseNames already filtered)
+                    callback(true);
+                });
+            }
             </script>
         <% } %>
     </main>
@@ -2796,6 +2824,7 @@
         </div>
         <div class="modal-footer">
             <button id="closeInactiveModal" class="btn-secondary">Close</button>
+            <button id="selectOtherCourse" class="btn-outline">Select Another Course</button>
         </div>
     </div>
 </div>
@@ -3023,18 +3052,4 @@
             }
         }
     });
-</script>
-
-<script>
-// Test the isCourseActive function directly
-function testCourseStatus() {
-    const testCourses = ['Python Entry Level 2', 'ISTQB Exam Prep'];
-    testCourses.forEach(course => {
-        checkCourseStatus(course, function(isActive) {
-            console.log('TEST - Course:', course, 'Active:', isActive);
-        });
-    });
-}
-// Run test when page loads
-window.addEventListener('load', testCourseStatus);
 </script>

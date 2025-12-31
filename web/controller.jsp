@@ -422,62 +422,60 @@ try {
    EXAMS
    ========================= */
 } else if ("exams".equalsIgnoreCase(pageParam)) {
-
     String operation = nz(request.getParameter("operation"), "");
-    if (page.equals("exams")) {
-        if (operation.equals("startexam")) {
-            // Verify CSRF token
-            String csrfToken = request.getParameter("csrf_token");
-            String sessionToken = (String) session.getAttribute("csrf_token");
-            
-            if (csrfToken == null || !csrfToken.equals(sessionToken)) {
-                response.sendRedirect("std-page.jsp?pgprt=1&error=Invalid CSRF token");
-                return;
-            }
-            
-            String coursename = request.getParameter("coursename");
-            
-            // Check if course is active
-            boolean isActive = pDAO.isCourseActive(coursename);
-            
-            if (!isActive) {
-                response.sendRedirect("std-page.jsp?pgprt=1&error=This exam is not active");
-                return;
-            }
-            
-            // Start new exam and get the exam ID
-            int userId = 0;
-            Object userIdObj = session.getAttribute("userId");
-            if (userIdObj != null) {
-                userId = Integer.parseInt(userIdObj.toString());
-            } else {
-                // Try to get user ID from username
-                String username = (String) session.getAttribute("uname");
-                if (username != null) {
-                    userId = pDAO.getUserId(username);
-                }
-            }
-            
-            if (userId == 0) {
-                response.sendRedirect("std-page.jsp?pgprt=1&error=User not logged in");
-                return;
-            }
-            
-            int examId = pDAO.startExam(coursename, userId);
-            
-            if (examId > 0) {
-                // Set session attributes
-                session.setAttribute("examStarted", "1");
-                session.setAttribute("examId", examId);
-                
-                // Redirect to exam page with URL encoding
-                String encodedCourseName = java.net.URLEncoder.encode(coursename, "UTF-8");
-                response.sendRedirect("std-page.jsp?pgprt=1&coursename=" + encodedCourseName);
-            } else {
-                response.sendRedirect("std-page.jsp?pgprt=1&error=Failed to start exam");
+    
+    if ("startexam".equalsIgnoreCase(operation)) {
+        // Verify CSRF token
+        String csrfToken = request.getParameter("csrf_token");
+        String sessionToken = (String) session.getAttribute("csrf_token");
+        
+        if (csrfToken == null || !csrfToken.equals(sessionToken)) {
+            response.sendRedirect("std-page.jsp?pgprt=1&error=Invalid CSRF token");
+            return;
+        }
+        
+        String coursename = request.getParameter("coursename");
+        
+        // Check if course is active
+        boolean isActive = pDAO.isCourseActive(coursename);
+        
+        if (!isActive) {
+            response.sendRedirect("std-page.jsp?pgprt=1&error=This exam is not active");
+            return;
+        }
+        
+        // Start new exam and get the exam ID
+        int userId = 0;
+        Object userIdObj = session.getAttribute("userId");
+        if (userIdObj != null) {
+            userId = Integer.parseInt(userIdObj.toString());
+        } else {
+            // Try to get user ID from username
+            String username = (String) session.getAttribute("uname");
+            if (username != null) {
+                userId = pDAO.getUserId(username);
             }
         }
-
+        
+        if (userId == 0) {
+            response.sendRedirect("std-page.jsp?pgprt=1&error=User not logged in");
+            return;
+        }
+        
+        int examId = pDAO.startExam(coursename, userId);
+        
+        if (examId > 0) {
+            // Set session attributes
+            session.setAttribute("examStarted", "1");
+            session.setAttribute("examId", examId);
+            
+            // Redirect to exam page with URL encoding
+            String encodedCourseName = java.net.URLEncoder.encode(coursename, "UTF-8");
+            response.sendRedirect("std-page.jsp?pgprt=1&coursename=" + encodedCourseName);
+        } else {
+            response.sendRedirect("std-page.jsp?pgprt=1&error=Failed to start exam");
+        }
+        
     } else if ("submitted".equalsIgnoreCase(operation)) {
         try {
             String time = java.time.LocalTime.now().truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
@@ -517,8 +515,6 @@ try {
             response.getWriter().write(String.valueOf(isActive));
             return;
         }
-    
-    
     } else {
         session.setAttribute("error", "Invalid operation for exams");
         response.sendRedirect("std-page.jsp");
