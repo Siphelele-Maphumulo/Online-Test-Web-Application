@@ -391,287 +391,287 @@ public ArrayList<User> getAllLecturers() {
         return str;
     }
 
-public User getUserByUsername(String username) {
-    PreparedStatement ps = null;
-    ResultSet rs = null;
-    try {
-        String sql = "SELECT * FROM users WHERE user_name = ?";
-        ps = conn.prepareStatement(sql);
-        ps.setString(1, username);
-        rs = ps.executeQuery();
-        
-        if (rs.next()) {
-            return new User(
-                rs.getInt("user_id"),
-                rs.getString("first_name"),
-                rs.getString("last_name"),
-                rs.getString("user_name"),
-                rs.getString("email"),
-                rs.getString("password"),
-                rs.getString("user_type"),
-                rs.getString("contact_no"),
-                rs.getString("city"),
-                rs.getString("address"),
-                null
-            );
-        }
-    } catch (SQLException e) {
-        e.printStackTrace();
-    } finally {
+    public User getUserByUsername(String username) {
+        PreparedStatement ps = null;
+        ResultSet rs = null;
         try {
-            if (rs != null) rs.close();
-            if (ps != null) ps.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-    return null;
-}
+            String sql = "SELECT * FROM users WHERE user_name = ?";
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, username);
+            rs = ps.executeQuery();
 
-public User getUserByEmail(String email) {
-    PreparedStatement ps = null;
-    ResultSet rs = null;
-    try {
-        String sql = "SELECT * FROM users WHERE email = ?";
-        ps = conn.prepareStatement(sql);
-        ps.setString(1, email);
-        rs = ps.executeQuery();
-        
-        if (rs.next()) {
-            return new User(
-                rs.getInt("user_id"),
-                rs.getString("first_name"),
-                rs.getString("last_name"),
-                rs.getString("user_name"),
-                rs.getString("email"),
-                rs.getString("password"),
-                rs.getString("user_type"),
-                rs.getString("contact_no"),
-                rs.getString("city"),
-                rs.getString("address"),
-                null
-            );
-        }
-    } catch (SQLException e) {
-        e.printStackTrace();
-    } finally {
-        try {
-            if (rs != null) rs.close();
-            if (ps != null) ps.close();
+            if (rs.next()) {
+                return new User(
+                    rs.getInt("user_id"),
+                    rs.getString("first_name"),
+                    rs.getString("last_name"),
+                    rs.getString("user_name"),
+                    rs.getString("email"),
+                    rs.getString("password"),
+                    rs.getString("user_type"),
+                    rs.getString("contact_no"),
+                    rs.getString("city"),
+                    rs.getString("address"),
+                    null
+                );
+            }
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (ps != null) ps.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
-    }
-    return null;
-}
-     
-public User getUserDetails(String userId) {
-    User userDetails = null;
-    
-    if (userId == null || userId.trim().isEmpty()) {
         return null;
     }
-    
-    PreparedStatement pstm = null;
-    ResultSet rs = null;
-    
-    try {
-        // Improved query with explicit column selection
-        String sql = "SELECT " +
-                     "u.user_id AS uid, u.first_name AS ufname, u.last_name AS ulname, " +
-                     "u.user_name AS uname, u.email AS uemail, u.password AS upass, " +
-                     "u.user_type AS utype, u.contact_no AS ucontact, u.city AS ucity, " +
-                     "u.address AS uaddr, " +
-                     "l.user_id AS lid, l.course_name AS lcourse " +
-                     "FROM users u " +
-                     "LEFT JOIN lectures l ON u.user_id = l.user_id " +
-                     "WHERE u.user_id = ?";
-        
-        pstm = conn.prepareStatement(sql);
-        pstm.setString(1, userId);
-        rs = pstm.executeQuery();
-        
-        if (rs.next()) {
-            // Determine if user is a lecturer (has entry in lectures table)
-            boolean isLecturer = rs.getInt("lid") > 0;
-            
-            // Get common fields from users table
-            int user_id = rs.getInt("uid");
-            String firstName = rs.getString("ufname");
-            String lastName = rs.getString("ulname");
-            String userName = rs.getString("uname");
-            String email = rs.getString("uemail");
-            String password = rs.getString("upass");
-            String userType = rs.getString("utype");
-            String contactNo = rs.getString("ucontact");
-            String city = rs.getString("ucity");
-            String address = rs.getString("uaddr");
-            
-            // Get course name if lecturer
-            String courseName = null;
-            if (isLecturer) {
-                courseName = rs.getString("lcourse");
-                // If user type is not already set to lecture, update it
-                if (!"lecture".equalsIgnoreCase(userType)) {
-                    userType = "lecture";
-                }
-            }
-            
-            // Handle null values
-            firstName = (firstName != null) ? firstName : "";
-            lastName = (lastName != null) ? lastName : "";
-            userName = (userName != null) ? userName : "";
-            email = (email != null) ? email : "";
-            password = (password != null) ? password : "";
-            userType = (userType != null) ? userType : "student";
-            contactNo = (contactNo != null) ? contactNo : "";
-            city = (city != null) ? city : "";
-            address = (address != null) ? address : "";
-            courseName = (courseName != null) ? courseName : null;
-            
-            userDetails = new User(
-                user_id,
-                firstName,
-                lastName,
-                userName,
-                email,
-                password,
-                userType,
-                contactNo,
-                city,
-                address,
-                courseName
-            );
-        }
-        
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error getting user details for ID: " + userId, ex);
-    } finally {
-        // Close resources properly
+
+    public User getUserByEmail(String email) {
+        PreparedStatement ps = null;
+        ResultSet rs = null;
         try {
-            if (rs != null) rs.close();
-            if (pstm != null) pstm.close();
+            String sql = "SELECT * FROM users WHERE email = ?";
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, email);
+            rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return new User(
+                    rs.getInt("user_id"),
+                    rs.getString("first_name"),
+                    rs.getString("last_name"),
+                    rs.getString("user_name"),
+                    rs.getString("email"),
+                    rs.getString("password"),
+                    rs.getString("user_type"),
+                    rs.getString("contact_no"),
+                    rs.getString("city"),
+                    rs.getString("address"),
+                    null
+                );
+            }
         } catch (SQLException e) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error closing resources", e);
+            e.printStackTrace();
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (ps != null) ps.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
+        return null;
     }
-    
-    return userDetails;
-}
      
-// add new lecturer/staff
-public void addNewStaff(String staffNum, String email, String fullNames, String course_name) {
-    String sql = "INSERT INTO staff (staffNum, email, fullNames, course_name) VALUES (?, ?, ?, ?)";
-    try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-        pstmt.setString(1, staffNum);
-        pstmt.setString(2, email);
-        pstmt.setString(3, fullNames);
-        pstmt.setString(4, course_name);
-        pstmt.executeUpdate();
-    } catch (SQLException e) {
-        e.printStackTrace();
-    }
-}
+    public User getUserDetails(String userId) {
+        User userDetails = null;
 
-
-    
-public void addNewUser(String fName, String lName, String uName, String email, String pass,
-                       String contact, String city, String address, String userTypeParam) {
-    PreparedStatement pstmUsers = null;
-    PreparedStatement pstmInsert = null;
-    ResultSet rsUserId = null;
-
-    try {
-        conn.setAutoCommit(false);
-        
-        String userType = "student";
-        if (userTypeParam != null && !userTypeParam.isEmpty()){
-            userType = userTypeParam;
+        if (userId == null || userId.trim().isEmpty()) {
+            return null;
         }
 
-        // 2. Insert into users table (DO NOT include course_name here)
-        String sqlUsers = "INSERT INTO users (first_name, last_name, user_name, email, password, user_type, contact_no, city, address) " +
-                          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        pstmUsers = conn.prepareStatement(sqlUsers, Statement.RETURN_GENERATED_KEYS);
-        pstmUsers.setString(1, fName);
-        pstmUsers.setString(2, lName);
-        pstmUsers.setString(3, uName);
-        pstmUsers.setString(4, email);
-        pstmUsers.setString(5, pass);
-        pstmUsers.setString(6, userType);
-        pstmUsers.setString(7, contact);
-        pstmUsers.setString(8, city);
-        pstmUsers.setString(9, address);
-        pstmUsers.executeUpdate();
+        PreparedStatement pstm = null;
+        ResultSet rs = null;
 
-        // 3. Get the generated user_id
-        rsUserId = pstmUsers.getGeneratedKeys();
-        if (!rsUserId.next()) {
-            throw new SQLException("Failed to retrieve generated user_id for " + email);
-        }
-        int userId = rsUserId.getInt(1);
+        try {
+            // Improved query with explicit column selection
+            String sql = "SELECT " +
+                         "u.user_id AS uid, u.first_name AS ufname, u.last_name AS ulname, " +
+                         "u.user_name AS uname, u.email AS uemail, u.password AS upass, " +
+                         "u.user_type AS utype, u.contact_no AS ucontact, u.city AS ucity, " +
+                         "u.address AS uaddr, " +
+                         "l.user_id AS lid, l.course_name AS lcourse " +
+                         "FROM users u " +
+                         "LEFT JOIN lectures l ON u.user_id = l.user_id " +
+                         "WHERE u.user_id = ?";
 
-        // 4. Insert into students or lectures table
-        String sqlInsert;
-        if ("student".equals(userType)) {
-            sqlInsert = "INSERT INTO students (user_id, first_name, last_name, user_name, email, password, user_type, contact_no, city, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            pstmInsert = conn.prepareStatement(sqlInsert);
-            pstmInsert.setInt(1, userId);
-            pstmInsert.setString(2, fName);
-            pstmInsert.setString(3, lName);
-            pstmInsert.setString(4, uName);
-            pstmInsert.setString(5, email);
-            pstmInsert.setString(6, pass);
-            pstmInsert.setString(7, userType);
-            pstmInsert.setString(8, contact);
-            pstmInsert.setString(9, city);
-            pstmInsert.setString(10, address);
-        } else { // It's a lecturer
-            String courseName = "";
-            try (PreparedStatement pstmCheckStaff = conn.prepareStatement("SELECT course_name FROM staff WHERE email = ?")) {
-                pstmCheckStaff.setString(1, email);
-                try(ResultSet rsCheck = pstmCheckStaff.executeQuery()){
-                    if (rsCheck.next()) {
-                        courseName = rsCheck.getString("course_name");
+            pstm = conn.prepareStatement(sql);
+            pstm.setString(1, userId);
+            rs = pstm.executeQuery();
+
+            if (rs.next()) {
+                // Determine if user is a lecturer (has entry in lectures table)
+                boolean isLecturer = rs.getInt("lid") > 0;
+
+                // Get common fields from users table
+                int user_id = rs.getInt("uid");
+                String firstName = rs.getString("ufname");
+                String lastName = rs.getString("ulname");
+                String userName = rs.getString("uname");
+                String email = rs.getString("uemail");
+                String password = rs.getString("upass");
+                String userType = rs.getString("utype");
+                String contactNo = rs.getString("ucontact");
+                String city = rs.getString("ucity");
+                String address = rs.getString("uaddr");
+
+                // Get course name if lecturer
+                String courseName = null;
+                if (isLecturer) {
+                    courseName = rs.getString("lcourse");
+                    // If user type is not already set to lecture, update it
+                    if (!"lecture".equalsIgnoreCase(userType)) {
+                        userType = "lecture";
                     }
                 }
-            }
-            // For lecturers, insert into lectures table
-            sqlInsert = "INSERT INTO lectures (user_id, first_name, last_name, user_name, email, password, user_type, contact_no, city, address, course_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            pstmInsert = conn.prepareStatement(sqlInsert);
-            pstmInsert.setInt(1, userId);
-            pstmInsert.setString(2, fName);
-            pstmInsert.setString(3, lName);
-            pstmInsert.setString(4, uName);
-            pstmInsert.setString(5, email);
-            pstmInsert.setString(6, pass);
-            pstmInsert.setString(7, userType);
-            pstmInsert.setString(8, contact);
-            pstmInsert.setString(9, city);
-            pstmInsert.setString(10, address);
-            pstmInsert.setString(11, courseName != null ? courseName : "");
-        }
-        pstmInsert.executeUpdate();
 
-        conn.commit();
-    } catch (SQLException ex) {
-        try {
-            if (conn != null) conn.rollback();
-        } catch (SQLException rollbackEx) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Rollback failed", rollbackEx);
+                // Handle null values
+                firstName = (firstName != null) ? firstName : "";
+                lastName = (lastName != null) ? lastName : "";
+                userName = (userName != null) ? userName : "";
+                email = (email != null) ? email : "";
+                password = (password != null) ? password : "";
+                userType = (userType != null) ? userType : "student";
+                contactNo = (contactNo != null) ? contactNo : "";
+                city = (city != null) ? city : "";
+                address = (address != null) ? address : "";
+                courseName = (courseName != null) ? courseName : null;
+
+                userDetails = new User(
+                    user_id,
+                    firstName,
+                    lastName,
+                    userName,
+                    email,
+                    password,
+                    userType,
+                    contactNo,
+                    city,
+                    address,
+                    courseName
+                );
+            }
+
+        } catch (SQLException ex) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error getting user details for ID: " + userId, ex);
+        } finally {
+            // Close resources properly
+            try {
+                if (rs != null) rs.close();
+                if (pstm != null) pstm.close();
+            } catch (SQLException e) {
+                Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error closing resources", e);
+            }
         }
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-    } finally {
-        try {
-            if (rsUserId != null) rsUserId.close();
-            if (pstmUsers != null) pstmUsers.close();
-            if (pstmInsert != null) pstmInsert.close();
-            conn.setAutoCommit(true);
+
+        return userDetails;
+    }
+
+    // add new lecturer/staff
+    public void addNewStaff(String staffNum, String email, String fullNames, String course_name) {
+        String sql = "INSERT INTO staff (staffNum, email, fullNames, course_name) VALUES (?, ?, ?, ?)";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, staffNum);
+            pstmt.setString(2, email);
+            pstmt.setString(3, fullNames);
+            pstmt.setString(4, course_name);
+            pstmt.executeUpdate();
         } catch (SQLException e) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, e);
+            e.printStackTrace();
         }
     }
-}
+
+
+
+    public void addNewUser(String fName, String lName, String uName, String email, String pass,
+                           String contact, String city, String address, String userTypeParam) {
+        PreparedStatement pstmUsers = null;
+        PreparedStatement pstmInsert = null;
+        ResultSet rsUserId = null;
+
+        try {
+            conn.setAutoCommit(false);
+
+            String userType = "student";
+            if (userTypeParam != null && !userTypeParam.isEmpty()){
+                userType = userTypeParam;
+            }
+
+            // 2. Insert into users table (DO NOT include course_name here)
+            String sqlUsers = "INSERT INTO users (first_name, last_name, user_name, email, password, user_type, contact_no, city, address) " +
+                              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            pstmUsers = conn.prepareStatement(sqlUsers, Statement.RETURN_GENERATED_KEYS);
+            pstmUsers.setString(1, fName);
+            pstmUsers.setString(2, lName);
+            pstmUsers.setString(3, uName);
+            pstmUsers.setString(4, email);
+            pstmUsers.setString(5, pass);
+            pstmUsers.setString(6, userType);
+            pstmUsers.setString(7, contact);
+            pstmUsers.setString(8, city);
+            pstmUsers.setString(9, address);
+            pstmUsers.executeUpdate();
+
+            // 3. Get the generated user_id
+            rsUserId = pstmUsers.getGeneratedKeys();
+            if (!rsUserId.next()) {
+                throw new SQLException("Failed to retrieve generated user_id for " + email);
+            }
+            int userId = rsUserId.getInt(1);
+
+            // 4. Insert into students or lectures table
+            String sqlInsert;
+            if ("student".equals(userType)) {
+                sqlInsert = "INSERT INTO students (user_id, first_name, last_name, user_name, email, password, user_type, contact_no, city, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                pstmInsert = conn.prepareStatement(sqlInsert);
+                pstmInsert.setInt(1, userId);
+                pstmInsert.setString(2, fName);
+                pstmInsert.setString(3, lName);
+                pstmInsert.setString(4, uName);
+                pstmInsert.setString(5, email);
+                pstmInsert.setString(6, pass);
+                pstmInsert.setString(7, userType);
+                pstmInsert.setString(8, contact);
+                pstmInsert.setString(9, city);
+                pstmInsert.setString(10, address);
+            } else { // It's a lecturer
+                String courseName = "";
+                try (PreparedStatement pstmCheckStaff = conn.prepareStatement("SELECT course_name FROM staff WHERE email = ?")) {
+                    pstmCheckStaff.setString(1, email);
+                    try(ResultSet rsCheck = pstmCheckStaff.executeQuery()){
+                        if (rsCheck.next()) {
+                            courseName = rsCheck.getString("course_name");
+                        }
+                    }
+                }
+                // For lecturers, insert into lectures table
+                sqlInsert = "INSERT INTO lectures (user_id, first_name, last_name, user_name, email, password, user_type, contact_no, city, address, course_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                pstmInsert = conn.prepareStatement(sqlInsert);
+                pstmInsert.setInt(1, userId);
+                pstmInsert.setString(2, fName);
+                pstmInsert.setString(3, lName);
+                pstmInsert.setString(4, uName);
+                pstmInsert.setString(5, email);
+                pstmInsert.setString(6, pass);
+                pstmInsert.setString(7, userType);
+                pstmInsert.setString(8, contact);
+                pstmInsert.setString(9, city);
+                pstmInsert.setString(10, address);
+                pstmInsert.setString(11, courseName != null ? courseName : "");
+            }
+            pstmInsert.executeUpdate();
+
+            conn.commit();
+        } catch (SQLException ex) {
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException rollbackEx) {
+                Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Rollback failed", rollbackEx);
+            }
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            try {
+                if (rsUserId != null) rsUserId.close();
+                if (pstmUsers != null) pstmUsers.close();
+                if (pstmInsert != null) pstmInsert.close();
+                conn.setAutoCommit(true);
+            } catch (SQLException e) {
+                Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, e);
+            }
+        }
+    }
 
 
     public boolean loginValidate(String userName, String userPass) throws SQLException {
@@ -695,234 +695,227 @@ public void addNewUser(String fName, String lName, String uName, String email, S
         return false;
     }  
     
-public boolean updateUser(User user) {
-    PreparedStatement ps = null;
-    PreparedStatement psLecture = null;
-    
-    try {
-        conn.setAutoCommit(false);
-        
-        // Update users table - CORRECTED COLUMN NAMES
-        String query = "UPDATE users SET first_name=?, last_name=?, user_name=?, email=?, password=?, user_type=?, contact_no=?, city=?, address=? WHERE user_id=?";
-        ps = conn.prepareStatement(query);
-        ps.setString(1, user.getFirstName());
-        ps.setString(2, user.getLastName());
-        ps.setString(3, user.getUserName());
-        ps.setString(4, user.getEmail());
-        ps.setString(5, user.getPassword());
-        ps.setString(6, user.getType());
-        ps.setString(7, user.getContact());
-        ps.setString(8, user.getCity());
-        ps.setString(9, user.getAddress());
-        ps.setInt(10, user.getUserId());
-        
-        int rowsAffected = ps.executeUpdate();
-        
-        // If user is a lecturer, update/insert in lectures table
-        if ("lecture".equalsIgnoreCase(user.getType())) {
-            // Check if lecturer exists in lectures table
-            String checkSql = "SELECT COUNT(*) FROM lectures WHERE user_id = ?";
-            PreparedStatement checkStmt = conn.prepareStatement(checkSql);
-            checkStmt.setInt(1, user.getUserId());
-            ResultSet rs = checkStmt.executeQuery();
-            
-            if (rs.next() && rs.getInt(1) > 0) {
-                // Update existing lecturer
-                String updateSql = "UPDATE lectures SET first_name=?, last_name=?, user_name=?, email=?, password=?, user_type=?, contact_no=?, city=?, address=?, course_name=? WHERE user_id=?";
-                psLecture = conn.prepareStatement(updateSql);
-                psLecture.setString(1, user.getFirstName());
-                psLecture.setString(2, user.getLastName());
-                psLecture.setString(3, user.getUserName());
-                psLecture.setString(4, user.getEmail());
-                psLecture.setString(5, user.getPassword());
-                psLecture.setString(6, user.getType());
-                psLecture.setString(7, user.getContact());
-                psLecture.setString(8, user.getCity());
-                psLecture.setString(9, user.getAddress());
-                psLecture.setString(10, user.getCourseName());
-                psLecture.setInt(11, user.getUserId());
+    public boolean updateUser(User user) {
+        PreparedStatement ps = null;
+        PreparedStatement psLecture = null;
+
+        try {
+            conn.setAutoCommit(false);
+
+            // Update users table - CORRECTED COLUMN NAMES
+            String query = "UPDATE users SET first_name=?, last_name=?, user_name=?, email=?, password=?, user_type=?, contact_no=?, city=?, address=? WHERE user_id=?";
+            ps = conn.prepareStatement(query);
+            ps.setString(1, user.getFirstName());
+            ps.setString(2, user.getLastName());
+            ps.setString(3, user.getUserName());
+            ps.setString(4, user.getEmail());
+            ps.setString(5, user.getPassword());
+            ps.setString(6, user.getType());
+            ps.setString(7, user.getContact());
+            ps.setString(8, user.getCity());
+            ps.setString(9, user.getAddress());
+            ps.setInt(10, user.getUserId());
+
+            int rowsAffected = ps.executeUpdate();
+
+            // If user is a lecturer, update/insert in lectures table
+            if ("lecture".equalsIgnoreCase(user.getType())) {
+                // Check if lecturer exists in lectures table
+                String checkSql = "SELECT COUNT(*) FROM lectures WHERE user_id = ?";
+                PreparedStatement checkStmt = conn.prepareStatement(checkSql);
+                checkStmt.setInt(1, user.getUserId());
+                ResultSet rs = checkStmt.executeQuery();
+
+                if (rs.next() && rs.getInt(1) > 0) {
+                    // Update existing lecturer
+                    String updateSql = "UPDATE lectures SET first_name=?, last_name=?, user_name=?, email=?, password=?, user_type=?, contact_no=?, city=?, address=?, course_name=? WHERE user_id=?";
+                    psLecture = conn.prepareStatement(updateSql);
+                    psLecture.setString(1, user.getFirstName());
+                    psLecture.setString(2, user.getLastName());
+                    psLecture.setString(3, user.getUserName());
+                    psLecture.setString(4, user.getEmail());
+                    psLecture.setString(5, user.getPassword());
+                    psLecture.setString(6, user.getType());
+                    psLecture.setString(7, user.getContact());
+                    psLecture.setString(8, user.getCity());
+                    psLecture.setString(9, user.getAddress());
+                    psLecture.setString(10, user.getCourseName());
+                    psLecture.setInt(11, user.getUserId());
+                } else {
+                    // Insert new lecturer
+                    String insertSql = "INSERT INTO lectures (user_id, first_name, last_name, user_name, email, password, user_type, contact_no, city, address, course_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    psLecture = conn.prepareStatement(insertSql);
+                    psLecture.setInt(1, user.getUserId());
+                    psLecture.setString(2, user.getFirstName());
+                    psLecture.setString(3, user.getLastName());
+                    psLecture.setString(4, user.getUserName());
+                    psLecture.setString(5, user.getEmail());
+                    psLecture.setString(6, user.getPassword());
+                    psLecture.setString(7, user.getType());
+                    psLecture.setString(8, user.getContact());
+                    psLecture.setString(9, user.getCity());
+                    psLecture.setString(10, user.getAddress());
+                    psLecture.setString(11, user.getCourseName());
+                }
+
+                if (psLecture != null) {
+                    psLecture.executeUpdate();
+                }
+                checkStmt.close();
             } else {
-                // Insert new lecturer
-                String insertSql = "INSERT INTO lectures (user_id, first_name, last_name, user_name, email, password, user_type, contact_no, city, address, course_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                psLecture = conn.prepareStatement(insertSql);
-                psLecture.setInt(1, user.getUserId());
-                psLecture.setString(2, user.getFirstName());
-                psLecture.setString(3, user.getLastName());
-                psLecture.setString(4, user.getUserName());
-                psLecture.setString(5, user.getEmail());
-                psLecture.setString(6, user.getPassword());
-                psLecture.setString(7, user.getType());
-                psLecture.setString(8, user.getContact());
-                psLecture.setString(9, user.getCity());
-                psLecture.setString(10, user.getAddress());
-                psLecture.setString(11, user.getCourseName());
+                // If not a lecturer, delete from lectures table if exists
+                String deleteSql = "DELETE FROM lectures WHERE user_id = ?";
+                PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
+                deleteStmt.setInt(1, user.getUserId());
+                deleteStmt.executeUpdate();
+                deleteStmt.close();
             }
-            
-            if (psLecture != null) {
-                psLecture.executeUpdate();
-            }
-            checkStmt.close();
-        } else {
-            // If not a lecturer, delete from lectures table if exists
-            String deleteSql = "DELETE FROM lectures WHERE user_id = ?";
-            PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
-            deleteStmt.setInt(1, user.getUserId());
-            deleteStmt.executeUpdate();
-            deleteStmt.close();
-        }
-        
-        conn.commit();
-        return rowsAffected > 0;
-        
-    } catch (SQLException e) {
-        try {
-            if (conn != null) conn.rollback();
-        } catch (SQLException rollbackEx) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Rollback failed", rollbackEx);
-        }
-        e.printStackTrace();
-        return false;
-    } finally {
-        try {
-            if (ps != null) ps.close();
-            if (psLecture != null) psLecture.close();
-            conn.setAutoCommit(true);
+
+            conn.commit();
+            return rowsAffected > 0;
+
         } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-}
-    
-public boolean checkUserExists(String username) {
-    PreparedStatement ps = null;
-    ResultSet rs = null;
-    
-    try {
-        String sql = "SELECT 1 FROM users WHERE user_name = ? LIMIT 1";
-        ps = conn.prepareStatement(sql);
-        ps.setString(1, username);
-        rs = ps.executeQuery();
-        
-        return rs.next();
-        
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "checkUserExists failed for username: " + username, ex);
-        return false;
-    } finally {
-        try {
-            if (rs != null) rs.close();
-            if (ps != null) ps.close();
-        } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in checkUserExists", ex);
-        }
-    }
-}
-
-public int getExamId(String courseName) {
-    PreparedStatement ps = null;
-    ResultSet rs = null;
-    int examId = 0;
-    
-    try {
-        String sql = "SELECT exam_id FROM exams WHERE cname = ? AND status = 'Active' ORDER BY exam_id DESC LIMIT 1";
-        ps = conn.prepareStatement(sql);
-        ps.setString(1, courseName);
-        rs = ps.executeQuery();
-        
-        if (rs.next()) {
-            examId = rs.getInt("exam_id");
-        }
-        
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "getExamId failed for course: " + courseName, ex);
-    } finally {
-        try {
-            if (rs != null) rs.close();
-            if (ps != null) ps.close();
-        } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in getExamId", ex);
-        }
-    }
-    
-    return examId;
-}
-
-public ArrayList<Exams> getActiveCourses() {
-    ArrayList<Exams> list = new ArrayList<>();
-    PreparedStatement ps = null;
-    ResultSet rs = null;
-    
-    try {
-        // Updated to select more columns if they exist in your exams table
-        String sql = "SELECT exam_id, cname, status, duration, total_marks, exam_date " +
-                     "FROM exams WHERE status = 'Active' ORDER BY cname";
-        ps = conn.prepareStatement(sql);
-        rs = ps.executeQuery();
-        
-        while(rs.next()){
-            Exams e = new Exams();
-            e.setExamId(rs.getInt("exam_id"));
-            e.setcName(rs.getString("cname"));
-            e.setStatus(rs.getString("status"));
-            
-            // Set other properties if your Exams class has them
             try {
-                e.setDuration(rs.getInt("duration"));
-                e.settMarks(rs.getInt("total_marks"));
-                e.setDate(rs.getString("exam_date"));
-            } catch (Exception ex) {
-                // Some properties might not exist in your Exams class
-                // This is okay - just skip them
+                if (conn != null) conn.rollback();
+            } catch (SQLException rollbackEx) {
+                Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Rollback failed", rollbackEx);
             }
-            
-            list.add(e);
-        }
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "getActiveCourses failed", ex);
-    } finally {
-        try {
-            if (rs != null) rs.close();
-            if (ps != null) ps.close();
-        } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in getActiveCourses", ex);
+            e.printStackTrace();
+            return false;
+        } finally {
+            try {
+                if (ps != null) ps.close();
+                if (psLecture != null) psLecture.close();
+                conn.setAutoCommit(true);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
     }
     
-    return list;
-}
+    public boolean checkUserExists(String username) {
+        PreparedStatement ps = null;
+        ResultSet rs = null;
 
-public boolean isCourseActive(String courseName) {
-    PreparedStatement ps = null;
-    ResultSet rs = null;
-    
-    try {
-        // Alternative query that also checks if there are questions available
-        String sql = "SELECT COUNT(*) as active_count FROM exams e " +
-                     "WHERE e.cname = ? AND e.status = 'Active' " +
-                     "AND EXISTS (SELECT 1 FROM questions q WHERE q.course_name = e.cname LIMIT 1)";
-        ps = conn.prepareStatement(sql);
-        ps.setString(1, courseName);
-        rs = ps.executeQuery();
-        
-        if (rs.next()) {
-            int activeCount = rs.getInt("active_count");
-            return activeCount > 0;
-        }
-        
-        return false;
-        
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "isCourseActive failed for course: " + courseName, ex);
-        return false;
-    } finally {
         try {
-            if (rs != null) rs.close();
-            if (ps != null) ps.close();
+            String sql = "SELECT 1 FROM users WHERE user_name = ? LIMIT 1";
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, username);
+            rs = ps.executeQuery();
+
+            return rs.next();
+
         } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in isCourseActive", ex);
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "checkUserExists failed for username: " + username, ex);
+            return false;
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (ps != null) ps.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in checkUserExists", ex);
+            }
         }
     }
-}
+
+    public int getExamId(String courseName) {
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        int examId = 0;
+
+        try {
+            String sql = "SELECT exam_id FROM exams WHERE cname = ? AND status = 'Active' ORDER BY exam_id DESC LIMIT 1";
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, courseName);
+            rs = ps.executeQuery();
+
+            if (rs.next()) {
+                examId = rs.getInt("exam_id");
+            }
+
+        } catch (SQLException ex) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "getExamId failed for course: " + courseName, ex);
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (ps != null) ps.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in getExamId", ex);
+            }
+        }
+
+        return examId;
+    }
+
+     public ArrayList<Exams> getActiveCourses() {
+        ArrayList<Exams> list = new ArrayList<>();
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+
+        try {
+            // Query courses table instead of exams table for active status
+            String sql = "SELECT c.course_id, c.course_name, c.total_marks, c.time, c.exam_date, " +
+                         "c.is_active, COALESCE(e.status, 'Inactive') as exam_status " +
+                         "FROM courses c " +
+                         "LEFT JOIN exams e ON c.course_name = e.cname " +
+                         "WHERE c.is_active = 1 " +  // Only active courses
+                         "ORDER BY c.course_name";
+
+            ps = conn.prepareStatement(sql);
+            rs = ps.executeQuery();
+
+            while(rs.next()){
+                Exams e = new Exams();
+                e.setcName(rs.getString("course_name"));
+                e.setStatus(rs.getString("exam_status")); // This comes from exams table or defaults to 'Inactive'
+                e.setTotalMarks(rs.getInt("total_marks"));
+                e.setExamDate(rs.getString("exam_date"));
+
+                // If you have these setters in your Exams class, add them:
+                // e.setCourseId(rs.getInt("course_id"));
+                // e.setDuration(rs.getInt("time"));
+
+                list.add(e);
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "getActiveCourses failed", ex);
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (ps != null) ps.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in getActiveCourses", ex);
+            }
+        }
+
+        return list;
+    }
+
+    public boolean isCourseActive(String courseName) {
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+
+        try {
+            // Check if course is active in courses table
+            String sql = "SELECT 1 FROM courses WHERE course_name = ? AND is_active = 1 LIMIT 1";
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, courseName);
+            rs = ps.executeQuery();
+
+            return rs.next(); // Returns true if active course exists
+
+        } catch (SQLException ex) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "isCourseActive failed for course: " + courseName, ex);
+            return false;
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (ps != null) ps.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in isCourseActive", ex);
+            }
+        }
+    }
     
 public int updateStudent(int uId, String fName, String lName, String uName, String email, String pass,
         String contact, String city, String address, String userType) {
