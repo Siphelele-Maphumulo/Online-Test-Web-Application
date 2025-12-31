@@ -896,17 +896,13 @@ public boolean isCourseActive(String courseName) {
     ResultSet rs = null;
     
     try {
-        // Alternative query that also checks if there are questions available
-        String sql = "SELECT COUNT(*) as active_count FROM exams e " +
-                     "WHERE e.cname = ? AND e.status = 'Active' " +
-                     "AND EXISTS (SELECT 1 FROM questions q WHERE q.course_name = e.cname LIMIT 1)";
+        String sql = "SELECT is_active FROM courses WHERE course_name = ?";
         ps = conn.prepareStatement(sql);
         ps.setString(1, courseName);
         rs = ps.executeQuery();
         
         if (rs.next()) {
-            int activeCount = rs.getInt("active_count");
-            return activeCount > 0;
+            return rs.getBoolean("is_active");
         }
         
         return false;
