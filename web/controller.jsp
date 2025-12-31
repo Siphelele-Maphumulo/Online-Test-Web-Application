@@ -356,6 +356,15 @@ try {
         }
 
     /* =========================
+       CHECK USERNAME
+       ========================= */
+    } else if ("check_username".equalsIgnoreCase(pageParam)) {
+        String username = request.getParameter("username");
+        boolean exists = pDAO.checkUserExists(username);
+        response.setContentType("application/json");
+        response.getWriter().write("{\"exists\": " + exists + "}");
+        return;
+    /* =========================
        LOGOUT
        ========================= */
         } else if ("logout".equalsIgnoreCase(pageParam)) {

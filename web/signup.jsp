@@ -29,6 +29,9 @@
 <%
     // Get the user_type from request parameter
     String userType = request.getParameter("user_type");
+    if (userType == null) {
+        userType = "student"; // Default to student
+    }
     String fromPage = request.getParameter("from");
     
     // Store these in session or hidden fields for use after registration
@@ -37,6 +40,28 @@
     }
     if (fromPage != null) {
         session.setAttribute("signup_from_page", fromPage);
+    }
+
+    String title = "Create your account";
+    String subtitle = "Please fill in your details to sign up.";
+    if ("student".equalsIgnoreCase(userType)) {
+        title = "Creating Student Account";
+        subtitle = "You are creating a student account.";
+    } else if ("lecture".equalsIgnoreCase(userType)) {
+        title = "Creating Lecturer Account";
+        subtitle = "You are creating a lecturer account with elevated privileges.";
+    } else if ("admin".equalsIgnoreCase(userType)) {
+        title = "Creating Administrator Account";
+        subtitle = "You are creating an administrator account with elevated privileges.";
+    }
+
+    String emailLabel = "Email";
+    if ("student".equalsIgnoreCase(userType)) {
+        emailLabel = "Student account email";
+    } else if ("lecture".equalsIgnoreCase(userType)) {
+        emailLabel = "Lecturer account email";
+    } else if ("admin".equalsIgnoreCase(userType)) {
+        emailLabel = "Administrator account email";
     }
 %>
 
@@ -51,8 +76,9 @@
       <div class="row justify-content-center">
         <div class="col-12 col-md-10 col-lg-8 col-xl-6">
           <div class="auth-card p-4 p-md-5">
-            <h2 class="auth-title h4 mb-3 text-center">Create your account</h2>
-            <p class="text-center text-muted mb-4">Please fill in your details to sign up.</p>
+            <%@ include file="header-messages.jsp" %>
+            <h2 class="auth-title h4 mb-3 text-center"><%= title %></h2>
+            <p class="text-center text-muted mb-4"><%= subtitle %></p>
 
             <!-- Add hidden fields for user_type and from_page -->
             <form action="controller.jsp" method="POST" onsubmit="return validateForm();">
@@ -101,10 +127,10 @@
                 </div>
 
                   <div class="col-12 ">
-                  <label class="sr-only" for="email">Email</label>
+                  <label class="sr-only" for="email"><%= emailLabel %></label>
                   <div class="input-icon">
                     <i class="fas fa-envelope"></i>
-                    <input id="email" type="email" name="email" class="form-control" placeholder="Email" required/>
+                    <input id="email" type="email" name="email" class="form-control" placeholder="<%= emailLabel %>" required/>
                   </div>
                   <span id="errorEmail" class="error-message"></span>
                 </div>
@@ -184,6 +210,21 @@
       icon.classList.toggle("fa-eye");
       icon.classList.toggle("fa-eye-slash");
     }
+
+    document.getElementById('uname').addEventListener('blur', function() {
+        const username = this.value;
+        if (username.length > 0) {
+            fetch('controller.jsp?page=check_username&username=' + username)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exists) {
+                        document.getElementById('errorUsername').textContent = 'Username already exists.';
+                    } else {
+                        document.getElementById('errorUsername').textContent = '';
+                    }
+                });
+        }
+    });
   </script>
 
   <!-- If header.jsp already includes these, remove to avoid duplicates -->

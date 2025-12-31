@@ -798,6 +798,19 @@ public boolean updateUser(User user) {
             e.printStackTrace();
         }
     }
+
+    public boolean checkUserExists(String username) {
+        String sql = "SELECT 1 FROM users WHERE user_name = ? LIMIT 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, username);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "checkUserExists failed", e);
+            return false;
+        }
+    }
 }
 
     
