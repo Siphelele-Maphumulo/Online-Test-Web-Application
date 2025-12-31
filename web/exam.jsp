@@ -2676,7 +2676,6 @@
                 // Confirm before starting exam (using modal instead of alert)
                 document.getElementById('examStartForm').addEventListener('submit', function(e) {
                     e.preventDefault();
-                    e.stopPropagation(); // Add this to stop event bubbling
                     
                     var courseSelect = document.getElementById('courseSelect');
                     if(!courseSelect.value) {
@@ -2684,34 +2683,22 @@
                         return;
                     }
                     
-                    // Get selected course
                     var selectedOption = courseSelect.options[courseSelect.selectedIndex];
-                    var courseName = selectedOption.text.split(' (')[0];
-                    var duration = selectedOption.getAttribute('data-duration') || '60';
+                    var courseName = selectedOption.value;
+                    var duration = selectedOption.getAttribute('data-duration');
                     
-                    console.log('Form submitted for course:', courseName);
-                    
-                    // First check if course is active via AJAX
                     checkCourseStatus(courseName, function(isActive) {
-                        console.log('AJAX callback received. Course active:', isActive);
-                        if (!isActive) {
-                            // Show inactive course modal
-                            console.log('Showing inactive modal for:', courseName);
+                        if (isActive) {
+                            document.getElementById('modalCourseName').textContent = courseName;
+                            document.getElementById('modalDuration').textContent = duration;
+                            document.getElementById('confirmationModal').style.display = 'flex';
+                        } else {
                             document.getElementById('inactiveCourseName').textContent = courseName;
                             document.getElementById('inactiveModal').style.display = 'flex';
-                            return;
                         }
-                        
-                        // If active, show confirmation modal
-                        console.log('Showing confirmation modal for:', courseName);
-                        document.getElementById('modalCourseName').textContent = courseName;
-                        document.getElementById('modalDuration').textContent = duration;
-                        document.getElementById('confirmationModal').style.display = 'flex';
                     });
                 });
                 
-
-                // Function to check course status via AJAX
                 function checkCourseStatus(courseName, callback) {
                     console.log('Checking course status for:', courseName);
 
@@ -2769,7 +2756,7 @@
 </div>
 
 <!-- Confirmation Modal (for course selection) -->
-<div id="confirmationModal" class="modal-overlay">
+<div id="confirmationModal" class="modal-overlay" style="display: none;">
     <div class="modal-container">
         <div class="modal-header">
             <h3 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Exam Start</h3>
@@ -2790,7 +2777,7 @@
 </div>
 
 <!-- Inactive Course Modal -->
-<div id="inactiveModal" class="modal-overlay">
+<div id="inactiveModal" class="modal-overlay" style="display: none;">
     <div class="modal-container">
         <div class="modal-header" style="background-color: #dc3545;">
             <h3 class="modal-title"><i class="fas fa-exclamation-circle"></i> Course Not Available</h3>
@@ -2813,9 +2800,6 @@
         </div>
         <div class="modal-footer">
             <button id="closeInactiveModal" class="btn-secondary">Close</button>
-            <button id="selectOtherCourse" class="btn-primary">
-                <i class="fas fa-book"></i> Select Another Course
-            </button>
         </div>
     </div>
 </div>
