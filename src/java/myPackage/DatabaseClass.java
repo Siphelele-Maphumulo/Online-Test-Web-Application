@@ -1692,10 +1692,29 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
             pstm.executeUpdate();
 
             try (ResultSet keys = pstm.getGeneratedKeys()) {
-                if (keys.next()) examId = keys.getInt(1);
+                if (keys.next()) {
+                    examId = keys.getInt(1);
+                    logExamStart(sId, examId, cName);
+                }
             }
         }
         return examId;
+    }
+
+    public void logExamStart(int studentId, int examId, String courseName) {
+        try {
+            String sql = "INSERT INTO exam_register(student_id, exam_id, course_name, exam_date, start_time) VALUES (?, ?, ?, ?, ?)";
+            PreparedStatement pstm = conn.prepareStatement(sql);
+            pstm.setInt(1, studentId);
+            pstm.setInt(2, examId);
+            pstm.setString(3, courseName);
+            pstm.setDate(4, java.sql.Date.valueOf(LocalDate.now()));
+            pstm.setTime(5, java.sql.Time.valueOf(LocalTime.now()));
+            pstm.executeUpdate();
+            pstm.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
     
     public int getLastExamId(){
@@ -2400,9 +2419,24 @@ public void calculateResult(int eid, int tMarks, String endTime, int size) {
         System.out.println("Rows updated: " + rowsUpdated);
         
         pstm.close();
+
+        logExamCompletion(eid);
         
     } catch (SQLException ex) {
         System.err.println("ERROR in calculateResult: " + ex.getMessage());
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+    }
+}
+
+public void logExamCompletion(int examId) {
+    try {
+        String sql = "UPDATE exam_register SET end_time = ? WHERE exam_id = ?";
+        PreparedStatement pstm = conn.prepareStatement(sql);
+        pstm.setTime(1, java.sql.Time.valueOf(LocalTime.now()));
+        pstm.setInt(2, examId);
+        pstm.executeUpdate();
+        pstm.close();
+    } catch (SQLException ex) {
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
     }
 }

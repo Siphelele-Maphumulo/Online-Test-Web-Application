@@ -671,6 +671,11 @@
     <main class="dashboard-content">
         <div class="content-wrapper">
             <%@ include file="header-messages.jsp" %>
+            
+                    <%-- Add this to your admin menu --%>
+                <a class="nav-item" href="exam-register.jsp">
+                    <i class="fas fa-clipboard-list"></i><span>Exam Register</span>
+                </a>
             <%
                 // Check if user is logged in
                 if (session.getAttribute("userStatus") != null && session.getAttribute("userStatus").equals("1")) {
@@ -734,10 +739,6 @@
             %>
         </div>
         
-        <%-- Add this to your admin menu --%>
-        <a class="nav-item" href="exam-register.jsp">
-            <i class="fas fa-clipboard-list"></i><span>Exam Register</span>
-        </a>
     </main>
 </div>
 
