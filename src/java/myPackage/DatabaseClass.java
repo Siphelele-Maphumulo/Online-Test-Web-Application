@@ -1697,8 +1697,8 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement pstm = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstm.setString(1, cName);               // cleaned name
-            pstm.setString(2, LocalDate.now().toString());
-            pstm.setString(3, LocalTime.now().toString());
+            pstm.setDate(2, java.sql.Date.valueOf(LocalDate.now()));
+            pstm.setTime(3, java.sql.Time.valueOf(LocalTime.now()));
             pstm.setString(4, getCourseTimeByName(cName));
             pstm.setInt(5, sId);
             pstm.setInt(6, getTotalMarksByName(cName));
@@ -1710,26 +1710,25 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
             try (ResultSet keys = pstm.getGeneratedKeys()) {
                 if (keys.next()){
                     examId = keys.getInt(1);
-                    logExamStart(sId, examId, cName, null);
+                    logExamStart(sId, examId, null);
                 }
             }
         }
         return examId;
     }
 
-    public void logExamStart(int studentId, int examId, String courseName, String deviceIdentifier) {
-        String sql = "INSERT INTO exam_register (student_id, exam_id, course_name, exam_date, start_time, device_identifier) VALUES (?, ?, ?, ?, ?, ?)";
+    public void logExamStart(int studentId, int examId, String deviceIdentifier) {
+        String sql = "INSERT INTO exam_register (student_id, exam_id, exam_date, start_time, device_identifier) VALUES (?, ?, ?, ?, ?)";
         try (PreparedStatement pstm = conn.prepareStatement(sql)) {
             pstm.setInt(1, studentId);
             pstm.setInt(2, examId);
-            pstm.setString(3, courseName);
-            pstm.setDate(4, java.sql.Date.valueOf(LocalDate.now()));
-            pstm.setTime(5, java.sql.Time.valueOf(LocalTime.now()));
+            pstm.setDate(3, java.sql.Date.valueOf(LocalDate.now()));
+            pstm.setTime(4, java.sql.Time.valueOf(LocalTime.now()));
 
             if (deviceIdentifier != null) {
-                pstm.setString(6, deviceIdentifier);
+                pstm.setString(5, deviceIdentifier);
             } else {
-                pstm.setNull(6, Types.VARCHAR);
+                pstm.setNull(5, Types.VARCHAR);
             }
 
             pstm.executeUpdate();
