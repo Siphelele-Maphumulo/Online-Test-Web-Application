@@ -136,3 +136,24 @@ CREATE TABLE `users` (
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2017-08-06 21:26:29
+
+--
+-- Table structure for table `exam_register`
+--
+
+DROP TABLE IF EXISTS `exam_register`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `exam_register` (
+  `register_id` int(11) NOT NULL AUTO_INCREMENT,
+  `student_id` int(11) NOT NULL,
+  `exam_id` int(11) NOT NULL,
+  `course_name` varchar(45) NOT NULL,
+  `exam_date` date NOT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time DEFAULT NULL,
+  `device_identifier` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`register_id`),
+  UNIQUE KEY `uq_student_course_date` (`student_id`,`course_name`,`exam_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
