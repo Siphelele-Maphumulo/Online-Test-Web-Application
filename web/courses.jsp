@@ -524,8 +524,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                 <i class="fas fa-graduation-cap"></i>
                 <%
                     ArrayList list = pDAO.getAllCourses();
-                    // Fix: Since we're now storing 4 fields per course, divide by 4
-                    int courseCount = list.size() / 4;
+                    int courseCount = list.size() / 5;
                 %>
                 <%= courseCount %> Courses
             </div>
@@ -548,6 +547,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             <th>Total Marks</th>
                             <th>Duration</th>
                             <th>Exam Date</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -556,15 +556,16 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         if (list.isEmpty()) {
                         %>
                             <tr>
-                                <td colspan="5" class="no-courses">
+                                <td colspan="6" class="no-courses">
                                     <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 16px; display: block; opacity: 0.5;"></i>
                                     No courses available. Add your first course to get started.
                                 </td>
                             </tr>
                         <%
                         } else {
-                            for (int i = 0; i < list.size(); i += 4) {
-                                if (i + 3 < list.size()) {
+                            for (int i = 0; i < list.size(); i += 5) {
+                                if (i + 4 < list.size()) {
+                                    boolean isActive = (Boolean) list.get(i + 4);
                         %>
                         <tr>
                             <td>
@@ -576,7 +577,12 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             <td><span class="badge badge-success"><%= list.get(i + 1) %> Marks</span></td>
                             <td><span class="badge badge-info"><%= list.get(i + 2) %> mins</span></td>
                             <td><span class="badge badge-neutral"><%= list.get(i + 3) %></span></td>
+                            <td><span class="badge <%= isActive ? "badge-success" : "badge-danger" %>"><%= isActive ? "Active" : "Inactive" %></span></td>
                             <td>
+                                <a href="controller.jsp?page=courses&operation=toggle_status&cname=<%= list.get(i) %>" class="btn btn-<%= isActive ? "danger" : "success" %>">
+                                    <i class="fas fa-power-off"></i>
+                                    <%= isActive ? "Deactivate" : "Activate" %>
+                                </a>
                                 <a href="controller.jsp?page=courses&operation=del&cname=<%= list.get(i) %>"
                                    onclick="return confirm('Are you sure you want to delete \"<%= list.get(i) %>\"? This action cannot be undone.');" 
                                    class="btn btn-danger">
