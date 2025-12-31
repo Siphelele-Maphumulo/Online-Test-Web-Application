@@ -2588,42 +2588,63 @@
             session.removeAttribute("remainingTime");
             session.removeAttribute("courseName");
         %>
-            <!-- COURSE PICKER -->
-            <div class="page-header">
-                <div class="page-title"><i class="fas fa-pencil-alt"></i> Start New Exam</div>
-                <div class="stats-badge"><i class="fas fa-play-circle"></i> Ready to Start</div>
-            </div>
-            
-            <div class="course-card">
-                <form action="controller.jsp" method="post" id="examStartForm">
-                    <input type="hidden" name="page" value="exams">
-                    <input type="hidden" name="operation" value="startexam">
-                    <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") != null ? session.getAttribute("csrf_token") : "" %>">
-                    <label class="form-label"><i class="fas fa-book"></i> Select Course</label>
-                    <select name="coursename" class="form-select" required id="courseSelect">
-                        <option value="">Choose a course...</option>
-                        <% 
-                            ArrayList<String> courseList = pDAO.getAllCourseNames();
-                            for(String course : courseList){ 
-                                int duration = pDAO.getExamDuration(course);
-                        %>
-                        <option value="<%= course %>" data-duration="<%= duration %>">
-                            <%= course %> (<%= formatDuration(duration) %>)
-                        </option>
-                        <% } %>
-                    </select>
-                    
-                    <!-- Course Info Display -->
-                    <div id="courseInfo" style="margin-top: 10px; padding: 10px; background: #f0f9ff; border-radius: 6px; display: none;">
-                        <i class="fas fa-info-circle" style="color: #3b82f6;"></i>
-                        <span id="courseInfoText"></span>
-                    </div>
-                    
-                    <button type="submit" class="start-exam-btn" id="startExamBtn">
-                        <i class="fas fa-play"></i> Start Exam
-                    </button>
-                </form>
-            </div>
+        <!-- COURSE PICKER -->
+        <div class="page-header">
+            <div class="page-title"><i class="fas fa-pencil-alt"></i> Start New Exam</div>
+            <div class="stats-badge"><i class="fas fa-play-circle"></i> Ready to Start</div>
+        </div>
+
+        <div class="course-card">
+            <form action="controller.jsp" method="post" id="examStartForm">
+                <input type="hidden" name="page" value="exams">
+                <input type="hidden" name="operation" value="startexam">
+                <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") != null ? session.getAttribute("csrf_token") : "" %>">
+                <label class="form-label"><i class="fas fa-book"></i> Select Course</label>
+                <select name="coursename" class="form-select" required id="courseSelect">
+                    <option value="">Choose a course...</option>
+                    <% 
+                        // Get only ACTIVE courses
+                        ArrayList<myPackage.classes.Exams> activeCourses = pDAO.getActiveCourses();
+                        if (activeCourses != null && !activeCourses.isEmpty()) {
+                            for(myPackage.classes.Exams course : activeCourses){ 
+                                int duration = pDAO.getExamDuration(course.getcName());
+                                String status = course.getStatus();
+
+                                // Only show if status is "Active" (case-insensitive)
+                                if ("active".equalsIgnoreCase(status)) {
+                    %>
+                    <option value="<%= course.getcName() %>" data-duration="<%= duration %>">
+                        <%= course.getcName() %> (<%= formatDuration(duration) %>)
+                    </option>
+                    <% 
+                                }
+                            }
+                        } else {
+                    %>
+                    <option value="" disabled>No active exams available</option>
+                    <% } %>
+                </select>
+
+                <!-- Course Info Display -->
+                <div id="courseInfo" style="margin-top: 10px; padding: 10px; background: #f0f9ff; border-radius: 6px; display: none;">
+                    <i class="fas fa-info-circle" style="color: #3b82f6;"></i>
+                    <span id="courseInfoText"></span>
+                </div>
+
+                <!-- No Exams Message -->
+                <% if (activeCourses == null || activeCourses.isEmpty()) { %>
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center; border: 1px solid #e2e8f0;">
+                    <i class="fas fa-calendar-times" style="color: #64748b; font-size: 24px; margin-bottom: 10px;"></i>
+                    <p style="color: #64748b; margin: 0;">No active exams are currently available. Please check back later.</p>
+                </div>
+                <% } %>
+
+                <button type="submit" class="start-exam-btn" id="startExamBtn" 
+                        <% if (activeCourses == null || activeCourses.isEmpty()) { %>disabled<% } %>>
+                    <i class="fas fa-play"></i> Start Exam
+                </button>
+            </form>
+        </div>
             
             <!-- CLEAR EXAM SESSION DATA -->
             <script>
@@ -2655,6 +2676,7 @@
                 // Confirm before starting exam (using modal instead of alert)
                 document.getElementById('examStartForm').addEventListener('submit', function(e) {
                     e.preventDefault();
+                    e.stopPropagation(); // Add this to stop event bubbling
                     
                     var courseSelect = document.getElementById('courseSelect');
                     if(!courseSelect.value) {
@@ -2662,15 +2684,85 @@
                         return;
                     }
                     
-                    // Show confirmation modal
+                    // Get selected course
                     var selectedOption = courseSelect.options[courseSelect.selectedIndex];
                     var courseName = selectedOption.text.split(' (')[0];
                     var duration = selectedOption.getAttribute('data-duration') || '60';
                     
-                    document.getElementById('modalCourseName').textContent = courseName;
-                    document.getElementById('modalDuration').textContent = duration;
-                    document.getElementById('confirmationModal').style.display = 'flex';
+                    console.log('Form submitted for course:', courseName);
+                    
+                    // First check if course is active via AJAX
+                    checkCourseStatus(courseName, function(isActive) {
+                        console.log('AJAX callback received. Course active:', isActive);
+                        if (!isActive) {
+                            // Show inactive course modal
+                            console.log('Showing inactive modal for:', courseName);
+                            document.getElementById('inactiveCourseName').textContent = courseName;
+                            document.getElementById('inactiveModal').style.display = 'flex';
+                            return;
+                        }
+                        
+                        // If active, show confirmation modal
+                        console.log('Showing confirmation modal for:', courseName);
+                        document.getElementById('modalCourseName').textContent = courseName;
+                        document.getElementById('modalDuration').textContent = duration;
+                        document.getElementById('confirmationModal').style.display = 'flex';
+                    });
                 });
+                
+
+                // Function to check course status via AJAX
+                function checkCourseStatus(courseName, callback) {
+                    console.log('Checking course status for:', courseName);
+
+                    // Create form data
+                    const formData = new FormData();
+                    formData.append('page', 'exams');
+                    formData.append('operation', 'checkCourseStatus');
+                    formData.append('courseName', courseName);
+                    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+
+                    console.log('Sending AJAX request to check course status...');
+
+                    // Send AJAX request with timeout
+                    const timeout = 5000; // 5 second timeout
+
+                    // Create abort controller for timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+                    fetch('controller.jsp', {
+                        method: 'POST',
+                        body: formData,
+                        signal: controller.signal
+                    })
+                    .then(response => {
+                        clearTimeout(timeoutId);
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.text();
+                    })
+                    .then(data => {
+                        console.log('Raw response data:', data);
+                        // Parse response (should be "true" or "false")
+                        const isActive = data.trim().toLowerCase() === 'true';
+                        console.log('Course is active:', isActive);
+                        callback(isActive);
+                    })
+                    .catch(error => {
+                        clearTimeout(timeoutId);
+                        console.error('Error checking course status:', error);
+                        // Show error message
+                        if (error.name === 'AbortError') {
+                            alert('Request timeout. Please try again.');
+                        } else {
+                            alert('Error checking course status. Please try again.');
+                        }
+                        // Default to false on error
+                        callback(false);
+                    });
+                }
             </script>
         <% } %>
     </main>
@@ -2693,6 +2785,37 @@
         <div class="modal-footer">
             <button id="cancelButton" class="btn-secondary">Cancel</button>
             <button id="beginButton" class="btn-primary">Begin Exam</button>
+        </div>
+    </div>
+</div>
+
+<!-- Inactive Course Modal -->
+<div id="inactiveModal" class="modal-overlay">
+    <div class="modal-container">
+        <div class="modal-header" style="background-color: #dc3545;">
+            <h3 class="modal-title"><i class="fas fa-exclamation-circle"></i> Course Not Available</h3>
+        </div>
+        <div class="modal-body">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <i class="fas fa-lock fa-3x" style="color: #dc3545; margin-bottom: 15px;"></i>
+                <h4 style="color: #dc3545; margin-bottom: 10px;">Exam Temporarily Unavailable</h4>
+            </div>
+            <p>The "<strong id="inactiveCourseName"></strong>" exam is currently <strong style="color: #dc3545;">NOT ACTIVE</strong>.</p>
+            <ul style="color: #6c757d;">
+                <li><i class="fas fa-calendar-times"></i> This exam has been deactivated by the administrator</li>
+                <li><i class="fas fa-user-clock"></i> Please check back later or contact your instructor</li>
+                <li><i class="fas fa-book"></i> You can select another available course</li>
+            </ul>
+            <div style="background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-top: 15px;">
+                <i class="fas fa-info-circle" style="color: #17a2b8;"></i>
+                <small>Only exams marked as "Active" can be taken by students.</small>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="closeInactiveModal" class="btn-secondary">Close</button>
+            <button id="selectOtherCourse" class="btn-primary">
+                <i class="fas fa-book"></i> Select Another Course
+            </button>
         </div>
     </div>
 </div>
@@ -2721,16 +2844,28 @@
     document.addEventListener('DOMContentLoaded', function () {
         const form = document.getElementById('examStartForm');
         const courseSelect = document.getElementById('courseSelect');
-        const modal = document.getElementById('confirmationModal');
+        const confirmationModal = document.getElementById('confirmationModal');
         const modalCourseName = document.getElementById('modalCourseName');
         const modalDuration = document.getElementById('modalDuration');
         const beginButton = document.getElementById('beginButton');
         const cancelButton = document.getElementById('cancelButton');
+        
+        // Inactive Modal elements
+        const inactiveModal = document.getElementById('inactiveModal');
+        const closeInactiveModal = document.getElementById('closeInactiveModal');
+        const selectOtherCourse = document.getElementById('selectOtherCourse');
+
+        // Initialize modal display to none
+        if (confirmationModal) confirmationModal.style.display = 'none';
+        if (inactiveModal) inactiveModal.style.display = 'none';
 
         if (beginButton) {
             beginButton.addEventListener('click', function () {
+                console.log('Begin button clicked, submitting form...');
                 sessionStorage.clear(); // Clear storage and submit
                 if (form) {
+                    // Remove the event listener to prevent infinite loop
+                    form.removeEventListener('submit', arguments.callee);
                     form.submit();
                 }
             });
@@ -2738,15 +2873,42 @@
 
         if (cancelButton) {
             cancelButton.addEventListener('click', function () {
-                modal.style.display = 'none'; // Hide modal
+                if (confirmationModal) confirmationModal.style.display = 'none';
+            });
+        }
+        
+        // Inactive Modal handlers
+        if (closeInactiveModal) {
+            closeInactiveModal.addEventListener('click', function () {
+                if (inactiveModal) inactiveModal.style.display = 'none';
+            });
+        }
+        
+        if (selectOtherCourse) {
+            selectOtherCourse.addEventListener('click', function () {
+                if (inactiveModal) inactiveModal.style.display = 'none';
+                // Clear the course selection
+                if (courseSelect) {
+                    courseSelect.value = '';
+                    const courseInfo = document.getElementById('courseInfo');
+                    if (courseInfo) courseInfo.style.display = 'none';
+                }
             });
         }
 
-        // Close modal when clicking outside
-        if (modal) {
-            modal.addEventListener('click', function (e) {
-                if (e.target === modal) {
-                    modal.style.display = 'none';
+        // Close modals when clicking outside
+        if (confirmationModal) {
+            confirmationModal.addEventListener('click', function (e) {
+                if (e.target === confirmationModal) {
+                    confirmationModal.style.display = 'none';
+                }
+            });
+        }
+        
+        if (inactiveModal) {
+            inactiveModal.addEventListener('click', function (e) {
+                if (e.target === inactiveModal) {
+                    inactiveModal.style.display = 'none';
                 }
             });
         }
@@ -2864,12 +3026,35 @@
         if (event.target === modal) {
             closeDeleteModal();
         }
+        
+        const inactiveModal = document.getElementById('inactiveModal');
+        if (event.target === inactiveModal) {
+            inactiveModal.style.display = 'none';
+        }
     });
 
-    // Add keyboard support for delete modal
+    // Add keyboard support for modals
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') {
             closeDeleteModal();
+            const inactiveModal = document.getElementById('inactiveModal');
+            if (inactiveModal && inactiveModal.style.display === 'flex') {
+                inactiveModal.style.display = 'none';
+            }
         }
     });
+</script>
+
+<script>
+// Test the isCourseActive function directly
+function testCourseStatus() {
+    const testCourses = ['Python Entry Level 2', 'ISTQB Exam Prep'];
+    testCourses.forEach(course => {
+        checkCourseStatus(course, function(isActive) {
+            console.log('TEST - Course:', course, 'Active:', isActive);
+        });
+    });
+}
+// Run test when page loads
+window.addEventListener('load', testCourseStatus);
 </script>

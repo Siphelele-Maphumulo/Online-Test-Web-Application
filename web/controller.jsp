@@ -11,6 +11,7 @@
 <%@ page import="java.sql.SQLException" %>
 <%@ page import="java.sql.ResultSet" %>
 
+
 <%@ page import="myPackage.*" %>
 <%@ page import="myPackage.classes.User" %>
 <%@ page import="myPackage.classes.Questions" %>
@@ -417,57 +418,111 @@ try {
         response.sendRedirect("adm-page.jsp?pgprt=5");
     }
 
-    /* =========================
-       EXAMS
-       ========================= */
-    } else if ("exams".equalsIgnoreCase(pageParam)) {
-        String operation = nz(request.getParameter("operation"), "");
-        if ("startexam".equalsIgnoreCase(operation)) {
-            String cName = nz(request.getParameter("coursename"), "");
-            if (session.getAttribute("userId") != null && !cName.isEmpty()) {
-                int userId = Integer.parseInt(session.getAttribute("userId").toString());
-                int examId = pDAO.startExam(cName, userId);
+/* =========================
+   EXAMS
+   ========================= */
+} else if ("exams".equalsIgnoreCase(pageParam)) {
+
+    String operation = nz(request.getParameter("operation"), "");
+    if (page.equals("exams")) {
+        if (operation.equals("startexam")) {
+            // Verify CSRF token
+            String csrfToken = request.getParameter("csrf_token");
+            String sessionToken = (String) session.getAttribute("csrf_token");
+            
+            if (csrfToken == null || !csrfToken.equals(sessionToken)) {
+                response.sendRedirect("std-page.jsp?pgprt=1&error=Invalid CSRF token");
+                return;
+            }
+            
+            String coursename = request.getParameter("coursename");
+            
+            // Check if course is active
+            boolean isActive = pDAO.isCourseActive(coursename);
+            
+            if (!isActive) {
+                response.sendRedirect("std-page.jsp?pgprt=1&error=This exam is not active");
+                return;
+            }
+            
+            // Start new exam and get the exam ID
+            int userId = 0;
+            Object userIdObj = session.getAttribute("userId");
+            if (userIdObj != null) {
+                userId = Integer.parseInt(userIdObj.toString());
+            } else {
+                // Try to get user ID from username
+                String username = (String) session.getAttribute("uname");
+                if (username != null) {
+                    userId = pDAO.getUserId(username);
+                }
+            }
+            
+            if (userId == 0) {
+                response.sendRedirect("std-page.jsp?pgprt=1&error=User not logged in");
+                return;
+            }
+            
+            int examId = pDAO.startExam(coursename, userId);
+            
+            if (examId > 0) {
+                // Set session attributes
+                session.setAttribute("examStarted", "1");
                 session.setAttribute("examId", examId);
-                session.setAttribute("examStarted","1");
-                response.sendRedirect("std-page.jsp?pgprt=1&coursename="+cName);
+                
+                // Redirect to exam page with URL encoding
+                String encodedCourseName = java.net.URLEncoder.encode(coursename, "UTF-8");
+                response.sendRedirect("std-page.jsp?pgprt=1&coursename=" + encodedCourseName);
+            } else {
+                response.sendRedirect("std-page.jsp?pgprt=1&error=Failed to start exam");
+            }
+        }
+
+    } else if ("submitted".equalsIgnoreCase(operation)) {
+        try {
+            String time = java.time.LocalTime.now().truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
+                          .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+            int size = Integer.parseInt(nz(request.getParameter("size"), "0"));
+            if (session.getAttribute("examId") != null) {
+                int eId    = Integer.parseInt(session.getAttribute("examId").toString());
+                int tMarks = Integer.parseInt(nz(request.getParameter("totalmarks"), "0"));
+
+                for (int i=0;i<size;i++){
+                    String question = nz(request.getParameter("question"+i), "");
+                    String ans      = nz(request.getParameter("ans"+i), "");
+                    int qid         = Integer.parseInt(nz(request.getParameter("qid"+i), "0"));
+                    pDAO.insertAnswer(eId, qid, question, ans);
+                }
+
+                pDAO.calculateResult(eId, tMarks, time, size);
+
+                session.removeAttribute("examId");
+                session.removeAttribute("examStarted");
+
+                response.sendRedirect("std-page.jsp?pgprt=1&eid="+eId+"&showresult=1");
             } else {
                 response.sendRedirect("std-page.jsp");
             }
-
-        } else if ("submitted".equalsIgnoreCase(operation)) {
-            try {
-                String time = LocalTime.now().truncatedTo(ChronoUnit.MINUTES)
-                              .format(DateTimeFormatter.ofPattern("HH:mm"));
-                int size = Integer.parseInt(nz(request.getParameter("size"), "0"));
-                if (session.getAttribute("examId") != null) {
-                    int eId    = Integer.parseInt(session.getAttribute("examId").toString());
-                    int tMarks = Integer.parseInt(nz(request.getParameter("totalmarks"), "0"));
-
-                    for (int i=0;i<size;i++){
-                        String question = nz(request.getParameter("question"+i), "");
-                        String ans      = nz(request.getParameter("ans"+i), "");
-                        int qid         = Integer.parseInt(nz(request.getParameter("qid"+i), "0"));
-                        pDAO.insertAnswer(eId, qid, question, ans);
-                    }
-
-                    pDAO.calculateResult(eId, tMarks, time, size);
-
-                    session.removeAttribute("examId");
-                    session.removeAttribute("examStarted");
-
-                    response.sendRedirect("std-page.jsp?pgprt=1&eid="+eId+"&showresult=1");
-                } else {
-                    response.sendRedirect("std-page.jsp");
-                }
-            } catch(Exception e){
-                session.setAttribute("error","Error submitting exam: "+e.getMessage());
-                response.sendRedirect("std-page.jsp");
-            }
-        } else {
-            session.setAttribute("error", "Invalid operation for exams");
+        } catch(Exception e){
+            session.setAttribute("error","Error submitting exam: "+e.getMessage());
             response.sendRedirect("std-page.jsp");
         }
-
+        
+    } else if ("checkCourseStatus".equalsIgnoreCase(operation)) {
+        // Handle AJAX request to check if a course is active
+        String courseNameToCheck = nz(request.getParameter("courseName"), "");
+        if (!courseNameToCheck.isEmpty()) {
+            boolean isActive = pDAO.isCourseActive(courseNameToCheck);
+            response.setContentType("text/plain");
+            response.getWriter().write(String.valueOf(isActive));
+            return;
+        }
+    
+    
+    } else {
+        session.setAttribute("error", "Invalid operation for exams");
+        response.sendRedirect("std-page.jsp");
+    }
     /* =========================
        CHECK USERNAME
        ========================= */

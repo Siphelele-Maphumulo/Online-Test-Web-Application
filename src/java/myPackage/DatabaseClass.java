@@ -310,6 +310,8 @@ public ArrayList<User> getAllStudents() {
     return list;
 }
 
+
+
 // Fetch all lecturers
 public ArrayList<User> getAllLecturers() {
     ArrayList<User> list = new ArrayList<>();
@@ -792,19 +794,135 @@ public boolean updateUser(User user) {
 }
     
 public boolean checkUserExists(String username) {
-    String sql = "SELECT 1 FROM users WHERE user_name = ? LIMIT 1";
-    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+    PreparedStatement ps = null;
+    ResultSet rs = null;
+    
+    try {
+        String sql = "SELECT 1 FROM users WHERE user_name = ? LIMIT 1";
+        ps = conn.prepareStatement(sql);
         ps.setString(1, username);
-        try (ResultSet rs = ps.executeQuery()) {
-            return rs.next();
-        }
-    } catch (SQLException e) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "checkUserExists failed", e);
+        rs = ps.executeQuery();
+        
+        return rs.next();
+        
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "checkUserExists failed for username: " + username, ex);
         return false;
+    } finally {
+        try {
+            if (rs != null) rs.close();
+            if (ps != null) ps.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in checkUserExists", ex);
+        }
     }
 }
 
+public int getExamId(String courseName) {
+    PreparedStatement ps = null;
+    ResultSet rs = null;
+    int examId = 0;
+    
+    try {
+        String sql = "SELECT exam_id FROM exams WHERE cname = ? AND status = 'Active' ORDER BY exam_id DESC LIMIT 1";
+        ps = conn.prepareStatement(sql);
+        ps.setString(1, courseName);
+        rs = ps.executeQuery();
+        
+        if (rs.next()) {
+            examId = rs.getInt("exam_id");
+        }
+        
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "getExamId failed for course: " + courseName, ex);
+    } finally {
+        try {
+            if (rs != null) rs.close();
+            if (ps != null) ps.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in getExamId", ex);
+        }
+    }
+    
+    return examId;
+}
 
+public ArrayList<Exams> getActiveCourses() {
+    ArrayList<Exams> list = new ArrayList<>();
+    PreparedStatement ps = null;
+    ResultSet rs = null;
+    
+    try {
+        // Updated to select more columns if they exist in your exams table
+        String sql = "SELECT exam_id, cname, status, duration, total_marks, exam_date " +
+                     "FROM exams WHERE status = 'Active' ORDER BY cname";
+        ps = conn.prepareStatement(sql);
+        rs = ps.executeQuery();
+        
+        while(rs.next()){
+            Exams e = new Exams();
+            e.setExamId(rs.getInt("exam_id"));
+            e.setcName(rs.getString("cname"));
+            e.setStatus(rs.getString("status"));
+            
+            // Set other properties if your Exams class has them
+            try {
+                e.setDuration(rs.getInt("duration"));
+                e.settMarks(rs.getInt("total_marks"));
+                e.setDate(rs.getString("exam_date"));
+            } catch (Exception ex) {
+                // Some properties might not exist in your Exams class
+                // This is okay - just skip them
+            }
+            
+            list.add(e);
+        }
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "getActiveCourses failed", ex);
+    } finally {
+        try {
+            if (rs != null) rs.close();
+            if (ps != null) ps.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in getActiveCourses", ex);
+        }
+    }
+    
+    return list;
+}
+
+public boolean isCourseActive(String courseName) {
+    PreparedStatement ps = null;
+    ResultSet rs = null;
+    
+    try {
+        // Alternative query that also checks if there are questions available
+        String sql = "SELECT COUNT(*) as active_count FROM exams e " +
+                     "WHERE e.cname = ? AND e.status = 'Active' " +
+                     "AND EXISTS (SELECT 1 FROM questions q WHERE q.course_name = e.cname LIMIT 1)";
+        ps = conn.prepareStatement(sql);
+        ps.setString(1, courseName);
+        rs = ps.executeQuery();
+        
+        if (rs.next()) {
+            int activeCount = rs.getInt("active_count");
+            return activeCount > 0;
+        }
+        
+        return false;
+        
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "isCourseActive failed for course: " + courseName, ex);
+        return false;
+    } finally {
+        try {
+            if (rs != null) rs.close();
+            if (ps != null) ps.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in isCourseActive", ex);
+        }
+    }
+}
     
 public int updateStudent(int uId, String fName, String lName, String uName, String email, String pass,
         String contact, String city, String address, String userType) {
