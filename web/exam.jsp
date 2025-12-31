@@ -2547,11 +2547,6 @@
                         View Details
                     </a> -->
                 </div>
-<!--                    <button class="btn-danger" 
-                            onclick="showDeleteModal(<%= result.getExamId() %>, '<%= studentFullName.replace("'", "\\'") %>', '<%= result.getcName().replace("'", "\\'") %>')"
-                            style="padding: 10px 20px; border-radius: 6px; border: none; color: white; cursor: pointer; margin-left: 10px;">
-                        <i class="fas fa-trash"></i> Delete Result
-                    </button>-->
                 </div>
                                 <!-- Action Buttons -->
                 <div style="text-align: center; margin-top: 20px;">

@@ -1,4 +1,5 @@
 <%@page import="myPackage.classes.User"%>
+<%@page import="java.net.URL"%>
 <!DOCTYPE html>
 <html lang="en">
 <head>
