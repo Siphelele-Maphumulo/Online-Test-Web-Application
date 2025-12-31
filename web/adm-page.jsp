@@ -3,10 +3,16 @@
 <%@page import="myPackage.DatabaseClass"%>
 <%@page import="myPackage.classes.Result"%>
 <%@page import="java.util.ArrayList"%>
+<%@page import="java.util.UUID"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
  
 <% 
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+
+// Generate and set CSRF token if not already present
+if (session.getAttribute("csrf_token") == null) {
+    session.setAttribute("csrf_token", UUID.randomUUID().toString());
+}
 %>
 <!DOCTYPE html>
 <html>
@@ -15,6 +21,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Add Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="style-backend.css">
     <style>
     /* CSS Variables for easy customization */
     :root {
@@ -715,6 +722,36 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             });
         }
     });
+</script>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteConfirmationModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeDeleteModal()">&times;</span>
+        <h2>Confirm Deletion</h2>
+        <p>Are you sure you want to delete the exam result for <strong id="studentName"></strong> in course <strong id="courseName"></strong>?</p>
+        <form id="deleteResultForm" action="controller.jsp" method="post">
+            <input type="hidden" name="page" value="admin-results">
+            <input type="hidden" name="operation" value="delete_result">
+            <input type="hidden" id="examIdToDelete" name="examId">
+            <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
+            <button type="submit" class="btn btn-danger">Yes, Delete</button>
+            <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openDeleteModal(examId, studentName, courseName) {
+        document.getElementById('examIdToDelete').value = examId;
+        document.getElementById('studentName').textContent = studentName;
+        document.getElementById('courseName').textContent = courseName;
+        document.getElementById('deleteConfirmationModal').style.display = 'block';
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteConfirmationModal').style.display = 'none';
+    }
 </script>
 
 </body>

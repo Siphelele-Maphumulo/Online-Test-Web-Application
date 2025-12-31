@@ -811,6 +811,9 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                                     <a class="btn btn-primary" href="adm-page.jsp?pgprt=5&eid=<%= e.getExamId() %>" style="font-size: 13px; padding: 8px 16px;">
                                         <i class="fas fa-eye"></i> Details
                                     </a>
+                                    <button class="btn btn-danger" onclick="openDeleteModal(<%= e.getExamId() %>, '<%= fullName %>', '<%= e.getcName() %>')" style="font-size: 13px; padding: 8px 16px; background-color: var(--error); border: none;">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
                                 </td>
                             </tr>
                             <% 

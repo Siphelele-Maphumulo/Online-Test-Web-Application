@@ -798,6 +798,58 @@ public boolean updateUser(User user) {
             e.printStackTrace();
         }
     }
+
+
+// Method to delete an exam result and its associated answers
+public boolean deleteExamResult(int examId) {
+    PreparedStatement deleteAnswersStmt = null;
+    PreparedStatement deleteExamStmt = null;
+
+    try {
+        // Start transaction
+        conn.setAutoCommit(false);
+
+        // 1. Delete associated answers from the 'answers' table
+        String deleteAnswersSql = "DELETE FROM answers WHERE exam_id = ?";
+        deleteAnswersStmt = conn.prepareStatement(deleteAnswersSql);
+        deleteAnswersStmt.setInt(1, examId);
+        deleteAnswersStmt.executeUpdate();
+
+        // 2. Delete the exam from the 'exams' table
+        String deleteExamSql = "DELETE FROM exams WHERE exam_id = ?";
+        deleteExamStmt = conn.prepareStatement(deleteExamSql);
+        deleteExamStmt.setInt(1, examId);
+        int rowsAffected = deleteExamStmt.executeUpdate();
+
+        // Commit transaction
+        conn.commit();
+
+        return rowsAffected > 0;
+
+    } catch (SQLException ex) {
+        try {
+            // Rollback transaction in case of an error
+            if (conn != null) {
+                conn.rollback();
+            }
+        } catch (SQLException rollbackEx) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Rollback failed", rollbackEx);
+        }
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to delete exam result for ID: " + examId, ex);
+        return false;
+    } finally {
+        try {
+            // Close statements and restore auto-commit mode
+            if (deleteAnswersStmt != null) deleteAnswersStmt.close();
+            if (deleteExamStmt != null) deleteExamStmt.close();
+            if (conn != null) {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, e);
+        }
+    }
+}
 }
 
     
