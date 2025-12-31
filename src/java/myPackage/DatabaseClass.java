@@ -1658,7 +1658,7 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
         return list;
     }
     
-    public int startExam(String rawName, int sId) throws SQLException {
+    public int startExam(String rawName, int sId, String deviceId) throws SQLException {
         /* ----  FK-SAFE WRAPPER  ---- */
         if (rawName == null) throw new SQLException("Course name is null");
 
@@ -1687,11 +1687,33 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
             pstm.executeUpdate();
 
             try (ResultSet keys = pstm.getGeneratedKeys()) {
-                if (keys.next()) examId = keys.getInt(1);
+                if (keys.next()) {
+                    examId = keys.getInt(1);
+                    logExamStart(sId, examId, cName, deviceId);
+                }
             }
         }
         return examId;
     }
+
+    public void logExamStart(int studentId, int examId, String courseName, String deviceId) {
+    String sql = "INSERT INTO exam_register (student_id, exam_id, course_name, exam_date, start_time, device_id) VALUES (?, ?, ?, ?, ?, ?)";
+    try (PreparedStatement pstm = conn.prepareStatement(sql)) {
+        pstm.setInt(1, studentId);
+        pstm.setInt(2, examId);
+        pstm.setString(3, courseName);
+        pstm.setDate(4, java.sql.Date.valueOf(LocalDate.now()));
+        pstm.setTime(5, java.sql.Time.valueOf(LocalTime.now()));
+        if (deviceId != null) {
+            pstm.setString(6, deviceId);
+        } else {
+            pstm.setNull(6, Types.VARCHAR);
+        }
+        pstm.executeUpdate();
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to log exam start", ex);
+    }
+}
     
     public int getLastExamId(){
         int id=0;
@@ -2244,27 +2266,27 @@ private int getObtMarks(int examId, int tMarks, int size) {
     }
 }
 
-public void calculateResult(int eid, int tMarks, String endTime, int size) {
+public void calculateResult(int eid, int tMarks, String endTime, int size, int studentId) {
     try {
         // First, calculate obtained marks
         int obt = getObtMarks(eid, tMarks, size);
-        
+
         // Calculate percentage
         float percentage = 0;
         if (tMarks > 0) {
             percentage = ((float) obt / tMarks) * 100;
         }
-        
+
         // Determine result status based on percentage (45% passing threshold)
         String resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
-        
+
         // DEBUG LOGGING
         System.out.println("=== DEBUG calculateResult ===");
         System.out.println("Exam ID: " + eid);
         System.out.println("Marks: " + obt + "/" + tMarks);
         System.out.println("Percentage: " + percentage + "%");
         System.out.println("Result Status: " + resultStatus);
-        
+
         // Update the exams table with both status and result_status
         String sql = "UPDATE exams SET obt_marks=?, end_time=?, status=?, result_status=? WHERE exam_id=?";
         PreparedStatement pstm = conn.prepareStatement(sql);
@@ -2273,15 +2295,29 @@ public void calculateResult(int eid, int tMarks, String endTime, int size) {
         pstm.setString(3, "completed");
         pstm.setString(4, resultStatus); // CRITICAL: This sets result_status
         pstm.setInt(5, eid);
-        
+
         int rowsUpdated = pstm.executeUpdate();
         System.out.println("Rows updated: " + rowsUpdated);
-        
+
         pstm.close();
-        
+
+        logExamCompletion(eid, studentId, endTime);
+
     } catch (SQLException ex) {
         System.err.println("ERROR in calculateResult: " + ex.getMessage());
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+    }
+}
+
+public void logExamCompletion(int examId, int studentId, String endTime) {
+    String sql = "UPDATE exam_register SET end_time = ? WHERE exam_id = ? AND student_id = ? AND exam_date = CURDATE() AND end_time IS NULL";
+    try (PreparedStatement pstm = conn.prepareStatement(sql)) {
+        pstm.setTime(1, java.sql.Time.valueOf(LocalTime.parse(endTime)));
+        pstm.setInt(2, examId);
+        pstm.setInt(3, studentId);
+        pstm.executeUpdate();
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to log exam completion", ex);
     }
 }
 

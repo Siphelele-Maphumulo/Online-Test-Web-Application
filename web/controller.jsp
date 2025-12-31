@@ -462,7 +462,8 @@ try {
             return;
         }
         
-        int examId = pDAO.startExam(coursename, userId);
+        String deviceId = request.getRemoteAddr();
+        int examId = pDAO.startExam(coursename, userId, deviceId);
         
         if (examId > 0) {
             // Set session attributes
@@ -481,9 +482,10 @@ try {
             String time = java.time.LocalTime.now().truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
                           .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
             int size = Integer.parseInt(nz(request.getParameter("size"), "0"));
-            if (session.getAttribute("examId") != null) {
+            if (session.getAttribute("examId") != null && session.getAttribute("userId") != null) {
                 int eId    = Integer.parseInt(session.getAttribute("examId").toString());
                 int tMarks = Integer.parseInt(nz(request.getParameter("totalmarks"), "0"));
+                int studentId = Integer.parseInt(session.getAttribute("userId").toString());
 
                 for (int i=0;i<size;i++){
                     String question = nz(request.getParameter("question"+i), "");
@@ -492,7 +494,7 @@ try {
                     pDAO.insertAnswer(eId, qid, question, ans);
                 }
 
-                pDAO.calculateResult(eId, tMarks, time, size);
+                pDAO.calculateResult(eId, tMarks, time, size, studentId);
 
                 session.removeAttribute("examId");
                 session.removeAttribute("examStarted");
