@@ -688,144 +688,6 @@ int lecturerCount = lecturerList.size();
     }
 </style>
 
-<style>
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-    animation: fadeIn 0.3s;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.modal-content {
-    background-color: #fff;
-    margin: 10% auto;
-    padding: 0;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    animation: slideDown 0.3s;
-}
-
-@keyframes slideDown {
-    from { transform: translateY(-50px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-.modal-header {
-    padding: 16px 20px;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-    border-radius: 8px 8px 0 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-header h3 {
-    margin: 0;
-    color: #333;
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.close-modal {
-    color: #aaa;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    line-height: 20px;
-}
-
-.close-modal:hover {
-    color: #000;
-}
-
-.modal-body {
-    padding: 20px;
-    color: #333;
-    font-size: 16px;
-    line-height: 1.5;
-}
-
-.modal-footer {
-    padding: 16px 20px;
-    background-color: #f8f9fa;
-    border-top: 1px solid #dee2e6;
-    border-radius: 0 0 8px 8px;
-    text-align: right;
-}
-
-.delete-details {
-    background: #f8f9fa;
-    padding: 12px;
-    border-radius: 4px;
-    margin: 12px 0;
-    font-size: 14px;
-}
-
-.delete-details div {
-    margin: 4px 0;
-    display: flex;
-    align-items: center;
-}
-
-.delete-details i {
-    width: 20px;
-    color: #6c757d;
-    margin-right: 8px;
-}
-
-.warning-box {
-    background: #fff3cd;
-    border-left: 4px solid #ffc107;
-    padding: 12px;
-    margin-top: 16px;
-    border-radius: 4px;
-    color: #856404;
-}
-
-.warning-box ul {
-    margin: 8px 0 0 20px;
-}
-
-.warning-box li {
-    margin: 4px 0;
-}
-
-.btn-danger {
-    background-color: #dc3545;
-    border-color: #dc3545;
-    color: white;
-}
-
-.btn-danger:hover {
-    background-color: #c82333;
-    border-color: #bd2130;
-}
-
-.btn-outline {
-    background-color: transparent;
-    border: 1px solid #6c757d;
-    color: #6c757d;
-    margin-right: 8px;
-}
-
-.btn-outline:hover {
-    background-color: #6c757d;
-    color: white;
-}
-</style>
 <div class="dashboard-container">
     <!-- Sidebar Navigation - Same as profile page -->
     <aside class="sidebar">
@@ -982,15 +844,12 @@ int lecturerCount = lecturerList.size();
                             </td>
                             <td>
                                 <div class="action-buttons">
-                                    <button class="btn btn-error delete-lecturer-btn" 
-                                            data-user-id="<%= lecturer.getUserId() %>"
-                                            data-user-name="<%= lecturer.getFirstName() %> <%= lecturer.getLastName() %>"
-                                            data-staff-number="<%= lecturer.getUserName() != null ? lecturer.getUserName() : "N/A" %>"
-                                            data-course="<%= lecturer.getCourseName() != null ? lecturer.getCourseName() : "Not assigned" %>"
-                                            style="font-size: 13px; padding: 8px 16px;">
-                                        <i class="fas fa-trash"></i>
-                                        Delete
-                                    </button>
+                                    <a href="controller.jsp?page=Lecturers_accounts&operation=del&uid=<%= lecturer.getUserId() %>" 
+                                       onclick="return confirm('Are you sure you want to delete lecturer \"<%= lecturer.getFirstName() %> <%= lecturer.getLastName() %>\"? This action cannot be undone.');" 
+                                       class="btn btn-error" style="font-size: 13px; padding: 8px 16px;">
+                                       <i class="fas fa-trash"></i>
+                                       Delete
+                                    </a>
                                 </div>
                             </td>
                         </tr>
@@ -1002,38 +861,6 @@ int lecturerCount = lecturerList.size();
                 </table>
             </div>
         </div>
-                    <!-- Delete Confirmation Modal -->
-        <div id="deleteModal" class="modal" style="display: none;">
-            <div class="modal-content" style="max-width: 500px;">
-                <div class="modal-header">
-                    <h3><i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i> Delete Lecturer</h3>
-                    <span class="close-modal" onclick="closeDeleteModal()">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <p id="deleteModalMessage">Are you sure you want to delete this lecturer?</p>
-                    <div class="delete-details" id="deleteDetails" style="background: #f8f9fa; padding: 12px; border-radius: 4px; margin-top: 12px; font-size: 14px;">
-                        <!-- Details will be populated here -->
-                    </div>
-                    <div class="warning-box" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin-top: 16px; border-radius: 4px;">
-                        <i class="fas fa-exclamation-triangle" style="color: #856404; margin-right: 8px;"></i>
-                        <strong>Warning:</strong> This action will:
-                        <ul style="margin: 8px 0 0 20px;">
-                            <li>Remove the lecturer from the system</li>
-                            <li>Remove their access to the platform</li>
-                            <li>This action cannot be undone</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button onclick="closeDeleteModal()" class="btn btn-outline">
-                        <i class="fas fa-times"></i> Cancel
-                    </button>
-                    <button onclick="confirmDeleteLecturer()" class="btn btn-danger">
-                        <i class="fas fa-trash"></i> Delete Lecturer
-                    </button>
-                </div>
-            </div>
-        </div>
     </main>
 </div>
 
@@ -1041,13 +868,10 @@ int lecturerCount = lecturerList.size();
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <!-- JavaScript for enhanced functionality -->
-<!-- JavaScript for enhanced functionality -->
 <script>
-    // Global variables
+    // Global variables for sorting
     let currentSortColumn = -1;
-    let sortDirection = 1;
-    let deleteUserId = null;
-    let deleteUserName = null;
+    let sortDirection = 1; // 1 = ascending, -1 = descending
     
     // Filter lecturers function
     function filterLecturers() {
@@ -1081,12 +905,17 @@ int lecturerCount = lecturerList.size();
         // Update sort indicators
         const headers = document.querySelectorAll('#lecturerTable thead th');
         headers.forEach((header, index) => {
-            let indicator = header.querySelector('.sort-indicator');
+            const indicator = header.querySelector('.sort-indicator');
             if (!indicator) {
-                indicator = document.createElement('span');
-                indicator.className = 'sort-indicator';
-                header.appendChild(indicator);
+                const newIndicator = document.createElement('span');
+                newIndicator.className = 'sort-indicator';
+                header.appendChild(newIndicator);
             }
+        });
+        
+        // Update current header indicators
+        headers.forEach((header, index) => {
+            const indicator = header.querySelector('.sort-indicator');
             indicator.innerHTML = '';
             if (index === columnIndex) {
                 if (currentSortColumn === columnIndex) {
@@ -1151,77 +980,12 @@ int lecturerCount = lecturerList.size();
         rows.forEach(row => tbody.appendChild(row));
     }
     
-    // Delete lecturer functions
-    function showDeleteModal(userId, userName, staffNumber, course) {
-        deleteUserId = userId;
-        deleteUserName = userName;
-        
-        // Update modal message
-        document.getElementById('deleteModalMessage').textContent = 
-            `Are you sure you want to delete lecturer "${userName}"?`;
-        
-        // Update details
-        const detailsDiv = document.getElementById('deleteDetails');
-        detailsDiv.innerHTML = `
-            <div><i class="fas fa-user"></i> <strong>Lecturer:</strong> ${userName}</div>
-            <div><i class="fas fa-id-card"></i> <strong>Staff Number:</strong> ${staffNumber}</div>
-            <div><i class="fas fa-book"></i> <strong>Assigned Course:</strong> ${course}</div>
-        `;
-        
-        // Show modal
-        document.getElementById('deleteModal').style.display = 'block';
-    }
-    
-    function closeDeleteModal() {
-        document.getElementById('deleteModal').style.display = 'none';
-        deleteUserId = null;
-        deleteUserName = null;
-    }
-    
-    function confirmDeleteLecturer() {
-        if (!deleteUserId) return;
-        
-        // Show loading state
-        const deleteBtn = document.querySelector('#deleteModal .btn-danger');
-        const originalText = deleteBtn.innerHTML;
-        deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
-        deleteBtn.disabled = true;
-        
-        // Create and submit form
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = 'controller.jsp';
-        
-        // Add hidden inputs
-        const pageInput = document.createElement('input');
-        pageInput.type = 'hidden';
-        pageInput.name = 'page';
-        pageInput.value = 'Lecturers_accounts';
-        form.appendChild(pageInput);
-        
-        const operationInput = document.createElement('input');
-        operationInput.type = 'hidden';
-        operationInput.name = 'operation';
-        operationInput.value = 'del';
-        form.appendChild(operationInput);
-        
-        const uidInput = document.createElement('input');
-        uidInput.type = 'hidden';
-        uidInput.name = 'uid';
-        uidInput.value = deleteUserId;
-        form.appendChild(uidInput);
-        
-        // Submit the form
-        document.body.appendChild(form);
-        form.submit();
-    }
-    
-    // Initialize when page loads
+    // Initialize search functionality
     document.addEventListener('DOMContentLoaded', function() {
         // Add sort indicators to headers
         const headers = document.querySelectorAll('#lecturerTable thead th');
         headers.forEach((header, index) => {
-            if (index < 6) {
+            if (index < 6) { // Add to all except Actions column
                 const indicator = document.createElement('span');
                 indicator.className = 'sort-indicator';
                 header.appendChild(indicator);
@@ -1237,43 +1001,21 @@ int lecturerCount = lecturerList.size();
             }
         });
         
-        // Attach delete button click handlers
-        document.querySelectorAll('.delete-lecturer-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const userId = this.getAttribute('data-user-id');
-                const userName = this.getAttribute('data-user-name');
-                const staffNumber = this.getAttribute('data-staff-number');
-                const course = this.getAttribute('data-course');
-                
-                showDeleteModal(userId, userName, staffNumber, course);
-            });
+        // Add animation for rows
+        const rows = document.querySelectorAll('#lecturerTableBody tr.lecturer-row');
+        rows.forEach((row, index) => {
+            row.style.animationDelay = `${index * 0.1}s`;
+            row.style.animation = 'fadeIn 0.3s ease forwards';
         });
         
-        // Add CSS animation for fadeIn
+        // Add CSS animation
         const style = document.createElement('style');
         style.textContent = `
             @keyframes fadeIn {
                 from { opacity: 0; transform: translateY(10px); }
                 to { opacity: 1; transform: translateY(0); }
             }
-            .lecturer-row {
-                animation: fadeIn 0.3s ease forwards;
-            }
         `;
         document.head.appendChild(style);
-        
-        // Add animation delays for rows
-        const rows = document.querySelectorAll('#lecturerTableBody tr.lecturer-row');
-        rows.forEach((row, index) => {
-            row.style.animationDelay = `${index * 0.05}s`;
-        });
-        
-        // Close modal when clicking outside
-        window.addEventListener('click', function(event) {
-            const modal = document.getElementById('deleteModal');
-            if (event.target === modal) {
-                closeDeleteModal();
-            }
-        });
     });
 </script>

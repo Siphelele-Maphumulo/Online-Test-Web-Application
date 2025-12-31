@@ -958,13 +958,6 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
             <h3><i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i> Delete Exam Result</h3>
             <span class="close-modal" onclick="closeDeleteModal()">&times;</span>
         </div>
-        <%
-        // Generate CSRF token if not exists
-        if (session.getAttribute("csrf_token") == null) {
-            String csrfToken = java.util.UUID.randomUUID().toString();
-            session.setAttribute("csrf_token", csrfToken);
-        }
-        %>
         <div class="modal-body">
             <p id="deleteModalMessage">Are you sure you want to delete this exam result?</p>
         </div>
@@ -976,6 +969,73 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         </div>
     </div>
 </div>
+
+<style>
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 0;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+    padding: 16px 20px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.close-modal {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 20px;
+}
+
+.close-modal:hover {
+    color: #000;
+}
+
+.modal-body {
+    padding: 20px;
+    color: #333;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.modal-footer {
+    padding: 16px 20px;
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    border-radius: 0 0 8px 8px;
+    text-align: right;
+}
+</style>
 
 <style>
 .modal {
@@ -1064,6 +1124,8 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     let currentSortColumn = -1;
     let sortDirection = 1;
     let deleteExamId = null;
+    let deleteStudentName = null;
+    let deleteCourseName = null;
 
     // Initialize when page loads
     document.addEventListener('DOMContentLoaded', function() {
@@ -1080,6 +1142,9 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         
         // Initialize edit/delete functionality
         initializeEditDeleteHandlers();
+        
+        // Debug: Log to check if modal exists
+        console.log('Modal element exists:', document.getElementById('deleteModal') !== null);
     });
     
     function initializeEditDeleteHandlers() {
@@ -1109,12 +1174,27 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
             });
         });
         
-        // Delete button click handler
+        // Delete button click handler - UPDATED
         document.querySelectorAll('.delete-btn').forEach(button => {
-            button.addEventListener('click', function() {
+            button.addEventListener('click', function(e) {
+                e.stopPropagation(); // Prevent event bubbling
+                
                 const examId = this.getAttribute('data-exam-id');
-                const studentName = this.getAttribute('data-student-name');
-                const courseName = this.getAttribute('data-course-name');
+                let studentName = this.getAttribute('data-student-name');
+                let courseName = this.getAttribute('data-course-name');
+                
+                // Debug log
+                console.log('Delete clicked:', {examId, studentName, courseName});
+                
+                // If data attributes are empty, try to get from row
+                if (!studentName || !courseName) {
+                    const row = this.closest('tr');
+                    if (row) {
+                        studentName = row.querySelector('td:nth-child(1)')?.textContent || studentName;
+                        courseName = row.querySelector('td:nth-child(5)')?.textContent || courseName;
+                    }
+                }
+                
                 showDeleteModal(examId, studentName, courseName);
             });
         });
@@ -1199,35 +1279,78 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     
     function showDeleteModal(examId, studentName, courseName) {
         deleteExamId = examId;
+        deleteStudentName = studentName;
+        deleteCourseName = courseName;
+        
+        console.log('Showing modal with:', {examId, studentName, courseName});
+        
+        const modal = document.getElementById('deleteModal');
+        if (!modal) {
+            console.error('Modal element not found!');
+            alert('Error: Modal not found. Please refresh the page.');
+            return;
+        }
+        
         const modalMessage = document.getElementById('deleteModalMessage');
+        if (!modalMessage) {
+            console.error('Modal message element not found!');
+            alert('Error: Modal message element not found.');
+            return;
+        }
+        
+        // Clean up text - replace any problematic characters
+        const cleanStudentName = studentName ? studentName.replace(/'/g, "\\'") : 'Unknown Student';
+        const cleanCourseName = courseName ? courseName.replace(/'/g, "\\'") : 'Unknown Course';
+        
         modalMessage.innerHTML = `Are you sure you want to delete the exam result for:<br><br>
-                                 <strong>Student:</strong> ${studentName}<br>
-                                 <strong>Course:</strong> ${courseName}<br>
+                                 <strong>Student:</strong> ${cleanStudentName}<br>
+                                 <strong>Course:</strong> ${cleanCourseName}<br>
                                  <strong>Exam ID:</strong> ${examId}<br><br>
-                                 This action cannot be undone!`;
+                                 <span style="color: #dc3545; font-weight: bold;">
+                                 <i class="fas fa-exclamation-triangle"></i> This action cannot be undone!</span>`;
 
-        document.getElementById('deleteModal').style.display = 'block';
+        modal.style.display = 'block';
+        console.log('Modal should now be visible');
     }
+    
     function closeDeleteModal() {
-        document.getElementById('deleteModal').style.display = 'none';
+        const modal = document.getElementById('deleteModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
         deleteExamId = null;
+        deleteStudentName = null;
+        deleteCourseName = null;
     }
     
     function confirmDelete() {
-        if (!deleteExamId) return;
-
+        if (!deleteExamId) {
+            alert('No exam selected for deletion.');
+            return;
+        }
+        
+        console.log('Confirming delete for exam ID:', deleteExamId);
+        
         // Show loading state
-        const deleteBtn = document.querySelector('.modal-footer .btn-danger');
-        const originalText = deleteBtn.innerHTML;
-        deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
-        deleteBtn.disabled = true;
+        const deleteBtn = document.querySelector('#deleteModal .modal-footer .btn-danger');
+        if (deleteBtn) {
+            const originalText = deleteBtn.innerHTML;
+            deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+            deleteBtn.disabled = true;
+            
+            // Revert button after 5 seconds if something goes wrong
+            setTimeout(() => {
+                deleteBtn.innerHTML = originalText;
+                deleteBtn.disabled = false;
+            }, 5000);
+        }
 
         // Submit delete request
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = 'controller.jsp';
 
-        // Add CSRF token if you have one
+        // Add CSRF token
         const csrfInput = document.createElement('input');
         csrfInput.type = 'hidden';
         csrfInput.name = 'csrf_token';
@@ -1252,6 +1375,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         examIdInput.value = deleteExamId;
         form.appendChild(examIdInput);
 
+        console.log('Submitting delete form for exam ID:', deleteExamId);
         document.body.appendChild(form);
         form.submit();
     }
@@ -1479,4 +1603,24 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
             closeDeleteModal();
         }
     });
+    
+    // Add keyboard support for modal
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeDeleteModal();
+        }
+    });
 </script>
+
+<div id="deleteConfirmationModal" style="display:none; position:fixed; z-index:1001; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.4);">
+  <div style="background-color:#fefefe; margin:15% auto; padding:20px; border:1px solid #888; width:80%; max-width:500px; border-radius:8px; box-shadow:0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);">
+    <span onclick="closeModal()" style="color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer;">&times;</span>
+    <h2>Confirm Deletion</h2>
+    <p>Are you sure you want to delete the exam result for <strong id="modalStudentName"></strong> in the course <strong id="modalCourseName"></strong> (Exam ID: <strong id="modalExamId"></strong>)?</p>
+    <p>This action cannot be undone.</p>
+    <div style="text-align:right;">
+      <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+      <button id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+    </div>
+  </div>
+</div>

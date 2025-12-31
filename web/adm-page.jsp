@@ -3,11 +3,14 @@
 <%@page import="myPackage.DatabaseClass"%>
 <%@page import="myPackage.classes.Result"%>
 <%@page import="java.util.ArrayList"%>
+<%@page import="java.util.UUID"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
  
 <% 
-myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
-
+    // Generate a CSRF token and store it in the session
+    String csrfToken = UUID.randomUUID().toString();
+    session.setAttribute("csrfToken", csrfToken);
+    myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 %>
 <!DOCTYPE html>
 <html>
@@ -555,28 +558,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     <!-- Main Content Area -->
     <main class="dashboard-content">
         <div class="content-wrapper">
-             <!-- Delete Confirmation Modal -->
-            <div id="deleteConfirmationModal" class="modal" style="display:none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
-                <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 400px; text-align: center; border-radius: 8px;">
-                    <h2 style="margin-bottom: 20px;">Confirm Deletion</h2>
-                    <p style="margin-bottom: 20px;" id="deleteModalText">Are you sure you want to delete this item? This action cannot be undone.</p>
-                    <div style="display: flex; justify-content: center; gap: 10px;">
-                        <button id="confirmDeleteBtn" class="btn btn-error">Delete</button>
-                        <button id="cancelDeleteBtn" class="btn btn-secondary">Cancel</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Permission Denied Modal -->
-            <div id="permissionDeniedModal" class="modal" style="display:none; position: fixed; z-index: 1002; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
-                <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 400px; text-align: center; border-radius: 8px;">
-                    <h2 style="margin-bottom: 20px; color: var(--error);">Permission Denied</h2>
-                    <p style="margin-bottom: 20px;">You do not have the required permissions to perform this action. Please contact an administrator.</p>
-                    <div style="display: flex; justify-content: center;">
-                        <button id="closePermissionModalBtn" class="btn btn-primary">OK</button>
-                    </div>
-                </div>
-            </div>
+            <%@ include file="header-messages.jsp" %>
             <%
                 // Check if user is logged in
                 if (session.getAttribute("userStatus") != null && session.getAttribute("userStatus").equals("1")) {
@@ -736,76 +718,6 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                 
                 lastScroll = currentScroll;
             });
-        }
-    });
-
-    // Modal Logic
-    document.addEventListener('DOMContentLoaded', function() {
-        // Delete Confirmation Modal
-        const deleteModal = document.getElementById('deleteConfirmationModal');
-        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-        const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
-        const deleteModalText = document.getElementById('deleteModalText');
-        let deleteUrl = '';
-
-        // Permission Denied Modal
-        const permissionModal = document.getElementById('permissionDeniedModal');
-        const closePermissionBtn = document.getElementById('closePermissionModalBtn');
-
-        document.body.addEventListener('click', function(e) {
-            // Handle Delete Button Clicks
-            if (e.target.closest('.btn-error, .btn-danger')) {
-                const deleteLink = e.target.closest('a');
-                if (deleteLink && deleteLink.href.includes('operation=del')) {
-                    e.preventDefault();
-                    deleteUrl = deleteLink.href;
-                    const itemName = deleteLink.getAttribute('data-item-name');
-                    if (itemName) {
-                        deleteModalText.textContent = `Are you sure you want to delete "${itemName}"? This action cannot be undone.`;
-                    } else {
-                        deleteModalText.textContent = 'Are you sure you want to delete this item? This action cannot be undone.';
-                    }
-                    deleteModal.style.display = 'block';
-                }
-            }
-
-            // Handle Permission Check Clicks
-            if (e.target.closest('.permission-check')) {
-                const link = e.target.closest('a');
-                if (link) {
-                    e.preventDefault();
-                    permissionModal.style.display = 'block';
-                }
-            }
-        });
-
-        // Event Listeners for Buttons
-        if (cancelDeleteBtn) {
-            cancelDeleteBtn.onclick = function() {
-                deleteModal.style.display = 'none';
-            }
-        }
-
-        if (confirmDeleteBtn) {
-            confirmDeleteBtn.onclick = function() {
-                window.location.href = deleteUrl;
-            }
-        }
-
-        if (closePermissionBtn) {
-            closePermissionBtn.onclick = function() {
-                permissionModal.style.display = 'none';
-            }
-        }
-
-        // Handle clicks outside of the modals
-        window.onclick = function(event) {
-            if (event.target == deleteModal) {
-                deleteModal.style.display = 'none';
-            }
-            if (event.target == permissionModal) {
-                permissionModal.style.display = 'none';
-            }
         }
     });
 </script>
