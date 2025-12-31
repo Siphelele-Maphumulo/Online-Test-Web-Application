@@ -125,6 +125,26 @@ CREATE TABLE `users` (
   PRIMARY KEY (`user_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8 COMMENT='		';
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `exam_register`
+--
+
+DROP TABLE IF EXISTS `exam_register`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `exam_register` (
+  `register_id` int(11) NOT NULL AUTO_INCREMENT,
+  `student_id` int(11) NOT NULL,
+  `exam_id` int(11) NOT NULL,
+  `course_name` varchar(45) NOT NULL,
+  `exam_date` date NOT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time DEFAULT NULL,
+  PRIMARY KEY (`register_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
