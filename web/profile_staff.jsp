@@ -954,6 +954,10 @@
                         <i class="fas fa-users"></i>
                         <h2>Accounts</h2>
                     </a>
+                     <a href="adm-page.jsp?pgprt=7" class="nav-item">
+                        <i class="fas fa-users"></i>
+                        <h2>Registers</h2>
+                    </a>
                 <% } else { %>
                     <a href="std-page.jsp?pgprt=0" class="nav-item active">
                         <i class="fas fa-user"></i>
@@ -967,6 +971,7 @@
                         <i class="fas fa-chart-line"></i>
                         <h2>Results</h2>
                     </a>
+                   
                 <% } %>
             </nav>
         </aside>

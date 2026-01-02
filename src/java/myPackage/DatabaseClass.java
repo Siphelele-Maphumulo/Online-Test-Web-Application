@@ -2603,11 +2603,24 @@ public String getLastCourseName() {
 // Add to DatabaseClass.java
 
 // Get filtered exam register
-public ResultSet getFilteredExamRegister(int examId, String courseName, String examDate) throws SQLException {
+// Get filtered exam register - IMPROVED VERSION
+// UPDATED: Get filtered exam register with all new filters
+public ResultSet getFilteredExamRegister(int examId, int studentId, String firstName, 
+                                         String lastName, String courseName, String examDate) throws SQLException {
     StringBuilder sql = new StringBuilder();
-    sql.append("SELECT er.*, u.first_name, u.last_name, u.email, u.contact_no ");
+    sql.append("SELECT ");
+    sql.append("    er.register_id, ");
+    sql.append("    er.student_id, ");
+    sql.append("    er.exam_id, ");
+    sql.append("    er.course_name, ");
+    sql.append("    er.exam_date, ");
+    sql.append("    er.start_time, ");
+    sql.append("    er.end_time, ");
+    sql.append("    u.first_name, ");
+    sql.append("    u.last_name, ");
+    sql.append("    u.email ");
     sql.append("FROM exam_register er ");
-    sql.append("JOIN users u ON er.student_id = u.user_id ");
+    sql.append("LEFT JOIN users u ON er.student_id = u.user_id ");
     sql.append("WHERE 1=1 ");
     
     ArrayList<Object> params = new ArrayList<>();
@@ -2615,6 +2628,21 @@ public ResultSet getFilteredExamRegister(int examId, String courseName, String e
     if (examId > 0) {
         sql.append("AND er.exam_id = ? ");
         params.add(examId);
+    }
+    
+    if (studentId > 0) {
+        sql.append("AND er.student_id = ? ");
+        params.add(studentId);
+    }
+    
+    if (firstName != null && !firstName.trim().isEmpty()) {
+        sql.append("AND LOWER(u.first_name) LIKE ? ");
+        params.add("%" + firstName.trim().toLowerCase() + "%");
+    }
+    
+    if (lastName != null && !lastName.trim().isEmpty()) {
+        sql.append("AND LOWER(u.last_name) LIKE ? ");
+        params.add("%" + lastName.trim().toLowerCase() + "%");
     }
     
     if (courseName != null && !courseName.trim().isEmpty()) {
@@ -2688,6 +2716,31 @@ public ResultSet getExamRegisterStatistics(int examId, String courseName, String
     
     return ps.executeQuery();
 }
+
+// NEW METHOD: Get courses from exam register
+public ArrayList<String> getExamRegisterCourses() {
+    ArrayList<String> courses = new ArrayList<>();
+    try {
+        // Get DISTINCT courses from exam_register table
+        String sql = "SELECT DISTINCT course_name FROM exam_register WHERE course_name IS NOT NULL AND course_name != '' ORDER BY course_name";
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ResultSet rs = ps.executeQuery();
+        
+        while (rs.next()) {
+            String courseName = rs.getString("course_name");
+            if (courseName != null && !courseName.trim().isEmpty()) {
+                courses.add(courseName.trim());
+            }
+        }
+        
+        rs.close();
+        ps.close();
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return courses;
+}
+
 
 // Get course list for dropdown
 public ArrayList<String> getCourseList() {

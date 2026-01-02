@@ -5,7 +5,12 @@
         <group>
             <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/src/java/myPackage/DatabaseClass.java</file>
             <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/web/exam.jsp</file>
+            <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/web/export-register.jsp</file>
+            <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/web/exam-register.jsp</file>
             <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/web/controller.jsp</file>
+            <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/web/adm-page.jsp</file>
+            <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/web/profile.jsp</file>
+            <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/web/profile_staff.jsp</file>
             <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/web/results.jsp</file>
             <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/web/std-page.jsp</file>
         </group>

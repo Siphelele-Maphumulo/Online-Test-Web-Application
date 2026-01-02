@@ -673,9 +673,6 @@
             <%@ include file="header-messages.jsp" %>
             
                     <%-- Add this to your admin menu --%>
-                <a class="nav-item" href="exam-register.jsp">
-                    <i class="fas fa-clipboard-list"></i><span>Exam Register</span>
-                </a>
             <%
                 // Check if user is logged in
                 if (session.getAttribute("userStatus") != null && session.getAttribute("userStatus").equals("1")) {
@@ -701,6 +698,10 @@
                         } else if ("5".equals(pgprt)) {
             %>
                             <jsp:include page="admin-results.jsp" />
+            <%
+                        } else if ("7".equals(pgprt)) {
+            %>
+                            <jsp:include page="exam-register.jsp" />
             <%
                         } else if ("6".equals(pgprt)) {
             %>

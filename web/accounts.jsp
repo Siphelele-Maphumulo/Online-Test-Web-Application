@@ -105,7 +105,7 @@ for (User user : studentList) {
     
     /* Sidebar Styles - Same as profile page */
     .sidebar {
-        width: 250px;
+        width: 200px;
         background: linear-gradient(180deg, var(--primary-blue), var(--secondary-blue));
         color: var(--white);
         flex-shrink: 0;
@@ -726,6 +726,10 @@ for (User user : studentList) {
                 <i class="fas fa-chalkboard-teacher"></i>
                 <h2>Lecture Accounts</h2>
             </a>
+            <a href="adm-page.jsp?pgprt=7" class="nav-item">
+               <i class="fas fa-users"></i>
+               <h2>Registers</h2>
+           </a>
         </nav>
     </aside>
     

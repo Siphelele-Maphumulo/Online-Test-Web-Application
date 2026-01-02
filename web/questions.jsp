@@ -800,6 +800,11 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                 <i class="fas fa-users"></i>
                 <h2>Accounts</h2>
             </a>
+
+            <a href="adm-page.jsp?pgprt=7" class="nav-item">
+               <i class="fas fa-users"></i>
+               <h2>Registers</h2>
+           </a>
         </nav>
     </aside>
     
