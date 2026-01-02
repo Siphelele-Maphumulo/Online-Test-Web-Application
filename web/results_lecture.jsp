@@ -2,10 +2,13 @@
 <%@page import="myPackage.classes.Exams"%>
 <%@page import="myPackage.classes.Questions"%>
 <%@page import="java.util.ArrayList"%>
+<%@page import="java.util.UUID"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
  
 <% 
-myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+    String csrfToken = UUID.randomUUID().toString();
+    session.setAttribute("csrf_token", csrfToken);
+    myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 %>
 
 <style>
@@ -415,6 +418,79 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         padding: 12px;
     }
 }
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1001;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 0;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    max-width: 500px;
+}
+
+.modal-header {
+    padding: 16px 20px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.modal-header .close {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.modal-body {
+    padding: 20px;
+    font-size: 16px;
+}
+
+.modal-footer {
+    padding: 16px 20px;
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    border-radius: 0 0 8px 8px;
+    text-align: right;
+}
+
+.modal-footer button {
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.modal-footer .btn-cancel {
+    border: 1px solid #ccc;
+    background: transparent;
+}
+
+.modal-footer .btn-danger {
+    border: none;
+    background: #dc3545;
+    color: white;
+}
 </style>
 
 <!-- SIDEBAR -->
@@ -570,7 +646,14 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         <td><%= e.getStartTime() + " - " + e.getEndTime() %></td>
                         <td><strong><%= e.getObtMarks() %> / <%= e.gettMarks() %></strong></td>
                         <td><span class="<%= statusClass %>"><%= e.getStatus() != null ? e.getStatus() : "Terminated" %></span></td>
-                        <td><a href="adm-page.jsp?pgprt=5&eid=<%= e.getExamId() %>" class="action-link">Details</a></td>
+                        <td>
+                            <a href="adm-page.jsp?pgprt=5&eid=<%= e.getExamId() %>" class="action-link">Details</a>
+                            <button class="action-link delete-btn"
+                                    data-exam-id="<%= e.getExamId() %>"
+                                    data-student-name="<%= e.getFullName() %>"
+                                    data-course-name="<%= e.getcName() %>"
+                                    style="border: none; background: none; cursor: pointer; color: #dc3545; text-decoration: underline;">Delete</button>
+                        </td>
                     </tr>
                     <% 
                             }
@@ -578,6 +661,23 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                     %>
                 </tbody>
             </table>
+
+            <!-- Delete Confirmation Modal -->
+            <div id="deleteModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Delete Exam Result</h3>
+                        <span class="close" onclick="closeDeleteModal()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <p id="deleteModalMessage">Are you sure?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button onclick="closeDeleteModal()" class="btn-cancel">Cancel</button>
+                        <button onclick="confirmDelete()" class="btn-danger">Delete</button>
+                    </div>
+                </div>
+            </div>
         <% } else { %>
             <!-- Result Details View -->
             <div style="margin-bottom: 20px;">
@@ -829,5 +929,77 @@ function sortTable(columnIndex) {
     // Reorder rows in DOM
     rows.forEach(row => tbody.appendChild(row));
     updateResultsCount();
+}
+
+let deleteExamId = null;
+const csrfToken = '<%= session.getAttribute("csrf_token") %>';
+
+function showDeleteModal(examId, studentName, courseName) {
+    deleteExamId = examId;
+    const modal = document.getElementById('deleteModal');
+    const modalMessage = document.getElementById('deleteModalMessage');
+
+    modalMessage.innerHTML = `Are you sure you want to delete the result for <strong>${studentName}</strong> on the course <strong>${courseName}</strong>? This action cannot be undone.`;
+    modal.style.display = 'block';
+}
+
+function closeDeleteModal() {
+    const modal = document.getElementById('deleteModal');
+    modal.style.display = 'none';
+    deleteExamId = null;
+}
+
+function confirmDelete() {
+    if (!deleteExamId) return;
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = 'controller.jsp';
+
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    const pageInput = document.createElement('input');
+    pageInput.type = 'hidden';
+    pageInput.name = 'page';
+    pageInput.value = 'results';
+    form.appendChild(pageInput);
+
+    const operationInput = document.createElement('input');
+    operationInput.type = 'hidden';
+    operationInput.name = 'operation';
+    operationInput.value = 'delete';
+    form.appendChild(operationInput);
+
+    const examIdInput = document.createElement('input');
+    examIdInput.type = 'hidden';
+    examIdInput.name = 'eid';
+    examIdInput.value = deleteExamId;
+    form.appendChild(examIdInput);
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteButtons = document.querySelectorAll('.delete-btn');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const examId = this.getAttribute('data-exam-id');
+            const studentName = this.getAttribute('data-student-name');
+            const courseName = this.getAttribute('data-course-name');
+            showDeleteModal(examId, studentName, courseName);
+        });
+    });
+});
+
+window.onclick = function(event) {
+    const modal = document.getElementById('deleteModal');
+    if (event.target == modal) {
+        closeDeleteModal();
+    }
 }
 </script>
