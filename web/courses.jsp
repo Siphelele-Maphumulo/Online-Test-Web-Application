@@ -752,6 +752,27 @@
     </main>
 </div>
 
+<!-- Update Confirmation Modal -->
+<div id="updateConfirmationModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color: var(--primary-blue); color: var(--white);">
+            <h3 id="updateModalTitle"><i class="fas fa-question-circle"></i> Confirm Update</h3>
+            <span class="close-btn" onclick="closeUpdateModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="updateModalBody">
+            <p>Please review the changes before confirming.</p>
+        </div>
+        <div class="modal-footer" style="border-top: 1px solid var(--medium-gray);">
+            <button type="button" class="btn btn-outline" onclick="closeUpdateModal()">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button type="button" id="confirm-update-btn" class="btn btn-primary">
+                <i class="fas fa-check"></i> Confirm Update
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Font Awesome for Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
@@ -870,6 +891,13 @@
         }
     }
 
+    function closeUpdateModal() {
+        const modal = document.getElementById('updateConfirmationModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
     // Function for delete confirmation
     function confirmDelete(courseName) {
         const decodedCourseName = decodeURIComponent(courseName);
@@ -937,35 +965,53 @@
             });
         }
         
-        // Form submission handler
-        const courseForm = document.getElementById('course-form');
-        if (courseForm) {
-            courseForm.addEventListener('submit', function(e) {
-                const submitBtn = this.querySelector('#submit-btn');
+        // Confirm update button handler
+        const confirmUpdateBtn = document.getElementById('confirm-update-btn');
+        if (confirmUpdateBtn) {
+            confirmUpdateBtn.addEventListener('click', function() {
+                const courseForm = document.getElementById('course-form');
+                const submitBtn = courseForm.querySelector('#submit-btn');
+
                 if (submitBtn) {
                     submitBtn.classList.add('loading');
                     submitBtn.disabled = true;
                     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
                 }
-                
-                // If editing and course name changed, show confirmation
-                if (isEditing) {
-                    const newCourseName = document.getElementById('courseName').value.trim();
-                    if (newCourseName !== originalCourseName) {
-                        const confirmed = confirm('?? WARNING: Changing the course name will update:\n\n' +
-                                                 '? All related questions in the database\n' +
-                                                 '? All existing exams and results\n' +
-                                                 '? This change cannot be undone!\n\n' +
-                                                 'Are you sure you want to continue?');
-                        if (!confirmed) {
-                            e.preventDefault();
-                            if (submitBtn) {
-                                submitBtn.classList.remove('loading');
-                                submitBtn.disabled = false;
-                                submitBtn.innerHTML = '<i class="fas fa-save"></i> Update Course';
-                            }
-                        }
-                    }
+
+                courseForm.submit();
+            });
+        }
+
+        // Form submission handler
+        const courseForm = document.getElementById('course-form');
+        if (courseForm) {
+            courseForm.addEventListener('submit', function(e) {
+                e.preventDefault(); // Always prevent default submission
+
+                const submitBtn = this.querySelector('#submit-btn');
+                const newCourseName = document.getElementById('courseName').value.trim();
+
+                if (isEditing && newCourseName !== originalCourseName) {
+                    // Show confirmation modal
+                    const modal = document.getElementById('updateConfirmationModal');
+                    const modalBody = document.getElementById('updateModalBody');
+
+                    modalBody.innerHTML = `
+                        <p>You are about to rename the course from <strong>"${originalCourseName}"</strong> to <strong>"${newCourseName}"</strong>.</p>
+                        <p class="alert alert-warning" style="margin-top: 16px;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            This will update all associated questions and exam records. This action cannot be undone.
+                        </p>
+                        <p>Are you sure you want to proceed?</p>
+                    `;
+
+                    modal.style.display = 'block';
+                } else {
+                    // If not editing or name hasn't changed, submit directly
+                    submitBtn.classList.add('loading');
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                    this.submit();
                 }
             });
         }
