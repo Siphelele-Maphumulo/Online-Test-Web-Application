@@ -17,7 +17,7 @@
     
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     
-    // Get parameters
+    // Get all filter parameters
     int examId = 0;
     String examIdParam = request.getParameter("exam_id");
     if (examIdParam != null && !examIdParam.isEmpty()) {
@@ -28,11 +28,27 @@
         }
     }
     
+    int studentId = 0;
+    String studentIdParam = request.getParameter("student_id");
+    if (studentIdParam != null && !studentIdParam.isEmpty()) {
+        try {
+            studentId = Integer.parseInt(studentIdParam);
+        } catch (NumberFormatException e) {
+            studentId = 0;
+        }
+    }
+    
+    String firstName = request.getParameter("first_name");
+    if (firstName == null) firstName = "";
+    
+    String lastName = request.getParameter("last_name");
+    if (lastName == null) lastName = "";
+    
     String courseName = request.getParameter("course_name");
     if (courseName == null) courseName = "";
     
-    String dateFilter = request.getParameter("exam_date");
-    if (dateFilter == null) dateFilter = "";
+    String examDate = request.getParameter("exam_date");
+    if (examDate == null) examDate = "";
     
     // Generate filename
     SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
@@ -42,12 +58,15 @@
     if (examId > 0) {
         filename += "_Exam" + examId;
     }
+    if (studentId > 0) {
+        filename += "_Student" + studentId;
+    }
     if (!courseName.isEmpty()) {
         String safeCourseName = courseName.replaceAll("[^a-zA-Z0-9]", "_");
         filename += "_" + safeCourseName;
     }
-    if (!dateFilter.isEmpty()) {
-        filename += "_" + dateFilter.replace("-", "");
+    if (!examDate.isEmpty()) {
+        filename += "_" + examDate.replace("-", "");
     }
     filename += ".xls";
     
@@ -244,7 +263,7 @@
 <body>
     <!-- Report Header -->
     <div class="report-header">
-        <div class="university-title">PROFESSIONAL TESTING </div>
+        <div class="university-title">PROFESSIONAL TESTING</div>
         <div class="report-title">EXAM ATTENDANCE REGISTER</div>
         <div class="report-subtitle">CodeSA Institute Pty Ltd</div>
     </div>
@@ -262,24 +281,52 @@
         <tr>
             <td class="info-label">Report Type:</td>
             <td class="info-value">
-                <% if (examId > 0) { %>
-                    Specific Exam Analysis
-                <% } else if (!courseName.isEmpty()) { %>
-                    Course Analysis
-                <% } else if (!dateFilter.isEmpty()) { %>
-                    Date Analysis
-                <% } else { %>
-                    Comprehensive Report
-                <% } %>
+                <% 
+                    if (examId > 0) {
+                        out.print("Specific Exam Analysis");
+                    } else if (studentId > 0) {
+                        out.print("Student Analysis");
+                    } else if (!courseName.isEmpty()) {
+                        out.print("Course Analysis");
+                    } else if (!examDate.isEmpty()) {
+                        out.print("Date Analysis");
+                    } else {
+                        out.print("Comprehensive Report");
+                    }
+                %>
             </td>
             <td class="info-label">Filters Applied:</td>
             <td class="info-value">
-                <% if (examId > 0) { %>Exam ID: <%= examId %><br><% } %>
-                <% if (!courseName.isEmpty()) { %>Course: <%= courseName %><br><% } %>
-                <% if (!dateFilter.isEmpty()) { %>Date: <%= dateFilter %><% } %>
-                <% if (examId == 0 && courseName.isEmpty() && dateFilter.isEmpty()) { %>
-                    All Records
-                <% } %>
+                <% 
+                    boolean hasFilters = false;
+                    if (examId > 0) { 
+                        out.print("Exam ID: " + examId + "<br>");
+                        hasFilters = true;
+                    }
+                    if (studentId > 0) { 
+                        out.print("Student ID: " + studentId + "<br>");
+                        hasFilters = true;
+                    }
+                    if (!firstName.isEmpty()) { 
+                        out.print("First Name: " + firstName + "<br>");
+                        hasFilters = true;
+                    }
+                    if (!lastName.isEmpty()) { 
+                        out.print("Last Name: " + lastName + "<br>");
+                        hasFilters = true;
+                    }
+                    if (!courseName.isEmpty()) { 
+                        out.print("Course: " + courseName + "<br>");
+                        hasFilters = true;
+                    }
+                    if (!examDate.isEmpty()) { 
+                        out.print("Date: " + examDate);
+                        hasFilters = true;
+                    }
+                    if (!hasFilters) {
+                        out.print("All Records");
+                    }
+                %>
             </td>
         </tr>
     </table>
@@ -309,8 +356,15 @@
         <%
             try {
                 ResultSet rs = null;
-                if (examId > 0 || !courseName.isEmpty() || !dateFilter.isEmpty()) {
-                    rs = pDAO.getFilteredExamRegister(examId, courseName, dateFilter);
+                
+                // Check if any filters are applied
+                hasFilters = examId > 0 || studentId > 0 || 
+                                   !firstName.isEmpty() || !lastName.isEmpty() || 
+                                   !courseName.isEmpty() || !examDate.isEmpty();
+                
+                if (hasFilters) {
+                    // Call the method with all parameters
+                    rs = pDAO.getFilteredExamRegister(examId, studentId, firstName, lastName, courseName, examDate);
                 } else {
                     rs = pDAO.getAllExamRegister();
                 }
@@ -323,12 +377,12 @@
                 if (rs != null) {
                     while (rs.next()) {
                         count++;
-                        String firstName = rs.getString("first_name");
-                        String lastName = rs.getString("last_name");
-                        int studentId = rs.getInt("student_id");
+                        String rsFirstName = rs.getString("first_name");
+                        String rsLastName = rs.getString("last_name");
+                        int rsStudentId = rs.getInt("student_id");
                         String course = rs.getString("course_name");
                         int currentExamId = rs.getInt("exam_id");
-                        Date examDate = rs.getDate("exam_date");
+                        Date examDateObj = rs.getDate("exam_date");
                         Time startTime = rs.getTime("start_time");
                         Time endTime = rs.getTime("end_time");
                         String deviceIdentifier = rs.getString("device_identifier");
@@ -336,8 +390,8 @@
                         String email = rs.getString("email");
                         String department = rs.getString("department");
                         
-                        String studentName = (firstName != null ? firstName.trim() : "") + " " + 
-                                           (lastName != null ? lastName.trim() : "");
+                        String studentName = (rsFirstName != null ? rsFirstName.trim() : "") + " " + 
+                                           (rsLastName != null ? rsLastName.trim() : "");
                         
                         String duration = "";
                         if (durationSeconds > 0) {
@@ -359,8 +413,8 @@
                         
                         // Format date
                         String formattedDate = "N/A";
-                        if (examDate != null) {
-                            formattedDate = new SimpleDateFormat("dd-MMM-yyyy").format(examDate);
+                        if (examDateObj != null) {
+                            formattedDate = new SimpleDateFormat("dd-MMM-yyyy").format(examDateObj);
                         }
                         
                         // Format times
@@ -377,7 +431,7 @@
         <tr>
             <td class="text-center"><%= count %></td>
             <td><%= studentName %></td>
-            <td class="text-center"><%= studentId %></td>
+            <td class="text-center"><%= rsStudentId %></td>
             <td><%= course %></td>
             <td class="text-center"><%= currentExamId %></td>
             <td class="text-center"><%= formattedDate %></td>
@@ -443,14 +497,14 @@
     
     <!-- Footer -->
     <div class="footer">
-        <div>This report was automatically generated by the MUT Examination Management System</div>
-        <div>Mangosuthu University of Technology | Umlazi, Durban, 4031 | Tel: 031 907 7111</div>
+        <div>This report was automatically generated by the Professional Testing System</div>
+        <div>CodeSA Institute Pty Ltd | Professional Testing Platform</div>
         <div class="timestamp">
             Report ID: EXR<%= timestamp %> | 
             System Version: 2.1 | 
             Page generated in <%= System.currentTimeMillis() - new Date().getTime() %>ms
         </div>
-        <div>© <%= new SimpleDateFormat("yyyy").format(new Date()) %> Mangosuthu University of Technology. All rights reserved.</div>
+        <div>© <%= new SimpleDateFormat("yyyy").format(new Date()) %> CodeSA Institute. All rights reserved.</div>
     </div>
 </body>
 </html>
