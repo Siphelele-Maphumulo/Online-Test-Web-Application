@@ -1,7 +1,10 @@
 <%@ page import="java.util.ArrayList" %>
 <%@ page import="myPackage.classes.User" %>
+<%@ page import="java.util.UUID" %>
 
 <%
+    String csrfToken = UUID.randomUUID().toString();
+    session.setAttribute("csrf_token", csrfToken);
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
     User currentUser = null;
@@ -529,6 +532,10 @@
     }
 </style>
 
+<script>
+    const csrfToken = '<%= session.getAttribute("csrf_token") %>';
+</script>
+
 <div class="dashboard-container">
     <!-- Sidebar Navigation - Same as profile page -->
     <aside class="sidebar">
@@ -661,11 +668,9 @@
                                             data-exam-date="<%= dataDate %>">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
-                                    <a href="controller.jsp?page=courses&operation=del&cname=<%= courseName %>"
-                                       onclick="return confirmDelete('<%= courseName %>');" 
-                                       class="btn btn-danger">
-                                       <i class="fas fa-trash"></i> Delete
-                                    </a>
+                                    <button onclick="confirmDelete('<%= courseName %>');" class="btn btn-danger">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -876,7 +881,39 @@
                                    `? All related exams\n` +
                                    `? All exam answers and results\n\n` +
                                    `This action cannot be undone!`);
-        return confirmation;
+
+        if (confirmation) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'controller.jsp';
+
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrfToken;
+            form.appendChild(csrfInput);
+
+            const pageInput = document.createElement('input');
+            pageInput.type = 'hidden';
+            pageInput.name = 'page';
+            pageInput.value = 'courses';
+            form.appendChild(pageInput);
+
+            const operationInput = document.createElement('input');
+            operationInput.type = 'hidden';
+            operationInput.name = 'operation';
+            operationInput.value = 'del';
+            form.appendChild(operationInput);
+
+            const cnameInput = document.createElement('input');
+            cnameInput.type = 'hidden';
+            cnameInput.name = 'cname';
+            cnameInput.value = courseName;
+            form.appendChild(cnameInput);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
     }
 
     // Initialize when DOM is loaded
