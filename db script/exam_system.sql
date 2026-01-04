@@ -136,3 +136,20 @@ CREATE TABLE `users` (
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2017-08-06 21:26:29
+
+--
+-- Table structure for table `daily_register`
+--
+
+DROP TABLE IF EXISTS `daily_register`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `daily_register` (
+  `register_id` int(11) NOT NULL AUTO_INCREMENT,
+  `student_id` int(11) NOT NULL,
+  `student_name` varchar(100) NOT NULL,
+  `registration_date` date NOT NULL,
+  `registration_time` time NOT NULL,
+  PRIMARY KEY (`register_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;

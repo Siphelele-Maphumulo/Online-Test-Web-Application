@@ -540,3 +540,15 @@ body {
 ::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
 }
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.table th, .table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+.table th {
+    background-color: #f2f2f2;
+    text-align: left;
+}
