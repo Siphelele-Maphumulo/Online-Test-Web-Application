@@ -625,11 +625,16 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     <%
         } else if ("2".equals(pgprt)) {
     %>
-        <jsp:include page="results.jsp"/>
+        <jsp:include page="results.jsp"/> 
+    <%
+        } else if ("3".equals(pgprt)) {
+    %>
+        <jsp:include page="daily register.jsp"/>
     <%
         } else {
             // Default to profile
     %>
+    
         <jsp:include page="profile.jsp"/>
     <%
         }

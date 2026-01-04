@@ -843,6 +843,10 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
           <i class="fas fa-chart-line"></i>
           <span>Results</span>
         </a>
+        <a class="nav-item" href="std-page.jsp?pgprt=3">
+          <i class="fas fa-chart-line"></i>
+          <span>Daily Register</span>
+        </a>
       </div>
     </nav>
   </aside>
