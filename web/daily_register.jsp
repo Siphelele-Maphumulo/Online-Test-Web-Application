@@ -1109,11 +1109,11 @@
                             <i class="fas fa-chart-line"></i>
                             <span>Results</span>
                         </a>
-                        <a class="nav-item" href="std-page.jsp?pgprt=3">
+                        <a class="nav-item active" href="std-page.jsp?pgprt=3">
                             <i class="fas fa-calendar-check"></i>
                             <span>Register</span>
                         </a>
-                        <a class="nav-item  active" href="std-page.jsp?pgprt=4">
+                        <a class="nav-item" href="std-page.jsp?pgprt=4">
                             <i class="fas fa-eye"></i>
                             <span>Attendance</span>
                         </a>

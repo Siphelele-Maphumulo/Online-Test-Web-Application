@@ -703,9 +703,13 @@
                 <i class="fas fa-chalkboard-teacher"></i>
                 <h2>Lecture Accounts</h2>
             </a>
-            <a href="adm-page.jsp?pgprt=7" class="nav-item" active>
+            <a href="adm-page.jsp?pgprt=7" class="nav-item">
                <i class="fas fa-users"></i>
                <h2>Registers</h2>
+           </a>
+           <a href="adm-page.jsp?pgprt=8" class="nav-item" active>
+               <i class="fas fa-users"></i>
+               <h2>Class Registers</h2>
            </a>
         </nav>
  </aside>

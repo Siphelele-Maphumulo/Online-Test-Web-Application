@@ -2818,6 +2818,10 @@ public ArrayList<String> getCourseList() {
             return false;
         }
     }
+    
+    public PreparedStatement getPreparedStatement(String sql) throws SQLException {
+        return conn.prepareStatement(sql);
+    }
 
     public ArrayList<Map<String, String>> getAttendanceByStudentId(int studentId) {
         ArrayList<Map<String, String>> attendanceList = new ArrayList<>();

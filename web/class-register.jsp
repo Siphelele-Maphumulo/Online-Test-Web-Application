@@ -1,1266 +1,1202 @@
-<%-- 
-    Document   : daily_register.jsp
-    Created on : Jan 4, 2026, 12:48:41 PM
-    Author     : CodeSA Siphelele
---%>
+<%@ page import="java.sql.*" %>
+<%@ page import="java.util.*" %>
+<%@ page import="myPackage.DatabaseClass" %>
+<%@ page import="myPackage.classes.User" %>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
-<%@page import="java.sql.*" %>
-<%@page import="java.util.*" %>
-<%@page import="myPackage.DatabaseClass" %>
-<%@page import="myPackage.classes.User" %>
-<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%
+    if (session.getAttribute("userId") == null) {
+        response.sendRedirect("login.jsp");
+        return;
+    }
+
+    String userType = (String) session.getAttribute("userType");
+    if (userType == null) {
+        int userId = Integer.parseInt(session.getAttribute("userId").toString());
+        User user = DatabaseClass.getInstance().getUserDetails(String.valueOf(userId));
+        if (user != null) {
+            userType = user.getType();
+            session.setAttribute("userType", userType);
+        }
+    }
+
+    if (!("admin".equals(userType) || "lecture".equals(userType))) {
+        response.sendRedirect("std-page.jsp");
+        return;
+    }
+
+    DatabaseClass pDAO = DatabaseClass.getInstance();
+    PreparedStatement pstmt = null;
+    ResultSet rs = null;
+
+    // Filter parameters for class register
+    String classNameFilter = request.getParameter("class_name");
+    if (classNameFilter == null) classNameFilter = "";
+
+    String courseFilter = request.getParameter("course_name");
+    if (courseFilter == null) courseFilter = "";
+
+    String dateFilter = request.getParameter("attendance_date");
+    if (dateFilter == null || dateFilter.trim().isEmpty()) {
+        // Set today's date as default
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+        dateFilter = sdf.format(new java.util.Date());
+    }
+
+    String firstNameFilter = request.getParameter("first_name");
+    if (firstNameFilter == null) firstNameFilter = "";
+
+    String lastNameFilter = request.getParameter("last_name");
+    if (lastNameFilter == null) lastNameFilter = "";
+
+    // Get all students (for dropdown or reference)
+    List<String> allClasses = new ArrayList<>();
+    List<String> allCourses = new ArrayList<>();
+    
+    try {
+        // Get distinct classes from users table (students)
+        String classesQuery = "SELECT DISTINCT class_name FROM users WHERE user_type = 'student' AND class_name IS NOT NULL AND class_name != '' ORDER BY class_name";
+        pstmt = pDAO.getPreparedStatement(classesQuery);
+        rs = pstmt.executeQuery();
+        while (rs.next()) {
+            String className = rs.getString("class_name");
+            allClasses.add(className);
+        }
+        rs.close();
+        pstmt.close();
+        
+        // Get distinct courses from questions table
+        String coursesQuery = "SELECT DISTINCT course_name FROM questions WHERE course_name IS NOT NULL AND course_name != '' ORDER BY course_name";
+        pstmt = pDAO.getPreparedStatement(coursesQuery);
+        rs = pstmt.executeQuery();
+        while (rs.next()) {
+            String courseName = rs.getString("course_name");
+            allCourses.add(courseName);
+        }
+        
+    } catch (Exception e) {
+        e.printStackTrace();
+        // Add default values if query fails
+        allClasses.add("Computer Science");
+        allClasses.add("Mathematics");
+        allClasses.add("Physics");
+        allClasses.add("Engineering");
+        
+        allCourses.add("Computer Science 101");
+        allCourses.add("Mathematics 201");
+        allCourses.add("Physics 301");
+    } finally {
+        if (rs != null) try { rs.close(); } catch (SQLException e) {}
+        if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
+    }
+%>
+
 <!DOCTYPE html>
-<html>
-    <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <title>Daily Attendance Register</title>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    </head>
-    <body>
-        <%
-            // Authentication check
-            if (session.getAttribute("userId") == null) {
-                response.sendRedirect("login.jsp");
-                return;
-            }
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Register</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+    /* Use the same CSS Variables as the profile page */
+    :root {
+        /* Primary Colors */
+        --primary-blue: #09294d;
+        --secondary-blue: #1a3d6d;
+        --accent-blue: #4a90e2;
+        
+        /* Neutral Colors */
+        --white: #ffffff;
+        --light-gray: #f8fafc;
+        --medium-gray: #e2e8f0;
+        --dark-gray: #64748b;
+        --text-dark: #1e293b;
+        
+        /* Semantic Colors */
+        --success: #059669;
+        --warning: #d97706;
+        --error: #dc2626;
+        --info: #0891b2;
+        
+        /* Spacing */
+        --spacing-xs: 4px;
+        --spacing-sm: 8px;
+        --spacing-md: 16px;
+        --spacing-lg: 24px;
+        --spacing-xl: 32px;
+        
+        /* Border Radius */
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 16px;
+        
+        /* Shadows */
+        --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+        --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+        
+        /* Transitions */
+        --transition-fast: 0.15s ease;
+        --transition-normal: 0.2s ease;
+        --transition-slow: 0.3s ease;
+    }
+    
+    /* Reset and Base Styles - Same as profile page */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        line-height: 1.5;
+        color: var(--text-dark);
+        background-color: var(--light-gray);
+    }
+    
+    /* Layout Structure */
+    .dashboard-container {
+        display: flex;
+        min-height: 100vh;
+    }
+    
+    /* Sidebar Styles - Same as profile page */
+    .sidebar {
+        width: 200px;
+        background: linear-gradient(180deg, var(--primary-blue), var(--secondary-blue));
+        color: var(--white);
+        flex-shrink: 0;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+    }
+    
+    .sidebar-header {
+        padding: var(--spacing-xl) var(--spacing-lg);
+        text-align: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .mut-logo {
+        max-height: 150px;
+        width: auto;
+        filter: brightness(0) invert(1);
+    }
+    
+    .sidebar-nav {
+        padding: var(--spacing-lg) 0;
+    }
+    
+    .nav-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md) var(--spacing-lg);
+        color: rgba(255, 255, 255, 0.8);
+        text-decoration: none;
+        transition: all var(--transition-normal);
+        border-left: 3px solid transparent;
+    }
+    
+    .nav-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--white);
+        border-left-color: var(--accent-blue);
+    }
+    
+    .nav-item.active {
+        background: rgba(255, 255, 255, 0.15);
+        color: var(--white);
+        border-left-color: var(--white);
+    }
+    
+    .nav-item i {
+        width: 20px;
+        text-align: center;
+    }
+    
+    .nav-item h2 {
+        font-size: 14px;
+        font-weight: 500;
+        margin: 0;
+    }
+    
+    /* Main Content Area */
+    .main-content {
+        flex: 1;
+        padding: var(--spacing-lg);
+        overflow-y: auto;
+    }
+    
+    /* Page Header */
+    .page-header {
+        background: var(--white);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--medium-gray);
+    }
+    
+    .page-title {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+    
+    .stats-badge {
+        background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+        color: var(--white);
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-md);
+        padding: var(--spacing-lg);
+        background: var(--light-gray);
+    }
+    
+    .stat-card {
+        background: var(--white);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-lg);
+        text-align: center;
+        border: 1px solid var(--medium-gray);
+        box-shadow: var(--shadow-sm);
+        transition: transform var(--transition-normal);
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .stat-value {
+        font-size: 32px;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: var(--spacing-sm);
+    }
+    
+    .stat-label {
+        font-size: 13px;
+        color: var(--dark-gray);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-xs);
+    }
+    
+    /* Results Cards */
+    .results-card {
+        background: var(--white);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--medium-gray);
+        margin-bottom: var(--spacing-lg);
+        overflow: hidden;
+        transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+    }
+    
+    .results-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .card-header {
+        background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
+        color: var(--white);
+        padding: var(--spacing-md) var(--spacing-lg);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .card-header span {
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+    }
+    
+    /* Filter Container */
+    .filter-container {
+        background: var(--white);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--medium-gray);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .filter-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    .filter-title {
+        font-weight: 600;
+        color: var(--text-dark);
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+    }
+    
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .filter-label {
+        font-weight: 600;
+        color: var(--text-dark);
+        font-size: 13px;
+        margin-bottom: var(--spacing-xs);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+    }
+    
+    .filter-control,
+    .filter-select {
+        padding: 10px 12px;
+        border: 1px solid var(--medium-gray);
+        border-radius: var(--radius-sm);
+        font-size: 14px;
+        transition: all var(--transition-fast);
+        background: var(--white);
+        color: var(--text-dark);
+    }
+    
+    .filter-control:focus,
+    .filter-select:focus {
+        outline: none;
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+    }
+    
+    .filter-select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M2 4l4 4 4-4z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 12px;
+        padding-right: 32px;
+    }
+    
+    /* Quick Filters */
+    .quick-filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacing-sm);
+        margin-top: var(--spacing-md);
+        padding-top: var(--spacing-md);
+        border-top: 1px solid var(--medium-gray);
+    }
+    
+    /* Buttons - Consistent with profile page */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-sm);
+        padding: 10px 20px;
+        border-radius: var(--radius-sm);
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        cursor: pointer;
+        border: none;
+        transition: all var(--transition-normal);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
+        color: var(--white);
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(9, 41, 77, 0.2);
+    }
+    
+    .btn-secondary {
+        background: var(--dark-gray);
+        color: var(--white);
+    }
+    
+    .btn-secondary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(100, 116, 139, 0.2);
+    }
+    
+    .btn-outline {
+        background: transparent;
+        border: 1px solid var(--medium-gray);
+        color: var(--dark-gray);
+    }
+    
+    .btn-outline:hover {
+        background: var(--light-gray);
+        border-color: var(--dark-gray);
+    }
+    
+    .btn-success {
+        background: linear-gradient(90deg, var(--success), #10b981);
+        color: var(--white);
+    }
+    
+    .btn-success:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+    }
+    
+    .btn-danger {
+        background: linear-gradient(90deg, var(--error), #ef4444);
+        color: var(--white);
+    }
+    
+    .btn-danger:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+    }
+    
+    .btn-sm {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    
+    /* Button Groups */
+    .btn-group {
+        display: flex;
+        gap: 4px;
+    }
+    
+    /* Status Badges */
+    .badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-weight: 500;
+        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+    
+    .badge-info {
+        background: linear-gradient(90deg, var(--info), #0ea5e9);
+        color: var(--white);
+    }
+    
+    /* Attendance Status */
+    .attendance-status {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .status-present {
+        background: linear-gradient(90deg, var(--success), #10b981);
+        color: var(--white);
+    }
+    
+    .status-absent {
+        background: linear-gradient(90deg, var(--error), #ef4444);
+        color: var(--white);
+    }
+    
+    .status-not-marked {
+        background: var(--medium-gray);
+        color: var(--dark-gray);
+    }
+    
+    /* Search Container */
+    .search-container {
+        position: relative;
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    .search-input {
+        width: 100%;
+        padding: 12px 48px 12px 16px;
+        border: 1px solid var(--medium-gray);
+        border-radius: var(--radius-sm);
+        font-size: 14px;
+        transition: all var(--transition-fast);
+        background: var(--white);
+        color: var(--text-dark);
+    }
+    
+    .search-input:focus {
+        outline: none;
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+    }
+    
+    .search-icon {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--dark-gray);
+        font-size: 14px;
+    }
+    
+    /* Results Table */
+    .results-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--white);
+    }
+    
+    .results-table thead th {
+        background: var(--light-gray);
+        color: var(--text-dark);
+        padding: var(--spacing-md);
+        font-weight: 600;
+        text-align: left;
+        border-bottom: 1px solid var(--medium-gray);
+        font-size: 13px;
+        cursor: pointer;
+        transition: background-color var(--transition-fast);
+        position: relative;
+    }
+    
+    .results-table thead th:hover {
+        background: var(--medium-gray);
+    }
+    
+    .results-table tbody td {
+        padding: var(--spacing-md);
+        border-bottom: 1px solid var(--light-gray);
+        vertical-align: middle;
+        color: var(--dark-gray);
+        font-size: 13px;
+        text-align: left;
+    }
+    
+    .results-table tbody tr {
+        transition: background-color var(--transition-fast);
+    }
+    
+    .results-table tbody tr:hover {
+        background-color: var(--light-gray);
+    }
+    
+    /* Sort Indicator */
+    .sort-indicator {
+        margin-left: 4px;
+        font-size: 10px;
+        color: var(--dark-gray);
+    }
+    
+    /* No Results Message */
+    .no-results {
+        text-align: center;
+        padding: var(--spacing-xl);
+        color: var(--dark-gray);
+    }
+    
+    .no-results i {
+        font-size: 48px;
+        color: var(--medium-gray);
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .no-results h2 {
+        font-size: 18px;
+        margin-bottom: var(--spacing-sm);
+        color: var(--text-dark);
+    }
+    
+    .no-results p {
+        font-size: 14px;
+        color: var(--dark-gray);
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .results-count {
+        text-align: center;
+        padding: var(--spacing-md);
+        color: var(--dark-gray);
+        font-size: 13px;
+        border-top: 1px solid var(--medium-gray);
+        background: var(--light-gray);
+    }
+    
+    /* Checkboxes */
+    input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+    }
+    
+    /* Responsive Design - Consistent with profile page */
+    @media (max-width: 768px) {
+        .dashboard-container {
+            flex-direction: column;
+        }
+        
+        .sidebar {
+            width: 100%;
+            height: auto;
+            position: static;
+        }
+        
+        .sidebar-nav {
+            display: flex;
+            overflow-x: auto;
+            padding: var(--spacing-sm);
+        }
+        
+        .nav-item {
+            flex-direction: column;
+            padding: var(--spacing-sm);
+            min-width: 80px;
+            text-align: center;
+            border-left: none;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .nav-item.active {
+            border-left: none;
+            border-bottom-color: var(--white);
+        }
+        
+        .nav-item:hover {
+            border-left: none;
+            border-bottom-color: var(--accent-blue);
+        }
+        
+        .page-header {
+            flex-direction: column;
+            gap: var(--spacing-md);
+            text-align: center;
+        }
+        
+        .filter-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .results-table {
+            display: block;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        
+        .card-header {
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            text-align: center;
+        }
+        
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .quick-filter-row {
+            flex-direction: column;
+        }
+        
+        .quick-filter-row .btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .main-content {
+            padding: var(--spacing-md);
+        }
+        
+        .filter-container {
+            padding: var(--spacing-md);
+        }
+        
+        .results-table thead th,
+        .results-table tbody td {
+            padding: var(--spacing-sm);
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .btn-group {
+            flex-direction: column;
+        }
+    }
+    
+    /* Loading State */
+    .loading {
+        opacity: 0.7;
+        pointer-events: none;
+    }
+    
+    .loading::after {
+        content: '';
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid var(--light-gray);
+        border-top: 2px solid var(--primary-blue);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-left: var(--spacing-sm);
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* For inline forms in quick-filter-row */
+    .quick-filter-row form {
+        display: inline;
+    }
+    
+    .quick-filter-row .btn {
+        margin: 2px;
+    }
+    
+    /* Table Container */
+    .results-table-container {
+        overflow-x: auto;
+    }
+    
+    /* Results Count Styling */
+    .results-count span {
+        font-weight: 600;
+    }
+</style>
+    
+</head>
+<body>
+<div class="dashboard-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <img src="IMG/mut.png" alt="CodeSA Institute Pty LTD Logo" class="mut-logo">
+        </div>
+        <nav class="sidebar-nav">
+            <a href="adm-page.jsp?pgprt=0" class="nav-item">
+                <i class="fas fa-user"></i>
+                <h2>Profile</h2>
+            </a>
+            <a href="adm-page.jsp?pgprt=2" class="nav-item">
+                <i class="fas fa-book"></i>
+                <h2>Courses</h2>
+            </a>
+            <a href="adm-page.jsp?pgprt=3" class="nav-item">
+                <i class="fas fa-question-circle"></i>
+                <h2>Questions</h2>
+            </a>
+            <a href="adm-page.jsp?pgprt=5" class="nav-item">
+                <i class="fas fa-chart-bar"></i>
+                <h2>Results</h2>
+            </a>
+            <a href="adm-page.jsp?pgprt=1" class="nav-item">
+                <i class="fas fa-user-graduate"></i>
+                <h2>Student Accounts</h2>
+            </a>
+            <a href="adm-page.jsp?pgprt=6" class="nav-item">
+                <i class="fas fa-chalkboard-teacher"></i>
+                <h2>Lecture Accounts</h2>
+            </a>
+            <a href="adm-page.jsp?pgprt=7" class="nav-item">
+               <i class="fas fa-users"></i>
+               <h2>Exam Registers</h2>
+           </a>
+           <a href="adm-page.jsp?pgprt=8" class="nav-item active">
+               <i class="fas fa-users"></i>
+               <h2>Class Registers</h2>
+           </a>
+        </nav>
+    </aside>
 
-            int userId = Integer.parseInt(session.getAttribute("userId").toString());
-            DatabaseClass pDAO = DatabaseClass.getInstance();
-            Connection conn = null;
-            PreparedStatement pstmt = null;
-            ResultSet rs = null;
-            
-            // Determine user type
-            String userType = (String) session.getAttribute("userType");
-            if (userType == null) {
-                User user = pDAO.getUserDetails(String.valueOf(userId));
-                if (user != null) {
-                    userType = user.getType();
-                    session.setAttribute("userType", userType);
-                }
-            }
-
-            // Redirect non-students to appropriate pages
-            if ("admin".equals(userType)) {
-                response.sendRedirect("adm-page.jsp?pgprt=7");
-                return;
-            } else if ("lecture".equals(userType)) {
-                response.sendRedirect("lec-page.jsp");
-                return;
-            }
-
-            // Get student details
-            User student = pDAO.getUserDetails(String.valueOf(userId));
-            String studentName = "Student";
-            String studentEmail = "";
-            
-            if (student != null) {
-                studentName = student.getFirstName() + " " + student.getLastName();
-                studentEmail = student.getEmail();
-            }
-            
-            // Get today's date
-            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
-            String todayDate = sdf.format(new java.util.Date());
-            
-            // Check if attendance already marked today
-            boolean attendanceMarkedToday = false;
-            try {
-                conn = pDAO.getConnection();
-                String checkQuery = "SELECT COUNT(*) as count FROM daily_register WHERE student_id = ? AND DATE(registration_date) = ?";
-                pstmt = conn.prepareStatement(checkQuery);
-                pstmt.setInt(1, userId);
-                pstmt.setString(2, todayDate);
-                rs = pstmt.executeQuery();
-                if (rs.next()) {
-                    attendanceMarkedToday = rs.getInt("count") > 0;
-                }
-            } catch (Exception e) {
-                attendanceMarkedToday = false;
-            } finally {
-                // Close resources
-                if (rs != null) try { rs.close(); } catch (SQLException e) {}
-                if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
-            }
-            
-            // Handle attendance marking if form was submitted
-            String operation = request.getParameter("operation");
-            if ("mark_attendance".equals(operation) && !attendanceMarkedToday) {
-                boolean marked = pDAO.markAttendance(userId, studentName);
-                if (marked) {
-                    session.setAttribute("message", "Attendance marked successfully!");
-                    attendanceMarkedToday = true;
-                } else {
-                    session.setAttribute("error", "Failed to mark attendance. Please try again.");
-                }
-            }
-            
-            // Get attendance history
-            ArrayList<Map<String, String>> attendanceHistory = null;
-            try {
-                attendanceHistory = pDAO.getAttendanceByStudentId(userId);
-            } catch (Exception e) {
-                // Handle error - table might not exist yet
-            }
-            
-            // Get filter parameters
-            String filterDate = request.getParameter("filter_date");
-            if (filterDate == null || filterDate.isEmpty()) {
-                filterDate = todayDate;
-            }
-            
-            String filterCourse = request.getParameter("filter_course");
-            if (filterCourse == null) filterCourse = "";
-            
-            // Get student courses for dropdown
-            List<String> studentCourses = new ArrayList<>();
-            try {
-                conn = pDAO.getConnection();
-                String coursesQuery = "SELECT DISTINCT course_name FROM exam_register WHERE student_id = ?";
-                pstmt = conn.prepareStatement(coursesQuery);
-                pstmt.setInt(1, userId);
-                rs = pstmt.executeQuery();
-                while (rs.next()) {
-                    String course = rs.getString("course_name");
-                    if (course != null && !course.trim().isEmpty()) {
-                        studentCourses.add(course.trim());
-                    }
-                }
-            } catch (Exception e) {
-                // Add default courses if query fails
-                studentCourses.add("Computer Science");
-                studentCourses.add("Mathematics");
-                studentCourses.add("Physics");
-            } finally {
-                // Close resources
-                if (rs != null) try { rs.close(); } catch (SQLException e) {}
-                if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
-                if (conn != null) try { conn.close(); } catch (SQLException e) {}
-            }
-            
-            // Calculate attendance statistics
-            int totalDays = 0;
-            int presentDays = 0;
-            
-            if (attendanceHistory != null) {
-                totalDays = attendanceHistory.size();
-                presentDays = totalDays; // In this simple system, all recorded days are present days
-            }
-            
-            int attendanceRate = totalDays > 0 ? (presentDays * 100 / totalDays) : 0;
-            int absentDays = 0; // Not tracked in this simple system
-            int lateDays = 0;   // Not tracked in this simple system
-        %>
-
-        <!--Style-->
-        <style>
-            /* CSS Variables for Maintainability - PROFESSIONAL THEME */
-            :root {
-                /* Primary Colors - Professional Blue Theme */
-                --primary-blue: #09294d;
-                --secondary-blue: #1a3d6d;
-                --accent-blue: #3b82f6;
-                --accent-blue-light: #60a5fa;
-                
-                /* Neutral Colors - Modern Gray Scale */
-                --white: #ffffff;
-                --light-gray: #f8fafc;
-                --medium-gray: #e2e8f0;
-                --dark-gray: #64748b;
-                --text-dark: #1e293b;
-                --border-color: #e5e7eb;
-                
-                /* Semantic Colors */
-                --success: #10b981;
-                --success-light: #d1fae5;
-                --warning: #f59e0b;
-                --warning-light: #fef3c7;
-                --error: #ef4444;
-                --error-light: #fee2e2;
-                --info: #0ea5e9;
-                --info-light: #e0f2fe;
-                
-                /* Spacing - 8px grid */
-                --spacing-xs: 4px;
-                --spacing-sm: 8px;
-                --spacing-md: 16px;
-                --spacing-lg: 24px;
-                --spacing-xl: 32px;
-                --spacing-2xl: 48px;
-                
-                /* Border Radius - Modern */
-                --radius-sm: 6px;
-                --radius-md: 10px;
-                --radius-lg: 16px;
-                --radius-xl: 24px;
-                --radius-full: 9999px;
-                
-                /* Shadows - Material Design inspired */
-                --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-                --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-                --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-                --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-                
-                /* Transitions */
-                --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-                --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-                --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-                
-                /* Z-index layers */
-                --z-dropdown: 100;
-                --z-sticky: 200;
-                --z-modal: 300;
-                --z-popover: 400;
-                --z-tooltip: 500;
-            }
-            
-            /* Reset and Base Styles */
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
-            
-            body {
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-                line-height: 1.5;
-                color: var(--text-dark);
-                background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-                min-height: 100vh;
-                font-weight: 400;
-                -webkit-font-smoothing: antialiased;
-                -moz-osx-font-smoothing: grayscale;
-            }
-            
-            /* Results Wrapper */
-            .results-wrapper {
-                display: flex;
-                min-height: 100vh;
-                background: transparent;
-            }
-            
-            /* Sidebar - Modern Design */
-            .sidebar {
-                width: 200px;
-                background: linear-gradient(180deg, var(--primary-blue) 0%, #0d3060 100%);
-                color: var(--white);
-                flex-shrink: 0;
-                position: fixed;
-                top: 0;
-                left: 0;
-                height: 100vh;
-                z-index: var(--z-sticky);
-                box-shadow: var(--shadow-lg);
-                border-right: 1px solid rgba(255, 255, 255, 0.1);
-                overflow-y: auto;
-                scrollbar-width: thin;
-                scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-            }
-
-            .sidebar::-webkit-scrollbar {
-                width: 6px;
-            }
-
-            .sidebar::-webkit-scrollbar-track {
-                background: transparent;
-            }
-
-            .sidebar::-webkit-scrollbar-thumb {
-                background-color: rgba(255, 255, 255, 0.3);
-                border-radius: var(--radius-full);
-            }
-
-            .sidebar-header {
-                padding-top: 35%;
-                text-align: center;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-                background: rgba(255, 255, 255, 0.05);
-                backdrop-filter: blur(10px);
-            }
-
-            .mut-logo {
-                max-height: 150px;
-                width: auto;
-                filter: brightness(0) invert(1);
-            }
-            
-            .mut-logo:hover {
-                transform: scale(1.05);
-            }
-            
-            .sidebar-nav {
-                padding: var(--spacing-lg) 0;
-            }
-            
-            /* Main Content Area */
-            .content-area,
-            .main-content {
-                flex: 1;
-                padding: var(--spacing-xl);
-                overflow-y: auto;
-                background: transparent;
-                margin-left: 180px;
-                min-height: 100vh;
-            }
-
-            /* Navigation Items */
-            .nav-item {
-                display: flex;
-                align-items: center;
-                gap: var(--spacing-md);
-                padding: var(--spacing-md) var(--spacing-lg);
-                color: rgba(255, 255, 255, 0.85);
-                text-decoration: none;
-                transition: all var(--transition-normal);
-                border-radius: var(--radius-md);
-                margin: 0 var(--spacing-sm) var(--spacing-sm);
-                font-weight: 500;
-                font-size: 14px;
-                position: relative;
-                overflow: hidden;
-            }
-            
-            .nav-item::before {
-                content: '';
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 4px;
-                height: 100%;
-                background: var(--accent-blue);
-                transform: translateX(-100%);
-                transition: transform var(--transition-normal);
-            }
-            
-            .nav-item:hover {
-                background: rgba(255, 255, 255, 0.1);
-                color: var(--white);
-                padding-left: var(--spacing-xl);
-            }
-            
-            .nav-item:hover::before {
-                transform: translateX(0);
-            }
-            
-            .nav-item.active {
-                background: linear-gradient(90deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1));
-                color: var(--white);
-                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-            }
-            
-            .nav-item.active::before {
-                transform: translateX(0);
-            }
-            
-            .nav-item i {
-                width: 20px;
-                text-align: center;
-                font-size: 16px;
-                opacity: 0.9;
-            }
-            
-            .nav-item span {
-                margin: 0;
-                font-size: 14px;
-                font-weight: 500;
-                letter-spacing: 0.3px;
-            }
-            
-            /* Page Header */
-            .page-header {
-                background: linear-gradient(135deg, var(--white) 0%, #fafcff 100%);
-                border-radius: var(--radius-lg);
-                padding: var(--spacing-xl);
-                margin-bottom: var(--spacing-xl);
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                box-shadow: var(--shadow-md);
-                border: 1px solid var(--border-color);
-                position: relative;
-                overflow: hidden;
-            }
-            
-            .page-header::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 4px;
-                background: linear-gradient(90deg, var(--accent-blue), var(--success));
-            }
-            
-            .page-title {
-                display: flex;
-                align-items: center;
-                gap: var(--spacing-md);
-                font-size: 20px;
-                font-weight: 600;
-                color: var(--text-dark);
-            }
-            
-            .page-title i {
-                color: var(--accent-blue);
-                background: var(--accent-blue-light);
-                padding: var(--spacing-sm);
-                border-radius: var(--radius-md);
-                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-            }
-            
-            /* Stats Badge */
-            .stats-badge {
-                background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-light));
-                color: var(--white);
-                padding: 8px 20px;
-                border-radius: var(--radius-full);
-                font-size: 14px;
-                font-weight: 600;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
-                letter-spacing: 0.3px;
-            }
-            
-            /* Alert Messages */
-            .alert {
-                background: linear-gradient(90deg, var(--success-light), #ecfdf5);
-                border-left: 4px solid var(--success);
-                color: var(--text-dark);
-                padding: var(--spacing-lg);
-                border-radius: var(--radius-md);
-                margin-bottom: var(--spacing-xl);
-                display: flex;
-                align-items: center;
-                gap: var(--spacing-md);
-                font-size: 14px;
-                box-shadow: var(--shadow-sm);
-                animation: slideIn 0.3s ease-out;
-            }
-            
-            .alert-success {
-                background: linear-gradient(90deg, var(--success-light), #ecfdf5);
-                border-left-color: var(--success);
-            }
-            
-            .alert-success i {
-                color: var(--success);
-            }
-            
-            .alert-error {
-                background: linear-gradient(90deg, var(--error-light), #fef2f2);
-                border-left-color: var(--error);
-            }
-            
-            .alert-error i {
-                color: var(--error);
-            }
-            
-            @keyframes slideIn {
-                from {
-                    opacity: 0;
-                    transform: translateY(-10px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-            
-            /* Cards */
-            .course-card {
-                background: linear-gradient(135deg, var(--white) 0%, #fafcff 100%);
-                border-radius: var(--radius-lg);
-                box-shadow: var(--shadow-md);
-                border: 1px solid var(--border-color);
-                padding: var(--spacing-xl);
-                margin-bottom: var(--spacing-xl);
-                transition: transform var(--transition-normal), box-shadow var(--transition-normal);
-                position: relative;
-                overflow: hidden;
-            }
-            
-            .course-card::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 4px;
-                background: linear-gradient(90deg, var(--accent-blue), var(--success));
-            }
-            
-            .course-card:hover {
-                transform: translateY(-4px);
-                box-shadow: var(--shadow-xl);
-            }
-            
-            .results-card {
-                background: linear-gradient(135deg, var(--white) 0%, #fafcff 100%);
-                border-radius: var(--radius-lg);
-                box-shadow: var(--shadow-md);
-                border: 1px solid var(--border-color);
-                margin-bottom: var(--spacing-xl);
-                overflow: hidden;
-                transition: transform var(--transition-normal), box-shadow var(--transition-normal);
-            }
-            
-            .results-card:hover {
-                transform: translateY(-4px);
-                box-shadow: var(--shadow-xl);
-            }
-            
-            .card-header {
-                background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
-                color: var(--white);
-                padding: var(--spacing-lg) var(--spacing-xl);
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                font-size: 16px;
-                font-weight: 600;
-                position: relative;
-                overflow: hidden;
-            }
-            
-            .card-header::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 4px;
-                background: linear-gradient(90deg, var(--accent-blue), var(--success));
-            }
-            
-            .card-header i {
-                opacity: 0.9;
-                font-size: 18px;
-            }
-            
-            /* Student Info Card */
-            .student-info-card {
-                background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
-                color: var(--white);
-                border-radius: var(--radius-lg);
-                padding: var(--spacing-xl);
-                margin-bottom: var(--spacing-xl);
-                box-shadow: var(--shadow-lg);
-                position: relative;
-                overflow: hidden;
-            }
-            
-            .student-info-card::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 4px;
-                background: linear-gradient(90deg, var(--accent-blue), var(--success));
-            }
-            
-            .student-info-card h3 {
-                font-size: 18px;
-                font-weight: 600;
-                margin-bottom: var(--spacing-lg);
-                display: flex;
-                align-items: center;
-                gap: var(--spacing-md);
-            }
-            
-            .student-info-card p {
-                font-size: 15px;
-                opacity: 0.95;
-                margin-bottom: var(--spacing-md);
-                display: flex;
-                align-items: center;
-                gap: var(--spacing-sm);
-            }
-            
-            .student-info-card p i {
-                width: 20px;
-                opacity: 0.8;
-            }
-            
-            /* Filter Container */
-            .filter-container {
-                background: linear-gradient(135deg, var(--white) 0%, #fafcff 100%);
-                border-radius: var(--radius-lg);
-                border: 1px solid var(--border-color);
-                padding: var(--spacing-xl);
-                margin-bottom: var(--spacing-xl);
-                box-shadow: var(--shadow-md);
-                position: relative;
-                overflow: hidden;
-            }
-            
-            .filter-container::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 4px;
-                background: linear-gradient(90deg, var(--accent-blue), var(--success));
-            }
-            
-            .filter-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: var(--spacing-lg);
-                margin-bottom: var(--spacing-md);
-            }
-            
-            .filter-group {
-                display: flex;
-                flex-direction: column;
-            }
-            
-            .filter-label {
-                font-weight: 600;
-                color: var(--text-dark);
-                font-size: 14px;
-                margin-bottom: var(--spacing-sm);
-                display: flex;
-                align-items: center;
-                gap: var(--spacing-sm);
-            }
-            
-            .filter-control,
-            .filter-select {
-                padding: 12px 16px;
-                border: 2px solid var(--border-color);
-                border-radius: var(--radius-md);
-                font-size: 15px;
-                transition: all var(--transition-fast);
-                background: var(--white);
-                color: var(--text-dark);
-                font-family: inherit;
-            }
-            
-            .filter-control:focus,
-            .filter-select:focus {
-                outline: none;
-                border-color: var(--accent-blue);
-                box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-                transform: translateY(-1px);
-            }
-            
-            .filter-select {
-                appearance: none;
-                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%2364748b' d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
-                background-repeat: no-repeat;
-                background-position: right 16px center;
-                background-size: 16px;
-                padding-right: 48px;
-            }
-            
-            /* Quick Filters */
-            .quick-filter-row {
-                display: flex;
-                flex-wrap: wrap;
-                gap: var(--spacing-sm);
-                margin-top: var(--spacing-lg);
-                padding-top: var(--spacing-lg);
-                border-top: 1px solid var(--border-color);
-            }
-            
-            /* Buttons */
-            .btn {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                gap: var(--spacing-sm);
-                padding: 12px 24px;
-                border-radius: var(--radius-md);
-                font-size: 14px;
-                font-weight: 600;
-                text-decoration: none;
-                cursor: pointer;
-                border: none;
-                transition: all var(--transition-normal);
-                font-family: inherit;
-                position: relative;
-                overflow: hidden;
-            }
-            
-            .btn::after {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-                transform: translateX(-100%);
-                transition: transform 0.6s;
-            }
-            
-            .btn:hover::after {
-                transform: translateX(100%);
-            }
-            
-            .btn-primary {
-                background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-light));
-                color: var(--white);
-                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
-            }
-            
-            .btn-primary:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 20px rgba(59, 130, 246, 0.35);
-            }
-            
-            .btn-success {
-                background: linear-gradient(135deg, var(--success), #34d399);
-                color: var(--white);
-                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
-            }
-            
-            .btn-success:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
-            }
-            
-            .btn-error {
-                background: linear-gradient(135deg, var(--error), #f87171);
-                color: var(--white);
-                box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
-            }
-            
-            .btn-outline {
-                background: transparent;
-                color: var(--text-dark);
-                border: 2px solid var(--border-color);
-                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-            }
-            
-            .btn-outline:hover {
-                background: var(--light-gray);
-                border-color: var(--dark-gray);
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            }
-            
-            /* Attendance Status */
-            .attendance-status {
-                display: flex;
-                align-items: center;
-                gap: var(--spacing-sm);
-                padding: 8px 16px;
-                border-radius: var(--radius-full);
-                font-weight: 600;
-                font-size: 13px;
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-                white-space: nowrap;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            }
-            
-            .status-present {
-                background: linear-gradient(135deg, var(--success), #34d399);
-                color: var(--white);
-            }
-            
-            .status-absent {
-                background: linear-gradient(135deg, var(--error), #f87171);
-                color: var(--white);
-            }
-            
-            .status-late {
-                background: linear-gradient(135deg, var(--warning), #fbbf24);
-                color: var(--white);
-            }
-            
-            /* Results Table */
-            .results-table-container {
-                overflow-x: auto;
-                border-radius: var(--radius-lg);
-                box-shadow: var(--shadow-md);
-                border: 1px solid var(--border-color);
-                background: var(--white);
-                margin-top: var(--spacing-lg);
-            }
-            
-            .results-table {
-                width: 100%;
-                border-collapse: collapse;
-                background: var(--white);
-            }
-            
-            .results-table thead th {
-                background: linear-gradient(180deg, var(--light-gray) 0%, #f1f5f9 100%);
-                color: var(--text-dark);
-                padding: var(--spacing-lg);
-                font-weight: 600;
-                text-align: left;
-                border-bottom: 2px solid var(--border-color);
-                font-size: 14px;
-                cursor: pointer;
-                transition: all var(--transition-fast);
-                position: relative;
-                white-space: nowrap;
-            }
-            
-            .results-table thead th:hover {
-                background: #f1f5f9;
-                color: var(--accent-blue);
-            }
-            
-            .results-table tbody td {
-                padding: var(--spacing-lg);
-                border-bottom: 1px solid var(--light-gray);
-                vertical-align: middle;
-                color: var(--text-dark);
-                font-size: 14px;
-                text-align: left;
-                transition: background-color var(--transition-fast);
-            }
-            
-            .results-table tbody tr {
-                transition: all var(--transition-fast);
-            }
-            
-            .results-table tbody tr:hover {
-                background: var(--light-gray);
-            }
-            
-            /* No Results Message */
-            .no-results {
-                text-align: center;
-                padding: var(--spacing-2xl) var(--spacing-xl);
-                color: var(--dark-gray);
-                background: var(--white);
-                border-radius: var(--radius-lg);
-                box-shadow: var(--shadow-md);
-                border: 1px solid var(--border-color);
-            }
-            
-            .no-results i {
-                font-size: 64px;
-                color: var(--dark-gray);
-                margin-bottom: var(--spacing-lg);
-                opacity: 0.5;
-            }
-            
-            .no-results h2 {
-                font-size: 24px;
-                font-weight: 600;
-                margin-bottom: var(--spacing-md);
-                color: var(--text-dark);
-            }
-            
-            .no-results p {
-                color: var(--dark-gray);
-                margin-bottom: var(--spacing-xl);
-                max-width: 400px;
-                margin-left: auto;
-                margin-right: auto;
-            }
-            
-            .results-count {
-                text-align: center;
-                padding: var(--spacing-lg);
-                color: var(--dark-gray);
-                font-size: 14px;
-                border-top: 2px solid var(--border-color);
-                background: linear-gradient(180deg, var(--light-gray) 0%, #f1f5f9 100%);
-                font-weight: 500;
-            }
-            
-            /* Attendance Statistics Grid */
-            .stats-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: var(--spacing-lg);
-                margin-top: var(--spacing-lg);
-            }
-            
-            .stat-card {
-                background: linear-gradient(135deg, var(--white) 0%, #fafcff 100%);
-                border: 2px solid var(--border-color);
-                border-radius: var(--radius-lg);
-                padding: var(--spacing-lg);
-                text-align: center;
-                box-shadow: var(--shadow-md);
-                transition: all var(--transition-normal);
-                position: relative;
-                overflow: hidden;
-            }
-            
-            .stat-card::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 4px;
-                background: linear-gradient(90deg, var(--accent-blue), var(--success));
-            }
-            
-            .stat-card:hover {
-                transform: translateY(-4px);
-                box-shadow: var(--shadow-xl);
-                border-color: var(--accent-blue);
-            }
-            
-            .stat-value {
-                font-size: 28px;
-                font-weight: 700;
-                color: var(--text-dark);
-                margin-bottom: var(--spacing-sm);
-                line-height: 1.2;
-            }
-            
-            .stat-label {
-                color: var(--dark-gray);
-                font-weight: 600;
-                font-size: 14px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: var(--spacing-xs);
-            }
-            
-            .stat-label i {
-                color: var(--accent-blue);
-                font-size: 14px;
-            }
-            
-            /* Start Exam Button */
-            .start-exam-btn {
-                background: linear-gradient(135deg, var(--success), #34d399);
-                color: var(--white);
-                padding: 14px 28px;
-                border-radius: var(--radius-md);
-                border: none;
-                font-size: 16px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all var(--transition-normal);
-                display: inline-flex;
-                align-items: center;
-                gap: var(--spacing-sm);
-                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
-                font-family: inherit;
-                position: relative;
-                overflow: hidden;
-            }
-            
-            .start-exam-btn::after {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-                transform: translateX(-100%);
-                transition: transform 0.6s;
-            }
-            
-            .start-exam-btn:hover::after {
-                transform: translateX(100%);
-            }
-            
-            .start-exam-btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
-            }
-            
-            .start-exam-btn:disabled {
-                background: var(--medium-gray);
-                cursor: not-allowed;
-                transform: none;
-                box-shadow: none;
-            }
-            
-            /* Responsive Design */
-            @media (max-width: 768px) {
-                .sidebar {
-                    width: 100%;
-                    height: auto;
-                    position: static;
-                    box-shadow: none;
-                    border-right: none;
-                    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-                }
-                
-                .sidebar-header {
-                    padding: var(--spacing-xl) var(--spacing-md);
-                }
-                
-                .sidebar-nav {
-                    display: flex;
-                    overflow-x: auto;
-                    padding: var(--spacing-md);
-                    gap: var(--spacing-sm);
-                }
-                
-                .nav-item {
-                    flex-direction: column;
-                    padding: var(--spacing-sm) var(--spacing-md);
-                    min-width: 80px;
-                    text-align: center;
-                    margin: 0;
-                    border-radius: var(--radius-md);
-                }
-                
-                .nav-item::before {
-                    width: 100%;
-                    height: 3px;
-                    top: auto;
-                    bottom: 0;
-                    transform: translateY(100%);
-                }
-                
-                .nav-item:hover::before,
-                .nav-item.active::before {
-                    transform: translateY(0);
-                }
-                
-                .nav-item:hover {
-                    padding-left: var(--spacing-md);
-                }
-                
-                .content-area,
-                .main-content {
-                    padding: var(--spacing-lg);
-                    margin-left: 0;
-                }
-                
-                .page-header {
-                    flex-direction: column;
-                    gap: var(--spacing-lg);
-                    text-align: center;
-                    padding: var(--spacing-lg);
-                }
-                
-                .filter-grid {
-                    grid-template-columns: 1fr;
-                }
-                
-                .stats-grid {
-                    grid-template-columns: 1fr;
-                }
-                
-                .results-table-container {
-                    overflow-x: auto;
-                }
-                
-                .results-table thead th,
-                .results-table tbody td {
-                    padding: var(--spacing-md);
-                    font-size: 13px;
-                }
-            }
-            
-            @media (max-width: 480px) {
-                .content-area,
-                .main-content {
-                    padding: var(--spacing-md);
-                }
-                
-                .page-header {
-                    padding: var(--spacing-md);
-                }
-                
-                .card-header {
-                    padding: var(--spacing-md);
-                    flex-direction: column;
-                    gap: var(--spacing-sm);
-                    text-align: center;
-                }
-                
-                .filter-container {
-                    padding: var(--spacing-md);
-                }
-                
-                .start-exam-btn {
-                    padding: 12px 20px;
-                    font-size: 15px;
-                }
-            }
-        </style>
-
-        <%@ include file="header-messages.jsp" %>
-
-        <div class="results-wrapper">
-            <!-- Sidebar Navigation -->
-            <aside class="sidebar">
-                <div class="sidebar-header">
-                    <img src="IMG/mut.png" alt="MUT Logo" class="mut-logo">
-                </div>
-                <nav class="sidebar-nav">
-                    <div class="left-menu">
-                        <a class="nav-item" href="std-page.jsp?pgprt=0">
-                            <i class="fas fa-user"></i>
-                            <span>Profile</span>
-                        </a>
-                        <a class="nav-item" href="std-page.jsp?pgprt=1">
-                            <i class="fas fa-file-alt"></i>
-                            <span>Exams</span>
-                        </a>
-                        <a class="nav-item" href="std-page.jsp?pgprt=2">
-                            <i class="fas fa-chart-line"></i>
-                            <span>Results</span>
-                        </a>
-                        <a class="nav-item" href="std-page.jsp?pgprt=3">
-                            <i class="fas fa-calendar-check"></i>
-                            <span>Register</span>
-                        </a>
-                        <a class="nav-item  active" href="std-page.jsp?pgprt=4">
-                            <i class="fas fa-eye"></i>
-                            <span>Attendance</span>
-                        </a>
-                    </div>
-                </nav>
-            </aside>
-
-            <div class="main-content">
-                <!-- Page Header -->
-                <div class="page-header">
-                    <div class="page-title">
-                        <i class="fas fa-calendar-check"></i> Daily Attendance Register
-                    </div>
-                    <div class="stats-badge">
-                        <i class="fas fa-user-graduate"></i> Student Portal
-                    </div>
-                </div>
-
-                <!-- Alert Messages -->
-                <% if (session.getAttribute("message") != null) { %>
-                    <div class="alert alert-success">
-                        <i class="fas fa-check-circle"></i>
-                        <%= session.getAttribute("message") %>
-                    </div>
-                    <% session.removeAttribute("message"); %>
-                <% } %>
-                
-                <% if (session.getAttribute("error") != null) { %>
-                    <div class="alert alert-error">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <%= session.getAttribute("error") %>
-                    </div>
-                    <% session.removeAttribute("error"); %>
-                <% } %>
-
-                <!-- Student Information -->
-                <div class="student-info-card">
-                    <h3><i class="fas fa-user-circle"></i> Student Information</h3>
-                    <p><i class="fas fa-user"></i> <strong>Name:</strong> <%= studentName %></p>
-                    <p><i class="fas fa-id-card"></i> <strong>Student ID:</strong> <%= userId %></p>
-                    <% if (!studentEmail.isEmpty()) { %>
-                        <p><i class="fas fa-envelope"></i> <strong>Email:</strong> <%= studentEmail %></p>
-                    <% } %>
-                    <p><i class="fas fa-calendar-day"></i> <strong>Today's Date:</strong> <%= todayDate %></p>
-                </div>
-
-                <!-- Today's Attendance Card -->
-                <div class="course-card">
-                    <h3 style="margin-bottom: var(--spacing-md); color: var(--text-dark); font-size: 18px;">
-                        <i class="fas fa-calendar-day"></i> Today's Attendance
-                    </h3>
-                    
-                    <% if (attendanceMarkedToday) { %>
-                        <div class="attendance-status status-present" style="margin-bottom: var(--spacing-lg);">
-                            <i class="fas fa-check-circle"></i> Attendance already marked for today
-                        </div>
-                        <p style="color: var(--dark-gray); margin-bottom: var(--spacing-lg); font-size: 15px;">
-                            You have successfully marked your attendance for <strong><%= todayDate %></strong>.
-                        </p>
-                        <button class="start-exam-btn" disabled>
-                            <i class="fas fa-check"></i> Attendance Marked
-                        </button>
-                    <% } else { %>
-                        <div class="attendance-status status-absent" style="margin-bottom: var(--spacing-lg);">
-                            <i class="fas fa-exclamation-circle"></i> Attendance not marked for today
-                        </div>
-                        <p style="color: var(--dark-gray); margin-bottom: var(--spacing-lg); font-size: 15px;">
-                            Please mark your attendance for <strong><%= todayDate %></strong> by clicking the button below.
-                        </p>
-                        <form method="post" onsubmit="return confirm('Are you sure you want to mark attendance for today?');">
-                            <input type="hidden" name="operation" value="mark_attendance">
-                            <button type="submit" class="start-exam-btn">
-                                <i class="fas fa-check"></i> Mark Today's Attendance
-                            </button>
-                        </form>
-                    <% } %>
-                </div>
-
-                <!-- Attendance Statistics -->
-                <div class="course-card">
-                    <h3 style="margin-bottom: var(--spacing-md); color: var(--text-dark); font-size: 18px;">
-                        <i class="fas fa-chart-pie"></i> Attendance Statistics
-                    </h3>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-value" style="color: var(--success);"><%= attendanceRate %>%</div>
-                            <div class="stat-label">
-                                <i class="fas fa-chart-line"></i> Attendance Rate
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" style="color: var(--accent-blue);"><%= presentDays %></div>
-                            <div class="stat-label">
-                                <i class="fas fa-check-circle"></i> Days Present
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" style="color: var(--error);"><%= absentDays %></div>
-                            <div class="stat-label">
-                                <i class="fas fa-times-circle"></i> Days Absent
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" style="color: var(--warning);"><%= lateDays %></div>
-                            <div class="stat-label">
-                                <i class="fas fa-clock"></i> Days Late
-                            </div>
-                        </div>
-                    </div>
-                    <p style="margin-top: var(--spacing-lg); font-size: 14px; color: var(--dark-gray); text-align: center;">
-                        Based on <%= totalDays %> recorded attendance days.
-                    </p>
-                </div>
+    <div class="main-content">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="page-title">
+                <i class="fas fa-clipboard-list"></i> Class Register - All Students
+            </div>
+            <div class="stats-badge">
+                <i class="fas fa-user-graduate"></i> Student Attendance Register
             </div>
         </div>
 
-        <script>
-            // Add confirmation for marking attendance
-            document.addEventListener('DOMContentLoaded', function() {
-                const markBtn = document.querySelector('.start-exam-btn');
-                if (markBtn && !markBtn.disabled) {
-                    markBtn.addEventListener('click', function(e) {
-                        if (!confirm('Are you sure you want to mark your attendance for today?')) {
-                            e.preventDefault();
-                        }
-                    });
-                }
+        <!-- Filters -->
+        <div class="filter-container">
+            <form method="get" action="adm-page.jsp">
+                <input type="hidden" name="pgprt" value="8">
+
+                <div class="filter-grid">
+                    <div class="filter-group">
+                        <label class="filter-label"><i class="fas fa-user"></i> First Name</label>
+                        <input type="text" name="first_name" class="filter-control" value="<%= firstNameFilter %>" placeholder="Search by first name">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label"><i class="fas fa-user"></i> Last Name</label>
+                        <input type="text" name="last_name" class="filter-control" value="<%= lastNameFilter %>" placeholder="Search by last name">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label"><i class="fas fa-school"></i> Class</label>
+                        <select name="class_name" class="filter-select">
+                            <option value="">All Classes</option>
+                            <% for (String className : allClasses) { %>
+                                <option value="<%= className %>" <%= className.equals(classNameFilter) ? "selected" : "" %>><%= className %></option>
+                            <% } %>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label"><i class="fas fa-book"></i> Course</label>
+                        <select name="course_name" class="filter-select">
+                            <option value="">All Courses</option>
+                            <% for (String course : allCourses) { %>
+                                <option value="<%= course %>" <%= course.equals(courseFilter) ? "selected" : "" %>><%= course %></option>
+                            <% } %>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label"><i class="fas fa-calendar"></i> Attendance Date</label>
+                        <input type="date" name="attendance_date" class="filter-control" value="<%= dateFilter %>">
+                    </div>
+                </div>
+
+                <div class="quick-filter-row">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-search"></i> Apply Filters
+                    </button>
+                    <a href="adm-page.jsp?pgprt=8" class="btn btn-outline">
+                        <i class="fas fa-times"></i> Clear Filters
+                    </a>
+                    <button type="button" class="btn btn-success" onclick="markAllAttendance()">
+                        <i class="fas fa-check-circle"></i> Mark Selected
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Class Register Results -->
+        <div class="results-card">
+            <div class="card-header">
+                <span><i class="fas fa-table"></i> Class Attendance Register</span>
+                <span class="stats-badge" style="font-size: 12px; padding: 4px 12px;">
+                    <i class="fas fa-users"></i> Students Listed
+                </span>
+            </div>
+
+            <%
+                List<Map<String, String>> studentsList = new ArrayList<>();
+                int totalStudents = 0;
+                int presentCount = 0;
+                int absentCount = 0;
                 
-                // Set today's date as default in date filter
-                const dateFilter = document.querySelector('input[name="filter_date"]');
-                if (dateFilter && !dateFilter.value) {
-                    const today = new Date().toISOString().split('T')[0];
-                    dateFilter.value = today;
-                }
-                
-                // Add loading state to buttons
-                const forms = document.querySelectorAll('form');
-                forms.forEach(form => {
-                    form.addEventListener('submit', function() {
-                        const submitBtn = this.querySelector('button[type="submit"]');
-                        if (submitBtn) {
-                            submitBtn.classList.add('loading');
-                            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                try {
+                    // Build query to get all students with their attendance for the selected date
+                    StringBuilder query = new StringBuilder();
+                    query.append("SELECT u.user_id, u.first_name, u.last_name, u.email, u.class_name, ");
+                    query.append("dr.registration_date, dr.status ");
+                    query.append("FROM users u ");
+                    query.append("LEFT JOIN daily_register dr ON u.user_id = dr.student_id ");
+                    query.append("AND DATE(dr.registration_date) = ? ");
+                    query.append("WHERE u.user_type = 'student' ");
+                    
+                    List<Object> params = new ArrayList<>();
+                    params.add(dateFilter);
+                    
+                    if (!firstNameFilter.isEmpty()) {
+                        query.append("AND u.first_name LIKE ? ");
+                        params.add("%" + firstNameFilter + "%");
+                    }
+                    
+                    if (!lastNameFilter.isEmpty()) {
+                        query.append("AND u.last_name LIKE ? ");
+                        params.add("%" + lastNameFilter + "%");
+                    }
+                    
+                    if (!classNameFilter.isEmpty()) {
+                        query.append("AND u.class_name = ? ");
+                        params.add(classNameFilter);
+                    }
+                    
+                    query.append("ORDER BY u.class_name, u.last_name, u.first_name");
+                    
+                    pstmt = pDAO.getPreparedStatement(query.toString());
+                    
+                    for (int i = 0; i < params.size(); i++) {
+                        pstmt.setObject(i + 1, params.get(i));
+                    }
+                    
+                    rs = pstmt.executeQuery();
+                    
+                    while (rs.next()) {
+                        Map<String, String> student = new HashMap<>();
+                        student.put("user_id", rs.getString("user_id"));
+                        student.put("first_name", rs.getString("first_name"));
+                        student.put("last_name", rs.getString("last_name"));
+                        student.put("email", rs.getString("email"));
+                        student.put("class_name", rs.getString("class_name"));
+                        student.put("registration_date", rs.getString("registration_date"));
+                        student.put("status", rs.getString("status"));
+                        
+                        studentsList.add(student);
+                        totalStudents++;
+                        
+                        if ("present".equalsIgnoreCase(rs.getString("status"))) {
+                            presentCount++;
+                        } else if ("absent".equalsIgnoreCase(rs.getString("status"))) {
+                            absentCount++;
                         }
-                    });
-                });
-            });
-        </script>
-    </body>
+                    }
+                    
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    if (rs != null) try { rs.close(); } catch (SQLException e) {}
+                    if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
+                }
+            %>
+
+            <!-- Summary Statistics -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value"><%= totalStudents %></div>
+                    <div class="stat-label"><i class="fas fa-users"></i> Total Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: var(--success);"><%= presentCount %></div>
+                    <div class="stat-label"><i class="fas fa-check-circle"></i> Present</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: var(--error);"><%= absentCount %></div>
+                    <div class="stat-label"><i class="fas fa-times-circle"></i> Absent</div>
+                </div>
+                <div class="stat-card">
+                    <%
+                        int notMarked = totalStudents - presentCount - absentCount;
+                    %>
+                    <div class="stat-value" style="color: var(--warning);"><%= notMarked %></div>
+                    <div class="stat-label"><i class="fas fa-clock"></i> Not Marked</div>
+                </div>
+            </div>
+
+            <% if (!studentsList.isEmpty()) { %>
+                <div class="results-table-container">
+                    <form id="attendanceForm" method="post" action="updateAttendance.jsp">
+                        <input type="hidden" name="attendance_date" value="<%= dateFilter %>">
+                        <table class="results-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 30px;">#</th>
+                                    <th style="width: 30px;">
+                                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                                    </th>
+                                    <th>Student Name</th>
+                                    <th>Student ID</th>
+                                    <th>Class</th>
+                                    <th>Email</th>
+                                    <th>Attendance Date</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <%
+                                    int i = 0;
+                                    for (Map<String, String> student : studentsList) {
+                                        i++;
+                                        String status = student.get("status");
+                                        String registrationDate = student.get("registration_date");
+                                %>
+                                <tr>
+                                    <td><%= i %></td>
+                                    <td>
+                                        <input type="checkbox" name="selectedStudents" value="<%= student.get("user_id") %>" 
+                                               class="student-checkbox">
+                                    </td>
+                                    <td>
+                                        <strong><%= student.get("first_name") %> <%= student.get("last_name") %></strong>
+                                    </td>
+                                    <td><%= student.get("user_id") %></td>
+                                    <td>
+                                        <span class="badge badge-info">
+                                            <%= student.get("class_name") != null ? student.get("class_name") : "N/A" %>
+                                        </span>
+                                    </td>
+                                    <td><%= student.get("email") %></td>
+                                    <td>
+                                        <% if (registrationDate != null) { 
+                                            try {
+                                                java.text.SimpleDateFormat displayFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm");
+                                                java.text.SimpleDateFormat parseFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                                                out.print(displayFormat.format(parseFormat.parse(registrationDate)));
+                                            } catch (Exception e) {
+                                                out.print(dateFilter);
+                                            }
+                                        } else {
+                                            out.print(dateFilter);
+                                        } %>
+                                    </td>
+                                    <td>
+                                        <% if ("present".equalsIgnoreCase(status)) { %>
+                                            <span class="attendance-status status-present">
+                                                <i class="fas fa-check-circle"></i> Present
+                                            </span>
+                                        <% } else if ("absent".equalsIgnoreCase(status)) { %>
+                                            <span class="attendance-status status-absent">
+                                                <i class="fas fa-times-circle"></i> Absent
+                                            </span>
+                                        <% } else { %>
+                                            <span class="attendance-status status-not-marked">
+                                                <i class="fas fa-clock"></i> Not Marked
+                                            </span>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-success btn-sm"
+                                                    onclick="markAttendance('<%= student.get("user_id") %>', 'present')">
+                                                <i class="fas fa-check"></i> Present
+                                            </button>
+                                            <button type="button" class="btn btn-danger btn-sm"
+                                                    onclick="markAttendance('<%= student.get("user_id") %>', 'absent')">
+                                                <i class="fas fa-times"></i> Absent
+                                            </button>
+                                            <button type="button" class="btn btn-outline btn-sm"
+                                                    onclick="markAttendance('<%= student.get("user_id") %>', 'late')">
+                                                <i class="fas fa-clock"></i> Late
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </form>
+                </div>
+
+                <div class="results-count">
+                    Total Students: <strong><%= totalStudents %></strong> | 
+                    Present: <strong style="color: var(--success);"><%= presentCount %></strong> | 
+                    Absent: <strong style="color: var(--error);"><%= absentCount %></strong> | 
+                    Not Marked: <strong style="color: var(--warning);"><%= totalStudents - presentCount - absentCount %></strong>
+                </div>
+
+            <% } else { %>
+                <div class="no-results">
+                    <i class="fas fa-user-graduate"></i>
+                    <h2>No Students Found</h2>
+                    <p>No student records match your search criteria.</p>
+                    <a href="adm-page.jsp?pgprt=8" class="btn btn-primary">
+                        <i class="fas fa-refresh"></i> Reset Filters
+                    </a>
+                </div>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleSelectAll(checkbox) {
+        const checkboxes = document.querySelectorAll('.student-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = checkbox.checked;
+        });
+    }
+    
+    function markAttendance(studentId, status) {
+        if (confirm('Mark this student as ' + status + '?')) {
+            const form = document.createElement('form');
+            form.method = 'post';
+            form.action = 'updateAttendance.jsp';
+            
+            const studentIdInput = document.createElement('input');
+            studentIdInput.type = 'hidden';
+            studentIdInput.name = 'student_id';
+            studentIdInput.value = studentId;
+            
+            const statusInput = document.createElement('input');
+            statusInput.type = 'hidden';
+            statusInput.name = 'status';
+            statusInput.value = status;
+            
+            const dateInput = document.createElement('input');
+            dateInput.type = 'hidden';
+            dateInput.name = 'attendance_date';
+            dateInput.value = '<%= dateFilter %>';
+            
+            form.appendChild(studentIdInput);
+            form.appendChild(statusInput);
+            form.appendChild(dateInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+    
+    function markAllAttendance() {
+        const selectedCheckboxes = document.querySelectorAll('.student-checkbox:checked');
+        if (selectedCheckboxes.length === 0) {
+            alert('Please select at least one student.');
+            return;
+        }
+        
+        if (confirm('Mark attendance for ' + selectedCheckboxes.length + ' selected students as "Present"?')) {
+            // Create status input for bulk marking
+            const statusInput = document.createElement('input');
+            statusInput.type = 'hidden';
+            statusInput.name = 'status';
+            statusInput.value = 'present';
+            
+            const form = document.getElementById('attendanceForm');
+            form.appendChild(statusInput);
+            form.submit();
+        }
+    }
+    
+    // Set today's date as default if empty
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateInput = document.querySelector('input[name="attendance_date"]');
+        if (dateInput && !dateInput.value) {
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.value = today;
+        }
+    });
+</script>
+</body>
 </html>

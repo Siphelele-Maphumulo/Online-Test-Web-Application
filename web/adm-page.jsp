@@ -702,6 +702,10 @@
                         } else if ("7".equals(pgprt)) {
             %>
                             <jsp:include page="exam-register.jsp" />
+                                        <%
+                        } else if ("8".equals(pgprt)) {
+            %>
+                            <jsp:include page="class-register.jsp" />
             <%
                         } else if ("6".equals(pgprt)) {
             %>
