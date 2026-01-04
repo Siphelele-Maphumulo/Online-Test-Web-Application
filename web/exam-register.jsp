@@ -721,32 +721,21 @@
             </div>
         </div>
 
-        <!-- Filters - UPDATED -->
+        <!-- Filters & Export -->
         <div class="filter-container">
+            <!-- Filter Form -->
             <form method="get" action="adm-page.jsp">
                 <input type="hidden" name="pgprt" value="7">
 
                 <div class="filter-grid">
-<!--                    <div class="filter-group">
-                        <label class="filter-label"><i class="fas fa-hashtag"></i> Exam ID</label>
-                        <input type="number" name="exam_id" class="filter-control" value="<%= examId > 0 ? examId : "" %>">
-                    </div>
-
-                    <div class="filter-group">
-                        <label class="filter-label"><i class="fas fa-id-card"></i> Student ID</label>
-                        <input type="number" name="student_id" class="filter-control" value="<%= studentId > 0 ? studentId : "" %>">
-                    </div>-->
-
                     <div class="filter-group">
                         <label class="filter-label"><i class="fas fa-user"></i> First Name</label>
                         <input type="text" name="first_name" class="filter-control" value="<%= firstNameFilter %>" placeholder="Search by first name">
                     </div>
-
                     <div class="filter-group">
                         <label class="filter-label"><i class="fas fa-user"></i> Last Name</label>
                         <input type="text" name="last_name" class="filter-control" value="<%= lastNameFilter %>" placeholder="Search by last name">
                     </div>
-
                     <div class="filter-group">
                         <label class="filter-label"><i class="fas fa-book"></i> Course</label>
                         <select name="course_name" class="filter-select">
@@ -756,7 +745,6 @@
                             <% } %>
                         </select>
                     </div>
-
                     <div class="filter-group">
                         <label class="filter-label"><i class="fas fa-calendar"></i> Exam Date</label>
                         <input type="date" name="exam_date" class="filter-control" value="<%= dateFilter %>">
@@ -770,22 +758,24 @@
                     <a href="adm-page.jsp?pgprt=7" class="btn btn-outline">
                         <i class="fas fa-times"></i> Clear
                     </a>
-                    
-                    <!-- Export Form in Filter Section -->
-                    <form id="exportRegisterForm" method="get" action="export-register.jsp" target="_blank" style="display: inline;">
-                        <!-- Pass all filter parameters -->
-                        <input type="hidden" name="exam_id" value="<%= examId %>">
-                        <input type="hidden" name="student_id" value="<%= studentId %>">
-                        <input type="hidden" name="first_name" value="<%= firstNameFilter %>">
-                        <input type="hidden" name="last_name" value="<%= lastNameFilter %>">
-                        <input type="hidden" name="course_name" value="<%= courseNameFilter %>">
-                        <input type="hidden" name="exam_date" value="<%= dateFilter %>">
-                        <button type="button" id="exportButton" class="btn btn-success">
-                            <i class="fas fa-file-excel"></i> Export to Excel
-                        </button>
-                    </form>
                 </div>
             </form>
+
+            <!-- Standalone Export Form -->
+            <div class="quick-filter-row" style="padding-top: var(--spacing-sm); margin-top: var(--spacing-sm);">
+                <form method="get" action="export-register.jsp" target="_blank" style="display: inline;">
+                    <!-- Hidden inputs with current filter values are crucial -->
+                    <input type="hidden" name="exam_id" value="<%= examId %>">
+                    <input type="hidden" name="student_id" value="<%= studentId %>">
+                    <input type="hidden" name="first_name" value="<%= firstNameFilter %>">
+                    <input type="hidden" name="last_name" value="<%= lastNameFilter %>">
+                    <input type="hidden" name="course_name" value="<%= courseNameFilter %>">
+                    <input type="hidden" name="exam_date" value="<%= dateFilter %>">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-file-excel"></i> Export to Excel
+                    </button>
+                </form>
+            </div>
         </div>
 
         <!-- Results -->
@@ -886,21 +876,3 @@
         </div>
     </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    var exportButton = document.getElementById('exportButton');
-    var exportForm = document.getElementById('exportRegisterForm');
-
-    if (exportButton && exportForm) {
-        exportButton.addEventListener('click', function(event) {
-            // Stop any other scripts from interfering
-            event.preventDefault();
-            event.stopPropagation();
-
-            // Submit the form directly
-            exportForm.submit();
-        });
-    }
-});
-</script>
