@@ -53,7 +53,6 @@
 %>
 
 <!-- CSS Styles remain the same -->
-<!-- CSS Styles remain the same -->
     <style>
     /* Use the same CSS Variables as the profile page */
     :root {
@@ -722,12 +721,22 @@
             </div>
         </div>
 
-        <!-- Filters -->
+        <!-- Filters - UPDATED -->
         <div class="filter-container">
             <form method="get" action="adm-page.jsp">
                 <input type="hidden" name="pgprt" value="7">
 
                 <div class="filter-grid">
+<!--                    <div class="filter-group">
+                        <label class="filter-label"><i class="fas fa-hashtag"></i> Exam ID</label>
+                        <input type="number" name="exam_id" class="filter-control" value="<%= examId > 0 ? examId : "" %>">
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label"><i class="fas fa-id-card"></i> Student ID</label>
+                        <input type="number" name="student_id" class="filter-control" value="<%= studentId > 0 ? studentId : "" %>">
+                    </div>-->
+
                     <div class="filter-group">
                         <label class="filter-label"><i class="fas fa-user"></i> First Name</label>
                         <input type="text" name="first_name" class="filter-control" value="<%= firstNameFilter %>" placeholder="Search by first name">
@@ -763,7 +772,7 @@
                     </a>
                     
                     <!-- Export Form in Filter Section -->
-                    <form method="get" action="export_exam.jsp" target="_blank" style="display: inline;">
+                    <form id="exportRegisterForm" method="get" action="export-register.jsp" target="_blank" style="display: inline;">
                         <!-- Pass all filter parameters -->
                         <input type="hidden" name="exam_id" value="<%= examId %>">
                         <input type="hidden" name="student_id" value="<%= studentId %>">
@@ -771,7 +780,7 @@
                         <input type="hidden" name="last_name" value="<%= lastNameFilter %>">
                         <input type="hidden" name="course_name" value="<%= courseNameFilter %>">
                         <input type="hidden" name="exam_date" value="<%= dateFilter %>">
-                        <button type="submit" class="btn btn-success">
+                        <button type="button" id="exportButton" class="btn btn-success">
                             <i class="fas fa-file-excel"></i> Export to Excel
                         </button>
                     </form>
@@ -788,7 +797,7 @@
             <%
                 ResultSet rs = null;
                 try {
-                    // Call with all filter parameters
+                    // UPDATED: Call with all filter parameters
                     rs = pDAO.getFilteredExamRegister(examId, studentId, firstNameFilter, 
                                                      lastNameFilter, courseNameFilter, dateFilter);
                     if (rs != null && rs.next()) {
@@ -868,14 +877,30 @@
                 <div class="no-results">
                     No exam register records found.
                 </div>
-            <% } } catch (Exception e) { 
-                e.printStackTrace();
-            %>
+            <% } } catch (Exception e) { %>
                 <div class="no-results">
-                    Error loading exam register: <%= e.getMessage() %>
+                    Error loading exam register.
                 </div>
             <% } %>
 
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var exportButton = document.getElementById('exportButton');
+    var exportForm = document.getElementById('exportRegisterForm');
+
+    if (exportButton && exportForm) {
+        exportButton.addEventListener('click', function(event) {
+            // Stop any other scripts from interfering
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Submit the form directly
+            exportForm.submit();
+        });
+    }
+});
+</script>
