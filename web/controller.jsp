@@ -616,6 +616,18 @@ try {
         session.setAttribute("error", "Invalid page parameter: " + pageParam);
         response.sendRedirect("login.jsp");
     }
+} else if ("daily_register".equalsIgnoreCase(pageParam)) {
+    String operation = nz(request.getParameter("operation"), "");
+    if ("mark_attendance".equalsIgnoreCase(operation)) {
+        User currentUser = (User) session.getAttribute("currentUser");
+        boolean success = pDAO.markAttendance(currentUser.getUserId(), currentUser.getFirstName() + " " + currentUser.getLastName());
+        if (success) {
+            session.setAttribute("message", "Attendance marked successfully!");
+        } else {
+            session.setAttribute("error", "Failed to mark attendance.");
+        }
+        response.sendRedirect("std-page.jsp?pgprt=4");
+    }
 
 } catch(Exception e){
     session.setAttribute("error","An unexpected error occurred: "+e.getMessage());

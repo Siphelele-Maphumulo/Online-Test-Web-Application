@@ -621,7 +621,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         // Include appropriate page based on parameter
         if ("1".equals(pgprt)) {
     %>
-        <jsp:include page="exam.jsp"/>
+        <jsp:include page="exam_content.jsp"/>
     <%
         } else if ("2".equals(pgprt)) {
     %>
@@ -630,6 +630,10 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         } else if ("3".equals(pgprt)) {
     %>
         <jsp:include page="daily_register.jsp"/>
+    <%
+        } else if ("4".equals(pgprt)) {
+    %>
+        <jsp:include page="view_attendance.jsp"/>
     <%
         } else {
             // Default to profile
