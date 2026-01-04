@@ -801,8 +801,8 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                                     for (Exams e : allExamResults) {
                                         double percentage = (e.gettMarks() > 0) ? (double)e.getObtMarks() / e.gettMarks() * 100 : 0;
                                         String status = (e.getStatus() != null) ? e.getStatus() : "Terminated";
-                                        // Use getFullName() method as per Exams class
-                                        String fullName = e.getFullName();
+                                        // Use getFullName() method as per Exams class, with a fallback for safety
+                                        String fullName = (e.getFullName() != null && !e.getFullName().trim().isEmpty()) ? e.getFullName() : "N/A";
                                         int examId = e.getExamId();
                             %>
                             <tr class="result-row" 
@@ -1226,27 +1226,14 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
             });
         });
         
-        // Delete button click handler - FIXED VERSION
+        // Delete button click handler
         document.querySelectorAll('.delete-btn').forEach(button => {
             button.addEventListener('click', function(e) {
                 e.stopPropagation(); // Prevent event bubbling
                 
                 const examId = this.getAttribute('data-exam-id');
-                let studentName = this.getAttribute('data-student-name');
-                let courseName = this.getAttribute('data-course-name');
-                
-                // Debug log
-                console.log('Delete clicked - Raw data:', {examId, studentName, courseName});
-                
-                // If data attributes are empty or contain problematic characters, get from row
-                if (!studentName || studentName === 'null' || studentName.trim() === '') {
-                    const row = this.closest('tr');
-                    if (row) {
-                        studentName = row.querySelector('td:nth-child(1)')?.textContent.trim() || 'Unknown Student';
-                        courseName = row.querySelector('td:nth-child(5)')?.textContent.trim() || 'Unknown Course';
-                        console.log('Fetched from row:', {studentName, courseName});
-                    }
-                }
+                const studentName = this.getAttribute('data-student-name');
+                const courseName = this.getAttribute('data-course-name');
                 
                 showDeleteModal(examId, studentName, courseName);
             });
@@ -1361,22 +1348,22 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         
         console.log('Cleaned values:', {cleanStudentName, cleanCourseName});
 
-        modalMessage.innerHTML = `
-            <div style="text-align: left;">
-                <p>Are you sure you want to delete the following exam result?</p>
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
-                    <p><strong>Student:</strong> ${cleanStudentName}</p>
-                    <p><strong>Course:</strong> ${cleanCourseName}</p>
-                    <p><strong>Exam ID:</strong> ${examId}</p>
-                </div>
-                <p style="color: #dc3545; font-weight: bold;">
-                    <i class="fas fa-exclamation-triangle"></i> 
-                    This action will permanently delete:<br>
-                    ? The exam record<br>
-                    ? All related answers<br>
-                    ? This cannot be undone!
-                </p>
-            </div>`;
+        modalMessage.innerHTML =
+            '<div style="text-align: left;">' +
+                '<p>Are you sure you want to delete the following exam result?</p>' +
+                '<div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">' +
+                    '<p><strong>Student:</strong> ' + cleanStudentName + '</p>' +
+                    '<p><strong>Course:</strong> ' + cleanCourseName + '</p>' +
+                    '<p><strong>Exam ID:</strong> ' + examId + '</p>' +
+                '</div>' +
+                '<p style="color: #dc3545; font-weight: bold;">' +
+                    '<i class="fas fa-exclamation-triangle"></i> ' +
+                    'This action will permanently delete:<br>' +
+                    '? The exam record<br>' +
+                    '? All related answers<br>' +
+                    '? This cannot be undone!' +
+                '</p>' +
+            '</div>';
 
         modal.style.display = 'block';
         
