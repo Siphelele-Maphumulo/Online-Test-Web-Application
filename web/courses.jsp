@@ -530,6 +530,21 @@
         text-decoration: none;
         cursor: pointer;
     }
+    .modal-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--medium-gray);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .modal-body {
+        padding: 20px;
+    }
+    .modal-footer {
+        padding: 16px 20px;
+        text-align: right;
+        border-top: 1px solid var(--medium-gray);
+    }
 </style>
 
 <script>

@@ -945,19 +945,19 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             </label>
                             <div class="options-grid">
                                 <div class="option-container">
-                                    <input type="text" name="opt1" class="option-input" placeholder="First Option" id="opt1" required>
+                                    <textarea name="opt1" class="option-input" placeholder="First Option" id="opt1" required rows="2"></textarea>
                                     <div class="error-message" id="opt1Error">First option is required</div>
                                 </div>
                                 <div class="option-container">
-                                    <input type="text" name="opt2" class="option-input" placeholder="Second Option" id="opt2" required>
+                                    <textarea name="opt2" class="option-input" placeholder="Second Option" id="opt2" required rows="2"></textarea>
                                     <div class="error-message" id="opt2Error">Second option is required</div>
                                 </div>
                                 <div class="option-container">
-                                    <input type="text" name="opt3" class="option-input" placeholder="Third Option" id="opt3">
+                                    <textarea name="opt3" class="option-input" placeholder="Third Option" id="opt3" rows="2"></textarea>
                                     <div class="error-message" id="opt3Error"></div>
                                 </div>
                                 <div class="option-container">
-                                    <input type="text" name="opt4" class="option-input" placeholder="Fourth Option" id="opt4">
+                                    <textarea name="opt4" class="option-input" placeholder="Fourth Option" id="opt4" rows="2"></textarea>
                                     <div class="error-message" id="opt4Error"></div>
                                 </div>
                             </div>
@@ -972,7 +972,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         
                         <!-- Single Answer Input (for MCQ and True/False) -->
                         <div id="correctAnswerContainer">
-                            <input type="text" id="correctAnswer" name="correct" class="form-control" placeholder="Enter correct answer" required>
+                            <textarea id="correctAnswer" name="correct" class="form-control" placeholder="Enter correct answer" required rows="2"></textarea>
                             <div class="error-message" id="correctAnswerError">Correct answer is required</div>
                             <small id="correctAnswerHint" class="form-hint">Enter the correct answer (must match one of the options exactly)</small>
                         </div>
