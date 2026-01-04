@@ -1,6 +1,11 @@
+<%@page import="java.util.UUID"%>
 <%@page import="myPackage.classes.User"%>
 <%@page import="java.util.ArrayList"%>
 <% 
+// CSRF Token Generation
+String csrfToken = UUID.randomUUID().toString();
+session.setAttribute("csrfToken", csrfToken);
+
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
 // Get current user details FIRST
@@ -693,6 +698,8 @@ for (User user : studentList) {
     }
 </style>
 
+<%@ include file="modal_assets.jspf" %>
+
 <%@ include file="header-messages.jsp" %>
 
 <div class="dashboard-container">
@@ -915,12 +922,11 @@ for (User user : studentList) {
                                         <i class="fas fa-edit"></i>
                                         Edit
                                     </a>
-                                    <a href="controller.jsp?page=accounts&operation=del&uid=<%= user.getUserId() %>" 
-                                       onclick="return confirm('Are you sure you want to delete student \"<%= user.getFirstName() %> <%= user.getLastName() %>\"? This action cannot be undone.');" 
-                                       class="btn btn-error" style="font-size: 13px; padding: 8px 16px;">
-                                       <i class="fas fa-trash"></i>
-                                       Delete
-                                    </a>
+                                   <button class="btn btn-error" style="font-size: 13px; padding: 8px 16px;"
+                                            onclick="openDeleteStudentModal('<%= user.getUserId() %>', '<%= user.getFirstName() + " " + user.getLastName() %>', '<%= user.getUserName() %>')">
+                                        <i class="fas fa-trash"></i>
+                                        Delete
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -948,6 +954,35 @@ for (User user : studentList) {
                 </div>
             </div>
         </div>
+         <!-- Delete Confirmation Modal -->
+    <div id="deleteStudentModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="fas fa-trash"></i> Confirm Deletion</h2>
+                <button class="close-button" onclick="closeDeleteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to permanently delete the following student account? This action cannot be undone.</p>
+                <div id="studentDetails">
+                    <!-- Student details will be populated by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <form id="deleteStudentForm" action="controller.jsp" method="post" style="display: flex; gap: 8px;">
+                     <input type="hidden" name="page" value="accounts">
+                    <input type="hidden" name="operation" value="del">
+                    <input type="hidden" name="uid" id="deleteStudentId">
+                    <input type="hidden" name="csrfToken" value="<%= session.getAttribute("csrfToken") %>">
+                    <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">
+                        <i class="fas fa-times-circle"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-error" id="confirmDeleteBtn">
+                        <i class="fas fa-trash-alt"></i> Yes, Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
     </main>
 </div>
 
@@ -956,6 +991,35 @@ for (User user : studentList) {
 
 <!-- JavaScript for enhanced functionality -->
 <script>
+     // Modal handling functions
+    const deleteModal = document.getElementById('deleteStudentModal');
+    const deleteStudentIdInput = document.getElementById('deleteStudentId');
+    const studentDetailsDiv = document.getElementById('studentDetails');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+    function openDeleteStudentModal(userId, studentName, studentNumber) {
+        // Use standard string concatenation
+        studentDetailsDiv.innerHTML = '<strong>Name:</strong> ' + studentName + '<br><strong>Student Number:</strong> ' + studentNumber;
+        deleteStudentIdInput.value = userId;
+        deleteModal.style.display = 'flex';
+    }
+
+    function closeDeleteModal() {
+        deleteModal.style.display = 'none';
+    }
+
+    // Close modal if user clicks outside of it
+    window.onclick = function(event) {
+        if (event.target === deleteModal) {
+            closeDeleteModal();
+        }
+    };
+
+    document.getElementById('deleteStudentForm').addEventListener('submit', function() {
+        confirmDeleteBtn.classList.add('loading');
+        confirmDeleteBtn.disabled = true;
+        confirmDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+    });
     // Global variables for sorting
     let currentSortColumn = -1;
     let sortDirection = 1; // 1 = ascending, -1 = descending

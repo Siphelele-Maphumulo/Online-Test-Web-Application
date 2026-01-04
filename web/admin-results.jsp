@@ -7,7 +7,7 @@
 
 <% 
     String csrfToken = UUID.randomUUID().toString();
-    session.setAttribute("csrf_token", csrfToken);
+    session.setAttribute("csrfToken", csrfToken);
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
 // Get ALL exam results (for admin view)
@@ -801,8 +801,8 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                                     for (Exams e : allExamResults) {
                                         double percentage = (e.gettMarks() > 0) ? (double)e.getObtMarks() / e.gettMarks() * 100 : 0;
                                         String status = (e.getStatus() != null) ? e.getStatus() : "Terminated";
-                                        // Use getFullName() method as per Exams class
-                                        String fullName = e.getFullName();
+                                        // Use getFullName() method as per Exams class, with a fallback for safety
+                                        String fullName = (e.getFullName() != null && !e.getFullName().trim().isEmpty()) ? e.getFullName() : "N/A";
                                         int examId = e.getExamId();
                             %>
                             <tr class="result-row" 
@@ -962,17 +962,17 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div id="deleteModal" class="modal" style="display: none;">
-    <div class="modal-content" style="max-width: 500px;">
+<div id="deleteModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
         <div class="modal-header">
-            <h3><i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i> Delete Exam Result</h3>
-            <span class="close-modal" onclick="closeDeleteModal()">&times;</span>
+            <h2 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Delete Exam Result</h2>
+            <button class="close-button" onclick="closeDeleteModal()">&times;</button>
         </div>
         <div class="modal-body">
             <p id="deleteModalMessage">Are you sure you want to delete this exam result?</p>
         </div>
         <div class="modal-footer">
-            <button onclick="closeDeleteModal()" class="btn btn-outline">Cancel</button>
+            <button onclick="closeDeleteModal()" class="btn btn-secondary">Cancel</button>
             <button onclick="confirmDelete()" class="btn btn-danger">
                 <i class="fas fa-trash"></i> Delete
             </button>
@@ -981,190 +981,9 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
 </div>
 
 <style>
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-}
-
-.modal-content {
-    background-color: #fff;
-    margin: 10% auto;
-    padding: 0;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-}
-
-.modal-header {
-    padding: 16px 20px;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-    border-radius: 8px 8px 0 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-header h3 {
-    margin: 0;
-    color: #333;
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.close-modal {
-    color: #aaa;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    line-height: 20px;
-}
-
-.close-modal:hover {
-    color: #000;
-}
-
-.modal-body {
-    padding: 20px;
-    color: #333;
-    font-size: 16px;
-    line-height: 1.5;
-}
-
-.modal-footer {
-    padding: 16px 20px;
-    background-color: #f8f9fa;
-    border-top: 1px solid #dee2e6;
-    border-radius: 0 0 8px 8px;
-    text-align: right;
-}
-
-/* Update button styles to match your theme */
-.btn {
-    padding: 8px 16px;
-    border-radius: 6px;
-    border: none;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.btn-outline {
-    background: transparent;
-    border: 1px solid var(--medium-gray);
-    color: var(--dark-gray);
-}
-
-.btn-outline:hover {
-    background: var(--light-gray);
-    border-color: var(--dark-gray);
-}
-
-.btn-danger {
-    background: linear-gradient(135deg, #dc2626, #b91c1c);
-    color: white;
-    border: none;
-}
-
-.btn-danger:hover {
-    background: linear-gradient(135deg, #b91c1c, #991b1b);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-}
-
-.btn-danger:disabled {
-    background: #9ca3af;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
 </style>
 
-<style>
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-}
-
-.modal-content {
-    background-color: #fff;
-    margin: 10% auto;
-    padding: 0;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-}
-
-.modal-header {
-    padding: 16px 20px;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-    border-radius: 8px 8px 0 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-header h3 {
-    margin: 0;
-    color: #333;
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.close-modal {
-    color: #aaa;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    line-height: 20px;
-}
-
-.close-modal:hover {
-    color: #000;
-}
-
-.modal-body {
-    padding: 20px;
-    color: #333;
-    font-size: 16px;
-    line-height: 1.5;
-}
-
-.modal-footer {
-    padding: 16px 20px;
-    background-color: #f8f9fa;
-    border-top: 1px solid #dee2e6;
-    border-radius: 0 0 8px 8px;
-    text-align: right;
-}
-
-.action-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    align-items: center;
-}
-
-.action-buttons .btn {
-    margin: 2px !important;
-}
-</style>
+<%@ include file="modal_assets.jspf" %>
 
 <!-- Font Awesome for Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -1177,7 +996,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     let deleteExamId = null;
     let deleteStudentName = null;
     let deleteCourseName = null;
-    const csrfToken = '<%= session.getAttribute("csrf_token") %>';
+    const csrfToken = '<%= session.getAttribute("csrfToken") %>';
 
     // Initialize when page loads
     document.addEventListener('DOMContentLoaded', function() {
@@ -1226,27 +1045,14 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
             });
         });
         
-        // Delete button click handler - FIXED VERSION
+        // Delete button click handler
         document.querySelectorAll('.delete-btn').forEach(button => {
             button.addEventListener('click', function(e) {
                 e.stopPropagation(); // Prevent event bubbling
                 
                 const examId = this.getAttribute('data-exam-id');
-                let studentName = this.getAttribute('data-student-name');
-                let courseName = this.getAttribute('data-course-name');
-                
-                // Debug log
-                console.log('Delete clicked - Raw data:', {examId, studentName, courseName});
-                
-                // If data attributes are empty or contain problematic characters, get from row
-                if (!studentName || studentName === 'null' || studentName.trim() === '') {
-                    const row = this.closest('tr');
-                    if (row) {
-                        studentName = row.querySelector('td:nth-child(1)')?.textContent.trim() || 'Unknown Student';
-                        courseName = row.querySelector('td:nth-child(5)')?.textContent.trim() || 'Unknown Course';
-                        console.log('Fetched from row:', {studentName, courseName});
-                    }
-                }
+                const studentName = this.getAttribute('data-student-name');
+                const courseName = this.getAttribute('data-course-name');
                 
                 showDeleteModal(examId, studentName, courseName);
             });
@@ -1361,31 +1167,24 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         
         console.log('Cleaned values:', {cleanStudentName, cleanCourseName});
 
-        modalMessage.innerHTML = `
-            <div style="text-align: left;">
-                <p>Are you sure you want to delete the following exam result?</p>
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
-                    <p><strong>Student:</strong> ${cleanStudentName}</p>
-                    <p><strong>Course:</strong> ${cleanCourseName}</p>
-                    <p><strong>Exam ID:</strong> ${examId}</p>
-                </div>
-                <p style="color: #dc3545; font-weight: bold;">
-                    <i class="fas fa-exclamation-triangle"></i> 
-                    This action will permanently delete:<br>
-                    ? The exam record<br>
-                    ? All related answers<br>
-                    ? This cannot be undone!
-                </p>
-            </div>`;
+        modalMessage.innerHTML =
+            '<div style="text-align: left;">' +
+                '<p>Are you sure you want to delete the following exam result?</p>' +
+                '<div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">' +
+                    '<p><strong>Student:</strong> ' + cleanStudentName + '</p>' +
+                    '<p><strong>Course:</strong> ' + cleanCourseName + '</p>' +
+                    '<p><strong>Exam ID:</strong> ' + examId + '</p>' +
+                '</div>' +
+                '<p style="color: #dc3545; font-weight: bold;">' +
+                    '<i class="fas fa-exclamation-triangle"></i> ' +
+                    'This action will permanently delete:<br>' +
+                    '? The exam record<br>' +
+                    '? All related answers<br>' +
+                    '? This cannot be undone!' +
+                '</p>' +
+            '</div>';
 
-        modal.style.display = 'block';
-        
-        // Add fade-in animation
-        modal.style.opacity = 0;
-        modal.style.transition = 'opacity 0.3s';
-        setTimeout(() => {
-            modal.style.opacity = 1;
-        }, 10);
+        modal.style.display = 'flex';
     }
 
     // Helper function to escape HTML special characters
@@ -1415,7 +1214,6 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         const modal = document.getElementById('deleteModal');
         if (modal) {
             modal.style.display = 'none';
-            modal.style.opacity = 0;
         }
         deleteExamId = null;
         deleteStudentName = null;
@@ -1452,14 +1250,14 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         // Add CSRF token
         const csrfInput = document.createElement('input');
         csrfInput.type = 'hidden';
-        csrfInput.name = 'csrf_token';
+        csrfInput.name = 'csrfToken';
         csrfInput.value = csrfToken;
         form.appendChild(csrfInput);
 
         const pageInput = document.createElement('input');
         pageInput.type = 'hidden';
         pageInput.name = 'page';
-        pageInput.value = 'results';
+        pageInput.value = 'admin-results';
         form.appendChild(pageInput);
 
         const operationInput = document.createElement('input');

@@ -709,10 +709,10 @@
                         <div class="form-group">
                             <label class="form-label"><i class="fas fa-list-ol"></i> Options</label>
                             <div class="options-grid">
-                                <input type="text" name="opt1" id="editOpt1" class="option-input" value="<%= questionToEdit.getOpt1() %>" required>
-                                <input type="text" name="opt2" id="editOpt2" class="option-input" value="<%= questionToEdit.getOpt2() %>" required>
-                                <input type="text" name="opt3" id="editOpt3" class="option-input" value="<%= questionToEdit.getOpt3() != null ? questionToEdit.getOpt3() : "" %>">
-                                <input type="text" name="opt4" id="editOpt4" class="option-input" value="<%= questionToEdit.getOpt4() != null ? questionToEdit.getOpt4() : "" %>">
+                                <textarea name="opt1" id="editOpt1" class="option-input" required rows="2"><%= questionToEdit.getOpt1() %></textarea>
+                                <textarea name="opt2" id="editOpt2" class="option-input" required rows="2"><%= questionToEdit.getOpt2() %></textarea>
+                                <textarea name="opt3" id="editOpt3" class="option-input" rows="2"><%= questionToEdit.getOpt3() != null ? questionToEdit.getOpt3() : "" %></textarea>
+                                <textarea name="opt4" id="editOpt4" class="option-input" rows="2"><%= questionToEdit.getOpt4() != null ? questionToEdit.getOpt4() : "" %></textarea>
                             </div>
                         </div>
                     </div>
@@ -720,7 +720,7 @@
                     <div class="form-group">
                         <label class="form-label"><i class="fas fa-check-circle" style="color: var(--success);"></i>Correct Answer</label>
                         <div id="editCorrectAnswerContainer">
-                            <input type="text" id="editCorrectAnswer" name="correct" class="form-control" value="<%= questionToEdit.getCorrect() %>" required>
+                            <textarea id="editCorrectAnswer" name="correct" class="form-control" required rows="2"><%= questionToEdit.getCorrect() %></textarea>
                             <small class="form-hint">Must match one of the options exactly</small>
                         </div>
 

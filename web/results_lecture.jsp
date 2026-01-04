@@ -2,10 +2,13 @@
 <%@page import="myPackage.classes.Exams"%>
 <%@page import="myPackage.classes.Questions"%>
 <%@page import="java.util.ArrayList"%>
+<%@page import="java.util.UUID"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
  
 <% 
-myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+    String csrfToken = UUID.randomUUID().toString();
+    session.setAttribute("csrfToken", csrfToken);
+    myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 %>
 
 <style>
@@ -415,7 +418,10 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         padding: 12px;
     }
 }
+
 </style>
+
+<%@ include file="modal_assets.jspf" %>
 
 <!-- SIDEBAR -->
 <div class="sidebar">
@@ -570,7 +576,14 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         <td><%= e.getStartTime() + " - " + e.getEndTime() %></td>
                         <td><strong><%= e.getObtMarks() %> / <%= e.gettMarks() %></strong></td>
                         <td><span class="<%= statusClass %>"><%= e.getStatus() != null ? e.getStatus() : "Terminated" %></span></td>
-                        <td><a href="adm-page.jsp?pgprt=5&eid=<%= e.getExamId() %>" class="action-link">Details</a></td>
+                        <td>
+                            <a href="adm-page.jsp?pgprt=5&eid=<%= e.getExamId() %>" class="action-link">Details</a>
+                            <button class="action-link delete-btn"
+                                    data-exam-id="<%= e.getExamId() %>"
+                                    data-student-name="<%= e.getFullName() %>"
+                                    data-course-name="<%= e.getcName() %>"
+                                    style="border: none; background: none; cursor: pointer; color: #dc3545; text-decoration: underline;">Delete</button>
+                        </td>
                     </tr>
                     <% 
                             }
@@ -578,6 +591,36 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                     %>
                 </tbody>
             </table>
+
+            <!-- Delete Confirmation Modal -->
+            <div id="deleteResultModal" class="modal-overlay">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title"><i class="fas fa-trash"></i> Confirm Deletion</h2>
+                        <button class="close-button" onclick="closeDeleteModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to permanently delete the following exam result? This action cannot be undone.</p>
+                        <div id="resultDetails">
+                            <!-- Result details will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <form id="deleteResultForm" action="controller.jsp" method="post" style="display: flex; gap: 8px;">
+                            <input type="hidden" name="page" value="results_lecture">
+                            <input type="hidden" name="operation" value="del">
+                            <input type="hidden" name="eid" id="deleteExamId">
+                            <input type="hidden" name="csrfToken" value="<%= session.getAttribute("csrfToken") %>">
+                            <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">
+                                <i class="fas fa-times-circle"></i> Cancel
+                            </button>
+                            <button type="submit" class="btn btn-error" id="confirmDeleteBtn">
+                                <i class="fas fa-trash-alt"></i> Yes, Delete
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
         <% } else { %>
             <!-- Result Details View -->
             <div style="margin-bottom: 20px;">
@@ -830,4 +873,52 @@ function sortTable(columnIndex) {
     rows.forEach(row => tbody.appendChild(row));
     updateResultsCount();
 }
+
+// Modal handling functions for delete
+const deleteModal = document.getElementById('deleteResultModal');
+const deleteExamIdInput = document.getElementById('deleteExamId');
+const resultDetailsDiv = document.getElementById('resultDetails');
+const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+function openDeleteModal(examId, studentName, courseName) {
+    // Use standard string concatenation for broader compatibility
+    resultDetailsDiv.innerHTML = '<strong>Student:</strong> ' + studentName + '<br><strong>Course:</strong> ' + courseName;
+    deleteExamIdInput.value = examId;
+    deleteModal.style.display = 'flex';
+}
+
+function closeDeleteModal() {
+    deleteModal.style.display = 'none';
+}
+
+// Add loading indicator on form submission
+document.getElementById('deleteResultForm').addEventListener('submit', function() {
+    confirmDeleteBtn.classList.add('loading');
+    confirmDeleteBtn.disabled = true;
+    confirmDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+});
+
+// Attach event listeners to delete buttons after DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Other initializations...
+
+    // Attach event listeners for delete buttons
+    const deleteButtons = document.querySelectorAll('.delete-btn');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const examId = this.getAttribute('data-exam-id');
+            const studentName = this.getAttribute('data-student-name');
+            const courseName = this.getAttribute('data-course-name');
+            openDeleteModal(examId, studentName, courseName);
+        });
+    });
+});
+
+
+// Close modal if user clicks outside of it
+window.onclick = function(event) {
+    if (event.target === deleteModal) {
+        closeDeleteModal();
+    }
+};
 </script>
