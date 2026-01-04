@@ -772,7 +772,7 @@
                     </a>
                     
                     <!-- Export Form in Filter Section -->
-                    <form method="get" action="export_register.jsp" style="display: inline;">
+                    <form method="get" action="export_register.jsp" target="_blank" style="display: inline;">
                         <!-- Pass all filter parameters -->
                         <input type="hidden" name="exam_id" value="<%= examId %>">
                         <input type="hidden" name="student_id" value="<%= studentId %>">
@@ -792,19 +792,6 @@
         <div class="results-card">
             <div class="card-header">
                 <span><i class="fas fa-table"></i> Exam Register Records</span>
-                <!-- Export Button in Card Header -->
-                <form method="get" action="export_register.jsp" style="display: inline;">
-                    <!-- Pass all filter parameters to the export page -->
-                    <input type="hidden" name="exam_id" value="<%= examId %>">
-                    <input type="hidden" name="student_id" value="<%= studentId %>">
-                    <input type="hidden" name="first_name" value="<%= firstNameFilter %>">
-                    <input type="hidden" name="last_name" value="<%= lastNameFilter %>">
-                    <input type="hidden" name="course_name" value="<%= courseNameFilter %>">
-                    <input type="hidden" name="exam_date" value="<%= dateFilter %>">
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-file-export"></i> Export to CSV
-                    </button>
-                </form>
             </div>
 
             <%
