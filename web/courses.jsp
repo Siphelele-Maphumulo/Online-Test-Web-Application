@@ -4,7 +4,7 @@
 
 <%
     String csrfToken = UUID.randomUUID().toString();
-    session.setAttribute("csrf_token", csrfToken);
+    session.setAttribute("csrfToken", csrfToken);
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
     User currentUser = null;
@@ -20,6 +20,7 @@
     ArrayList list = pDAO.getAllCourses();
     int courseCount = list.size() / 5;
 %>
+
 
 <style>
     /* Use the same CSS Variables as the profile page */
