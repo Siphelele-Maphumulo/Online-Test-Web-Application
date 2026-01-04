@@ -1174,7 +1174,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
         </a>
         <a class="nav-item" href="std-page.jsp?pgprt=3">
           <i class="fas fa-chart-line"></i>
-          <span>Results</span>
+          <span>Daily Register</span>
         </a>
       </div>
     </nav>
