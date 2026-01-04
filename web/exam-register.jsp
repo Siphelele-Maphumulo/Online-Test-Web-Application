@@ -772,7 +772,7 @@
                     </a>
                     
                     <!-- Export Form in Filter Section -->
-                    <form method="get" action="export_register.jsp" target="_blank" style="display: inline;">
+                    <form method="get" action="export-register.jsp" target="_blank" style="display: inline;">
                         <!-- Pass all filter parameters -->
                         <input type="hidden" name="exam_id" value="<%= examId %>">
                         <input type="hidden" name="student_id" value="<%= studentId %>">
