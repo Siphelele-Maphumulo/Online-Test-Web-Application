@@ -772,7 +772,7 @@
                     </a>
                     
                     <!-- Export Form in Filter Section -->
-                    <form method="get" action="export-register.jsp" target="_blank" style="display: inline;">
+                    <form id="exportRegisterForm" method="get" action="export-register.jsp" target="_blank" style="display: inline;">
                         <!-- Pass all filter parameters -->
                         <input type="hidden" name="exam_id" value="<%= examId %>">
                         <input type="hidden" name="student_id" value="<%= studentId %>">
@@ -780,7 +780,7 @@
                         <input type="hidden" name="last_name" value="<%= lastNameFilter %>">
                         <input type="hidden" name="course_name" value="<%= courseNameFilter %>">
                         <input type="hidden" name="exam_date" value="<%= dateFilter %>">
-                        <button type="submit" class="btn btn-success">
+                        <button type="button" id="exportButton" class="btn btn-success">
                             <i class="fas fa-file-excel"></i> Export to Excel
                         </button>
                     </form>
@@ -886,3 +886,21 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var exportButton = document.getElementById('exportButton');
+    var exportForm = document.getElementById('exportRegisterForm');
+
+    if (exportButton && exportForm) {
+        exportButton.addEventListener('click', function(event) {
+            // Stop any other scripts from interfering
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Submit the form directly
+            exportForm.submit();
+        });
+    }
+});
+</script>
