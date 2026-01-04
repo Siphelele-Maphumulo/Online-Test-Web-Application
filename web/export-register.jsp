@@ -50,10 +50,9 @@
     String dateFilter = request.getParameter("exam_date");
     if (dateFilter == null) dateFilter = "";
 
-    // Set response headers for CSV download
-    response.setContentType("text/csv");
-    response.setHeader("Content-Disposition", "attachment; filename=\"exam_register_export.csv\"");
-    response.setCharacterEncoding("UTF-8");
+    // Set response headers for Excel download
+    response.setContentType("application/vnd.ms-excel");
+    response.setHeader("Content-Disposition", "attachment; filename=\"exam_register_export.xls\"");
 
     PrintWriter outWriter = response.getWriter();
     

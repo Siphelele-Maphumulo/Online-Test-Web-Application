@@ -53,6 +53,7 @@
 %>
 
 <!-- CSS Styles remain the same -->
+<!-- CSS Styles remain the same -->
     <style>
     /* Use the same CSS Variables as the profile page */
     :root {
@@ -721,22 +722,12 @@
             </div>
         </div>
 
-        <!-- Filters - UPDATED -->
+        <!-- Filters -->
         <div class="filter-container">
             <form method="get" action="adm-page.jsp">
                 <input type="hidden" name="pgprt" value="7">
 
                 <div class="filter-grid">
-<!--                    <div class="filter-group">
-                        <label class="filter-label"><i class="fas fa-hashtag"></i> Exam ID</label>
-                        <input type="number" name="exam_id" class="filter-control" value="<%= examId > 0 ? examId : "" %>">
-                    </div>
-
-                    <div class="filter-group">
-                        <label class="filter-label"><i class="fas fa-id-card"></i> Student ID</label>
-                        <input type="number" name="student_id" class="filter-control" value="<%= studentId > 0 ? studentId : "" %>">
-                    </div>-->
-
                     <div class="filter-group">
                         <label class="filter-label"><i class="fas fa-user"></i> First Name</label>
                         <input type="text" name="first_name" class="filter-control" value="<%= firstNameFilter %>" placeholder="Search by first name">
@@ -772,7 +763,7 @@
                     </a>
                     
                     <!-- Export Form in Filter Section -->
-                    <form method="get" action="export_register.jsp" style="display: inline;">
+                    <form method="get" action="export_exam.jsp" target="_blank" style="display: inline;">
                         <!-- Pass all filter parameters -->
                         <input type="hidden" name="exam_id" value="<%= examId %>">
                         <input type="hidden" name="student_id" value="<%= studentId %>">
@@ -781,7 +772,7 @@
                         <input type="hidden" name="course_name" value="<%= courseNameFilter %>">
                         <input type="hidden" name="exam_date" value="<%= dateFilter %>">
                         <button type="submit" class="btn btn-success">
-                            <i class="fas fa-file-export"></i> Export CSV
+                            <i class="fas fa-file-excel"></i> Export to Excel
                         </button>
                     </form>
                 </div>
@@ -792,25 +783,12 @@
         <div class="results-card">
             <div class="card-header">
                 <span><i class="fas fa-table"></i> Exam Register Records</span>
-                <!-- Export Button in Card Header -->
-                <form method="get" action="export_register.jsp" style="display: inline;">
-                    <!-- Pass all filter parameters to the export page -->
-                    <input type="hidden" name="exam_id" value="<%= examId %>">
-                    <input type="hidden" name="student_id" value="<%= studentId %>">
-                    <input type="hidden" name="first_name" value="<%= firstNameFilter %>">
-                    <input type="hidden" name="last_name" value="<%= lastNameFilter %>">
-                    <input type="hidden" name="course_name" value="<%= courseNameFilter %>">
-                    <input type="hidden" name="exam_date" value="<%= dateFilter %>">
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-file-export"></i> Export to CSV
-                    </button>
-                </form>
             </div>
 
             <%
                 ResultSet rs = null;
                 try {
-                    // UPDATED: Call with all filter parameters
+                    // Call with all filter parameters
                     rs = pDAO.getFilteredExamRegister(examId, studentId, firstNameFilter, 
                                                      lastNameFilter, courseNameFilter, dateFilter);
                     if (rs != null && rs.next()) {
@@ -890,9 +868,11 @@
                 <div class="no-results">
                     No exam register records found.
                 </div>
-            <% } } catch (Exception e) { %>
+            <% } } catch (Exception e) { 
+                e.printStackTrace();
+            %>
                 <div class="no-results">
-                    Error loading exam register.
+                    Error loading exam register: <%= e.getMessage() %>
                 </div>
             <% } %>
 
