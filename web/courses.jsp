@@ -773,6 +773,27 @@
     </div>
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div id="deleteConfirmationModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color: var(--error); color: var(--white);">
+            <h3 id="deleteModalTitle"><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h3>
+            <span class="close-btn" onclick="closeDeleteModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="deleteModalBody">
+            <!-- Content will be set by JavaScript -->
+        </div>
+        <div class="modal-footer" style="border-top: 1px solid var(--medium-gray);">
+            <button type="button" class="btn btn-outline" onclick="closeDeleteModal()">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button type="button" id="confirm-delete-btn" class="btn btn-danger">
+                <i class="fas fa-trash"></i> Confirm Delete
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Font Awesome for Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
@@ -898,19 +919,30 @@
         }
     }
 
+    function closeDeleteModal() {
+        const modal = document.getElementById('deleteConfirmationModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
     // Function for delete confirmation
     function confirmDelete(courseName) {
-        const decodedCourseName = decodeURIComponent(courseName);
-        const confirmation = confirm(`?? DELETE CONFIRMATION\n\n` +
-                                   `Are you sure you want to delete "${decodedCourseName}"?\n\n` +
-                                   `This will permanently delete:\n` +
-                                   `? The course itself\n` +
-                                   `? All associated questions\n` +
-                                   `? All related exams\n` +
-                                   `? All exam answers and results\n\n` +
-                                   `This action cannot be undone!`);
+        const modal = document.getElementById('deleteConfirmationModal');
+        const modalBody = document.getElementById('deleteModalBody');
+        const confirmBtn = document.getElementById('confirm-delete-btn');
 
-        if (confirmation) {
+        const decodedCourseName = decodeURIComponent(courseName);
+
+        modalBody.innerHTML = `
+            <p>Are you sure you want to delete the course <strong>"${decodedCourseName}"</strong>?</p>
+            <p class="alert alert-warning" style="margin-top: 16px;">
+                <i class="fas fa-exclamation-triangle"></i>
+                This will permanently delete the course, all associated questions, and all exam records. <strong>This action cannot be undone.</strong>
+            </p>
+        `;
+
+        confirmBtn.onclick = function() {
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = 'controller.jsp';
@@ -941,7 +973,9 @@
 
             document.body.appendChild(form);
             form.submit();
-        }
+        };
+
+        modal.style.display = 'block';
     }
 
     // Initialize when DOM is loaded
@@ -990,14 +1024,15 @@
 
                 const submitBtn = this.querySelector('#submit-btn');
                 const newCourseName = document.getElementById('courseName').value.trim();
+                const originalCourseNameFromInput = document.getElementById('original-course-name').value;
 
-                if (isEditing && newCourseName !== originalCourseName) {
+                if (isEditing && newCourseName !== originalCourseNameFromInput) {
                     // Show confirmation modal
                     const modal = document.getElementById('updateConfirmationModal');
                     const modalBody = document.getElementById('updateModalBody');
 
                     modalBody.innerHTML = `
-                        <p>You are about to rename the course from <strong>"${originalCourseName}"</strong> to <strong>"${newCourseName}"</strong>.</p>
+                        <p>You are about to rename the course from <strong>"${originalCourseNameFromInput}"</strong> to <strong>"${newCourseName}"</strong>.</p>
                         <p class="alert alert-warning" style="margin-top: 16px;">
                             <i class="fas fa-exclamation-triangle"></i>
                             This will update all associated questions and exam records. This action cannot be undone.
