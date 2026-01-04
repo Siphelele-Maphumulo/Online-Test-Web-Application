@@ -1,7 +1,10 @@
 <%@ page import="java.util.ArrayList" %>
 <%@ page import="myPackage.classes.User" %>
+<%@ page import="java.util.UUID" %>
 
 <%
+    String csrfToken = UUID.randomUUID().toString();
+    session.setAttribute("csrf_token", csrfToken);
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
     User currentUser = null;
@@ -529,6 +532,10 @@
     }
 </style>
 
+<script>
+    const csrfToken = '<%= session.getAttribute("csrf_token") %>';
+</script>
+
 <div class="dashboard-container">
     <!-- Sidebar Navigation - Same as profile page -->
     <aside class="sidebar">
@@ -661,11 +668,9 @@
                                             data-exam-date="<%= dataDate %>">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
-                                    <a href="controller.jsp?page=courses&operation=del&cname=<%= courseName %>"
-                                       onclick="return confirmDelete('<%= courseName %>');" 
-                                       class="btn btn-danger">
-                                       <i class="fas fa-trash"></i> Delete
-                                    </a>
+                                    <button onclick="confirmDelete('<%= courseName %>');" class="btn btn-danger">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -745,6 +750,48 @@
             </div>
         </div>
     </main>
+</div>
+
+<!-- Update Confirmation Modal -->
+<div id="updateConfirmationModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color: var(--primary-blue); color: var(--white);">
+            <h3 id="updateModalTitle"><i class="fas fa-question-circle"></i> Confirm Update</h3>
+            <span class="close-btn" onclick="closeUpdateModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="updateModalBody">
+            <p>Please review the changes before confirming.</p>
+        </div>
+        <div class="modal-footer" style="border-top: 1px solid var(--medium-gray);">
+            <button type="button" class="btn btn-outline" onclick="closeUpdateModal()">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button type="button" id="confirm-update-btn" class="btn btn-primary">
+                <i class="fas fa-check"></i> Confirm Update
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteConfirmationModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color: var(--error); color: var(--white);">
+            <h3 id="deleteModalTitle"><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h3>
+            <span class="close-btn" onclick="closeDeleteModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="deleteModalBody">
+            <!-- Content will be set by JavaScript -->
+        </div>
+        <div class="modal-footer" style="border-top: 1px solid var(--medium-gray);">
+            <button type="button" class="btn btn-outline" onclick="closeDeleteModal()">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button type="button" id="confirm-delete-btn" class="btn btn-danger">
+                <i class="fas fa-trash"></i> Confirm Delete
+            </button>
+        </div>
+    </div>
 </div>
 
 <!-- Font Awesome for Icons -->
@@ -865,18 +912,69 @@
         }
     }
 
+    function closeUpdateModal() {
+        const modal = document.getElementById('updateConfirmationModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    function closeDeleteModal() {
+        const modal = document.getElementById('deleteConfirmationModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
     // Function for delete confirmation
     function confirmDelete(courseName) {
+        const modal = document.getElementById('deleteConfirmationModal');
+        const modalBody = document.getElementById('deleteModalBody');
+        const confirmBtn = document.getElementById('confirm-delete-btn');
+
         const decodedCourseName = decodeURIComponent(courseName);
-        const confirmation = confirm(`?? DELETE CONFIRMATION\n\n` +
-                                   `Are you sure you want to delete "${decodedCourseName}"?\n\n` +
-                                   `This will permanently delete:\n` +
-                                   `? The course itself\n` +
-                                   `? All associated questions\n` +
-                                   `? All related exams\n` +
-                                   `? All exam answers and results\n\n` +
-                                   `This action cannot be undone!`);
-        return confirmation;
+
+        modalBody.innerHTML =
+            '<p>Are you sure you want to delete the course <strong>"' + decodedCourseName + '"</strong>?</p>' +
+            '<p class="alert alert-warning" style="margin-top: 16px;">' +
+                '<i class="fas fa-exclamation-triangle"></i>' +
+                'This will permanently delete the course, all associated questions, and all exam records. <strong>This action cannot be undone.</strong>' +
+            '</p>';
+
+        confirmBtn.onclick = function() {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'controller.jsp';
+
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrfToken;
+            form.appendChild(csrfInput);
+
+            const pageInput = document.createElement('input');
+            pageInput.type = 'hidden';
+            pageInput.name = 'page';
+            pageInput.value = 'courses';
+            form.appendChild(pageInput);
+
+            const operationInput = document.createElement('input');
+            operationInput.type = 'hidden';
+            operationInput.name = 'operation';
+            operationInput.value = 'del';
+            form.appendChild(operationInput);
+
+            const cnameInput = document.createElement('input');
+            cnameInput.type = 'hidden';
+            cnameInput.name = 'cname';
+            cnameInput.value = courseName;
+            form.appendChild(cnameInput);
+
+            document.body.appendChild(form);
+            form.submit();
+        };
+
+        modal.style.display = 'block';
     }
 
     // Initialize when DOM is loaded
@@ -900,35 +998,53 @@
             });
         }
         
-        // Form submission handler
-        const courseForm = document.getElementById('course-form');
-        if (courseForm) {
-            courseForm.addEventListener('submit', function(e) {
-                const submitBtn = this.querySelector('#submit-btn');
+        // Confirm update button handler
+        const confirmUpdateBtn = document.getElementById('confirm-update-btn');
+        if (confirmUpdateBtn) {
+            confirmUpdateBtn.addEventListener('click', function() {
+                const courseForm = document.getElementById('course-form');
+                const submitBtn = courseForm.querySelector('#submit-btn');
+
                 if (submitBtn) {
                     submitBtn.classList.add('loading');
                     submitBtn.disabled = true;
                     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
                 }
-                
-                // If editing and course name changed, show confirmation
-                if (isEditing) {
-                    const newCourseName = document.getElementById('courseName').value.trim();
-                    if (newCourseName !== originalCourseName) {
-                        const confirmed = confirm('?? WARNING: Changing the course name will update:\n\n' +
-                                                 '? All related questions in the database\n' +
-                                                 '? All existing exams and results\n' +
-                                                 '? This change cannot be undone!\n\n' +
-                                                 'Are you sure you want to continue?');
-                        if (!confirmed) {
-                            e.preventDefault();
-                            if (submitBtn) {
-                                submitBtn.classList.remove('loading');
-                                submitBtn.disabled = false;
-                                submitBtn.innerHTML = '<i class="fas fa-save"></i> Update Course';
-                            }
-                        }
-                    }
+
+                courseForm.submit();
+            });
+        }
+
+        // Form submission handler
+        const courseForm = document.getElementById('course-form');
+        if (courseForm) {
+            courseForm.addEventListener('submit', function(e) {
+                e.preventDefault(); // Always prevent default submission
+
+                const submitBtn = this.querySelector('#submit-btn');
+                const newCourseName = document.getElementById('courseName').value.trim();
+                const originalCourseNameFromInput = document.getElementById('original-course-name').value;
+
+                if (isEditing && newCourseName !== originalCourseNameFromInput) {
+                    // Show confirmation modal
+                    const modal = document.getElementById('updateConfirmationModal');
+                    const modalBody = document.getElementById('updateModalBody');
+
+                    modalBody.innerHTML =
+                        '<p>You are about to rename the course from <strong>"' + originalCourseNameFromInput + '"</strong> to <strong>"' + newCourseName + '"</strong>.</p>' +
+                        '<p class="alert alert-warning" style="margin-top: 16px;">' +
+                            '<i class="fas fa-exclamation-triangle"></i>' +
+                            'This will update all associated questions and exam records. This action cannot be undone.' +
+                        '</p>' +
+                        '<p>Are you sure you want to proceed?</p>';
+
+                    modal.style.display = 'block';
+                } else {
+                    // If not editing or name hasn't changed, submit directly
+                    submitBtn.classList.add('loading');
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                    this.submit();
                 }
             });
         }

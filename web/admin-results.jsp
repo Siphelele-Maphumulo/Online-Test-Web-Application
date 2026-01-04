@@ -2,10 +2,13 @@
 <%@page import="myPackage.classes.Exams"%>
 <%@page import="myPackage.classes.Questions"%>
 <%@page import="java.util.ArrayList"%>
+<%@page import="java.util.UUID"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
 
 <% 
-myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+    String csrfToken = UUID.randomUUID().toString();
+    session.setAttribute("csrf_token", csrfToken);
+    myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
 // Get ALL exam results (for admin view)
 ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
@@ -1174,6 +1177,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     let deleteExamId = null;
     let deleteStudentName = null;
     let deleteCourseName = null;
+    const csrfToken = '<%= session.getAttribute("csrf_token") %>';
 
     // Initialize when page loads
     document.addEventListener('DOMContentLoaded', function() {
@@ -1449,7 +1453,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         const csrfInput = document.createElement('input');
         csrfInput.type = 'hidden';
         csrfInput.name = 'csrf_token';
-        csrfInput.value = '<%= session.getAttribute("csrf_token") != null ? session.getAttribute("csrf_token") : "" %>';
+        csrfInput.value = csrfToken;
         form.appendChild(csrfInput);
 
         const pageInput = document.createElement('input');
