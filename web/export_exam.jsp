@@ -59,6 +59,7 @@
     // Write HTML table for Excel
     outWriter.println("<html>");
     outWriter.println("<head>");
+    outWriter.println("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">");
     outWriter.println("<style>");
     outWriter.println("table { border-collapse: collapse; width: 100%; }");
     outWriter.println("th { background-color: #f2f2f2; border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold; }");
@@ -96,7 +97,7 @@
                 String status = completed ? "Completed" : "In Progress";
                 
                 // Calculate duration
-                String duration = "?";
+                String duration = "—";
                 java.sql.Time endTime = rs.getTime("end_time");
                 java.sql.Time startTime = rs.getTime("start_time");
                 
@@ -123,7 +124,7 @@
                 outWriter.println("<td>" + rs.getInt("exam_id") + "</td>");
                 outWriter.println("<td>" + rs.getDate("exam_date") + "</td>");
                 outWriter.println("<td>" + (rs.getTime("start_time") != null ? rs.getTime("start_time") : "") + "</td>");
-                outWriter.println("<td>" + (endTime != null ? endTime : "?") + "</td>");
+                outWriter.println("<td>" + (endTime != null ? endTime : "—") + "</td>");
                 outWriter.println("<td>" + duration + "</td>");
                 outWriter.println("<td>" + status + "</td>");
                 outWriter.println("</tr>");
