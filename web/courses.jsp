@@ -934,13 +934,12 @@
 
         const decodedCourseName = decodeURIComponent(courseName);
 
-        modalBody.innerHTML = `
-            <p>Are you sure you want to delete the course <strong>"${decodedCourseName}"</strong>?</p>
-            <p class="alert alert-warning" style="margin-top: 16px;">
-                <i class="fas fa-exclamation-triangle"></i>
-                This will permanently delete the course, all associated questions, and all exam records. <strong>This action cannot be undone.</strong>
-            </p>
-        `;
+        modalBody.innerHTML =
+            '<p>Are you sure you want to delete the course <strong>"' + decodedCourseName + '"</strong>?</p>' +
+            '<p class="alert alert-warning" style="margin-top: 16px;">' +
+                '<i class="fas fa-exclamation-triangle"></i>' +
+                'This will permanently delete the course, all associated questions, and all exam records. <strong>This action cannot be undone.</strong>' +
+            '</p>';
 
         confirmBtn.onclick = function() {
             const form = document.createElement('form');
@@ -1031,14 +1030,13 @@
                     const modal = document.getElementById('updateConfirmationModal');
                     const modalBody = document.getElementById('updateModalBody');
 
-                    modalBody.innerHTML = `
-                        <p>You are about to rename the course from <strong>"${originalCourseNameFromInput}"</strong> to <strong>"${newCourseName}"</strong>.</p>
-                        <p class="alert alert-warning" style="margin-top: 16px;">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            This will update all associated questions and exam records. This action cannot be undone.
-                        </p>
-                        <p>Are you sure you want to proceed?</p>
-                    `;
+                    modalBody.innerHTML =
+                        '<p>You are about to rename the course from <strong>"' + originalCourseNameFromInput + '"</strong> to <strong>"' + newCourseName + '"</strong>.</p>' +
+                        '<p class="alert alert-warning" style="margin-top: 16px;">' +
+                            '<i class="fas fa-exclamation-triangle"></i>' +
+                            'This will update all associated questions and exam records. This action cannot be undone.' +
+                        '</p>' +
+                        '<p>Are you sure you want to proceed?</p>';
 
                     modal.style.display = 'block';
                 } else {
