@@ -781,7 +781,7 @@
                         <input type="hidden" name="course_name" value="<%= courseNameFilter %>">
                         <input type="hidden" name="exam_date" value="<%= dateFilter %>">
                         <button type="submit" class="btn btn-success">
-                            <i class="fas fa-file-export"></i> Export CSV
+                            <i class="fas fa-file-excel"></i> Export to Excel
                         </button>
                     </form>
                 </div>
