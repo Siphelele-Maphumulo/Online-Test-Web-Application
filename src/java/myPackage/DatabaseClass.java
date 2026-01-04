@@ -2803,5 +2803,44 @@ public ArrayList<String> getCourseList() {
             e.printStackTrace();
         }
     }
+
+    public boolean markAttendance(int studentId, String studentName) {
+        try {
+            String sql = "INSERT INTO daily_register(student_id, student_name, registration_date, registration_time) VALUES (?, ?, CURDATE(), CURTIME())";
+            PreparedStatement pstm = conn.prepareStatement(sql);
+            pstm.setInt(1, studentId);
+            pstm.setString(2, studentName);
+            int rows = pstm.executeUpdate();
+            pstm.close();
+            return rows > 0;
+        } catch (SQLException ex) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        }
+    }
+
+    public ArrayList<Map<String, String>> getAttendanceByStudentId(int studentId) {
+        ArrayList<Map<String, String>> attendanceList = new ArrayList<>();
+        try {
+            String sql = "SELECT * FROM daily_register WHERE student_id = ? ORDER BY registration_date DESC, registration_time DESC";
+            PreparedStatement pstm = conn.prepareStatement(sql);
+            pstm.setInt(1, studentId);
+            ResultSet rs = pstm.executeQuery();
+            while (rs.next()) {
+                Map<String, String> attendance = new HashMap<>();
+                attendance.put("register_id", rs.getString("register_id"));
+                attendance.put("student_id", rs.getString("student_id"));
+                attendance.put("student_name", rs.getString("student_name"));
+                attendance.put("registration_date", rs.getString("registration_date"));
+                attendance.put("registration_time", rs.getString("registration_time"));
+                attendanceList.add(attendance);
+            }
+            rs.close();
+            pstm.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return attendanceList;
+    }
     
 }

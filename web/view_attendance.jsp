@@ -1109,13 +1109,13 @@
                             <i class="fas fa-chart-line"></i>
                             <span>Results</span>
                         </a>
-                        <a class="nav-item" href="std-page.jsp?pgprt=3">
+                        <a class="nav-item active" href="std-page.jsp?pgprt=3">
                             <i class="fas fa-calendar-check"></i>
-                            <span>Register</span>
+                            <span>Daily Register</span>
                         </a>
-                        <a class="nav-item  active" href="std-page.jsp?pgprt=4">
+                        <a class="nav-item" href="std-page.jsp?pgprt=4">
                             <i class="fas fa-eye"></i>
-                            <span>Attendance</span>
+                            <span>View Attendance</span>
                         </a>
                     </div>
                 </nav>
@@ -1125,7 +1125,7 @@
                 <!-- Page Header -->
                 <div class="page-header">
                     <div class="page-title">
-                        <i class="fas fa-calendar-check"></i> Daily Attendance Register
+                        <i class="fas fa-calendar-check"></i> View Daily Attendances
                     </div>
                     <div class="stats-badge">
                         <i class="fas fa-user-graduate"></i> Student Portal
@@ -1160,7 +1160,7 @@
                     <p><i class="fas fa-calendar-day"></i> <strong>Today's Date:</strong> <%= todayDate %></p>
                 </div>
 
-                <!-- Today's Attendance Card -->
+<!--                 Today's Attendance Card 
                 <div class="course-card">
                     <h3 style="margin-bottom: var(--spacing-md); color: var(--text-dark); font-size: 18px;">
                         <i class="fas fa-calendar-day"></i> Today's Attendance
@@ -1189,6 +1189,109 @@
                                 <i class="fas fa-check"></i> Mark Today's Attendance
                             </button>
                         </form>
+                    <% } %>
+                </div>-->
+
+                <!-- Attendance History -->
+                <div class="filter-container">
+                    <h3 style="margin-bottom: var(--spacing-md); color: var(--text-dark); font-size: 18px;">
+                        <i class="fas fa-history"></i> Attendance History
+                    </h3>
+                    <form method="get" action="std-page.jsp">
+                        <input type="hidden" name="pgprt" value="3">
+                        <div class="filter-grid">
+                            <div class="filter-group">
+                                <label class="filter-label"><i class="fas fa-calendar"></i> Filter by Date</label>
+                                <input type="date" name="filter_date" class="filter-control" value="<%= filterDate %>">
+                            </div>
+<!--                            <div class="filter-group">
+                                <label class="filter-label"><i class="fas fa-book"></i> Filter by Course</label>
+                                <select name="filter_course" class="filter-select">
+                                    <option value="">All Courses</option>
+                                    <% for (String course : studentCourses) { %>
+                                        <option value="<%= course %>" <%= course.equals(filterCourse) ? "selected" : "" %>>
+                                            <%= course %>
+                                        </option>
+                                    <% } %>
+                                </select>
+                            </div>-->
+                        </div>
+                        <div class="quick-filter-row">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-search"></i> Apply Filters
+                            </button>
+                            <a href="std-page.jsp?pgprt=3" class="btn btn-outline">
+                                <i class="fas fa-times"></i> Clear
+                            </a>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Attendance Records -->
+                <div class="results-card">
+                    <div class="card-header">
+                        <span><i class="fas fa-table"></i> Attendance Records</span>
+                        <span><i class="fas fa-user-check"></i> Student Attendance</span>
+                    </div>
+
+                    <%
+                        try {
+                            if (attendanceHistory != null && !attendanceHistory.isEmpty()) {
+                    %>
+                    <div class="results-table-container">
+                        <table class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Student ID</th>
+                                    <th>Student Name</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <%
+                                int i = 0;
+                                for (Map<String, String> attendance : attendanceHistory) {
+                                    i++;
+                            %>
+                                <tr>
+                                    <td><%= i %></td>
+                                    <td><%= attendance.get("registration_date") %></td>
+                                    <td><%= attendance.get("registration_time") %></td>
+                                    <td><%= attendance.get("student_id") %></td>
+                                    <td><%= attendance.get("student_name") %></td>
+                                    <td>
+                                        <span class="attendance-status status-present">
+                                            <i class="fas fa-check"></i>
+                                            Present
+                                        </span>
+                                    </td>
+                                </tr>
+                            <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="results-count">
+                        Total Attendance Records: <%= i %>
+                    </div>
+                    <% } else { %>
+                        <div class="no-results">
+                            <i class="fas fa-clipboard-list fa-2x" style="margin-bottom: var(--spacing-md); opacity: 0.5;"></i>
+                            <p>No attendance records found.</p>
+                            <p style="font-size: 15px; margin-top: var(--spacing-sm);">Start by marking today's attendance above.</p>
+                        </div>
+                    <% }
+                    } catch (Exception e) {
+                    %>
+                        <div class="no-results">
+                            <i class="fas fa-clipboard-list fa-2x" style="margin-bottom: var(--spacing-md); opacity: 0.5;"></i>
+                            <p>No attendance records available.</p>
+                            <p style="font-size: 14px; margin-top: var(--spacing-sm); color: var(--dark-gray);">
+                                Attendance records will appear here once you start marking attendance.
+                            </p>
+                        </div>
                     <% } %>
                 </div>
 
