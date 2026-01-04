@@ -4,7 +4,7 @@
 
 <%
     String csrfToken = UUID.randomUUID().toString();
-    session.setAttribute("csrf_token", csrfToken);
+    session.setAttribute("csrfToken", csrfToken);
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
     User currentUser = null;
@@ -497,58 +497,12 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
-
-    /* Modal Styles */
-    .modal {
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        overflow: auto;
-        background-color: rgba(0,0,0,0.5);
-    }
-    .modal-content {
-        background-color: #fefefe;
-        margin: 15% auto;
-        padding: 20px;
-        border: 1px solid #888;
-        width: 80%;
-        max-width: 500px;
-        border-radius: var(--radius-md);
-    }
-    .close-btn {
-        color: #aaa;
-        float: right;
-        font-size: 28px;
-        font-weight: bold;
-    }
-    .close-btn:hover,
-    .close-btn:focus {
-        color: black;
-        text-decoration: none;
-        cursor: pointer;
-    }
-    .modal-header {
-        padding: 16px 20px;
-        border-bottom: 1px solid var(--medium-gray);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .modal-body {
-        padding: 20px;
-    }
-    .modal-footer {
-        padding: 16px 20px;
-        text-align: right;
-        border-top: 1px solid var(--medium-gray);
-    }
 </style>
 
+<%@ include file="modal_assets.jspf" %>
+
 <script>
-    const csrfToken = '<%= session.getAttribute("csrf_token") %>';
+    const csrfToken = '<%= session.getAttribute("csrfToken") %>';
 </script>
 
 <div class="dashboard-container">
@@ -768,17 +722,17 @@
 </div>
 
 <!-- Update Confirmation Modal -->
-<div id="updateConfirmationModal" class="modal" style="display:none;">
+<div id="updateConfirmationModal" class="modal-overlay" style="display:none;">
     <div class="modal-content">
-        <div class="modal-header" style="background-color: var(--primary-blue); color: var(--white);">
-            <h3 id="updateModalTitle"><i class="fas fa-question-circle"></i> Confirm Update</h3>
-            <span class="close-btn" onclick="closeUpdateModal()">&times;</span>
+        <div class="modal-header">
+            <h2 class="modal-title"><i class="fas fa-question-circle"></i> Confirm Update</h2>
+            <button class="close-button" onclick="closeUpdateModal()">&times;</button>
         </div>
         <div class="modal-body" id="updateModalBody">
             <p>Please review the changes before confirming.</p>
         </div>
-        <div class="modal-footer" style="border-top: 1px solid var(--medium-gray);">
-            <button type="button" class="btn btn-outline" onclick="closeUpdateModal()">
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeUpdateModal()">
                 <i class="fas fa-times"></i> Cancel
             </button>
             <button type="button" id="confirm-update-btn" class="btn btn-primary">
@@ -789,17 +743,17 @@
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div id="deleteConfirmationModal" class="modal" style="display:none;">
+<div id="deleteConfirmationModal" class="modal-overlay" style="display:none;">
     <div class="modal-content">
-        <div class="modal-header" style="background-color: var(--error); color: var(--white);">
-            <h3 id="deleteModalTitle"><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h3>
-            <span class="close-btn" onclick="closeDeleteModal()">&times;</span>
+        <div class="modal-header">
+            <h2 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h2>
+            <button class="close-button" onclick="closeDeleteModal()">&times;</button>
         </div>
         <div class="modal-body" id="deleteModalBody">
             <!-- Content will be set by JavaScript -->
         </div>
-        <div class="modal-footer" style="border-top: 1px solid var(--medium-gray);">
-            <button type="button" class="btn btn-outline" onclick="closeDeleteModal()">
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">
                 <i class="fas fa-times"></i> Cancel
             </button>
             <button type="button" id="confirm-delete-btn" class="btn btn-danger">
@@ -963,7 +917,7 @@
 
             const csrfInput = document.createElement('input');
             csrfInput.type = 'hidden';
-            csrfInput.name = 'csrf_token';
+            csrfInput.name = 'csrfToken';
             csrfInput.value = csrfToken;
             form.appendChild(csrfInput);
 
@@ -1053,7 +1007,7 @@
                         '</p>' +
                         '<p>Are you sure you want to proceed?</p>';
 
-                    modal.style.display = 'block';
+                    modal.style.display = 'flex';
                 } else {
                     // If not editing or name hasn't changed, submit directly
                     submitBtn.classList.add('loading');

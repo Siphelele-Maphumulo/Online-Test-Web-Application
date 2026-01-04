@@ -7,7 +7,7 @@
  
 <% 
     String csrfToken = UUID.randomUUID().toString();
-    session.setAttribute("csrf_token", csrfToken);
+    session.setAttribute("csrfToken", csrfToken);
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 %>
 
@@ -419,79 +419,9 @@
     }
 }
 
-/* Modal Styles */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1001;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-}
-
-.modal-content {
-    background-color: #fff;
-    margin: 10% auto;
-    padding: 0;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    max-width: 500px;
-}
-
-.modal-header {
-    padding: 16px 20px;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-    border-radius: 8px 8px 0 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-header h3 {
-    margin: 0;
-    font-size: 18px;
-}
-
-.modal-header .close {
-    color: #aaa;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.modal-body {
-    padding: 20px;
-    font-size: 16px;
-}
-
-.modal-footer {
-    padding: 16px 20px;
-    background-color: #f8f9fa;
-    border-top: 1px solid #dee2e6;
-    border-radius: 0 0 8px 8px;
-    text-align: right;
-}
-
-.modal-footer button {
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-.modal-footer .btn-cancel {
-    border: 1px solid #ccc;
-    background: transparent;
-}
-
-.modal-footer .btn-danger {
-    border: none;
-    background: #dc3545;
-    color: white;
-}
 </style>
+
+<%@ include file="modal_assets.jspf" %>
 
 <!-- SIDEBAR -->
 <div class="sidebar">
@@ -663,18 +593,31 @@
             </table>
 
             <!-- Delete Confirmation Modal -->
-            <div id="deleteModal" class="modal">
+            <div id="deleteResultModal" class="modal-overlay">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h3>Delete Exam Result</h3>
-                        <span class="close" onclick="closeDeleteModal()">&times;</span>
+                        <h2 class="modal-title"><i class="fas fa-trash"></i> Confirm Deletion</h2>
+                        <button class="close-button" onclick="closeDeleteModal()">&times;</button>
                     </div>
                     <div class="modal-body">
-                        <p id="deleteModalMessage">Are you sure?</p>
+                        <p>Are you sure you want to permanently delete the following exam result? This action cannot be undone.</p>
+                        <div id="resultDetails">
+                            <!-- Result details will be populated by JavaScript -->
+                        </div>
                     </div>
                     <div class="modal-footer">
-                        <button onclick="closeDeleteModal()" class="btn-cancel">Cancel</button>
-                        <button onclick="confirmDelete()" class="btn-danger">Delete</button>
+                        <form id="deleteResultForm" action="controller.jsp" method="post" style="display: flex; gap: 8px;">
+                            <input type="hidden" name="page" value="results_lecture">
+                            <input type="hidden" name="operation" value="del">
+                            <input type="hidden" name="eid" id="deleteExamId">
+                            <input type="hidden" name="csrfToken" value="<%= session.getAttribute("csrfToken") %>">
+                            <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">
+                                <i class="fas fa-times-circle"></i> Cancel
+                            </button>
+                            <button type="submit" class="btn btn-error" id="confirmDeleteBtn">
+                                <i class="fas fa-trash-alt"></i> Yes, Delete
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -931,75 +874,51 @@ function sortTable(columnIndex) {
     updateResultsCount();
 }
 
-let deleteExamId = null;
-const csrfToken = '<%= session.getAttribute("csrf_token") %>';
+// Modal handling functions for delete
+const deleteModal = document.getElementById('deleteResultModal');
+const deleteExamIdInput = document.getElementById('deleteExamId');
+const resultDetailsDiv = document.getElementById('resultDetails');
+const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
 
-function showDeleteModal(examId, studentName, courseName) {
-    deleteExamId = examId;
-    const modal = document.getElementById('deleteModal');
-    const modalMessage = document.getElementById('deleteModalMessage');
-
-    modalMessage.innerHTML = `Are you sure you want to delete the result for <strong>${studentName}</strong> on the course <strong>${courseName}</strong>? This action cannot be undone.`;
-    modal.style.display = 'block';
+function openDeleteModal(examId, studentName, courseName) {
+    // Use standard string concatenation for broader compatibility
+    resultDetailsDiv.innerHTML = '<strong>Student:</strong> ' + studentName + '<br><strong>Course:</strong> ' + courseName;
+    deleteExamIdInput.value = examId;
+    deleteModal.style.display = 'flex';
 }
 
 function closeDeleteModal() {
-    const modal = document.getElementById('deleteModal');
-    modal.style.display = 'none';
-    deleteExamId = null;
+    deleteModal.style.display = 'none';
 }
 
-function confirmDelete() {
-    if (!deleteExamId) return;
+// Add loading indicator on form submission
+document.getElementById('deleteResultForm').addEventListener('submit', function() {
+    confirmDeleteBtn.classList.add('loading');
+    confirmDeleteBtn.disabled = true;
+    confirmDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+});
 
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = 'controller.jsp';
-
-    const csrfInput = document.createElement('input');
-    csrfInput.type = 'hidden';
-    csrfInput.name = 'csrf_token';
-    csrfInput.value = csrfToken;
-    form.appendChild(csrfInput);
-
-    const pageInput = document.createElement('input');
-    pageInput.type = 'hidden';
-    pageInput.name = 'page';
-    pageInput.value = 'results';
-    form.appendChild(pageInput);
-
-    const operationInput = document.createElement('input');
-    operationInput.type = 'hidden';
-    operationInput.name = 'operation';
-    operationInput.value = 'delete';
-    form.appendChild(operationInput);
-
-    const examIdInput = document.createElement('input');
-    examIdInput.type = 'hidden';
-    examIdInput.name = 'eid';
-    examIdInput.value = deleteExamId;
-    form.appendChild(examIdInput);
-
-    document.body.appendChild(form);
-    form.submit();
-}
-
+// Attach event listeners to delete buttons after DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+    // Other initializations...
+
+    // Attach event listeners for delete buttons
     const deleteButtons = document.querySelectorAll('.delete-btn');
     deleteButtons.forEach(button => {
         button.addEventListener('click', function() {
             const examId = this.getAttribute('data-exam-id');
             const studentName = this.getAttribute('data-student-name');
             const courseName = this.getAttribute('data-course-name');
-            showDeleteModal(examId, studentName, courseName);
+            openDeleteModal(examId, studentName, courseName);
         });
     });
 });
 
+
+// Close modal if user clicks outside of it
 window.onclick = function(event) {
-    const modal = document.getElementById('deleteModal');
-    if (event.target == modal) {
+    if (event.target === deleteModal) {
         closeDeleteModal();
     }
-}
+};
 </script>
