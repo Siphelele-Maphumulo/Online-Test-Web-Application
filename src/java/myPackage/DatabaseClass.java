@@ -2846,5 +2846,53 @@ public ArrayList<String> getCourseList() {
         }
         return attendanceList;
     }
+
+    public ArrayList<Map<String, String>> getFilteredDailyRegister(String studentNameFilter, String dateFilter) {
+        ArrayList<Map<String, String>> registerList = new ArrayList<>();
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            StringBuilder query = new StringBuilder("SELECT * FROM daily_register WHERE 1=1 ");
+            ArrayList<Object> params = new ArrayList<>();
+
+            if (studentNameFilter != null && !studentNameFilter.trim().isEmpty()) {
+                query.append("AND student_name LIKE ? ");
+                params.add("%" + studentNameFilter.trim() + "%");
+            }
+
+            if (dateFilter != null && !dateFilter.trim().isEmpty()) {
+                query.append("AND registration_date = ? ");
+                params.add(java.sql.Date.valueOf(dateFilter));
+            }
+
+            query.append("ORDER BY registration_date DESC, registration_time DESC");
+
+            pstmt = conn.prepareStatement(query.toString());
+
+            for (int i = 0; i < params.size(); i++) {
+                pstmt.setObject(i + 1, params.get(i));
+            }
+
+            rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                Map<String, String> record = new HashMap<>();
+                record.put("register_id", rs.getString("register_id"));
+                record.put("student_id", rs.getString("student_id"));
+                record.put("student_name", rs.getString("student_name"));
+                record.put("registration_date", rs.getString("registration_date"));
+                record.put("registration_time", rs.getString("registration_time"));
+                registerList.add(record);
+            }
+
+        } catch (SQLException ex) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error in getFilteredDailyRegister", ex);
+        } finally {
+            closeResources(pstmt, rs);
+        }
+
+        return registerList;
+    }
     
 }

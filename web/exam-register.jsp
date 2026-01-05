@@ -117,16 +117,38 @@
         min-height: 100vh;
     }
     
-    /* Sidebar Styles - Same as profile page */
+    /* Sidebar Styles - Scrollable */
     .sidebar {
         width: 200px;
         background: linear-gradient(180deg, var(--primary-blue), var(--secondary-blue));
         color: var(--white);
         flex-shrink: 0;
+
         position: sticky;
         top: 0;
+
         height: 100vh;
+        overflow-y: auto;        /* enable vertical scrolling */
+        overflow-x: hidden;      /* prevent horizontal scroll */
     }
+
+    /* Optional: smoother scrolling */
+    .sidebar {
+        scroll-behavior: smooth;
+    }
+
+    /* Optional: hide scrollbar but keep scroll (Chrome/Edge/Safari) */
+    .sidebar::-webkit-scrollbar {
+        width: 6px;
+    }
+    .sidebar::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.35);
+        border-radius: 4px;
+    }
+    .sidebar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
     
     .sidebar-header {
         padding: var(--spacing-xl) var(--spacing-lg);

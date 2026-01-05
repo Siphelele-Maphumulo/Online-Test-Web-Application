@@ -1,3 +1,4 @@
+<%@ page import="java.net.URLEncoder" %>
 <%@ page import="java.sql.*" %>
 <%@ page import="java.util.*" %>
 <%@ page import="myPackage.DatabaseClass" %>
@@ -5,90 +6,43 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
 <%
+    // Authentication and authorization checks
     if (session.getAttribute("userId") == null) {
         response.sendRedirect("login.jsp");
         return;
     }
 
     String userType = (String) session.getAttribute("userType");
-    if (userType == null) {
-        int userId = Integer.parseInt(session.getAttribute("userId").toString());
-        User user = DatabaseClass.getInstance().getUserDetails(String.valueOf(userId));
-        if (user != null) {
-            userType = user.getType();
-            session.setAttribute("userType", userType);
-        }
-    }
-
     if (!("admin".equals(userType) || "lecture".equals(userType))) {
         response.sendRedirect("std-page.jsp");
         return;
     }
 
+    // Get filter parameters from request
+    String studentNameFilter = request.getParameter("student_name");
+    if (studentNameFilter == null) studentNameFilter = "";
+
+    String dateFilter = request.getParameter("registration_date");
+    if (dateFilter == null) dateFilter = "";
+
+    String sortBy = request.getParameter("sort_by");
+    if (sortBy == null) sortBy = "registration_date";
+
+    String sortOrder = request.getParameter("sort_order");
+    if (sortOrder == null) sortOrder = "desc";
+
+    // Instantiate DAO and fetch data
     DatabaseClass pDAO = DatabaseClass.getInstance();
-    PreparedStatement pstmt = null;
-    ResultSet rs = null;
-
-    // Filter parameters for class register
-    String classNameFilter = request.getParameter("class_name");
-    if (classNameFilter == null) classNameFilter = "";
-
-    String courseFilter = request.getParameter("course_name");
-    if (courseFilter == null) courseFilter = "";
-
-    String dateFilter = request.getParameter("attendance_date");
-    if (dateFilter == null || dateFilter.trim().isEmpty()) {
-        // Set today's date as default
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
-        dateFilter = sdf.format(new java.util.Date());
-    }
-
-    String firstNameFilter = request.getParameter("first_name");
-    if (firstNameFilter == null) firstNameFilter = "";
-
-    String lastNameFilter = request.getParameter("last_name");
-    if (lastNameFilter == null) lastNameFilter = "";
-
-    // Get all students (for dropdown or reference)
-    List<String> allClasses = new ArrayList<>();
-    List<String> allCourses = new ArrayList<>();
+    ArrayList<Map<String, String>> registerList = pDAO.getFilteredDailyRegister(studentNameFilter, dateFilter);
     
-    try {
-        // Get distinct classes from users table (students)
-        String classesQuery = "SELECT DISTINCT class_name FROM users WHERE user_type = 'student' AND class_name IS NOT NULL AND class_name != '' ORDER BY class_name";
-        pstmt = pDAO.getPreparedStatement(classesQuery);
-        rs = pstmt.executeQuery();
-        while (rs.next()) {
-            String className = rs.getString("class_name");
-            allClasses.add(className);
-        }
-        rs.close();
-        pstmt.close();
-        
-        // Get distinct courses from questions table
-        String coursesQuery = "SELECT DISTINCT course_name FROM questions WHERE course_name IS NOT NULL AND course_name != '' ORDER BY course_name";
-        pstmt = pDAO.getPreparedStatement(coursesQuery);
-        rs = pstmt.executeQuery();
-        while (rs.next()) {
-            String courseName = rs.getString("course_name");
-            allCourses.add(courseName);
-        }
-        
-    } catch (Exception e) {
-        e.printStackTrace();
-        // Add default values if query fails
-        allClasses.add("Computer Science");
-        allClasses.add("Mathematics");
-        allClasses.add("Physics");
-        allClasses.add("Engineering");
-        
-        allCourses.add("Computer Science 101");
-        allCourses.add("Mathematics 201");
-        allCourses.add("Physics 301");
-    } finally {
-        if (rs != null) try { rs.close(); } catch (SQLException e) {}
-        if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
-    }
+    // Get today's date for quick filters
+    java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+    String today = sdf.format(new java.util.Date());
+    
+    // Get yesterday's date
+    java.util.Calendar cal = java.util.Calendar.getInstance();
+    cal.add(java.util.Calendar.DATE, -1);
+    String yesterday = sdf.format(cal.getTime());
 %>
 
 <!DOCTYPE html>
@@ -96,9 +50,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Class Register</title>
+    <title>Class Register Log</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
+
+</head>
+
+<!-- CSS Styles remain the same -->
     <style>
     /* Use the same CSS Variables as the profile page */
     :root {
@@ -163,7 +120,7 @@
         min-height: 100vh;
     }
     
-    /* Sidebar Styles - Same as profile page */
+    /* Sidebar Styles - Scrollable */
     .sidebar {
         width: 200px;
         background: linear-gradient(180deg, var(--primary-blue), var(--secondary-blue));
@@ -172,7 +129,27 @@
         position: sticky;
         top: 0;
         height: 100vh;
+        overflow-y: auto;        /* enable vertical scrolling */
+        overflow-x: hidden;      /* prevent horizontal scroll */
     }
+
+    /* Optional: smoother scrolling */
+    .sidebar {
+        scroll-behavior: smooth;
+    }
+
+    /* Optional: hide scrollbar but keep scroll (Chrome/Edge/Safari) */
+    .sidebar::-webkit-scrollbar {
+        width: 6px;
+    }
+    .sidebar::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.35);
+        border-radius: 4px;
+    }
+    .sidebar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
     
     .sidebar-header {
         padding: var(--spacing-xl) var(--spacing-lg);
@@ -263,46 +240,6 @@
         display: flex;
         align-items: center;
         gap: 6px;
-    }
-    
-    /* Stats Grid */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: var(--spacing-md);
-        padding: var(--spacing-lg);
-        background: var(--light-gray);
-    }
-    
-    .stat-card {
-        background: var(--white);
-        border-radius: var(--radius-md);
-        padding: var(--spacing-lg);
-        text-align: center;
-        border: 1px solid var(--medium-gray);
-        box-shadow: var(--shadow-sm);
-        transition: transform var(--transition-normal);
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-md);
-    }
-    
-    .stat-value {
-        font-size: 32px;
-        font-weight: 700;
-        line-height: 1;
-        margin-bottom: var(--spacing-sm);
-    }
-    
-    .stat-label {
-        font-size: 13px;
-        color: var(--dark-gray);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: var(--spacing-xs);
     }
     
     /* Results Cards */
@@ -471,8 +408,8 @@
     }
     
     .btn-success {
-        background: linear-gradient(90deg, var(--success), #10b981);
-        color: var(--white);
+    background: linear-gradient(90deg, var(--success), #10b981);
+    color: var(--white);
     }
     
     .btn-success:hover {
@@ -490,58 +427,26 @@
         box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
     }
     
-    .btn-sm {
-        padding: 6px 12px;
-        font-size: 12px;
-    }
     
-    /* Button Groups */
-    .btn-group {
-        display: flex;
-        gap: 4px;
-    }
-    
-    /* Status Badges */
-    .badge {
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-weight: 500;
-        font-size: 12px;
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        white-space: nowrap;
-    }
-    
-    .badge-info {
-        background: linear-gradient(90deg, var(--info), #0ea5e9);
-        color: var(--white);
-    }
-    
-    /* Attendance Status */
-    .attendance-status {
-        padding: 4px 12px;
+    .quick-filter-btn {
+        background: var(--light-gray);
+        border: 1px solid var(--medium-gray);
         border-radius: 20px;
-        font-size: 12px;
-        font-weight: 500;
+        padding: 8px 16px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        color: var(--text-dark);
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: var(--spacing-xs);
     }
     
-    .status-present {
-        background: linear-gradient(90deg, var(--success), #10b981);
+    .quick-filter-btn:hover,
+    .quick-filter-btn.active {
+        background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
         color: var(--white);
-    }
-    
-    .status-absent {
-        background: linear-gradient(90deg, var(--error), #ef4444);
-        color: var(--white);
-    }
-    
-    .status-not-marked {
-        background: var(--medium-gray);
-        color: var(--dark-gray);
+        border-color: transparent;
     }
     
     /* Search Container */
@@ -617,6 +522,38 @@
         background-color: var(--light-gray);
     }
     
+    /* Status Badges */
+    .badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-weight: 500;
+        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+    
+    .badge-success {
+        background: linear-gradient(90deg, var(--success), #10b981);
+        color: var(--white);
+    }
+    
+    .badge-error {
+        background: linear-gradient(90deg, var(--error), #ef4444);
+        color: var(--white);
+    }
+    
+    .badge-warning {
+        background: linear-gradient(90deg, var(--warning), #f59e0b);
+        color: var(--white);
+    }
+    
+    .badge-info {
+        background: linear-gradient(90deg, var(--info), #0ea5e9);
+        color: var(--white);
+    }
+    
     /* Sort Indicator */
     .sort-indicator {
         margin-left: 4px;
@@ -629,24 +566,8 @@
         text-align: center;
         padding: var(--spacing-xl);
         color: var(--dark-gray);
-    }
-    
-    .no-results i {
-        font-size: 48px;
-        color: var(--medium-gray);
-        margin-bottom: var(--spacing-md);
-    }
-    
-    .no-results h2 {
-        font-size: 18px;
-        margin-bottom: var(--spacing-sm);
-        color: var(--text-dark);
-    }
-    
-    .no-results p {
+        font-style: italic;
         font-size: 14px;
-        color: var(--dark-gray);
-        margin-bottom: var(--spacing-md);
     }
     
     .results-count {
@@ -656,13 +577,6 @@
         font-size: 13px;
         border-top: 1px solid var(--medium-gray);
         background: var(--light-gray);
-    }
-    
-    /* Checkboxes */
-    input[type="checkbox"] {
-        width: 16px;
-        height: 16px;
-        cursor: pointer;
     }
     
     /* Responsive Design - Consistent with profile page */
@@ -723,19 +637,6 @@
             gap: var(--spacing-sm);
             text-align: center;
         }
-        
-        .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-        
-        .quick-filter-row {
-            flex-direction: column;
-        }
-        
-        .quick-filter-row .btn {
-            width: 100%;
-            justify-content: center;
-        }
     }
     
     @media (max-width: 480px) {
@@ -752,12 +653,9 @@
             padding: var(--spacing-sm);
         }
         
-        .stats-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .btn-group {
-            flex-direction: column;
+        .quick-filter-btn {
+            font-size: 12px;
+            padding: 6px 12px;
         }
     }
     
@@ -792,25 +690,14 @@
     .quick-filter-row .btn {
         margin: 2px;
     }
-    
-    /* Table Container */
-    .results-table-container {
-        overflow-x: auto;
-    }
-    
-    /* Results Count Styling */
-    .results-count span {
-        font-weight: 600;
-    }
 </style>
-    
-</head>
+
 <body>
 <div class="dashboard-container">
-    <!-- Sidebar Navigation -->
+    <!-- Sidebar -->
     <aside class="sidebar">
         <div class="sidebar-header">
-            <img src="IMG/mut.png" alt="CodeSA Institute Pty LTD Logo" class="mut-logo">
+            <img src="IMG/mut.png" alt="Logo" class="mut-logo">
         </div>
         <nav class="sidebar-nav">
             <a href="adm-page.jsp?pgprt=0" class="nav-item">
@@ -842,289 +729,224 @@
                <h2>Exam Registers</h2>
            </a>
            <a href="adm-page.jsp?pgprt=8" class="nav-item active">
-               <i class="fas fa-users"></i>
+               <i class="fas fa-clipboard-list"></i>
                <h2>Class Registers</h2>
            </a>
         </nav>
     </aside>
 
     <div class="main-content">
-        <!-- Page Header -->
+        <!-- Header -->
         <div class="page-header">
             <div class="page-title">
-                <i class="fas fa-clipboard-list"></i> Class Register - All Students
+                <i class="fas fa-clipboard-list"></i> Class Register Log
             </div>
             <div class="stats-badge">
-                <i class="fas fa-user-graduate"></i> Student Attendance Register
+                <i class="fas fa-users"></i>
+                <span><%= registerList.size() %> Total Records</span>
             </div>
         </div>
 
-        <!-- Filters -->
-        <div class="filter-container">
-            <form method="get" action="adm-page.jsp">
+        <!-- Search and Quick Actions -->
+        <div class="search-container">
+            <form method="get" action="adm-page.jsp" id="searchForm">
                 <input type="hidden" name="pgprt" value="8">
+                <input type="search" 
+                       name="student_name" 
+                       class="search-input" 
+                       placeholder="Search by student name or ID..."
+                       value="<%= studentNameFilter %>">
+                <i class="fas fa-search search-icon"></i>
+            </form>
+        </div>
+
+        <!-- Filter Container -->
+        <div class="filter-container">
+            <form method="get" action="adm-page.jsp" id="filterForm">
+                <input type="hidden" name="pgprt" value="8">
+                <input type="hidden" name="student_name" value="<%= studentNameFilter %>">
+                
+                <div class="filter-header">
+                    <div class="filter-title">
+                        <i class="fas fa-filter"></i> Filter Options
+                    </div>
+                    <button type="button" class="btn btn-outline" onclick="resetFilters()">
+                        <i class="fas fa-redo"></i> Reset All
+                    </button>
+                </div>
 
                 <div class="filter-grid">
                     <div class="filter-group">
-                        <label class="filter-label"><i class="fas fa-user"></i> First Name</label>
-                        <input type="text" name="first_name" class="filter-control" value="<%= firstNameFilter %>" placeholder="Search by first name">
+                        <label class="filter-label">
+                            <i class="fas fa-calendar-alt"></i> Date Range
+                        </label>
+                        <input type="date" 
+                               name="registration_date" 
+                               class="filter-control" 
+                               value="<%= dateFilter %>">
                     </div>
+                    
                     <div class="filter-group">
-                        <label class="filter-label"><i class="fas fa-user"></i> Last Name</label>
-                        <input type="text" name="last_name" class="filter-control" value="<%= lastNameFilter %>" placeholder="Search by last name">
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label"><i class="fas fa-school"></i> Class</label>
-                        <select name="class_name" class="filter-select">
-                            <option value="">All Classes</option>
-                            <% for (String className : allClasses) { %>
-                                <option value="<%= className %>" <%= className.equals(classNameFilter) ? "selected" : "" %>><%= className %></option>
-                            <% } %>
+                        <label class="filter-label">
+                            <i class="fas fa-sort-amount-down"></i> Sort By
+                        </label>
+                        <select name="sort_by" class="filter-select" onchange="this.form.submit()">
+                            <option value="registration_date" <%= "registration_date".equals(sortBy) ? "selected" : "" %>>Date</option>
+                            <option value="student_name" <%= "student_name".equals(sortBy) ? "selected" : "" %>>Student Name</option>
+                            <option value="student_id" <%= "student_id".equals(sortBy) ? "selected" : "" %>>Student ID</option>
                         </select>
                     </div>
+                    
                     <div class="filter-group">
-                        <label class="filter-label"><i class="fas fa-book"></i> Course</label>
-                        <select name="course_name" class="filter-select">
-                            <option value="">All Courses</option>
-                            <% for (String course : allCourses) { %>
-                                <option value="<%= course %>" <%= course.equals(courseFilter) ? "selected" : "" %>><%= course %></option>
-                            <% } %>
+                        <label class="filter-label">
+                            <i class="fas fa-sort"></i> Order
+                        </label>
+                        <select name="sort_order" class="filter-select" onchange="this.form.submit()">
+                            <option value="desc" <%= "desc".equals(sortOrder) ? "selected" : "" %>>Newest First</option>
+                            <option value="asc" <%= "asc".equals(sortOrder) ? "selected" : "" %>>Oldest First</option>
                         </select>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label"><i class="fas fa-calendar"></i> Attendance Date</label>
-                        <input type="date" name="attendance_date" class="filter-control" value="<%= dateFilter %>">
                     </div>
                 </div>
 
+                <!-- Quick Filters -->
                 <div class="quick-filter-row">
+                    <span class="filter-label" style="margin-right: var(--spacing-sm);">
+                        <i class="fas fa-bolt"></i> Quick Filters:
+                    </span>
+                    <button type="button" 
+                            class="quick-filter-btn <%= today.equals(dateFilter) ? "active" : "" %>"
+                            onclick="setDateFilter('<%= today %>')">
+                        <i class="fas fa-calendar-day"></i> Today
+                    </button>
+                    <button type="button" 
+                            class="quick-filter-btn <%= yesterday.equals(dateFilter) ? "active" : "" %>"
+                            onclick="setDateFilter('<%= yesterday %>')">
+                        <i class="fas fa-calendar-minus"></i> Yesterday
+                    </button>
+                    <button type="button" 
+                            class="quick-filter-btn <%= "".equals(dateFilter) ? "active" : "" %>"
+                            onclick="setDateFilter('')">
+                        <i class="fas fa-calendar-week"></i> All Dates
+                    </button>
+                    
+                    <div style="flex-grow: 1;"></div>
+                    
                     <button class="btn btn-primary" type="submit">
                         <i class="fas fa-search"></i> Apply Filters
                     </button>
-                    <a href="adm-page.jsp?pgprt=8" class="btn btn-outline">
-                        <i class="fas fa-times"></i> Clear Filters
+                    
+                    <a href="export-class-register.jsp?student_name=<%= URLEncoder.encode(studentNameFilter, "UTF-8") %>&registration_date=<%= URLEncoder.encode(dateFilter, "UTF-8") %>&sort_by=<%= sortBy %>&sort_order=<%= sortOrder %>" 
+                       class="btn btn-success">
+                        <i class="fas fa-file-csv"></i> Export CSV
                     </a>
-                    <button type="button" class="btn btn-success" onclick="markAllAttendance()">
-                        <i class="fas fa-check-circle"></i> Mark Selected
-                    </button>
                 </div>
             </form>
         </div>
 
-        <!-- Class Register Results -->
+        <!-- Results Card -->
         <div class="results-card">
             <div class="card-header">
-                <span><i class="fas fa-table"></i> Class Attendance Register</span>
-                <span class="stats-badge" style="font-size: 12px; padding: 4px 12px;">
-                    <i class="fas fa-users"></i> Students Listed
-                </span>
-            </div>
-
-            <%
-                List<Map<String, String>> studentsList = new ArrayList<>();
-                int totalStudents = 0;
-                int presentCount = 0;
-                int absentCount = 0;
-                
-                try {
-                    // Build query to get all students with their attendance for the selected date
-                    StringBuilder query = new StringBuilder();
-                    query.append("SELECT u.user_id, u.first_name, u.last_name, u.email, u.class_name, ");
-                    query.append("dr.registration_date, dr.status ");
-                    query.append("FROM users u ");
-                    query.append("LEFT JOIN daily_register dr ON u.user_id = dr.student_id ");
-                    query.append("AND DATE(dr.registration_date) = ? ");
-                    query.append("WHERE u.user_type = 'student' ");
-                    
-                    List<Object> params = new ArrayList<>();
-                    params.add(dateFilter);
-                    
-                    if (!firstNameFilter.isEmpty()) {
-                        query.append("AND u.first_name LIKE ? ");
-                        params.add("%" + firstNameFilter + "%");
-                    }
-                    
-                    if (!lastNameFilter.isEmpty()) {
-                        query.append("AND u.last_name LIKE ? ");
-                        params.add("%" + lastNameFilter + "%");
-                    }
-                    
-                    if (!classNameFilter.isEmpty()) {
-                        query.append("AND u.class_name = ? ");
-                        params.add(classNameFilter);
-                    }
-                    
-                    query.append("ORDER BY u.class_name, u.last_name, u.first_name");
-                    
-                    pstmt = pDAO.getPreparedStatement(query.toString());
-                    
-                    for (int i = 0; i < params.size(); i++) {
-                        pstmt.setObject(i + 1, params.get(i));
-                    }
-                    
-                    rs = pstmt.executeQuery();
-                    
-                    while (rs.next()) {
-                        Map<String, String> student = new HashMap<>();
-                        student.put("user_id", rs.getString("user_id"));
-                        student.put("first_name", rs.getString("first_name"));
-                        student.put("last_name", rs.getString("last_name"));
-                        student.put("email", rs.getString("email"));
-                        student.put("class_name", rs.getString("class_name"));
-                        student.put("registration_date", rs.getString("registration_date"));
-                        student.put("status", rs.getString("status"));
-                        
-                        studentsList.add(student);
-                        totalStudents++;
-                        
-                        if ("present".equalsIgnoreCase(rs.getString("status"))) {
-                            presentCount++;
-                        } else if ("absent".equalsIgnoreCase(rs.getString("status"))) {
-                            absentCount++;
-                        }
-                    }
-                    
-                } catch (Exception e) {
-                    e.printStackTrace();
-                } finally {
-                    if (rs != null) try { rs.close(); } catch (SQLException e) {}
-                    if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
-                }
-            %>
-
-            <!-- Summary Statistics -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value"><%= totalStudents %></div>
-                    <div class="stat-label"><i class="fas fa-users"></i> Total Students</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" style="color: var(--success);"><%= presentCount %></div>
-                    <div class="stat-label"><i class="fas fa-check-circle"></i> Present</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" style="color: var(--error);"><%= absentCount %></div>
-                    <div class="stat-label"><i class="fas fa-times-circle"></i> Absent</div>
-                </div>
-                <div class="stat-card">
-                    <%
-                        int notMarked = totalStudents - presentCount - absentCount;
-                    %>
-                    <div class="stat-value" style="color: var(--warning);"><%= notMarked %></div>
-                    <div class="stat-label"><i class="fas fa-clock"></i> Not Marked</div>
+                <span><i class="fas fa-table"></i> Attendance Records</span>
+                <div>
+                    <span class="stats-badge">
+                        <i class="fas fa-chart-line"></i>
+                        <%= registerList.size() %> Records
+                    </span>
+                    <% if (!dateFilter.isEmpty()) { %>
+                    <span class="stats-badge" style="margin-left: var(--spacing-sm); background: linear-gradient(135deg, var(--info), #0ea5e9);">
+                        <i class="fas fa-calendar-check"></i>
+                        <%= dateFilter %>
+                    </span>
+                    <% } %>
                 </div>
             </div>
 
-            <% if (!studentsList.isEmpty()) { %>
+            <% if (!registerList.isEmpty()) { %>
                 <div class="results-table-container">
-                    <form id="attendanceForm" method="post" action="updateAttendance.jsp">
-                        <input type="hidden" name="attendance_date" value="<%= dateFilter %>">
-                        <table class="results-table">
-                            <thead>
-                                <tr>
-                                    <th style="width: 30px;">#</th>
-                                    <th style="width: 30px;">
-                                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
-                                    </th>
-                                    <th>Student Name</th>
-                                    <th>Student ID</th>
-                                    <th>Class</th>
-                                    <th>Email</th>
-                                    <th>Attendance Date</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <%
-                                    int i = 0;
-                                    for (Map<String, String> student : studentsList) {
-                                        i++;
-                                        String status = student.get("status");
-                                        String registrationDate = student.get("registration_date");
-                                %>
-                                <tr>
-                                    <td><%= i %></td>
-                                    <td>
-                                        <input type="checkbox" name="selectedStudents" value="<%= student.get("user_id") %>" 
-                                               class="student-checkbox">
-                                    </td>
-                                    <td>
-                                        <strong><%= student.get("first_name") %> <%= student.get("last_name") %></strong>
-                                    </td>
-                                    <td><%= student.get("user_id") %></td>
-                                    <td>
-                                        <span class="badge badge-info">
-                                            <%= student.get("class_name") != null ? student.get("class_name") : "N/A" %>
-                                        </span>
-                                    </td>
-                                    <td><%= student.get("email") %></td>
-                                    <td>
-                                        <% if (registrationDate != null) { 
-                                            try {
-                                                java.text.SimpleDateFormat displayFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm");
-                                                java.text.SimpleDateFormat parseFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                                                out.print(displayFormat.format(parseFormat.parse(registrationDate)));
-                                            } catch (Exception e) {
-                                                out.print(dateFilter);
-                                            }
-                                        } else {
-                                            out.print(dateFilter);
-                                        } %>
-                                    </td>
-                                    <td>
-                                        <% if ("present".equalsIgnoreCase(status)) { %>
-                                            <span class="attendance-status status-present">
-                                                <i class="fas fa-check-circle"></i> Present
-                                            </span>
-                                        <% } else if ("absent".equalsIgnoreCase(status)) { %>
-                                            <span class="attendance-status status-absent">
-                                                <i class="fas fa-times-circle"></i> Absent
-                                            </span>
-                                        <% } else { %>
-                                            <span class="attendance-status status-not-marked">
-                                                <i class="fas fa-clock"></i> Not Marked
-                                            </span>
-                                        <% } %>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group">
-                                            <button type="button" class="btn btn-success btn-sm"
-                                                    onclick="markAttendance('<%= student.get("user_id") %>', 'present')">
-                                                <i class="fas fa-check"></i> Present
-                                            </button>
-                                            <button type="button" class="btn btn-danger btn-sm"
-                                                    onclick="markAttendance('<%= student.get("user_id") %>', 'absent')">
-                                                <i class="fas fa-times"></i> Absent
-                                            </button>
-                                            <button type="button" class="btn btn-outline btn-sm"
-                                                    onclick="markAttendance('<%= student.get("user_id") %>', 'late')">
-                                                <i class="fas fa-clock"></i> Late
-                                            </button>
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable('index')"># <i class="fas fa-sort sort-indicator"></i></th>
+                                <th onclick="sortTable('register_id')">Register ID <i class="fas fa-sort sort-indicator"></i></th>
+                                <th onclick="sortTable('student_id')">Student ID <i class="fas fa-sort sort-indicator"></i></th>
+                                <th onclick="sortTable('student_name')">Student Name <i class="fas fa-sort sort-indicator"></i></th>
+                                <th onclick="sortTable('registration_date')">Date <i class="fas fa-sort sort-indicator"></i></th>
+                                <th onclick="sortTable('registration_time')">Time <i class="fas fa-sort sort-indicator"></i></th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% 
+                                int i = 0; 
+                                for (Map<String, String> record : registerList) { 
+                                    i++;
+                                    String registerId = record.get("register_id");
+                                    String studentId = record.get("student_id");
+                                    String studentName = record.get("student_name");
+                                    String regDate = record.get("registration_date");
+                                    String regTime = record.get("registration_time");
+                            %>
+                            <tr>
+                                <td><span class="badge badge-info"><%= i %></span></td>
+                                <td><code><%= registerId %></code></td>
+                                <td><strong><%= studentId %></strong></td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                                        <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-blue), var(--accent-blue)); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;">
+                                            <%= studentName.substring(0, 1).toUpperCase() %>
                                         </div>
-                                    </td>
-                                </tr>
-                                <% } %>
-                            </tbody>
-                        </table>
-                    </form>
+                                        <%= studentName %>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge <%= today.equals(regDate) ? "badge-success" : "badge-info" %>">
+                                        <i class="fas fa-calendar"></i>
+                                        <%= regDate %>
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge badge-warning">
+                                        <i class="fas fa-clock"></i>
+                                        <%= regTime %>
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-outline" style="padding: 4px 8px; font-size: 12px;" 
+                                            onclick="viewStudentDetails('<%= studentId %>')">
+                                        <i class="fas fa-eye"></i> View
+                                    </button>
+                                </td>
+                            </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
                 </div>
-
+                
                 <div class="results-count">
-                    Total Students: <strong><%= totalStudents %></strong> | 
-                    Present: <strong style="color: var(--success);"><%= presentCount %></strong> | 
-                    Absent: <strong style="color: var(--error);"><%= absentCount %></strong> | 
-                    Not Marked: <strong style="color: var(--warning);"><%= totalStudents - presentCount - absentCount %></strong>
+                    Showing <%= registerList.size() %> record(s)
+                    <% if (!studentNameFilter.isEmpty()) { %>
+                        for "<%= studentNameFilter %>"
+                    <% } %>
+                    <% if (!dateFilter.isEmpty()) { %>
+                        on <%= dateFilter %>
+                    <% } %>
                 </div>
-
+                
             <% } else { %>
                 <div class="no-results">
-                    <i class="fas fa-user-graduate"></i>
-                    <h2>No Students Found</h2>
-                    <p>No student records match your search criteria.</p>
-                    <a href="adm-page.jsp?pgprt=8" class="btn btn-primary">
-                        <i class="fas fa-refresh"></i> Reset Filters
-                    </a>
+                    <i class="fas fa-clipboard-list fa-3x" style="color: var(--medium-gray); margin-bottom: var(--spacing-md);"></i>
+                    <h2>No Records Found</h2>
+                    <p style="color: var(--dark-gray); margin-bottom: var(--spacing-lg);">
+                        No attendance records match your filter criteria.
+                        <% if (!studentNameFilter.isEmpty() || !dateFilter.isEmpty()) { %>
+                            Try adjusting your filters.
+                        <% } %>
+                    </p>
+                    <% if (!studentNameFilter.isEmpty() || !dateFilter.isEmpty()) { %>
+                        <a href="adm-page.jsp?pgprt=8" class="btn btn-primary">
+                            <i class="fas fa-times"></i> Clear All Filters
+                        </a>
+                    <% } %>
                 </div>
             <% } %>
         </div>
@@ -1132,71 +954,79 @@
 </div>
 
 <script>
-    function toggleSelectAll(checkbox) {
-        const checkboxes = document.querySelectorAll('.student-checkbox');
-        checkboxes.forEach(cb => {
-            cb.checked = checkbox.checked;
+    // JavaScript for enhanced functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-submit search form on typing
+        const searchInput = document.querySelector('.search-input');
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                document.getElementById('searchForm').submit();
+            }, 500);
         });
+        
+        // Highlight active filters
+        highlightActiveFilters();
+    });
+    
+    function setDateFilter(date) {
+        const form = document.getElementById('filterForm');
+        form.elements['registration_date'].value = date;
+        form.submit();
     }
     
-    function markAttendance(studentId, status) {
-        if (confirm('Mark this student as ' + status + '?')) {
-            const form = document.createElement('form');
-            form.method = 'post';
-            form.action = 'updateAttendance.jsp';
-            
-            const studentIdInput = document.createElement('input');
-            studentIdInput.type = 'hidden';
-            studentIdInput.name = 'student_id';
-            studentIdInput.value = studentId;
-            
-            const statusInput = document.createElement('input');
-            statusInput.type = 'hidden';
-            statusInput.name = 'status';
-            statusInput.value = status;
-            
-            const dateInput = document.createElement('input');
-            dateInput.type = 'hidden';
-            dateInput.name = 'attendance_date';
-            dateInput.value = '<%= dateFilter %>';
-            
-            form.appendChild(studentIdInput);
-            form.appendChild(statusInput);
-            form.appendChild(dateInput);
-            
-            document.body.appendChild(form);
-            form.submit();
-        }
+    function resetFilters() {
+        window.location.href = 'adm-page.jsp?pgprt=8';
     }
     
-    function markAllAttendance() {
-        const selectedCheckboxes = document.querySelectorAll('.student-checkbox:checked');
-        if (selectedCheckboxes.length === 0) {
-            alert('Please select at least one student.');
-            return;
+    function sortTable(column) {
+        const url = new URL(window.location.href);
+        const currentSort = url.searchParams.get('sort_by');
+        const currentOrder = url.searchParams.get('sort_order');
+        
+        let newOrder = 'asc';
+        if (currentSort === column) {
+            newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
         }
         
-        if (confirm('Mark attendance for ' + selectedCheckboxes.length + ' selected students as "Present"?')) {
-            // Create status input for bulk marking
-            const statusInput = document.createElement('input');
-            statusInput.type = 'hidden';
-            statusInput.name = 'status';
-            statusInput.value = 'present';
-            
-            const form = document.getElementById('attendanceForm');
-            form.appendChild(statusInput);
-            form.submit();
+        url.searchParams.set('sort_by', column);
+        url.searchParams.set('sort_order', newOrder);
+        window.location.href = url.toString();
+    }
+    
+    function viewStudentDetails(studentId) {
+        // You can implement a modal or redirect to student details page
+        alert('View details for student ID: ' + studentId);
+        // Example: window.open('student-details.jsp?id=' + studentId, '_blank');
+    }
+    
+    function highlightActiveFilters() {
+        const params = new URLSearchParams(window.location.search);
+        
+        // Highlight date quick filters
+        const dateFilter = params.get('registration_date');
+        if (dateFilter) {
+            document.querySelectorAll('.quick-filter-btn').forEach(btn => {
+                if (btn.textContent.includes(dateFilter === '<%= today %>' ? 'Today' : 
+                                            dateFilter === '<%= yesterday %>' ? 'Yesterday' : '')) {
+                    btn.classList.add('active');
+                }
+            });
         }
     }
     
-    // Set today's date as default if empty
-    document.addEventListener('DOMContentLoaded', function() {
-        const dateInput = document.querySelector('input[name="attendance_date"]');
-        if (dateInput && !dateInput.value) {
-            const today = new Date().toISOString().split('T')[0];
-            dateInput.value = today;
-        }
+    // Add loading state to form submissions
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', function() {
+            const submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.classList.add('loading');
+                submitBtn.disabled = true;
+            }
+        });
     });
 </script>
+
 </body>
 </html>
