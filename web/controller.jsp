@@ -571,7 +571,23 @@ try {
        ========================= */
     } else if ("admin-results".equalsIgnoreCase(pageParam)) {
         String operation = nz(request.getParameter("operation"), "");
-        if ("delete_result".equalsIgnoreCase(operation)) {
+        if ("bulk_delete".equalsIgnoreCase(operation)) {
+            String submittedToken = request.getParameter("csrfToken");
+            String sessionToken = (String) session.getAttribute("csrfToken");
+            if (sessionToken == null || !sessionToken.equals(submittedToken)) {
+                session.setAttribute("error", "Invalid request. Please try again.");
+                response.sendRedirect("adm-page.jsp?pgprt=5");
+                return;
+            }
+            String[] examIds = request.getParameterValues("examIds");
+            if (examIds != null && examIds.length > 0) {
+                pDAO.deleteExamResults(examIds);
+                session.setAttribute("message", "Selected exam results deleted successfully.");
+            } else {
+                session.setAttribute("error", "No exam results selected for deletion.");
+            }
+            response.sendRedirect("adm-page.jsp?pgprt=5");
+        } else if ("delete_result".equalsIgnoreCase(operation)) {
             String submittedToken = request.getParameter("csrf_token");
             String sessionToken = (String) session.getAttribute("csrf_token");
 

@@ -749,6 +749,9 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
             </div>
         </div>
         
+        <button type="submit" form="bulkDeleteForm" class="btn btn-danger" style="margin-bottom: 20px;">
+            <i class="fas fa-trash"></i> Delete Selected
+        </button>
         <!-- Search Box -->
         <div class="search-container">
             <input
@@ -770,10 +773,15 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
             </div>
             
             <% if (request.getParameter("eid") == null) { %>
+                <form id="bulkDeleteForm" action="controller.jsp" method="post">
+                    <input type="hidden" name="page" value="admin-results">
+                    <input type="hidden" name="operation" value="bulk_delete">
+                    <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
                 <div style="overflow-x:auto;">
                     <table class="results-table" id="resultsTable">
                         <thead>
                             <tr>
+                                <th><input type="checkbox" id="selectAll"></th>
                                 <th onclick="sortTable(0)">Name <span class="sort-indicator"></span></th>
                                 <th onclick="sortTable(1)">Student ID <span class="sort-indicator"></span></th>
                                 <th onclick="sortTable(2)">Email <span class="sort-indicator"></span></th>
@@ -818,6 +826,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                                 data-marks="<%= e.getObtMarks() + "/" + e.gettMarks() %>"
                                 data-percentage="<%= percentage %>"
                                 data-status="<%= status.toLowerCase() %>">
+                                <td><input type="checkbox" name="examIds" value="<%= examId %>"></td>
                                 <td><%= fullName %></td>
                                 <td><%= e.getUserName() %></td>
                                 <td><%= e.getEmail() %></td>
@@ -902,6 +911,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                         <span id="totalCount"><%= allExamResults.size() %></span> results
                     </div>
                 </div>
+                </form>
             <% } else { %>
                 <!-- Details View -->
                 <div style="padding: var(--spacing-lg);">
@@ -1522,6 +1532,14 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     
     // Call debug function on load
     setTimeout(debugButtonData, 1000);
+
+    // Select All functionality
+    document.getElementById('selectAll').addEventListener('change', function(e) {
+        const checkboxes = document.querySelectorAll('input[name="examIds"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = e.target.checked;
+        });
+    });
 </script>
 
 <div id="deleteConfirmationModal" style="display:none; position:fixed; z-index:1001; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.4);">
