@@ -715,9 +715,15 @@
                             <jsp:include page="showall.jsp" />
             <%
                         } else if ("5".equals(pgprt)) {
+                            if (currentUser.getType().equalsIgnoreCase("lecture")) {
             %>
-                            <jsp:include page="admin-results.jsp" />
+                                <jsp:include page="results_lecture.jsp" />
             <%
+                            } else {
+            %>
+                                <jsp:include page="admin-results.jsp" />
+            <%
+                            }
                         } else if ("7".equals(pgprt)) {
             %>
                             <jsp:include page="exam-register.jsp" />

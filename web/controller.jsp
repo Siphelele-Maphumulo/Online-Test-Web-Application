@@ -325,6 +325,99 @@ try {
         }
     }
 
+/* =========================
+   RESULTS (from results_lecture.jsp and admin-results.jsp)
+   ========================= */
+} else if ("results".equalsIgnoreCase(pageParam) || "admin-results".equalsIgnoreCase(pageParam)) {
+    String operation = request.getParameter("operation");
+    String csrfTokenParam = request.getParameter("csrfToken");
+    String sessionCsrfToken = (String) session.getAttribute("csrfToken");
+
+    // Security: CSRF Check for state-changing operations
+    if ("del".equalsIgnoreCase(operation) || "bulk_delete".equalsIgnoreCase(operation) || "delete".equalsIgnoreCase(operation) || "edit".equalsIgnoreCase(operation)) {
+        if (csrfTokenParam == null || !csrfTokenParam.equals(sessionCsrfToken)) {
+            session.setAttribute("error", "Invalid security token. Please try again.");
+            response.sendRedirect("adm-page.jsp?pgprt=5");
+            return;
+        }
+    }
+
+    if ("del".equalsIgnoreCase(operation) || "delete".equalsIgnoreCase(operation)) {
+        String examIdParam = request.getParameter("eid");
+        if (examIdParam != null) {
+            try {
+                int examId = Integer.parseInt(examIdParam);
+                boolean success = pDAO.deleteExamResult(examId);
+                if (success) {
+                    session.setAttribute("message", "Exam result (ID: " + examId + ") deleted successfully.");
+                } else {
+                    session.setAttribute("error", "Failed to delete exam result (ID: " + examId + ").");
+                }
+            } catch (NumberFormatException e) {
+                session.setAttribute("error", "Invalid Exam ID format.");
+            }
+        } else {
+            session.setAttribute("error", "Exam ID was not provided.");
+        }
+        response.sendRedirect("adm-page.jsp?pgprt=5");
+
+    } else if ("bulk_delete".equalsIgnoreCase(operation)) {
+        String[] examIds = request.getParameterValues("eids");
+        if (examIds != null && examIds.length > 0) {
+            int successCount = 0;
+            int failCount = 0;
+            for (String examIdStr : examIds) {
+                try {
+                    int examId = Integer.parseInt(examIdStr);
+                    if (pDAO.deleteExamResult(examId)) {
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
+                } catch (NumberFormatException e) {
+                    failCount++;
+                }
+            }
+            session.setAttribute("message", "Successfully deleted " + successCount + " record(s).");
+            if (failCount > 0) {
+                 session.setAttribute("error", "Failed to delete " + failCount + " record(s).");
+            }
+        } else {
+            session.setAttribute("error", "No records selected for deletion.");
+        }
+        response.sendRedirect("adm-page.jsp?pgprt=5");
+    } else if ("edit".equalsIgnoreCase(operation)) {
+        String examIdParam = request.getParameter("eid");
+        String obtMarksParam = request.getParameter("obtMarks");
+        String totalMarksParam = request.getParameter("totalMarks");
+        String status = request.getParameter("status");
+
+        if (examIdParam != null && obtMarksParam != null && totalMarksParam != null && status != null) {
+            try {
+                int examId = Integer.parseInt(examIdParam);
+                int obtMarks = Integer.parseInt(obtMarksParam);
+                int totalMarks = Integer.parseInt(totalMarksParam);
+
+                // Assuming a method like this exists in your DAO
+                // boolean success = pDAO.updateExamResult(examId, obtMarks, totalMarks, status);
+                // if (success) {
+                //     session.setAttribute("message", "Exam result updated successfully.");
+                // } else {
+                //     session.setAttribute("error", "Failed to update exam result.");
+                // }
+                 session.setAttribute("message", "Update functionality is not yet implemented in the DAO.");
+
+            } catch (NumberFormatException e) {
+                session.setAttribute("error", "Invalid number format for marks or ID.");
+            }
+        } else {
+            session.setAttribute("error", "Missing parameters for update.");
+        }
+        response.sendRedirect("adm-page.jsp?pgprt=5");
+    }
+    else {
+        response.sendRedirect("adm-page.jsp?pgprt=5");
+    }
     /* =========================
        LOGOUT
        ========================= */
