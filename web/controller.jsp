@@ -349,7 +349,7 @@ try {
                 int examId = Integer.parseInt(examIdParam);
                 boolean success = pDAO.deleteExamResult(examId);
                 if (success) {
-                    session.setAttribute("message", "Exam result (ID: " + examId + ") deleted successfully.");
+                    session.setAttribute("message", "Exam result deleted successfully.");
                 } else {
                     session.setAttribute("error", "Failed to delete exam result (ID: " + examId + ").");
                 }
