@@ -28,7 +28,7 @@ public class Questions {
     public void setQuestionType(String questionType) {
         this.questionType = questionType;
     }
-    
+
     public int getQuestionId() {
         return questionId;
     }

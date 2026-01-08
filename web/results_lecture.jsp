@@ -11,6 +11,42 @@
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 %>
 
+<%
+    // Check for delete operation
+    String operation = request.getParameter("operation");
+    String examIdParam = request.getParameter("eid");
+    String csrfTokenParam = request.getParameter("csrfToken");
+    String sessionCsrfToken = (String) session.getAttribute("csrfToken");
+    
+    if ("del".equals(operation) && examIdParam != null && csrfTokenParam != null 
+        && csrfTokenParam.equals(sessionCsrfToken)) {
+        
+        try {
+            int examId = Integer.parseInt(examIdParam);
+            boolean success = pDAO.deleteExamResult(examId);
+            
+            if (success) {
+                session.setAttribute("message", "Exam result deleted successfully");
+            } else {
+                session.setAttribute("error", "Failed to delete exam result");
+            }
+            
+            // Redirect back to results page
+            response.sendRedirect("adm-page.jsp?pgprt=5");
+            return;
+            
+        } catch (Exception e) {
+            session.setAttribute("error", "Error deleting exam result: " + e.getMessage());
+            response.sendRedirect("adm-page.jsp?pgprt=5");
+            return;
+        }
+    }
+    
+    // Generate new CSRF token
+    csrfToken = UUID.randomUUID().toString();
+    session.setAttribute("csrfToken", csrfToken);
+%>
+
 <style>
   /* Layout */
   .exam-wrapper {
@@ -606,18 +642,19 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <form id="deleteResultForm" action="controller.jsp" method="post" style="display: flex; gap: 8px;">
-                            <input type="hidden" name="page" value="results_lecture">
-                            <input type="hidden" name="operation" value="del">
-                            <input type="hidden" name="eid" id="deleteExamId">
-                            <input type="hidden" name="csrfToken" value="<%= session.getAttribute("csrfToken") %>">
-                            <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">
-                                <i class="fas fa-times-circle"></i> Cancel
-                            </button>
-                            <button type="submit" class="btn btn-error" id="confirmDeleteBtn">
-                                <i class="fas fa-trash-alt"></i> Yes, Delete
-                            </button>
-                        </form>
+                    <!-- To this: -->
+                    <form id="deleteResultForm" action="adm-page.jsp?pgprt=5" method="post" style="display: flex; gap: 8px;">
+                        <input type="hidden" name="page" value="results_lecture">
+                        <input type="hidden" name="operation" value="del">
+                        <input type="hidden" name="eid" id="deleteExamId">
+                        <input type="hidden" name="csrfToken" value="<%= session.getAttribute("csrfToken") %>">
+                        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">
+                            <i class="fas fa-times-circle"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-error" id="confirmDeleteBtn">
+                            <i class="fas fa-trash-alt"></i> Yes, Delete
+                        </button>
+                    </form>
                     </div>
                 </div>
             </div>
@@ -872,6 +909,39 @@ function sortTable(columnIndex) {
     // Reorder rows in DOM
     rows.forEach(row => tbody.appendChild(row));
     updateResultsCount();
+}
+
+function confirmDelete() {
+    const examId = document.getElementById('deleteExamId').value;
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    
+    // Show loading
+    confirmDeleteBtn.classList.add('loading');
+    confirmDeleteBtn.disabled = true;
+    confirmDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+    
+    // Submit via AJAX
+    fetch('deleteResult.jsp', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'examId=' + examId
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Result deleted successfully');
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.message);
+            closeDeleteModal();
+        }
+    })
+    .catch(error => {
+        alert('Network error: ' + error);
+        closeDeleteModal();
+    });
 }
 
 // Modal handling functions for delete

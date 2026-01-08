@@ -31,191 +31,15 @@ import myPackage.classes.Result;
 public class DatabaseClass {
     private static DatabaseClass instance; // Singleton instance
     private Connection conn;
+    private static final Logger LOGGER = Logger.getLogger(DatabaseClass.class.getName()); 
 
-    // Private constructor to prevent direct instantiation
-    private DatabaseClass() throws ClassNotFoundException, SQLException {
+    // PUBLIC NO-ARGUMENT CONSTRUCTOR REQUIRED FOR JSP BEAN
+    public DatabaseClass() throws ClassNotFoundException, SQLException {
         establishConnection();
     }
-private static final Logger LOGGER = Logger.getLogger(DatabaseClass.class.getName()); 
-public boolean updateUserAccount(int userId,
-                                 String firstName,
-                                 String lastName,
-                                 String userName,
-                                 String email,
-                                 String passwordHash,
-                                 String userType,
-                                 String contact,
-                                 String city,
-                                 String address,
-                                 String courseName) {
-    PreparedStatement updateUsersStmt = null;
-    PreparedStatement upsertStudentStmt = null;
-    PreparedStatement upsertLecturerStmt = null;
-    PreparedStatement deleteStudentsStmt = null;
-    PreparedStatement deleteLecturesStmt = null;
-
-    String normalizedContact = (contact != null && !contact.trim().isEmpty()) ? contact.trim() : null;
-    String normalizedCity = (city != null && !city.trim().isEmpty()) ? city.trim() : null;
-    String normalizedAddress = (address != null && !address.trim().isEmpty()) ? address.trim() : null;
-    String normalizedCourse = (courseName != null && !courseName.trim().isEmpty()) ? courseName.trim() : null;
-
-    try {
-        conn.setAutoCommit(false);
-
-        String updateUsersSql = "UPDATE users SET first_name=?, last_name=?, user_name=?, email=?, password=?, user_type=?, contact_no=?, city=?, address=? WHERE user_id=?";
-        updateUsersStmt = conn.prepareStatement(updateUsersSql);
-        updateUsersStmt.setString(1, firstName);
-        updateUsersStmt.setString(2, lastName);
-        updateUsersStmt.setString(3, userName);
-        updateUsersStmt.setString(4, email);
-        updateUsersStmt.setString(5, passwordHash);
-        updateUsersStmt.setString(6, userType);
-
-        if (normalizedContact != null) {
-            updateUsersStmt.setString(7, normalizedContact);
-        } else {
-            updateUsersStmt.setNull(7, Types.VARCHAR);
-        }
-
-        if (normalizedCity != null) {
-            updateUsersStmt.setString(8, normalizedCity);
-        } else {
-            updateUsersStmt.setNull(8, Types.VARCHAR);
-        }
-
-        if (normalizedAddress != null) {
-            updateUsersStmt.setString(9, normalizedAddress);
-        } else {
-            updateUsersStmt.setNull(9, Types.VARCHAR);
-        }
-
-        updateUsersStmt.setInt(10, userId);
-
-        int updatedRows = updateUsersStmt.executeUpdate();
-        if (updatedRows == 0) {
-            conn.rollback();
-            return false;
-        }
-
-        if ("student".equalsIgnoreCase(userType)) {
-            String upsertStudentSql = "INSERT INTO students (user_id, first_name, last_name, user_name, email, password, user_type, contact_no, city, address) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
-                    "ON DUPLICATE KEY UPDATE first_name=VALUES(first_name), last_name=VALUES(last_name), user_name=VALUES(user_name), email=VALUES(email), " +
-                    "password=VALUES(password), user_type=VALUES(user_type), contact_no=VALUES(contact_no), city=VALUES(city), address=VALUES(address)";
-            upsertStudentStmt = conn.prepareStatement(upsertStudentSql);
-            upsertStudentStmt.setInt(1, userId);
-            upsertStudentStmt.setString(2, firstName);
-            upsertStudentStmt.setString(3, lastName);
-            upsertStudentStmt.setString(4, userName);
-            upsertStudentStmt.setString(5, email);
-            upsertStudentStmt.setString(6, passwordHash);
-            upsertStudentStmt.setString(7, "student");
-
-            if (normalizedContact != null) {
-                upsertStudentStmt.setString(8, normalizedContact);
-            } else {
-                upsertStudentStmt.setNull(8, Types.VARCHAR);
-            }
-
-            if (normalizedCity != null) {
-                upsertStudentStmt.setString(9, normalizedCity);
-            } else {
-                upsertStudentStmt.setNull(9, Types.VARCHAR);
-            }
-
-            if (normalizedAddress != null) {
-                upsertStudentStmt.setString(10, normalizedAddress);
-            } else {
-                upsertStudentStmt.setNull(10, Types.VARCHAR);
-            }
-
-            upsertStudentStmt.executeUpdate();
-
-            deleteLecturesStmt = conn.prepareStatement("DELETE FROM lectures WHERE user_id=?");
-            deleteLecturesStmt.setInt(1, userId);
-            deleteLecturesStmt.executeUpdate();
-
-        } else if ("lecture".equalsIgnoreCase(userType)) {
-            String upsertLectureSql = "INSERT INTO lectures (user_id, first_name, last_name, user_name, email, password, user_type, contact_no, city, address, course_name) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
-                    "ON DUPLICATE KEY UPDATE first_name=VALUES(first_name), last_name=VALUES(last_name), user_name=VALUES(user_name), email=VALUES(email), " +
-                    "password=VALUES(password), user_type=VALUES(user_type), contact_no=VALUES(contact_no), city=VALUES(city), address=VALUES(address), course_name=VALUES(course_name)";
-            upsertLecturerStmt = conn.prepareStatement(upsertLectureSql);
-            upsertLecturerStmt.setInt(1, userId);
-            upsertLecturerStmt.setString(2, firstName);
-            upsertLecturerStmt.setString(3, lastName);
-            upsertLecturerStmt.setString(4, userName);
-            upsertLecturerStmt.setString(5, email);
-            upsertLecturerStmt.setString(6, passwordHash);
-            upsertLecturerStmt.setString(7, "lecture");
-
-            if (normalizedContact != null) {
-                upsertLecturerStmt.setString(8, normalizedContact);
-            } else {
-                upsertLecturerStmt.setNull(8, Types.VARCHAR);
-            }
-
-            if (normalizedCity != null) {
-                upsertLecturerStmt.setString(9, normalizedCity);
-            } else {
-                upsertLecturerStmt.setNull(9, Types.VARCHAR);
-            }
-
-            if (normalizedAddress != null) {
-                upsertLecturerStmt.setString(10, normalizedAddress);
-            } else {
-                upsertLecturerStmt.setNull(10, Types.VARCHAR);
-            }
-
-            if (normalizedCourse != null) {
-                upsertLecturerStmt.setString(11, normalizedCourse);
-            } else {
-                upsertLecturerStmt.setNull(11, Types.VARCHAR);
-            }
-
-            upsertLecturerStmt.executeUpdate();
-
-            deleteStudentsStmt = conn.prepareStatement("DELETE FROM students WHERE user_id=?");
-            deleteStudentsStmt.setInt(1, userId);
-            deleteStudentsStmt.executeUpdate();
-
-        } else {
-            deleteStudentsStmt = conn.prepareStatement("DELETE FROM students WHERE user_id=?");
-            deleteStudentsStmt.setInt(1, userId);
-            deleteStudentsStmt.executeUpdate();
-
-            deleteLecturesStmt = conn.prepareStatement("DELETE FROM lectures WHERE user_id=?");
-            deleteLecturesStmt.setInt(1, userId);
-            deleteLecturesStmt.executeUpdate();
-        }
-
-        conn.commit();
-        return true;
-    } catch (SQLException ex) {
-        try {
-            if (conn != null) {
-                conn.rollback();
-            }
-        } catch (SQLException rollbackEx) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Rollback failed", rollbackEx);
-        }
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to update user account for ID: " + userId, ex);
-        return false;
-    } finally {
-        try {
-            if (updateUsersStmt != null) updateUsersStmt.close();
-            if (upsertStudentStmt != null) upsertStudentStmt.close();
-            if (upsertLecturerStmt != null) upsertLecturerStmt.close();
-            if (deleteStudentsStmt != null) deleteStudentsStmt.close();
-            if (deleteLecturesStmt != null) deleteLecturesStmt.close();
-            conn.setAutoCommit(true);
-        } catch (SQLException e) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, e);
-        }
-    }
-}
-
-    // Get singleton instance
+    
+    
+        // Get singleton instance
     public static synchronized DatabaseClass getInstance() throws ClassNotFoundException, SQLException {
         if (instance == null || instance.conn == null || instance.conn.isClosed()) {
             instance = new DatabaseClass();
@@ -234,23 +58,55 @@ public boolean updateUserAccount(int userId,
 //        );
         
         conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/exam_system", "root", "");
+        
+        // Test connection
+        if (conn != null && !conn.isClosed()) {
+            LOGGER.info("Database connection established successfully");
+        }
     }
 
-    // Get the connection
+    // Get the connection with lazy initialization
     public Connection getConnection() throws SQLException {
-        if (conn == null || conn.isClosed()) {
-            try {
+        try {
+            if (conn == null || conn.isClosed()) {
                 establishConnection();
-            } catch (ClassNotFoundException e) {
-                throw new SQLException("JDBC Driver not found", e);
             }
+        } catch (ClassNotFoundException e) {
+            throw new SQLException("JDBC Driver not found", e);
         }
         return conn;
+    }
+    
+    // Ensure connection is valid before any database operation
+    private void ensureConnection() throws SQLException {
+        try {
+            if (conn == null || conn.isClosed()) {
+                establishConnection();
+            }
+        } catch (ClassNotFoundException e) {
+            throw new SQLException("JDBC Driver not found", e);
+        }
+    }
+    
+    // Add this method to check if connection is valid
+    public boolean isConnectionValid() {
+        try {
+            return conn != null && !conn.isClosed() && conn.isValid(2);
+        } catch (SQLException e) {
+            return false;
+        }
     }
 
     String user_Type = "";
     
     public boolean checkLecturerByEmail(String email) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in checkLecturerByEmail", e);
+            return false;
+        }
+        
         System.out.println("Here");
         boolean exists = false;
         try {
@@ -275,6 +131,13 @@ public boolean updateUserAccount(int userId,
 
 // Fetch all students
 public ArrayList<User> getAllStudents() {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getAllStudents", e);
+        return new ArrayList<>();
+    }
+    
     ArrayList<User> list = new ArrayList<>();
     User user = null;
     PreparedStatement pstm = null;
@@ -319,6 +182,13 @@ public ArrayList<User> getAllStudents() {
 
 // Fetch all lecturers
 public ArrayList<User> getAllLecturers() {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getAllLecturers", e);
+        return new ArrayList<>();
+    }
+    
     ArrayList<User> list = new ArrayList<>();
     User user = null;
     PreparedStatement pstm = null;
@@ -364,6 +234,13 @@ public ArrayList<User> getAllLecturers() {
 
     
      public String getUserType(String userId){
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getUserType", e);
+            return "error";
+        }
+        
         String str="";
         PreparedStatement pstm;
         try {
@@ -379,7 +256,15 @@ public ArrayList<User> getAllLecturers() {
         }
         return str;
     }
-     public int getUserId(String userName){
+     
+    public int getUserId(String userName){
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getUserId", e);
+            return 0;
+        }
+        
         int str=0;
         PreparedStatement pstm;
         try {
@@ -397,6 +282,13 @@ public ArrayList<User> getAllLecturers() {
     }
 
     public User getUserByUsername(String username) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getUserByUsername", e);
+            return null;
+        }
+        
         PreparedStatement ps = null;
         ResultSet rs = null;
         try {
@@ -434,6 +326,13 @@ public ArrayList<User> getAllLecturers() {
     }
 
     public User getUserByEmail(String email) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getUserByEmail", e);
+            return null;
+        }
+        
         PreparedStatement ps = null;
         ResultSet rs = null;
         try {
@@ -471,6 +370,13 @@ public ArrayList<User> getAllLecturers() {
     }
      
     public User getUserDetails(String userId) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getUserDetails", e);
+            return null;
+        }
+        
         User userDetails = null;
 
         if (userId == null || userId.trim().isEmpty()) {
@@ -566,6 +472,13 @@ public ArrayList<User> getAllLecturers() {
 
     // add new lecturer/staff
     public void addNewStaff(String staffNum, String email, String fullNames, String course_name) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in addNewStaff", e);
+            return;
+        }
+        
         String sql = "INSERT INTO staff (staffNum, email, fullNames, course_name) VALUES (?, ?, ?, ?)";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, staffNum);
@@ -582,6 +495,13 @@ public ArrayList<User> getAllLecturers() {
 
     public void addNewUser(String fName, String lName, String uName, String email, String pass,
                            String contact, String city, String address, String userTypeParam) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in addNewUser", e);
+            return;
+        }
+        
         PreparedStatement pstmUsers = null;
         PreparedStatement pstmInsert = null;
         ResultSet rsUserId = null;
@@ -680,6 +600,13 @@ public ArrayList<User> getAllLecturers() {
 
 
     public boolean loginValidate(String userName, String userPass) throws SQLException {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in loginValidate", e);
+            return false;
+        }
+        
         boolean status = false;
         
         String sql = "SELECT * FROM users WHERE user_name = ?";
@@ -701,6 +628,13 @@ public ArrayList<User> getAllLecturers() {
     }  
     
     public boolean updateUser(User user) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in updateUser", e);
+            return false;
+        }
+        
         PreparedStatement ps = null;
         PreparedStatement psLecture = null;
 
@@ -799,6 +733,13 @@ public ArrayList<User> getAllLecturers() {
     }
     
     public boolean checkUserExists(String username) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in checkUserExists", e);
+            return false;
+        }
+        
         PreparedStatement ps = null;
         ResultSet rs = null;
 
@@ -824,6 +765,13 @@ public ArrayList<User> getAllLecturers() {
     }
 
     public int getExamId(String courseName) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getExamId", e);
+            return 0;
+        }
+        
         PreparedStatement ps = null;
         ResultSet rs = null;
         int examId = 0;
@@ -854,6 +802,13 @@ public ArrayList<User> getAllLecturers() {
 
     // In DatabaseClass.java
     public ArrayList<String> getActiveCourseNames() {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getActiveCourseNames", e);
+            return new ArrayList<>();
+        }
+        
         ArrayList<String> courseNames = new ArrayList<>();
         PreparedStatement ps = null;
         ResultSet rs = null;
@@ -881,6 +836,13 @@ public ArrayList<User> getAllLecturers() {
     }
 
 public boolean isCourseActive(String courseName) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in isCourseActive", e);
+        return false;
+    }
+    
     PreparedStatement ps = null;
     ResultSet rs = null;
 
@@ -913,6 +875,13 @@ public boolean isCourseActive(String courseName) {
     
 public int updateStudent(int uId, String fName, String lName, String uName, String email, String pass,
         String contact, String city, String address, String userType) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in updateStudent", e);
+        return 0;
+    }
+    
     int rows = 0;
     PreparedStatement pstmUsers = null;
     PreparedStatement pstmStudents = null;
@@ -973,6 +942,13 @@ public int updateStudent(int uId, String fName, String lName, String uName, Stri
 
 public int updateLecturer(int uId, String fName, String lName, String uName, String email, String pass,
                           String contact, String city, String address, String userType, String courseName) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in updateLecturer", e);
+        return 0;
+    }
+    
     int rows = 0;
     PreparedStatement pstmUsers = null;
     PreparedStatement pstmLectures = null;
@@ -1063,6 +1039,13 @@ public int updateLecturer(int uId, String fName, String lName, String uName, Str
 
 
 public boolean updateCourse(String originalCourseName, String courseName, int tMarks, String time, String examDate) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in updateCourse", e);
+        return false;
+    }
+    
     PreparedStatement pstm = null;
     PreparedStatement pstmQuestions = null;
     PreparedStatement pstmExams = null;
@@ -1123,6 +1106,13 @@ public boolean updateCourse(String originalCourseName, String courseName, int tM
 }
 
 public ArrayList<String> getAllCourseNames() {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getAllCourseNames", e);
+        return new ArrayList<>();
+    }
+    
     ArrayList<String> courses = new ArrayList<>();
     // CORRECTED: The courses table has 'course_name' field as per your schema
     String sql = "SELECT DISTINCT course_name FROM courses WHERE course_name IS NOT NULL AND course_name != '' ORDER BY course_name";
@@ -1145,6 +1135,13 @@ public ArrayList<String> getAllCourseNames() {
 
     
 public ArrayList getAllCourses() {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getAllCourses", e);
+        return new ArrayList();
+    }
+    
     ArrayList list = new ArrayList();
     try {
         String sql = "SELECT course_name, total_marks, time, exam_date, is_active FROM courses";
@@ -1170,6 +1167,13 @@ public ArrayList getAllCourses() {
    
 public boolean addNewCourse(String courseName, int tMarks, String time, String examDate) {
     try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in addNewCourse", e);
+        return false;
+    }
+    
+    try {
         String sql = "INSERT INTO courses(course_name, total_marks, time, exam_date) VALUES (?, ?, ?, ?)";
         PreparedStatement pstm = conn.prepareStatement(sql);
         pstm.setString(1, courseName);
@@ -1188,6 +1192,13 @@ public boolean addNewCourse(String courseName, int tMarks, String time, String e
 
     public void delCourse(String cName){
         try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in delCourse", e);
+            return;
+        }
+        
+        try {
             String sql="DELETE from courses where course_name=?";
             PreparedStatement pstm=conn.prepareStatement(sql);
             pstm.setString(1,cName);
@@ -1200,6 +1211,13 @@ public boolean addNewCourse(String courseName, int tMarks, String time, String e
     
     
 public void addNewQuestion(String questionText, String opt1, String opt2, String opt3, String opt4, String correctAnswer, String courseName, String questionType) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in addNewQuestion", e);
+        return;
+    }
+    
     try {
         String sql;
         PreparedStatement pstm;
@@ -1240,6 +1258,13 @@ public void addNewQuestion(String questionText, String opt1, String opt2, String
 }  
     
 public Questions getQuestionById(int questionId) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getQuestionById", e);
+        return null;
+    }
+    
     Questions question = null;
     PreparedStatement pstmt = null;
     ResultSet rs = null;
@@ -1263,6 +1288,8 @@ public Questions getQuestionById(int questionId) {
             question.setOpt3(rs.getString("opt3"));
             question.setOpt4(rs.getString("opt4"));
             question.setCorrect(rs.getString("correct"));
+            question.setCourseName(rs.getString("course_name"));
+            question.setQuestionType(rs.getString("question_type"));
         }
     } catch (SQLException e) {
         e.printStackTrace();
@@ -1283,7 +1310,14 @@ public Questions getQuestionById(int questionId) {
 
  // Modify updateQuestion method to accept a Questions object
 public boolean updateQuestion(Questions question) {
-    String sql = "UPDATE questions SET question=?, opt1=?, opt2=?, opt3=?, opt4=?, correct=?, course_name=? WHERE question_id=?";
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in updateQuestion", e);
+        return false;
+    }
+    
+    String sql = "UPDATE questions SET question=?, opt1=?, opt2=?, opt3=?, opt4=?, correct=?, course_name=?, question_type=? WHERE question_id=?";
     try (PreparedStatement pstm = conn.prepareStatement(sql)) {
         pstm.setString(1, question.getQuestion());
         pstm.setString(2, question.getOpt1());
@@ -1292,7 +1326,8 @@ public boolean updateQuestion(Questions question) {
         pstm.setString(5, question.getOpt4());
         pstm.setString(6, question.getCorrect());
         pstm.setString(7, question.getCourseName());
-        pstm.setInt(8, question.getQuestionId());
+        pstm.setString(8, question.getQuestionType());
+        pstm.setInt(9, question.getQuestionId());
 
         int rowsAffected = pstm.executeUpdate();
         return rowsAffected > 0;
@@ -1305,9 +1340,15 @@ public boolean updateQuestion(Questions question) {
  
     
 public void delQuestion(int qId) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in delQuestion", e);
+        return;
+    }
     
-            // SQL statement to delete a question by its ID
-        String sql = "DELETE FROM questions WHERE question_id=?";
+    // SQL statement to delete a question by its ID
+    String sql = "DELETE FROM questions WHERE question_id=?";
     try {
         
         // Prepare the SQL statement using the existing connection
@@ -1325,6 +1366,13 @@ public void delQuestion(int qId) {
 }
 
 public void deleteQuestion(int questionId) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in deleteQuestion", e);
+        return;
+    }
+    
     String sql = "DELETE FROM questions WHERE question_id = ?";
     
     try {
@@ -1344,6 +1392,13 @@ public void deleteQuestion(int questionId) {
 
 
 public void deleteUserCascade(int userId) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in deleteUserCascade", e);
+        return;
+    }
+    
     PreparedStatement pstmt = null;
     ResultSet rs = null;
     
@@ -1468,6 +1523,13 @@ public void deleteUserCascade(int userId) {
 
 // Helper method to delete user from users table
 public int deleteUser(int userId) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in deleteUser", e);
+        return 0;
+    }
+    
     String sql = "DELETE FROM users WHERE user_id = ?";
     try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
         pstmt.setInt(1, userId);
@@ -1480,6 +1542,13 @@ public int deleteUser(int userId) {
 }
 
 public void deleteCourseCascade(String courseName) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in deleteCourseCascade", e);
+        return;
+    }
+    
     PreparedStatement pstmAnswers = null;
     PreparedStatement pstmExams = null;
     PreparedStatement pstmQuestions = null;
@@ -1553,6 +1622,13 @@ public void deleteCourseCascade(String courseName) {
 
     public void delStudent(int uid){
         try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in delStudent", e);
+            return;
+        }
+        
+        try {
             String sql="DELETE from students where user_id=?";
             PreparedStatement pstm=conn.prepareStatement(sql);
             pstm.setInt(1,uid);
@@ -1565,6 +1641,13 @@ public void deleteCourseCascade(String courseName) {
     
     public void delLecture(int uid){
         try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in delLecture", e);
+            return;
+        }
+        
+        try {
             String sql="DELETE from lectures where user_id=?";
             PreparedStatement pstm=conn.prepareStatement(sql);
             pstm.setInt(1,uid);
@@ -1576,6 +1659,13 @@ public void deleteCourseCascade(String courseName) {
     }
     
 public void deleteLecturer(int userId) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in deleteLecturer", e);
+        return;
+    }
+    
     String sql = "DELETE FROM lectures WHERE user_id = ?";
     
     try {
@@ -1596,6 +1686,13 @@ public void deleteLecturer(int userId) {
 
     
 public void addQuestion(String cName, String question, String opt1, String opt2, String opt3, String opt4, String correct, String questionType) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in addQuestion", e);
+        return;
+    }
+    
     try {
         String sql;
         PreparedStatement pstm;
@@ -1640,6 +1737,13 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
     
     
     public ArrayList getQuestions(String courseName,int questions){
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getQuestions", e);
+            return new ArrayList();
+        }
+        
         ArrayList list=new ArrayList();
         try {
             
@@ -1671,6 +1775,13 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
     }
     
     public int startExam(String rawName, int sId) throws SQLException {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in startExam", e);
+            throw new SQLException("Database connection failed: " + e.getMessage());
+        }
+        
         /* ----  FK-SAFE WRAPPER  ---- */
         if (rawName == null) throw new SQLException("Course name is null");
 
@@ -1710,6 +1821,13 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
 
     public void logExamStart(int studentId, int examId, String courseName) {
         try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in logExamStart", e);
+            return;
+        }
+        
+        try {
             String sql = "INSERT INTO exam_register(student_id, exam_id, course_name, exam_date, start_time) VALUES (?, ?, ?, ?, ?)";
             PreparedStatement pstm = conn.prepareStatement(sql);
             pstm.setInt(1, studentId);
@@ -1725,6 +1843,13 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
     }
     
     public int getLastExamId(){
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getLastExamId", e);
+            return 0;
+        }
+        
         int id=0;
          try {
             
@@ -1741,7 +1866,15 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
         }
          return id;
     }
+    
     public String getStartTime(int examId){
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getStartTime", e);
+            return "";
+        }
+        
         String time="";
         try {
             
@@ -1759,43 +1892,65 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
         }
         return time;
     }
+    
     public String getCourseTimeByName(String cName){
-     String c=null;
-     try{
-         PreparedStatement pstm=conn.prepareStatement("Select time from courses where course_name=?");
-         pstm.setString(1,cName);
-         ResultSet rs=pstm.executeQuery();
-         while(rs.next()){
-             c=rs.getString(1);
-         }
-         pstm.close();
-     }catch(Exception e){
-          Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, e);
-     }
-     
-     return c;
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getCourseTimeByName", e);
+            return null;
+        }
+        
+        String c=null;
+        try{
+            PreparedStatement pstm=conn.prepareStatement("Select time from courses where course_name=?");
+            pstm.setString(1,cName);
+            ResultSet rs=pstm.executeQuery();
+            while(rs.next()){
+                c=rs.getString(1);
+            }
+            pstm.close();
+        }catch(Exception e){
+             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, e);
+        }
+        
+        return c;
     }
     
     
     public int getTotalMarksByName(String cName){
-     int marks=0;
-     try{
-         PreparedStatement pstm=conn.prepareStatement("Select total_marks from courses where course_name=?");
-         pstm.setString(1,cName);
-         ResultSet rs=pstm.executeQuery();
-         while(rs.next()){
-             marks=rs.getInt(1);
-             System.out.println(rs.getInt(1));
-         }
-         pstm.close();
-     }catch(Exception e){
-          e.printStackTrace();
-     }
-     
-     return marks;
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getTotalMarksByName", e);
+            return 0;
+        }
+        
+        int marks=0;
+        try{
+            PreparedStatement pstm=conn.prepareStatement("Select total_marks from courses where course_name=?");
+            pstm.setString(1,cName);
+            ResultSet rs=pstm.executeQuery();
+            while(rs.next()){
+                marks=rs.getInt(1);
+                System.out.println(rs.getInt(1));
+            }
+            pstm.close();
+        }catch(Exception e){
+             e.printStackTrace();
+        }
+        
+        return marks;
     }
     
     public ArrayList getAllQuestions(String courseName){
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getAllQuestions", e);
+            return new ArrayList();
+        }
+        
         ArrayList list=new ArrayList();
         try {
             
@@ -1806,9 +1961,16 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
             Questions question;
             while(rs.next()){
                question = new Questions(
-                       rs.getInt(1),rs.getString(3),rs.getString(4),rs.getString(5),
-                       rs.getString(6),rs.getString(7),rs.getString(8),rs.getString(2)
-                    ); 
+                       rs.getInt("question_id"),
+                       rs.getString("question"),
+                       rs.getString("opt1"),
+                       rs.getString("opt2"),
+                       rs.getString("opt3"),
+                       rs.getString("opt4"),
+                       rs.getString("correct"),
+                       rs.getString("course_name"),
+                       rs.getString("question_type")
+               );
                list.add(question);
             }
             pstm.close();
@@ -1819,6 +1981,13 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
     }
     
     public ArrayList getAllAnswersByExamId(int examId){
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getAllAnswersByExamId", e);
+            return new ArrayList();
+        }
+        
         ArrayList list=new ArrayList();
         try {
             
@@ -1859,6 +2028,13 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
     }
 
     public int getRemainingTime(int examId){
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getRemainingTime", e);
+            return 0;
+        }
+        
         int time=0;
         try {
             
@@ -1883,6 +2059,13 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
     
     public void insertAnswer(int eId, int qid, String question, String ans) {
         try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in insertAnswer", e);
+            return;
+        }
+        
+        try {
             String correct = getCorrectAnswer(qid); // Fetch correct answer
             String status = getAnswerStatus(ans == null ? "" : ans, correct); // Handle null answers
 
@@ -1903,6 +2086,13 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
 
 
     private String getCorrectAnswer(int qid) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getCorrectAnswer", e);
+            return "";
+        }
+        
         String ans="";
         
         try {
@@ -1930,6 +2120,13 @@ private String getAnswerStatus(String ans, String correct) {
 
 
 public boolean courseExists(String courseName) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in courseExists", e);
+        return false;
+    }
+    
     if (courseName == null) return false;
     String sql = "SELECT 1 FROM courses WHERE LOWER(TRIM(course_name)) = LOWER(TRIM(?)) LIMIT 1";
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -1946,6 +2143,13 @@ public boolean courseExists(String courseName) {
 
 /// Method to get results for a specific student by student ID
 public ArrayList<Exams> getResultsFromExams(Integer stdId) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getResultsFromExams", e);
+        return new ArrayList<>();
+    }
+    
     ArrayList<Exams> list = new ArrayList<>();
     try {
         String query;
@@ -2020,6 +2224,13 @@ public ArrayList<Exams> getResultsFromExams(Integer stdId) {
 }
 
 public int getExamDuration(String courseName) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getExamDuration", e);
+        return 120; // Default 2 hours in minutes
+    }
+    
     int duration = 120; // Default 2 hours in minutes
     try {
         String sql = "SELECT time FROM courses WHERE course_name = ?";
@@ -2073,8 +2284,16 @@ public int getExamDuration(String courseName) {
     }
     return duration;
 }
+
 // Method to get an Exam by Exam ID
 public Exams getResultByExamId(int examId) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getResultByExamId", e);
+        return null;
+    }
+    
     Exams exam = null;
     PreparedStatement pstm = null;
     ResultSet rs = null;
@@ -2135,6 +2354,13 @@ public Exams getResultByExamId(int examId) {
 
 
 public boolean deleteExamResult(int examId) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in deleteExamResult", e);
+        return false;
+    }
+    
     PreparedStatement psExam = null;
     PreparedStatement psAnswers = null;
     Connection conn = null;
@@ -2200,6 +2426,13 @@ public boolean deleteExamResult(int examId) {
 
 // Optional: Method to get exam details before deletion (for confirmation)
 public Map<String, String> getExamDetails(int examId) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getExamDetails", e);
+        return new HashMap<>();
+    }
+    
     PreparedStatement ps = null;
     ResultSet rs = null;
     Map<String, String> details = new HashMap<>();
@@ -2245,6 +2478,13 @@ public Map<String, String> getExamDetails(int examId) {
 
 // Add this method to DatabaseClass.java to get ALL exam results (for admin)
 public ArrayList<Exams> getAllExamResults() {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getAllExamResults", e);
+        return new ArrayList<>();
+    }
+    
     ArrayList<Exams> list = new ArrayList<>();
     try {
         String query = "SELECT u.first_name, u.last_name, u.user_name, u.email, " +
@@ -2313,6 +2553,13 @@ public String generateDeviceIdentifier() {
 
 // Method to get all exams with results
 public ArrayList<Exams> getAllExamsWithResults() {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getAllExamsWithResults", e);
+        return new ArrayList<>();
+    }
+    
     ArrayList<Exams> exams = new ArrayList<>();
 
     String query = "SELECT u.first_name, u.last_name, u.user_name, u.email, " +
@@ -2370,6 +2617,13 @@ public ArrayList<Exams> getAllExamsWithResults() {
 
 
 private int getObtMarks(int examId, int tMarks, int size) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getObtMarks", e);
+        return 0;
+    }
+    
     float totalObtainedMarks = 0;
     try {
         String sql = "SELECT a.status, q.question_type " +
@@ -2404,6 +2658,13 @@ private int getObtMarks(int examId, int tMarks, int size) {
 }
 
 public void calculateResult(int eid, int tMarks, String endTime, int size) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in calculateResult", e);
+        return;
+    }
+    
     try {
         // First, calculate obtained marks
         int obt = getObtMarks(eid, tMarks, size);
@@ -2448,6 +2709,13 @@ public void calculateResult(int eid, int tMarks, String endTime, int size) {
 
 public void logExamCompletion(int examId) {
     try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in logExamCompletion", e);
+        return;
+    }
+    
+    try {
         String sql = "UPDATE exam_register SET end_time = ? WHERE exam_id = ?";
         PreparedStatement pstm = conn.prepareStatement(sql);
         pstm.setTime(1, java.sql.Time.valueOf(LocalTime.now()));
@@ -2460,6 +2728,13 @@ public void logExamCompletion(int examId) {
 }
 
     public void toggleCourseStatus(String cName) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in toggleCourseStatus", e);
+            return;
+        }
+        
         try {
             String sql = "UPDATE courses SET is_active = !is_active WHERE course_name=?";
             PreparedStatement pstm = conn.prepareStatement(sql);
@@ -2475,6 +2750,13 @@ public void logExamCompletion(int examId) {
 
 public boolean registerExamStart(int studentId, int examId, String courseName, String deviceIdentifier) 
     throws SQLException {
+    
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in registerExamStart", e);
+        return false;
+    }
     
     if (studentId <= 0 || examId <= 0 || courseName == null || courseName.trim().isEmpty() || 
         deviceIdentifier == null || deviceIdentifier.trim().isEmpty()) {
@@ -2502,6 +2784,13 @@ public boolean registerExamStart(int studentId, int examId, String courseName, S
 
 public boolean registerExamCompletion(int studentId, int examId, String endTime) 
     throws SQLException {
+    
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in registerExamCompletion", e);
+        return false;
+    }
     
     if (studentId <= 0 || examId <= 0 || endTime == null || endTime.trim().isEmpty()) {
         return false;
@@ -2543,6 +2832,13 @@ public String getDeviceIdentifier(HttpServletRequest request) {
 
 // Add a method to get the register for a specific exam
 public ResultSet getExamRegister(int examId) throws SQLException {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getExamRegister", e);
+        throw e;
+    }
+    
     String sql = "SELECT er.*, u.first_name, u.last_name, u.email, u.contact_no " +
                  "FROM exam_register er " +
                  "JOIN users u ON er.student_id = u.user_id " +
@@ -2556,6 +2852,13 @@ public ResultSet getExamRegister(int examId) throws SQLException {
 
 public boolean registerExamCompletion(int studentId, int examId, LocalTime endTime) 
     throws SQLException {
+    
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in registerExamCompletion (LocalTime)", e);
+        return false;
+    }
     
     // Validate inputs
     if (studentId <= 0) {
@@ -2603,6 +2906,13 @@ public boolean registerExamCompletion(int studentId, int examId, LocalTime endTi
 /* Add this method in your DatabaseClass */
 
 public String getLastCourseName() {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getLastCourseName", e);
+        return null;
+    }
+    
     String lastCourseName = null;
     try {
         String query = "SELECT course_name FROM questions ORDER BY question_id DESC LIMIT 1"; // Your SQL query
@@ -2625,6 +2935,13 @@ public String getLastCourseName() {
 // UPDATED: Get filtered exam register with all new filters
 public ResultSet getFilteredExamRegister(int examId, int studentId, String firstName, 
                                          String lastName, String courseName, String examDate) throws SQLException {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getFilteredExamRegister", e);
+        throw e;
+    }
+    
     StringBuilder sql = new StringBuilder();
     sql.append("SELECT ");
     sql.append("    er.register_id, ");
@@ -2687,6 +3004,13 @@ public ResultSet getFilteredExamRegister(int examId, int studentId, String first
 
 // Get all exam register
 public ResultSet getAllExamRegister() throws SQLException {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getAllExamRegister", e);
+        throw e;
+    }
+    
     String sql = "SELECT er.*, u.first_name, u.last_name, u.email, u.contact_no " +
                  "FROM exam_register er " +
                  "JOIN users u ON er.student_id = u.user_id " +
@@ -2700,6 +3024,13 @@ public ResultSet getAllExamRegister() throws SQLException {
 
 // Get exam register statistics
 public ResultSet getExamRegisterStatistics(int examId, String courseName, String examDate) throws SQLException {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getExamRegisterStatistics", e);
+        throw e;
+    }
+    
     StringBuilder sql = new StringBuilder();
     sql.append("SELECT ");
     sql.append("    COUNT(*) as total_students, ");
@@ -2737,6 +3068,13 @@ public ResultSet getExamRegisterStatistics(int examId, String courseName, String
 
 // NEW METHOD: Get courses from exam register
 public ArrayList<String> getExamRegisterCourses() {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getExamRegisterCourses", e);
+        return new ArrayList<>();
+    }
+    
     ArrayList<String> courses = new ArrayList<>();
     try {
         // Get DISTINCT courses from exam_register table
@@ -2762,6 +3100,13 @@ public ArrayList<String> getExamRegisterCourses() {
 
 // Get course list for dropdown
 public ArrayList<String> getCourseList() {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getCourseList", e);
+        return new ArrayList<>();
+    }
+    
     ArrayList<String> courses = new ArrayList<>();
     try {
         String sql = "SELECT DISTINCT course_name FROM courses WHERE course_status = 'Active' ORDER BY course_name";
@@ -2824,6 +3169,13 @@ public ArrayList<String> getCourseList() {
 
     public boolean markAttendance(int studentId, String studentName) {
         try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in markAttendance", e);
+            return false;
+        }
+        
+        try {
             String sql = "INSERT INTO daily_register(student_id, student_name, registration_date, registration_time) VALUES (?, ?, CURDATE(), CURTIME())";
             PreparedStatement pstm = conn.prepareStatement(sql);
             pstm.setInt(1, studentId);
@@ -2838,10 +3190,24 @@ public ArrayList<String> getCourseList() {
     }
     
     public PreparedStatement getPreparedStatement(String sql) throws SQLException {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getPreparedStatement", e);
+            throw e;
+        }
+        
         return conn.prepareStatement(sql);
     }
 
     public ArrayList<Map<String, String>> getAttendanceByStudentId(int studentId) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getAttendanceByStudentId", e);
+            return new ArrayList<>();
+        }
+        
         ArrayList<Map<String, String>> attendanceList = new ArrayList<>();
         try {
             String sql = "SELECT * FROM daily_register WHERE student_id = ? ORDER BY registration_date DESC, registration_time DESC";
@@ -2866,6 +3232,13 @@ public ArrayList<String> getCourseList() {
     }
 
     public ArrayList<Map<String, String>> getFilteredDailyRegister(String studentNameFilter, String dateFilter) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getFilteredDailyRegister", e);
+            return new ArrayList<>();
+        }
+        
         ArrayList<Map<String, String>> registerList = new ArrayList<>();
         PreparedStatement pstmt = null;
         ResultSet rs = null;
