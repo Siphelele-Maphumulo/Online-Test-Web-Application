@@ -25,11 +25,14 @@ DROP TABLE IF EXISTS `answers`;
 CREATE TABLE `answers` (
   `answer_id` int(11) NOT NULL AUTO_INCREMENT,
   `exam_id` int(11) NOT NULL,
-  `question` varchar(45) NOT NULL,
-  `answer` varchar(45) NOT NULL,
-  `correct_answer` varchar(45) NOT NULL,
+  `question_id` int(11) NOT NULL,
+  `question` varchar(255) NOT NULL,
+  `answer` varchar(255) NOT NULL,
+  `correct_answer` varchar(255) NOT NULL,
   `status` varchar(45) NOT NULL,
-  PRIMARY KEY (`answer_id`)
+  PRIMARY KEY (`answer_id`),
+  KEY `fk_answers_questions_idx` (`question_id`),
+  CONSTRAINT `fk_answers_questions` FOREIGN KEY (`question_id`) REFERENCES `questions` (`question_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
