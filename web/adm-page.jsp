@@ -671,6 +671,25 @@
     <main class="dashboard-content">
         <div class="content-wrapper">
             <%@ include file="header-messages.jsp" %>
+            <%@ include file="modal_assets.jspf" %>
+            
+            <div id="confirmationModal" class="modal-overlay">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 id="modalTitle" class="modal-title">
+                            <i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i> Confirmation
+                        </h3>
+                        <button id="closeModal" class="close-button">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="modalMessage">Are you sure you want to proceed with this action?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="cancelButton" class="btn btn-secondary">Cancel</button>
+                        <button id="confirmButton" class="btn btn-danger">Confirm</button>
+                    </div>
+                </div>
+            </div>
             
                     <%-- Add this to your admin menu --%>
             <%
@@ -842,6 +861,70 @@
                 lastScroll = currentScroll;
             });
         }
+
+        // Modal script for delete confirmations
+        const modal = document.getElementById('confirmationModal');
+        const closeModal = document.getElementById('closeModal');
+        const cancelButton = document.getElementById('cancelButton');
+        const confirmButton = document.getElementById('confirmButton');
+        const modalMessage = document.getElementById('modalMessage');
+        let actionTarget = null;
+
+        function showModal(message, target) {
+            modalMessage.textContent = message;
+            actionTarget = target;
+            modal.style.display = 'flex';
+        }
+
+        function hideModal() {
+            modal.style.display = 'none';
+            actionTarget = null;
+        }
+
+        // Single delete buttons
+        document.querySelectorAll('.single-delete-btn').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                showModal('Are you sure you want to delete this question? This action cannot be undone.', this.href);
+            });
+        });
+
+        // Bulk delete button
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const form = this.closest('form');
+                const selectedQuestions = form.querySelectorAll('input[name="questionIds"]:checked').length;
+                if (selectedQuestions === 0) {
+                    alert('Please select at least one question to delete.');
+                    return;
+                }
+                showModal(`Are you sure you want to delete the ${selectedQuestions} selected question(s)?`, form);
+            });
+        }
+        
+        // Modal controls
+        closeModal.addEventListener('click', hideModal);
+        cancelButton.addEventListener('click', hideModal);
+        window.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                hideModal();
+            }
+        });
+
+        confirmButton.addEventListener('click', function() {
+            if (actionTarget) {
+                if (typeof actionTarget === 'string') {
+                    // It's a URL for single delete
+                    window.location.href = actionTarget;
+                } else {
+                    // It's a form for bulk delete
+                    actionTarget.submit();
+                }
+            }
+            hideModal();
+        });
     });
 </script>
 

@@ -775,6 +775,9 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 }
 </style>
 
+<%@ include file="modal_assets.jspf" %>
+
+
 <div class="dashboard-container">
     <!-- Sidebar Navigation - Same as profile page -->
     <aside class="sidebar">
