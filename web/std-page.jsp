@@ -33,8 +33,9 @@
             <a href="controller.jsp?page=logout" class="button" style="float: right;background:crimson;color:white">Logout</a>
             </div>
             <% 
+            String pgprt = request.getParameter("pgprt");
             //pgpart = pagepart, exams=1,results=2 and profile is default
-            if(request.getParameter("pgprt").equals("1")){
+            if("1".equals(pgprt)){
                 
             %>
             
@@ -42,7 +43,7 @@
             
             <%
                 
-            }else if(request.getParameter("pgprt").equals("2")){
+            }else if("2".equals(pgprt)){
             
                 %>
             
