@@ -727,19 +727,19 @@
                         <div id="editMultipleCorrectContainer" style="display:none;">
                             <div class="options-grid">
                                 <div class="form-check">
-                                    <input type="checkbox" id="editCorrectOpt1" class="form-check-input edit-correct-checkbox" name="correctOpt1">
+                                    <input type="checkbox" id="editCorrectOpt1" class="form-check-input edit-correct-checkbox">
                                     <label for="editCorrectOpt1" class="form-check-label">Option 1</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" id="editCorrectOpt2" class="form-check-input edit-correct-checkbox" name="correctOpt2">
+                                    <input type="checkbox" id="editCorrectOpt2" class="form-check-input edit-correct-checkbox">
                                     <label for="editCorrectOpt2" class="form-check-label">Option 2</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" id="editCorrectOpt3" class="form-check-input edit-correct-checkbox" name="correctOpt3">
+                                    <input type="checkbox" id="editCorrectOpt3" class="form-check-input edit-correct-checkbox">
                                     <label for="editCorrectOpt3" class="form-check-label">Option 3</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" id="editCorrectOpt4" class="form-check-input edit-correct-checkbox" name="correctOpt4">
+                                    <input type="checkbox" id="editCorrectOpt4" class="form-check-input edit-correct-checkbox">
                                     <label for="editCorrectOpt4" class="form-check-label">Option 4</label>
                                 </div>
                             </div>
@@ -767,264 +767,119 @@
         const multiple = document.getElementById("editMultipleCorrectContainer");
         const correct = document.getElementById("editCorrectAnswer");
         
-        // Update the hidden field with the selected question type
         document.getElementById("questionTypeHidden").value = qType;
 
+        mcq.style.display = "none";
+        single.style.display = "none";
+        multiple.style.display = "none";
+        correct.required = false;
+
         if (qType === "TrueFalse") {
-            mcq.style.display = "none"; 
-            single.style.display = "block"; 
-            multiple.style.display = "none"; 
-            correct.placeholder = "Enter 'True' or 'False'"; 
+            single.style.display = "block";
+            correct.placeholder = "Enter 'True' or 'False'";
             correct.required = true;
-            
-            // Set True/False values
-            document.getElementById('editOpt1').value = 'True'; 
-            document.getElementById('editOpt2').value = 'False';
-            document.getElementById('editOpt3').value = ''; 
-            document.getElementById('editOpt4').value = '';
-            
-            // If current answer is not True/False, set to "True"
-            if (correct.value !== "True" && correct.value !== "False") {
-                correct.value = "True";
-            }
-            
-        } else if (qType === "MultipleSelect") {
-            mcq.style.display = "block"; 
-            single.style.display = "none"; 
-            multiple.style.display = "block"; 
-            correct.required = false;
-            
-            // Don't clear the correct value - we need it for checkbox initialization
-            updateEditCorrectOptionLabels();
-            initializeMultipleSelectCheckboxes();
-            
-        } else if (qType === "Code") {
-            mcq.style.display = "block"; 
-            single.style.display = "block"; 
-            multiple.style.display = "none"; 
-            correct.placeholder = "Expected output"; 
-            correct.required = true;
-            
         } else {
-            // MCQ (default)
-            mcq.style.display = "block"; 
-            single.style.display = "block"; 
-            multiple.style.display = "none"; 
-            correct.placeholder = "Correct Answer"; 
-            correct.required = true;
+            mcq.style.display = "block";
+            if (qType === "MultipleSelect") {
+                multiple.style.display = "block";
+                updateEditCorrectOptionLabels();
+                initializeMultipleSelectCheckboxes();
+            } else {
+                single.style.display = "block";
+                correct.placeholder = qType === 'Code' ? "Expected output" : "Correct Answer";
+                correct.required = true;
+            }
         }
-        updateEditSubmitButton();
     }
 
     function updateEditCorrectOptionLabels() {
-        const opts = ['editOpt1', 'editOpt2', 'editOpt3', 'editOpt4'];
-        const labels = ['editCorrectOpt1', 'editCorrectOpt2', 'editCorrectOpt3', 'editCorrectOpt4'];
-        
-        for(let i = 0; i < 4; i++) {
-            let val = document.getElementById(opts[i]).value || `Option ${i+1}`;
-            // Update checkbox labels
-            document.querySelector(`label[for="${labels[i]}"]`).textContent = val;
-            // Update checkbox values
-            document.getElementById(labels[i]).value = val;
-        }
+        ['editOpt1', 'editOpt2', 'editOpt3', 'editOpt4'].forEach((id, i) => {
+            const input = document.getElementById(id);
+            const checkbox = document.getElementById(`editCorrectOpt${i + 1}`);
+            const label = checkbox.nextElementSibling;
+            const value = input.value.trim();
+
+            label.textContent = value || `Option ${i + 1}`;
+            checkbox.value = value;
+            checkbox.disabled = !value;
+            if (!value) checkbox.checked = false;
+        });
     }
 
     function initializeMultipleSelectCheckboxes() {
-        // Get the current correct answer value
-        const correctAnswer = document.getElementById('editCorrectAnswer').value;
-        if (!correctAnswer) return;
-        
-        // Split by pipe and check the matching checkboxes
-        const correctAnswers = correctAnswer.split('|');
-        const opts = ['editOpt1', 'editOpt2', 'editOpt3', 'editOpt4'];
-        const checkboxes = ['editCorrectOpt1', 'editCorrectOpt2', 'editCorrectOpt3', 'editCorrectOpt4'];
-        
-        // Clear all checkboxes first
-        document.querySelectorAll('.edit-correct-checkbox').forEach(cb => cb.checked = false);
-        
-        correctAnswers.forEach(correctAns => {
-            for(let i = 0; i < 4; i++) {
-                const optionValue = document.getElementById(opts[i]).value;
-                if (optionValue && optionValue.trim() === correctAns.trim()) {
-                    document.getElementById(checkboxes[i]).checked = true;
-                    break;
-                }
+        const correctAnswers = document.getElementById('editCorrectAnswer').value.split('|');
+        document.querySelectorAll('.edit-correct-checkbox').forEach(cb => {
+            const optionValue = cb.value.trim();
+            if (optionValue && correctAnswers.includes(optionValue)) {
+                cb.checked = true;
+            } else {
+                cb.checked = false;
             }
         });
     }
 
-    function updateMultipleCorrectAnswerField() {
-        const selected = [];
-        const opts = ['editOpt1', 'editOpt2', 'editOpt3', 'editOpt4'];
-        const checkboxes = ['editCorrectOpt1', 'editCorrectOpt2', 'editCorrectOpt3', 'editCorrectOpt4'];
+    function validateAndSubmit(event) {
+        event.preventDefault();
         
-        for(let i = 0; i < 4; i++) {
-            if (document.getElementById(checkboxes[i]).checked) {
-                selected.push(document.getElementById(opts[i]).value);
-            }
-        }
-        
-        // Update the hidden correct answer field
-        document.getElementById('editCorrectAnswer').value = selected.join('|');
-    }
-
-    function updateEditSubmitButton() {
-        const btn = document.getElementById('editSubmitBtn');
-        let valid = document.getElementById('editQuestionForm').checkValidity();
-        const qType = document.getElementById("questionTypeSelect").value;
-        
-        // Additional validation for MultipleSelect
-        if (qType === "MultipleSelect") {
-            const selectedCount = document.querySelectorAll('.edit-correct-checkbox:checked').length;
-            if (selectedCount !== 2) {
-                valid = false;
-            }
-        }
-        
-        btn.disabled = !valid;
-    }
-
-    function validateEditQuestionForm() {
         const qType = document.getElementById("questionTypeSelect").value;
         let isValid = true;
         let msg = '';
-        
+
         if (qType === "TrueFalse") {
-            const correct = document.getElementById('editCorrectAnswer').value.trim();
-            if (correct !== "True" && correct !== "False") {
-                msg = "For True/False questions, correct answer must be either 'True' or 'False'";
+            const correctValue = document.getElementById('editCorrectAnswer').value.trim().toLowerCase();
+            if (correctValue !== "true" && correctValue !== "false") {
+                msg = "Answer must be 'True' or 'False'.";
                 isValid = false;
             }
         } else if (qType === "MultipleSelect") {
             const selectedCount = document.querySelectorAll('.edit-correct-checkbox:checked').length;
             if (selectedCount !== 2) {
-                msg = "For Multiple Select questions, you must select exactly 2 correct answers.";
+                msg = "Select exactly 2 correct answers.";
                 isValid = false;
             } else {
-                updateMultipleCorrectAnswerField();
+                const selectedAnswers = Array.from(document.querySelectorAll('.edit-correct-checkbox:checked'))
+                    .map(cb => cb.value)
+                    .join('|');
+                document.getElementById('editCorrectAnswer').value = selectedAnswers;
             }
         } else {
-            // MCQ or Code validation
-            const correct = document.getElementById('editCorrectAnswer').value.trim();
-            const opts = [
-                document.getElementById('editOpt1').value.trim(),
-                document.getElementById('editOpt2').value.trim(),
-                document.getElementById('editOpt3').value.trim(),
-                document.getElementById('editOpt4').value.trim()
-            ].filter(opt => opt !== '');
-            
-            if (!opts.includes(correct)) {
-                msg = "Correct answer must match one of the provided options exactly.";
+            const correctValue = document.getElementById('editCorrectAnswer').value.trim();
+            const opts = ['editOpt1', 'editOpt2', 'editOpt3', 'editOpt4']
+                .map(id => document.getElementById(id).value.trim())
+                .filter(Boolean);
+            if (!opts.includes(correctValue)) {
+                msg = "Correct answer must match one of the options.";
                 isValid = false;
             }
         }
-        
-        if (!isValid && msg) {
+
+        if (isValid) {
+            const submitBtn = document.getElementById('editSubmitBtn');
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+            submitBtn.disabled = true;
+            document.getElementById('editQuestionForm').submit();
+        } else {
             alert(msg);
         }
-        return isValid;
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('Edit question page loaded');
-        console.log('Current course:', '<%= currentCourseName %>');
-        console.log('Question type:', '<%= questionType %>');
-        
-        // Initialize form based on current question type
         toggleEditOptions();
-        
-        // Pre-select checkboxes for MultipleSelect questions
-        <% if ("MultipleSelect".equals(questionType) && correctAnswers != null) { %>
-            console.log('Initializing MultipleSelect checkboxes');
-            setTimeout(() => {
-                initializeMultipleSelectCheckboxes();
-                updateEditSubmitButton();
-            }, 100);
-        <% } %>
-        
-        // Event listeners for option inputs
+
         ['editOpt1', 'editOpt2', 'editOpt3', 'editOpt4'].forEach(id => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.addEventListener('input', function() {
-                    updateEditCorrectOptionLabels();
-                    const qType = document.getElementById("questionTypeSelect").value;
-                    if (qType === "MultipleSelect") {
-                        updateMultipleCorrectAnswerField();
-                    }
-                    updateEditSubmitButton();
-                });
-            }
+            document.getElementById(id).addEventListener('input', updateEditCorrectOptionLabels);
         });
-        
-        // Event listeners for checkbox changes
+
         document.querySelectorAll('.edit-correct-checkbox').forEach(cb => {
             cb.addEventListener('change', function() {
-                const qType = document.getElementById("questionTypeSelect").value;
-                if (qType === "MultipleSelect") {
-                    const selectedCount = document.querySelectorAll('.edit-correct-checkbox:checked').length;
-                    if (selectedCount > 2) {
-                        this.checked = false;
-                        alert("You can only select 2 correct answers for Multiple Select questions.");
-                        return;
-                    }
+                if (document.querySelectorAll('.edit-correct-checkbox:checked').length > 2) {
+                    this.checked = false;
+                    alert("You can only select 2 correct answers.");
                 }
-                updateMultipleCorrectAnswerField();
-                updateEditSubmitButton();
             });
         });
-        
-        // Event listeners for form validation
-        const correctAnswerInput = document.getElementById('editCorrectAnswer');
-        if (correctAnswerInput) {
-            correctAnswerInput.addEventListener('input', updateEditSubmitButton);
-        }
-        
-        const courseSelect = document.getElementById('courseSelectEdit');
-        if (courseSelect) {
-            courseSelect.addEventListener('change', updateEditSubmitButton);
-        }
-        
-        const questionTypeSelect = document.getElementById('questionTypeSelect');
-        if (questionTypeSelect) {
-            questionTypeSelect.addEventListener('change', function() {
-                toggleEditOptions();
-                updateEditSubmitButton();
-            });
-        }
-        
-        // Form submit handler
-        const editForm = document.getElementById('editQuestionForm');
-        if (editForm) {
-            editForm.addEventListener('submit', function(e) {
-                console.log('Form submission started');
-                
-                // Validate form
-                if (!validateEditQuestionForm()) {
-                    e.preventDefault();
-                    return false;
-                }
-                
-                console.log('Form validation passed');
-                
-                // Show loading state
-                const submitBtn = document.getElementById('editSubmitBtn');
-                if (submitBtn) {
-                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
-                    submitBtn.disabled = true;
-                }
-                
-                // Allow form to submit
-                return true;
-            });
-        }
-        
-        // Initial button state
-        updateEditSubmitButton();
-        
-        // Log current form state
-        console.log('Course select value:', document.getElementById('courseSelectEdit').value);
-        console.log('Question type value:', document.getElementById("questionTypeSelect").value);
-        console.log('Correct answer:', document.getElementById('editCorrectAnswer').value);
+
+        document.getElementById('questionTypeSelect').addEventListener('change', toggleEditOptions);
+        document.getElementById('editQuestionForm').addEventListener('submit', validateAndSubmit);
     });
 </script>
