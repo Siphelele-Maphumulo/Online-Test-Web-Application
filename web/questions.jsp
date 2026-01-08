@@ -1122,7 +1122,7 @@ function validateQuestionForm() {
         const filledOpts = opts.filter(Boolean);
         if (new Set(filledOpts).size !== filledOpts.length) {
             showModal('Duplicate Options', 'Options must be unique.');
-            isValid = false;
+            return false;
         }
         
         const selectedCount = document.querySelectorAll('.correct-checkbox:checked').length;
@@ -1139,7 +1139,7 @@ function validateQuestionForm() {
         const filledOpts = opts.filter(Boolean);
         if (new Set(filledOpts).size !== filledOpts.length) {
             showModal('Duplicate Options', 'Options must be unique.');
-            isValid = false;
+            return false;
         }
         
         const correctAnswer = document.getElementById("correctAnswer").value.trim();

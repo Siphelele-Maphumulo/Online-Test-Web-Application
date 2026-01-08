@@ -808,44 +808,44 @@
         event.preventDefault();
         
         const qType = document.getElementById("questionTypeSelect").value;
-        let isValid = true;
         let msg = '';
 
         if (qType === "TrueFalse") {
             const correctValue = document.getElementById('editCorrectAnswer').value.trim().toLowerCase();
             if (correctValue !== "true" && correctValue !== "false") {
                 msg = "Answer must be 'True' or 'False'.";
-                isValid = false;
-            }
-        } else if (qType === "MultipleSelect") {
-            const selectedCount = document.querySelectorAll('.edit-correct-checkbox:checked').length;
-            if (selectedCount !== 2) {
-                msg = "Select exactly 2 correct answers.";
-                isValid = false;
-            } else {
-                const selectedAnswers = Array.from(document.querySelectorAll('.edit-correct-checkbox:checked'))
-                    .map(cb => cb.value)
-                    .join('|');
-                document.getElementById('editCorrectAnswer').value = selectedAnswers;
             }
         } else {
-            const correctValue = document.getElementById('editCorrectAnswer').value.trim();
             const opts = ['editOpt1', 'editOpt2', 'editOpt3', 'editOpt4']
                 .map(id => document.getElementById(id).value.trim())
                 .filter(Boolean);
-            if (!opts.includes(correctValue)) {
-                msg = "Correct answer must match one of the options.";
-                isValid = false;
+            if (new Set(opts).size !== opts.length) {
+                msg = "Options must be unique.";
+            } else if (qType === "MultipleSelect") {
+                const selectedCount = document.querySelectorAll('.edit-correct-checkbox:checked').length;
+                if (selectedCount !== 2) {
+                    msg = "Select exactly 2 correct answers.";
+                } else {
+                    const selectedAnswers = Array.from(document.querySelectorAll('.edit-correct-checkbox:checked'))
+                        .map(cb => cb.value)
+                        .join('|');
+                    document.getElementById('editCorrectAnswer').value = selectedAnswers;
+                }
+            } else {
+                const correctValue = document.getElementById('editCorrectAnswer').value.trim();
+                if (!opts.includes(correctValue)) {
+                    msg = "Correct answer must match one of the options.";
+                }
             }
         }
 
-        if (isValid) {
+        if (msg) {
+            alert(msg);
+        } else {
             const submitBtn = document.getElementById('editSubmitBtn');
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
             submitBtn.disabled = true;
             document.getElementById('editQuestionForm').submit();
-        } else {
-            alert(msg);
         }
     }
 
