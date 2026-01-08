@@ -1245,10 +1245,12 @@ function updateCorrectOptionLabels() {
     ['opt1', 'opt2', 'opt3', 'opt4'].forEach((id, i) => {
         const input = document.getElementById(id);
         const checkbox = document.getElementById(`correctOpt${i + 1}`);
-        const label = checkbox.nextElementSibling;
+        const label = document.querySelector(`label[for="correctOpt${i + 1}"]`);
         const value = input.value.trim();
 
-        label.textContent = value || `Option ${i + 1}`;
+        if (label) {
+            label.textContent = value || `Option ${i + 1}`;
+        }
         checkbox.value = value;
         checkbox.disabled = !value;
         if (!value) checkbox.checked = false;

@@ -796,10 +796,12 @@
         ['editOpt1', 'editOpt2', 'editOpt3', 'editOpt4'].forEach((id, i) => {
             const input = document.getElementById(id);
             const checkbox = document.getElementById(`editCorrectOpt${i + 1}`);
-            const label = checkbox.nextElementSibling;
+            const label = document.querySelector(`label[for="editCorrectOpt${i + 1}"]`);
             const value = input.value.trim();
 
-            label.textContent = value || `Option ${i + 1}`;
+            if (label) {
+                label.textContent = value || `Option ${i + 1}`;
+            }
             checkbox.value = value;
             checkbox.disabled = !value;
             if (!value) checkbox.checked = false;
