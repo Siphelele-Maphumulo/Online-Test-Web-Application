@@ -1263,6 +1263,8 @@ public Questions getQuestionById(int questionId) {
             question.setOpt3(rs.getString("opt3"));
             question.setOpt4(rs.getString("opt4"));
             question.setCorrect(rs.getString("correct"));
+            question.setCourseName(rs.getString("course_name"));
+            question.setQuestionType(rs.getString("question_type"));
         }
     } catch (SQLException e) {
         e.printStackTrace();
@@ -1283,7 +1285,7 @@ public Questions getQuestionById(int questionId) {
 
  // Modify updateQuestion method to accept a Questions object
 public boolean updateQuestion(Questions question) {
-    String sql = "UPDATE questions SET question=?, opt1=?, opt2=?, opt3=?, opt4=?, correct=?, course_name=? WHERE question_id=?";
+    String sql = "UPDATE questions SET question=?, opt1=?, opt2=?, opt3=?, opt4=?, correct=?, course_name=?, question_type=? WHERE question_id=?";
     try (PreparedStatement pstm = conn.prepareStatement(sql)) {
         pstm.setString(1, question.getQuestion());
         pstm.setString(2, question.getOpt1());
@@ -1292,7 +1294,8 @@ public boolean updateQuestion(Questions question) {
         pstm.setString(5, question.getOpt4());
         pstm.setString(6, question.getCorrect());
         pstm.setString(7, question.getCourseName());
-        pstm.setInt(8, question.getQuestionId());
+        pstm.setString(8, question.getQuestionType());
+        pstm.setInt(9, question.getQuestionId());
 
         int rowsAffected = pstm.executeUpdate();
         return rowsAffected > 0;
@@ -1806,9 +1809,16 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
             Questions question;
             while(rs.next()){
                question = new Questions(
-                       rs.getInt(1),rs.getString(3),rs.getString(4),rs.getString(5),
-                       rs.getString(6),rs.getString(7),rs.getString(8),rs.getString(2)
-                    ); 
+                       rs.getInt("question_id"),
+                       rs.getString("question"),
+                       rs.getString("opt1"),
+                       rs.getString("opt2"),
+                       rs.getString("opt3"),
+                       rs.getString("opt4"),
+                       rs.getString("correct"),
+                       rs.getString("course_name"),
+                       rs.getString("question_type")
+               );
                list.add(question);
             }
             pstm.close();
