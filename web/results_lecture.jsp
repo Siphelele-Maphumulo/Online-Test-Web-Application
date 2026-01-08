@@ -173,7 +173,7 @@
   }
   
   .title {
-    background-color: #D8A02E;
+    background-color: #e3e3e3;
     color: white;
     padding: 12px 16px;
     font-weight: 700;
@@ -296,7 +296,7 @@
 }
 
 #rounded-corner thead th:hover, #gradient-style thead th:hover {
-    background: #D8A02E;
+    background: #e3e3e3;
 }
 
 #rounded-corner tbody td, #gradient-style tbody td {
@@ -416,7 +416,7 @@
 /* Header container for title and search */
 .results-header {
     position: relative;
-    background-color: #D8A02E;
+    background-color: #e3e3e3;
     color: white;
     padding: 12px 16px;
     border-radius: 16px 16px 0 0;
@@ -529,7 +529,7 @@
     <div class="panel" style="float: left; max-width: 900px">
 
         <% if (request.getParameter("eid") == null) { %>
-            <div class="title" style="background-color: #D8A02E">All Results</div>
+            <div class="title" style="background-color: #e3e3e3">All Results</div>
             <table id="rounded-corner">
                 <thead>
                     <tr>

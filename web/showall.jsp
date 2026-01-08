@@ -41,7 +41,7 @@
   
   .left-menu a:hover {
     background: #ffffff;
-    border-color: #D8A02E;
+    border-color: #e3e3e3;
     transform: translateX(8px);
     box-shadow: 0 4px 12px rgba(0,0,0,.08);
   }
@@ -49,7 +49,7 @@
   .left-menu a.active {
     background: linear-gradient(135deg, #09294D, #1a3d6d);
     color: white;
-    border-color: #D8A02E;
+    border-color: #e3e3e3;
     box-shadow: 0 6px 20px rgba(9, 41, 77, 0.3);
   }
   
@@ -84,12 +84,12 @@
   }
   
   .page-title i {
-    color: #D8A02E;
+    color: #e3e3e3;
     font-size: 2rem;
   }
   
   .stats-badge {
-    background: linear-gradient(135deg, #D8A02E, #09294D);
+    background: linear-gradient(135deg, #e3e3e3, #09294D);
     color: white;
     padding: 8px 20px;
     border-radius: 25px;
@@ -108,7 +108,7 @@
   }
   
   .course-header {
-    background: linear-gradient(135deg, #D8A02E, #09294D);
+    background: linear-gradient(135deg, #e3e3e3, #09294D);
     color: white;
     padding: 20px 24px;
     border-radius: 16px 16px 0 0;

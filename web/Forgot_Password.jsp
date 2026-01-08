@@ -57,7 +57,7 @@
 
     if (request.getParameter("pedt") == null) {
 %>
-    <div class="title" style="background-color: #D8A02E">Profile</div>
+    <div class="title" style="background-color: #e3e3e3">Profile</div>
     <div class="profile">
         <h2>
             <span class="tag" style="background-color: rgba(74, 23, 30, 0.8);">Your Name</span><span class="val"><%= user.getFirstName() + " " %><%= user.getLastName() %></span><br/>

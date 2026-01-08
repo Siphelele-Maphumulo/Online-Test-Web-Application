@@ -18,14 +18,14 @@
             <ul style="list-style-type: none; margin: 0; padding: 0; display: flex; gap: 10px; font-weight: bold;">
                 <!-- Sign Up and Login Links (Hidden if logged in) -->
                 <li id="signup-link">
-                    <a href="signup.jsp" style="color: #D8A02E; text-decoration: none;">Sign Up</a>
+                    <a href="signup.jsp" style="color: #e3e3e3; text-decoration: none;">Sign Up</a>
                 </li>
                 <li id="login-link">
-                    <a href="login.jsp" style="color: #D8A02E; text-decoration: none;">Login</a>
+                    <a href="login.jsp" style="color: #e3e3e3; text-decoration: none;">Login</a>
                 </li>
                 <!-- Logout Link (Visible only when logged in) -->
                 <li id="logout-link" style="display: none;">
-                    <a href="controller.jsp?page=logout" style="color: #D8A02E; text-decoration: none;">Logout</a>
+                    <a href="controller.jsp?page=logout" style="color: #e3e3e3; text-decoration: none;">Logout</a>
                 </li>
             </ul>
         </nav>

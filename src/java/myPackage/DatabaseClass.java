@@ -29,18 +29,18 @@ public class DatabaseClass {
     }
 
 private void establishConnection() throws ClassNotFoundException, SQLException {
-    Class.forName("com.mysql.cj.jdbc.Driver"); // Load the JDBC driver
-
-   this.conn = DriverManager.getConnection(
-       "jdbc:mysql://bdsnprm5vq9h4edsklxk-mysql.services.clever-cloud.com:3306/bdsnprm5vq9h4edsklxk?useSSL=true&requireSSL=false&serverTimezone=UTC",
-       "ugkdapgfbsc11xgj",
-       "vioCKbicD0jgZ8pjeJAa"
-   );
-
-
-
-
-        //conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/exam_system", "root", "");
+//    Class.forName("com.mysql.cj.jdbc.Driver"); // Load the JDBC driver
+//
+//   this.conn = DriverManager.getConnection(
+//       "jdbc:mysql://bdsnprm5vq9h4edsklxk-mysql.services.clever-cloud.com:3306/bdsnprm5vq9h4edsklxk?useSSL=true&requireSSL=false&serverTimezone=UTC",
+//       "ugkdapgfbsc11xgj",
+//       "vioCKbicD0jgZ8pjeJAa"
+//   );
+//
+//
+//
+//
+        conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/exam_system", "root", "");
     }
 
     String user_Type = "";
@@ -302,8 +302,8 @@ public void addNewUser(String fName, String lName, String uName, String email, S
         return false;
     }   
     
- public void updateStudent(int uId, String fName, String lName, String uName, String email, String pass,
-        String contact, String city, String address, String userType) {
+public int updateStudent(int uId, String fName, String lName, String uName, String email, String pass,
+                         String contact, String city, String address, String userType) {
     try {
         String sql = "UPDATE users SET first_name=?, last_name=?, user_name=?, email=?, password=?, user_type=?, contact_no=?, city=?, address=? WHERE user_id=?";
         
@@ -318,25 +318,30 @@ public void addNewUser(String fName, String lName, String uName, String email, S
         pstm.setString(8, city);
         pstm.setString(9, address);
         pstm.setInt(10, uId);
-        pstm.executeUpdate();
+
+        return pstm.executeUpdate(); // ✅ RETURN ROW COUNT
     } catch (SQLException ex) {
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
     }
+    return 0;
 }
-public ArrayList<String> getAllCourseNames() {
-    ArrayList<String> courseNames = new ArrayList<>();
+
+public boolean addNewCourse(String courseName, int tMarks, String time, String examDate) {
     try {
-        String query = "SELECT course_name FROM courses";
-        PreparedStatement pstmt = conn.prepareStatement(query);
-        ResultSet rs = pstmt.executeQuery();
-        
-        while (rs.next()) {
-            courseNames.add(rs.getString("course_name"));
-        }
-    } catch (SQLException e) {
-        e.printStackTrace();
+        String sql = "INSERT INTO courses(course_name, total_marks, time, exam_date) VALUES (?, ?, ?, ?)";
+        PreparedStatement pstm = conn.prepareStatement(sql);
+        pstm.setString(1, courseName);
+        pstm.setInt(2, tMarks);
+        pstm.setString(3, time);
+        pstm.setString(4, examDate);
+
+        pstm.executeUpdate();
+        pstm.close();
+        return true; // ✅ SUCCESS
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        return false; // ❌ FAILURE
     }
-    return courseNames;
 }
 
 

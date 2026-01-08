@@ -41,7 +41,7 @@
   
   .left-menu a:hover {
     background: #ffffff;
-    border-color: #D8A02E;
+    border-color: #e3e3e3;
     transform: translateX(8px);
     box-shadow: 0 4px 12px rgba(0,0,0,.08);
   }
@@ -49,7 +49,7 @@
   .left-menu a.active {
     background: linear-gradient(135deg, #09294D, #1a3d6d);
     color: white;
-    border-color: #D8A02E;
+    border-color: #e3e3e3;
     box-shadow: 0 6px 20px rgba(9, 41, 77, 0.3);
   }
   
@@ -84,12 +84,12 @@
   }
   
   .page-title i {
-    color: #D8A02E;
+    color: #e3e3e3;
     font-size: 2rem;
   }
   
   .stats-badge {
-    background: linear-gradient(135deg, #D8A02E, #09294D);
+    background: linear-gradient(135deg, #e3e3e3, #09294D);
     color: white;
     padding: 8px 20px;
     border-radius: 25px;
@@ -119,7 +119,7 @@
   }
   
   .card-header {
-    background: linear-gradient(135deg, #D8A02E, #09294D);
+    background: linear-gradient(135deg, #e3e3e3, #09294D);
     color: white;
     padding: 24px 32px;
     font-size: 1.375rem;
@@ -235,7 +235,7 @@
   }
   
   .submit-btn {
-    background: linear-gradient(135deg, #D8A02E, #09294D);
+    background: linear-gradient(135deg, #e3e3e3, #09294D);
     border: none;
     border-radius: 12px;
     padding: 16px 32px;
@@ -492,7 +492,7 @@
             <div class="form-grid">
               <div class="form-group">
                 <label class="form-label">
-                  <i class="fas fa-book" style="color: #D8A02E;"></i>
+                  <i class="fas fa-book" style="color: #e3e3e3;"></i>
                   Select Course
                 </label>
                 <select name="coursename" class="form-select" id="courseSelectShowAll" required>
@@ -541,7 +541,7 @@
             <div class="form-grid">
               <div class="form-group">
                 <label class="form-label">
-                  <i class="fas fa-book" style="color: #D8A02E;"></i>
+                  <i class="fas fa-book" style="color: #e3e3e3;"></i>
                   Select Course
                 </label>
                 <select name="coursename" class="form-select" id="courseSelectAddNew" required>
@@ -598,7 +598,7 @@
             <div id="mcqOptions">
               <div class="form-group">
                 <label class="form-label">
-                  <i class="fas fa-list-ol" style="color: #D8A02E;"></i>
+                  <i class="fas fa-list-ol" style="color: #e3e3e3;"></i>
                   Options
                 </label>
                 <div class="options-grid">

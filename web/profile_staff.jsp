@@ -41,7 +41,7 @@
   
   .left-menu a:hover {
     background: #ffffff;
-    border-color: #D8A02E;
+    border-color: #e3e3e3;
     transform: translateX(8px);
     box-shadow: 0 4px 12px rgba(0,0,0,.08);
   }
@@ -49,7 +49,7 @@
   .left-menu a.active {
     background: linear-gradient(135deg, #09294D, #1a3d6d);
     color: white;
-    border-color: #D8A02E;
+    border-color: #e3e3e3;
     box-shadow: 0 6px 20px rgba(9, 41, 77, 0.3);
   }
   
@@ -84,12 +84,12 @@
   }
   
   .page-title i {
-    color: #D8A02E;
+    color: #e3e3e3;
     font-size: 2rem;
   }
   
   .stats-badge {
-    background: linear-gradient(135deg, #D8A02E, #09294D);
+    background: linear-gradient(135deg, #e3e3e3, #09294D);
     color: white;
     padding: 8px 20px;
     border-radius: 25px;
@@ -119,7 +119,7 @@
   }
   
   .card-header {
-    background: linear-gradient(135deg, #D8A02E, #09294D);
+    background: linear-gradient(135deg, #e3e3e3, #09294D);
     color: white;
     padding: 24px 32px;
     font-size: 1.375rem;
@@ -149,7 +149,7 @@
   .avatar {
     width: 100px;
     height: 100px;
-    background: linear-gradient(135deg, #D8A02E, #09294D);
+    background: linear-gradient(135deg, #e3e3e3, #09294D);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -175,7 +175,7 @@
   
   .user-role {
     display: inline-block;
-    background: linear-gradient(135deg, #D8A02E, #e6b450);
+    background: linear-gradient(135deg, #e3e3e3, #e6b450);
     color: white;
     padding: 8px 20px;
     border-radius: 20px;
@@ -233,7 +233,7 @@
   }
   
   .form-button {
-    background: linear-gradient(135deg, #D8A02E, #09294D);
+    background: linear-gradient(135deg, #e3e3e3, #09294D);
     border: none;
     border-radius: 12px;
     padding: 16px 32px;
@@ -351,7 +351,7 @@
   }
   
   .student-badge {
-    background: linear-gradient(135deg, #D8A02E, #e6b450);
+    background: linear-gradient(135deg, #e3e3e3, #e6b450);
   }
   
   /* Responsive Design */
@@ -608,7 +608,7 @@
               
               <div class="form-group">
                 <label class="form-label">
-                  <i class="fas fa-city" style="color: #D8A02E;"></i>
+                  <i class="fas fa-city" style="color: #e3e3e3;"></i>
                   City
                 </label>
                 <input type="text" name="city" value="<%= user.getCity() %>" 
@@ -790,7 +790,7 @@
               
               <div class="form-group">
                 <label class="form-label">
-                  <i class="fas fa-city" style="color: #D8A02E;"></i>
+                  <i class="fas fa-city" style="color: #e3e3e3;"></i>
                   City
                 </label>
                 <input type="text" name="city" value="<%= user.getCity() %>" 
