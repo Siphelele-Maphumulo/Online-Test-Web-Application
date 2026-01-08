@@ -352,9 +352,13 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         border-color: var(--success);
         background: linear-gradient(135deg, rgba(5, 150, 105, 0.1), rgba(16, 185, 129, 0.1));
     }
+    .option-correct-multiple {
+        border-color: var(--info);
+        background: linear-gradient(135deg, rgba(8, 145, 178, 0.1), rgba(14, 165, 233, 0.1));
+    }
     
     .option-correct::after {
-        content: "? Correct";
+        content: "✔ Correct";
         position: absolute;
         top: -10px;
         right: 8px;
@@ -607,6 +611,12 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                     String courseName = request.getParameter("coursename");
             %>
             
+            <form action="controller.jsp" method="post">
+                <input type="hidden" name="page" value="questions">
+                <input type="hidden" name="operation" value="bulk_delete">
+                 <input type="hidden" name="coursename" value="<%= courseName %>">
+
+
             <!-- Course Header -->
             <div class="question-card" style="border-radius: var(--radius-md); margin-bottom: var(--spacing-lg);">
                 <div class="course-header">
@@ -632,6 +642,10 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                 </div>
             <%
                     } else {
+            %>
+                <button type="submit" class="btn btn-error" onclick="return confirm('Are you sure you want to delete selected questions?');">Delete Selected</button>
+                <br><br>
+            <%
                         for (int i = 0; i < list.size(); i++) {
                             Questions question = (Questions) list.get(i);
                             String questionId = String.valueOf(question.getQuestionId());
@@ -655,6 +669,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             <div class="question-card">
                 <div class="question-header">
                     <div class="question-number">
+                        <input type="checkbox" name="questionIds" value="<%= questionId %>">
                         <div class="question-badge">
                             <%= questionNumber %>
                         </div>
@@ -676,7 +691,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             Edit
                         </a>
 
-                        <a href="controller.jsp?page=questions&operation=del&qid=<%= question.getQuestionId() %>" 
+                        <a href="controller.jsp?page=questions&operation=del&qid=<%= question.getQuestionId() %>&coursename=<%= courseName %>"
                            onclick="return confirm('Are you sure you want to delete this question? This action cannot be undone.');" 
                            class="btn btn-error" style="font-size: 13px; padding: 8px 16px;">
                             <i class="fas fa-trash"></i>
@@ -689,7 +704,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                     <div class="options-grid">
                         <!-- Option A -->
                         <div class="option-item <%= isMultipleSelect ? 
-                              (containsAnswer(correctAnswers, opt1) ? "option-correct" : "") : 
+                              (containsAnswer(correctAnswers, opt1) ? "option-correct-multiple" : "") :
                               (correct != null && correct.equals(opt1) ? "option-correct" : "") %>">
                             <span class="option-label">Option A</span>
                             <div class="option-text"><%= opt1 %></div>
@@ -697,7 +712,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         
                         <!-- Option B -->
                         <div class="option-item <%= isMultipleSelect ? 
-                              (containsAnswer(correctAnswers, opt2) ? "option-correct" : "") : 
+                              (containsAnswer(correctAnswers, opt2) ? "option-correct-multiple" : "") :
                               (correct != null && correct.equals(opt2) ? "option-correct" : "") %>">
                             <span class="option-label">Option B</span>
                             <div class="option-text"><%= opt2 %></div>
@@ -706,7 +721,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         <!-- Option C -->
                         <% if (opt3 != null && !opt3.isEmpty()) { %>
                         <div class="option-item <%= isMultipleSelect ? 
-                              (containsAnswer(correctAnswers, opt3) ? "option-correct" : "") : 
+                              (containsAnswer(correctAnswers, opt3) ? "option-correct-multiple" : "") :
                               (correct != null && correct.equals(opt3) ? "option-correct" : "") %>">
                             <span class="option-label">Option C</span>
                             <div class="option-text"><%= opt3 %></div>
@@ -716,7 +731,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         <!-- Option D -->
                         <% if (opt4 != null && !opt4.isEmpty()) { %>
                         <div class="option-item <%= isMultipleSelect ? 
-                              (containsAnswer(correctAnswers, opt4) ? "option-correct" : "") : 
+                              (containsAnswer(correctAnswers, opt4) ? "option-correct-multiple" : "") :
                               (correct != null && correct.equals(opt4) ? "option-correct" : "") %>">
                             <span class="option-label">Option D</span>
                             <div class="option-text"><%= opt4 %></div>
@@ -745,6 +760,9 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             </div>
             <%
                         }
+            %>
+            </form>
+            <%
                     }
                 } else {
             %>

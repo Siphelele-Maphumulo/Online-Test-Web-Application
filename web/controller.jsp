@@ -294,9 +294,21 @@ try {
         String operation = nz(request.getParameter("operation"), "");
         if ("del".equalsIgnoreCase(operation)) {
             String qid = nz(request.getParameter("qid"), "");
+            String courseName = nz(request.getParameter("coursename"), "");
             if (!qid.isEmpty()) pDAO.deleteQuestion(Integer.parseInt(qid));
             session.setAttribute("message","Question deleted successfully");
-            response.sendRedirect("adm-page.jsp?pgprt=3");
+            response.sendRedirect("showall.jsp?coursename=" + courseName);
+
+        } else if ("bulk_delete".equalsIgnoreCase(operation)) {
+            String[] questionIds = request.getParameterValues("questionIds");
+            String courseName = nz(request.getParameter("coursename"), "");
+            if (questionIds != null) {
+                for (String qid : questionIds) {
+                    pDAO.deleteQuestion(Integer.parseInt(qid));
+                }
+                session.setAttribute("message", "Selected questions deleted successfully");
+            }
+            response.sendRedirect("showall.jsp?coursename=" + courseName);
 
         } else if ("edit".equalsIgnoreCase(operation)) {
             String qid = nz(request.getParameter("qid"), "");
