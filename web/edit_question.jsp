@@ -792,22 +792,6 @@
         }
     }
 
-    function updateEditCorrectOptionLabels() {
-        ['editOpt1', 'editOpt2', 'editOpt3', 'editOpt4'].forEach((id, i) => {
-            const input = document.getElementById(id);
-            const checkbox = document.getElementById(`editCorrectOpt${i + 1}`);
-            const label = document.querySelector(`label[for="editCorrectOpt${i + 1}"]`);
-            const value = input.value.trim();
-
-            if (label) {
-                label.textContent = value || `Option ${i + 1}`;
-            }
-            checkbox.value = value;
-            checkbox.disabled = !value;
-            if (!value) checkbox.checked = false;
-        });
-    }
-
     function initializeMultipleSelectCheckboxes() {
         const correctAnswers = document.getElementById('editCorrectAnswer').value.split('|');
         document.querySelectorAll('.edit-correct-checkbox').forEach(cb => {
@@ -868,9 +852,24 @@
     document.addEventListener('DOMContentLoaded', function() {
         toggleEditOptions();
 
-        ['editOpt1', 'editOpt2', 'editOpt3', 'editOpt4'].forEach(id => {
-            document.getElementById(id).addEventListener('input', updateEditCorrectOptionLabels);
-        });
+        // Attach event listeners to each option textarea
+        for (let i = 1; i <= 4; i++) {
+            const optInput = document.getElementById(`editOpt${i}`);
+            const checkbox = document.getElementById(`editCorrectOpt${i}`);
+            const label = document.querySelector(`label[for="editCorrectOpt${i}"]`);
+
+            if (optInput && checkbox && label) {
+                optInput.addEventListener('input', () => {
+                    const value = optInput.value.trim();
+                    label.textContent = value || `Option ${i}`;
+                    checkbox.value = value;
+                    checkbox.disabled = !value;
+                    if (!value) {
+                        checkbox.checked = false;
+                    }
+                });
+            }
+        }
 
         document.querySelectorAll('.edit-correct-checkbox').forEach(cb => {
             cb.addEventListener('change', function() {
