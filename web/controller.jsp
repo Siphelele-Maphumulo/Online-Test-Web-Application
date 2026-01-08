@@ -339,8 +339,10 @@ try {
             String questionType  = nz(request.getParameter("questionType"), "");
 
             if ("MultipleSelect".equalsIgnoreCase(questionType)) {
-                String correctMultiple = nz(request.getParameter("correctMultiple"), "");
-                if (!correctMultiple.isEmpty()) correctAnswer = correctMultiple;
+                String[] correctAnswers = request.getParameterValues("correctMultiple");
+                if (correctAnswers != null && correctAnswers.length > 0) {
+                    correctAnswer = String.join("|", correctAnswers);
+                }
             }
 
             pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType);
@@ -523,8 +525,24 @@ try {
 
                 for (int i=0;i<size;i++){
                     String question = nz(request.getParameter("question"+i), "");
-                    String ans      = nz(request.getParameter("ans"+i), "");
-                    int qid         = Integer.parseInt(nz(request.getParameter("qid"+i), "0"));
+                    String ans;
+                    String qType = nz(request.getParameter("qtype"+i), "single");
+                    
+                    if ("MultipleSelect".equals(qType)) {
+                        ArrayList<String> answers = new ArrayList<>();
+                        for (int j = 0; j < 4; j++) { // Assuming up to 4 options
+                            String paramName = "ans" + i + "_" + j;
+                            String paramValue = request.getParameter(paramName);
+                            if (paramValue != null) {
+                                answers.add(paramValue);
+                            }
+                        }
+                        ans = String.join("|", answers);
+                    } else {
+                        ans = nz(request.getParameter("ans"+i), "");
+                    }
+                    
+                    int qid = Integer.parseInt(nz(request.getParameter("qid"+i), "0"));
                     pDAO.insertAnswer(eId, qid, question, ans);
                 }
 
