@@ -4,12 +4,12 @@ package myPackage.classes;
 
 public class Questions {
     private int questionId;
-    private String question,opt1,opt2,opt3,opt4,correct,courseName;
+    private String question,opt1,opt2,opt3,opt4,correct,courseName, questionType;
 
     public Questions() {
     }
 
-    public Questions(int questionId, String question, String opt1, String opt2, String opt3, String opt4, String correct, String courseName) {
+    public Questions(int questionId, String question, String opt1, String opt2, String opt3, String opt4, String correct, String courseName, String questionType) {
         this.questionId = questionId;
         this.question = question;
         this.opt1 = opt1;
@@ -18,6 +18,15 @@ public class Questions {
         this.opt4 = opt4;
         this.correct = correct;
         this.courseName = courseName;
+        this.questionType = questionType;
+    }
+
+    public String getQuestionType() {
+        return questionType;
+    }
+
+    public void setQuestionType(String questionType) {
+        this.questionType = questionType;
     }
 
     public int getQuestionId() {

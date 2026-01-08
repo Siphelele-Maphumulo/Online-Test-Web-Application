@@ -1764,13 +1764,7 @@
                 <div class="questions-container">
                 <% for (int i=0; i<totalQ; i++){
                     Questions q = questionsList.get(i);
-                    boolean isMultiTwo = false;
-                    try{
-                        String qt = q.getQuestion().toLowerCase();
-                        isMultiTwo = qt.contains("select two") || qt.contains("choose two") || 
-                                    qt.contains("pick two") || qt.contains("multiple answers") || 
-                                    qt.contains("two options");
-                    } catch(Exception e) { isMultiTwo = false; }
+                    boolean isMultiTwo = "MultipleSelect".equalsIgnoreCase(q.getQuestionType());
 
                     String fullQuestion = q.getQuestion(), questionPart = "", codePart = "";
                     if(fullQuestion.contains("```")){
@@ -1828,7 +1822,7 @@
                             %>
                                 <div class="form-check">
                                     <input class="form-check-input answer-input <%= isMultiTwo?"multi":"single" %>" 
-                                        type="<%= isMultiTwo?"checkbox":"radio" %>" 
+                                        type="<%= isMultiTwo ? "checkbox" : "radio" %>"
                                         id="<%= inputId %>" 
                                         name="<%= isMultiTwo ? ("ans"+i+"_"+oi) : ("ans"+i) %>" 
                                         value="<%= optVal %>" 
@@ -1842,7 +1836,7 @@
                         </div>
                         <input type="hidden" name="question<%= i %>" value="<%= q.getQuestion() %>">
                         <input type="hidden" name="qid<%= i %>" value="<%= q.getQuestionId() %>">
-                        <input type="hidden" name="qtype<%= i %>" value="<%= isMultiTwo?"multi2":"single" %>">
+                        <input type="hidden" name="qtype<%= i %>" value="<%= isMultiTwo?"MultipleSelect":"single" %>">
                     </div>
                 <% } %>
                 </div>

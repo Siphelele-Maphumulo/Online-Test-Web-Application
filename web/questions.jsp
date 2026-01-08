@@ -983,19 +983,19 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         <div id="multipleCorrectContainer" style="display: none;">
                             <div class="options-grid">
                                 <div class="form-check">
-                                    <input type="checkbox" id="correctOpt1" class="form-check-input correct-checkbox" value="">
+                                    <input type="checkbox" id="correctOpt1" name="correctMultiple" class="form-check-input correct-checkbox" value="">
                                     <label for="correctOpt1" class="form-check-label">Option 1</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" id="correctOpt2" class="form-check-input correct-checkbox" value="">
+                                    <input type="checkbox" id="correctOpt2" name="correctMultiple" class="form-check-input correct-checkbox" value="">
                                     <label for="correctOpt2" class="form-check-label">Option 2</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" id="correctOpt3" class="form-check-input correct-checkbox" value="">
+                                    <input type="checkbox" id="correctOpt3" name="correctMultiple" class="form-check-input correct-checkbox" value="">
                                     <label for="correctOpt3" class="form-check-label">Option 3</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" id="correctOpt4" class="form-check-input correct-checkbox" value="">
+                                    <input type="checkbox" id="correctOpt4" name="correctMultiple" class="form-check-input correct-checkbox" value="">
                                     <label for="correctOpt4" class="form-check-label">Option 4</label>
                                 </div>
                             </div>
