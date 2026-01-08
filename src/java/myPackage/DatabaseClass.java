@@ -2111,11 +2111,32 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
     }
 
 private String getAnswerStatus(String ans, String correct) {
-    if (ans.equals(correct)) {
-        return "correct";
-    } else {
+    if (ans == null || correct == null) {
         return "incorrect";
     }
+
+    // For multi-select questions, the correct answer is stored with "|"
+    if (correct.contains("|")) {
+        // Normalize both strings by splitting, sorting, and rejoining.
+        String[] ansParts = ans.split("\\|");
+        String[] correctParts = correct.split("\\|");
+        java.util.Arrays.sort(ansParts);
+        java.util.Arrays.sort(correctParts);
+        
+        String normalizedAns = String.join("|", ansParts);
+        String normalizedCorrect = String.join("|", correctParts);
+
+        if (normalizedAns.equals(normalizedCorrect)) {
+            return "correct";
+        }
+    } else {
+        // For single-answer questions, a direct comparison is sufficient.
+        if (ans.equals(correct)) {
+            return "correct";
+        }
+    }
+
+    return "incorrect";
 }
 
 
@@ -2222,6 +2243,26 @@ public ArrayList<Exams> getResultsFromExams(Integer stdId) {
     }
     return list;
 }
+
+    public boolean hasQuestions(String courseName) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in hasQuestions", e);
+            return false;
+        }
+        
+        String sql = "SELECT 1 FROM questions WHERE course_name = ? LIMIT 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, courseName);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "hasQuestions failed for course: " + courseName, e);
+            return false;
+        }
+    }
 
 public int getExamDuration(String courseName) {
     try {
@@ -2617,14 +2658,20 @@ public ArrayList<Exams> getAllExamsWithResults() {
 
 
 private int getObtMarks(int examId, int tMarks, int size) {
+    if (size == 0) {
+        return 0;
+    }
+
     try {
         ensureConnection();
     } catch (SQLException e) {
         LOGGER.log(Level.SEVERE, "Connection error in getObtMarks", e);
         return 0;
     }
-    
-    float totalObtainedMarks = 0;
+
+    float totalWeight = 0;
+    float correctWeight = 0;
+
     try {
         String sql = "SELECT a.status, q.question_type " +
                      "FROM answers a " +
@@ -2634,22 +2681,25 @@ private int getObtMarks(int examId, int tMarks, int size) {
         pstm.setInt(1, examId);
         ResultSet rs = pstm.executeQuery();
 
-        float marksPerQuestion = (size > 0) ? (float) tMarks / size : 0;
-
         while (rs.next()) {
             String status = rs.getString("status");
             String questionType = rs.getString("question_type");
+            
+            float weight = "MultipleSelect".equalsIgnoreCase(questionType) ? 2.0f : 1.0f;
+            totalWeight += weight;
 
             if ("correct".equals(status)) {
-                if ("MultipleSelect".equalsIgnoreCase(questionType)) {
-                    totalObtainedMarks += marksPerQuestion * 2;
-                } else {
-                    totalObtainedMarks += marksPerQuestion;
-                }
+                correctWeight += weight;
             }
         }
         
-        return Math.round(totalObtainedMarks);
+        if (totalWeight == 0) {
+            return 0;
+        }
+
+        // Calculate marks based on the proportion of correct weight
+        float finalMarks = (correctWeight / totalWeight) * tMarks;
+        return Math.round(finalMarks);
         
     } catch (SQLException ex) {
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);

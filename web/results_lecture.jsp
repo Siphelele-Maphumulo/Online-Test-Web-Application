@@ -539,7 +539,7 @@
                     </thead>
                     <tbody id="resultsBody">
                         <%
-                            ArrayList<Exams> list = pDAO.getAllExamResults(); // Assuming this gets all results
+                            ArrayList<Exams> list = pDAO.getAllExamsWithResults();
                             
                             if (list.isEmpty()) {
                         %>
