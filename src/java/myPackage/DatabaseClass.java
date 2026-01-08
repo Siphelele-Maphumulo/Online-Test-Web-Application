@@ -1736,43 +1736,54 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
 
     
     
-    public ArrayList getQuestions(String courseName,int questions){
-        try {
-            ensureConnection();
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Connection error in getQuestions", e);
-            return new ArrayList();
-        }
-        
-        ArrayList list=new ArrayList();
-        try {
-            
-            String sql="Select * from questions where course_name=? ORDER BY RAND() LIMIT ?";
-            PreparedStatement pstm=conn.prepareStatement(sql);
-            pstm.setString(1,courseName);
-            pstm.setInt(2,questions);
-            ResultSet rs=pstm.executeQuery();
-            Questions question;
-            while(rs.next()){
-               question = new Questions(
-                       rs.getInt("question_id"),
-                       rs.getString("question"),
-                       rs.getString("opt1"),
-                       rs.getString("opt2"),
-                       rs.getString("opt3"),
-                       rs.getString("opt4"),
-                       rs.getString("correct"),
-                       rs.getString("course_name"),
-                       rs.getString("question_type")
-               );
-               list.add(question);
-            }
-            pstm.close();
-        } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return list;
+public ArrayList getQuestions(String courseName, int questions) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getQuestions", e);
+        return new ArrayList();
     }
+    
+    ArrayList list = new ArrayList();
+    PreparedStatement pstm = null;
+    ResultSet rs = null;
+    
+    try {
+        // Use LOWER and TRIM to make the course name search case-insensitive and whitespace-tolerant
+        String sql = "SELECT * FROM questions WHERE LOWER(TRIM(course_name)) = LOWER(TRIM(?)) ORDER BY RAND() LIMIT ?";
+        pstm = conn.prepareStatement(sql);
+        pstm.setString(1, courseName);
+        pstm.setInt(2, questions);
+        rs = pstm.executeQuery();
+        
+        Questions question;
+        while (rs.next()) {
+            question = new Questions(
+                rs.getInt("question_id"),
+                rs.getString("question"),
+                rs.getString("opt1"),
+                rs.getString("opt2"),
+                rs.getString("opt3"),
+                rs.getString("opt4"),
+                rs.getString("correct"),
+                rs.getString("course_name"),
+                rs.getString("question_type")
+            );
+            list.add(question);
+        }
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error in getQuestions", ex);
+    } finally {
+        // Ensure resources are closed to prevent leaks
+        try {
+            if (rs != null) rs.close();
+            if (pstm != null) pstm.close();
+        } catch (SQLException e) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in getQuestions", e);
+        }
+    }
+    return list;
+}
     
     public int startExam(String rawName, int sId) throws SQLException {
         try {
@@ -1943,42 +1954,53 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
         return marks;
     }
     
-    public ArrayList getAllQuestions(String courseName){
-        try {
-            ensureConnection();
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Connection error in getAllQuestions", e);
-            return new ArrayList();
-        }
-        
-        ArrayList list=new ArrayList();
-        try {
-            
-            String sql="Select * from questions where course_name=?";
-            PreparedStatement pstm=conn.prepareStatement(sql);
-            pstm.setString(1,courseName);
-            ResultSet rs=pstm.executeQuery();
-            Questions question;
-            while(rs.next()){
-               question = new Questions(
-                       rs.getInt("question_id"),
-                       rs.getString("question"),
-                       rs.getString("opt1"),
-                       rs.getString("opt2"),
-                       rs.getString("opt3"),
-                       rs.getString("opt4"),
-                       rs.getString("correct"),
-                       rs.getString("course_name"),
-                       rs.getString("question_type")
-               );
-               list.add(question);
-            }
-            pstm.close();
-        } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return list;
+public ArrayList getAllQuestions(String courseName) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getAllQuestions", e);
+        return new ArrayList();
     }
+    
+    ArrayList list = new ArrayList();
+    PreparedStatement pstm = null;
+    ResultSet rs = null;
+    
+    try {
+        // Use LOWER and TRIM for a case-insensitive and whitespace-tolerant search
+        String sql = "SELECT * FROM questions WHERE LOWER(TRIM(course_name)) = LOWER(TRIM(?))";
+        pstm = conn.prepareStatement(sql);
+        pstm.setString(1, courseName);
+        rs = pstm.executeQuery();
+        
+        Questions question;
+        while (rs.next()) {
+            question = new Questions(
+                rs.getInt("question_id"),
+                rs.getString("question"),
+                rs.getString("opt1"),
+                rs.getString("opt2"),
+                rs.getString("opt3"),
+                rs.getString("opt4"),
+                rs.getString("correct"),
+                rs.getString("course_name"),
+                rs.getString("question_type")
+            );
+            list.add(question);
+        }
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error in getAllQuestions", ex);
+    } finally {
+        // Ensure resources are closed to prevent leaks
+        try {
+            if (rs != null) rs.close();
+            if (pstm != null) pstm.close();
+        } catch (SQLException e) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in getAllQuestions", e);
+        }
+    }
+    return list;
+}
     
     public ArrayList getAllAnswersByExamId(int examId){
         try {
