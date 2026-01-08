@@ -308,7 +308,7 @@ try {
                 }
                 session.setAttribute("message", "Selected questions deleted successfully");
             }
-            response.sendRedirect("showall.jsp?coursename=" + courseName);
+            response.sendRedirect("adm-page.jsp?pgprt=4&coursename=" + courseName);
 
         } else if ("edit".equalsIgnoreCase(operation)) {
             String qid = nz(request.getParameter("qid"), "");
