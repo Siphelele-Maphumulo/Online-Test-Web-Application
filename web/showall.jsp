@@ -1,97 +1,10 @@
-<%@page import="java.util.ArrayList"%>
-<%@page import="myPackage.DatabaseClass"%>
 <%@page import="myPackage.classes.Questions"%>
-<%@page import="java.util.Arrays"%>
-<%@page import="java.util.HashSet"%>
-<%@page import="java.util.Set"%>
+<%@page import="java.util.ArrayList"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
 
-<%
-    myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+<% 
+myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 %>
-
-<!-- Modal for validation messages -->
-<div id="validationModal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 id="modalTitle"><i class="fas fa-exclamation-triangle"></i> Validation Error</h3>
-            <span class="close-modal" onclick="closeModal()">&times;</span>
-        </div>
-        <div class="modal-body">
-            <p id="modalMessage"></p>
-        </div>
-        <div class="modal-footer">
-            <button onclick="closeModal()" class="btn btn-primary">OK</button>
-        </div>
-    </div>
-</div>
-
-<!-- Success/Error Toast -->
-<div id="toast" class="toast" style="display: none;">
-    <div class="toast-content">
-        <i id="toastIcon" class="fas"></i>
-        <div class="toast-message">
-            <strong id="toastTitle"></strong>
-            <span id="toastText"></span>
-        </div>
-        <button class="toast-close" onclick="hideToast()">&times;</button>
-    </div>
-</div>
-
-<div class="question-display-container">
-    <%
-        String courseName = request.getParameter("coursename");
-        if (courseName != null && !courseName.isEmpty()) {
-            ArrayList<Questions> questions = pDAO.getAllQuestions(courseName);
-            for (Questions q : questions) {
-    %>
-    <div class="question-card">
-        <div class="card-header">
-            <span><%= q.getQuestion() %></span>
-            <span><%= q.getQuestionType() %></span>
-        </div>
-        <div class="card-body">
-            <div class="options-grid">
-                <%
-                    String correctAnswer = q.getCorrect();
-                    Set<String> correctAnswers = new HashSet<>();
-                    if ("MultipleSelect".equalsIgnoreCase(q.getQuestionType()) && correctAnswer != null && !correctAnswer.isEmpty()) {
-                        correctAnswers.addAll(Arrays.asList(correctAnswer.split("\\|")));
-                    }
-                %>
-                <% if (q.getOpt1() != null && !q.getOpt1().isEmpty()) { %>
-                    <div class="option <%= "MultipleSelect".equalsIgnoreCase(q.getQuestionType()) ? (correctAnswers.contains(q.getOpt1()) ? "option-correct-multiple" : "") : (q.getOpt1().equals(correctAnswer) ? "option-correct" : "") %>">
-                        Option A: <%= q.getOpt1() %>
-                    </div>
-                <% } %>
-                <% if (q.getOpt2() != null && !q.getOpt2().isEmpty()) { %>
-                    <div class="option <%= "MultipleSelect".equalsIgnoreCase(q.getQuestionType()) ? (correctAnswers.contains(q.getOpt2()) ? "option-correct-multiple" : "") : (q.getOpt2().equals(correctAnswer) ? "option-correct" : "") %>">
-                        Option B: <%= q.getOpt2() %>
-                    </div>
-                <% } %>
-                <% if (q.getOpt3() != null && !q.getOpt3().isEmpty()) { %>
-                    <div class="option <%= "MultipleSelect".equalsIgnoreCase(q.getQuestionType()) ? (correctAnswers.contains(q.getOpt3()) ? "option-correct-multiple" : "") : (q.getOpt3().equals(correctAnswer) ? "option-correct" : "") %>">
-                        Option C: <%= q.getOpt3() %>
-                    </div>
-                <% } %>
-                <% if (q.getOpt4() != null && !q.getOpt4().isEmpty()) { %>
-                    <div class="option <%= "MultipleSelect".equalsIgnoreCase(q.getQuestionType()) ? (correctAnswers.contains(q.getOpt4()) ? "option-correct-multiple" : "") : (q.getOpt4().equals(correctAnswer) ? "option-correct" : "") %>">
-                        Option D: <%= q.getOpt4() %>
-                    </div>
-                <% } %>
-            </div>
-        </div>
-        <div class="card-footer">
-            <small>Question ID: <%= q.getQuestionId() %></small>
-            <a href="edit_question.jsp?qid=<%= q.getQuestionId() %>">Edit</a>
-            <a href="controller.jsp?page=questions&operation=del&qid=<%= q.getQuestionId() %>&coursename=<%= courseName %>">Delete</a>
-        </div>
-    </div>
-    <%
-            }
-        }
-    %>
-</div>
 
 <style>
     /* Use the same CSS Variables as the profile page */
@@ -159,7 +72,7 @@
     
     /* Sidebar Styles - Same as profile page */
     .sidebar {
-        width: 200px;
+        width: 250px;
         background: linear-gradient(180deg, var(--primary-blue), var(--secondary-blue));
         color: var(--white);
         flex-shrink: 0;
@@ -259,119 +172,10 @@
         gap: 6px;
     }
     
-    /* Question Cards */
-    .question-card {
-        background: var(--white);
-        border-radius: var(--radius-md);
-        box-shadow: var(--shadow-md);
-        border: 1px solid var(--medium-gray);
-        margin-bottom: var(--spacing-lg);
-        overflow: hidden;
-        transition: transform var(--transition-normal), box-shadow var(--transition-normal);
-    }
-    
-    .question-card:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-lg);
-    }
-    
-    .card-header {
-        background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
-        color: var(--white);
-        padding: var(--spacing-md) var(--spacing-lg);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .card-header span {
-        font-size: 14px;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-sm);
-    }
-    
-    /* Question Form */
-    .question-form {
-        padding: var(--spacing-lg);
-    }
-    
-    .form-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: var(--spacing-md);
-        margin-bottom: var(--spacing-lg);
-    }
-    
-    .form-group {
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .form-label {
-        font-weight: 600;
-        color: var(--text-dark);
-        font-size: 13px;
-        margin-bottom: var(--spacing-xs);
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-xs);
-    }
-    
-    .form-control,
-    .form-select,
-    .question-input,
-    .option-input {
-        padding: 10px 12px;
-        border: 1px solid var(--medium-gray);
-        border-radius: var(--radius-sm);
-        font-size: 14px;
-        transition: all var(--transition-fast);
-        background: var(--white);
-        color: var(--text-dark);
-    }
-    
-    .form-control:focus,
-    .form-select:focus,
-    .question-input:focus,
-    .option-input:focus {
-        outline: none;
-        border-color: var(--accent-blue);
-        box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
-    }
-    
-    .form-select {
-        appearance: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M2 4l4 4 4-4z'/%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 12px center;
-        background-size: 12px;
-        padding-right: 32px;
-    }
-    
-    /* Options Grid */
-    .options-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: var(--spacing-sm);
-        margin: var(--spacing-md) 0;
-    }
-    
-    .question-input {
-        width: 100%;
-        min-height: 100px;
-        resize: vertical;
-    }
-    
-    /* Form Actions - Consistent with profile page */
-    .form-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-md);
-        padding-top: var(--spacing-lg);
-        border-top: 1px solid var(--medium-gray);
-        margin-top: var(--spacing-lg);
+    /* Questions Container */
+    .questions-container {
+        max-width: 900px;
+        margin: 0 auto;
     }
     
     /* Buttons - Consistent with profile page */
@@ -390,6 +194,17 @@
         transition: all var(--transition-normal);
     }
     
+    .btn-secondary {
+        background: var(--dark-gray);
+        color: var(--white);
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    .btn-secondary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(100, 116, 139, 0.2);
+    }
+    
     .btn-primary {
         background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
         color: var(--white);
@@ -400,80 +215,222 @@
         box-shadow: 0 4px 12px rgba(9, 41, 77, 0.2);
     }
     
-    .btn-success {
-        background: linear-gradient(90deg, var(--success), #10b981);
+    .btn-error {
+        background: linear-gradient(90deg, var(--error), #ef4444);
         color: var(--white);
     }
     
-    .btn-success:hover {
+    .btn-error:hover {
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
     }
     
-    .btn-outline {
-        background: transparent;
+    .btn-info {
+        background: linear-gradient(90deg, var(--info), #0ea5e9);
+        color: var(--white);
+    }
+    
+    .btn-info:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(8, 145, 178, 0.2);
+    }
+    
+    /* Course Header */
+    .course-header {
+        background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
+        color: var(--white);
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-radius: var(--radius-md) var(--radius-md) 0 0;
+        margin-bottom: 0;
+        font-size: 16px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .questions-count {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-weight: 500;
+        font-size: 12px;
+    }
+    
+    /* Question Cards */
+    .question-card {
+        background: var(--white);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-md);
         border: 1px solid var(--medium-gray);
-        color: var(--dark-gray);
+        margin-bottom: var(--spacing-lg);
+        overflow: hidden;
+        transition: transform var(--transition-normal), box-shadow var(--transition-normal);
     }
     
-    .btn-outline:hover {
+    .question-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    /* Question Header */
+    .question-header {
         background: var(--light-gray);
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-bottom: 1px solid var(--medium-gray);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .question-number {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+    }
+    
+    .question-badge {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+        color: var(--white);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 14px;
+        flex-shrink: 0;
+        box-shadow: 0 2px 6px rgba(9, 41, 77, 0.1);
+    }
+    
+    .question-text {
+        font-weight: 600;
+        color: var(--text-dark);
+        font-size: 14px;
+        margin: 0;
+        line-height: 1.5;
+    }
+    
+    /* Question Actions */
+    .question-actions {
+        display: flex;
+        gap: var(--spacing-sm);
+    }
+    
+    /* Question Content */
+    .question-content {
+        padding: var(--spacing-lg);
+    }
+    
+    /* Options Grid */
+    .options-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .option-item {
+        background: var(--light-gray);
+        border: 1px solid var(--medium-gray);
+        border-radius: var(--radius-sm);
+        padding: var(--spacing-md);
+        transition: all var(--transition-fast);
+        position: relative;
+    }
+    
+    .option-item:hover {
+        background: var(--white);
         border-color: var(--dark-gray);
     }
     
-    /* Alert Messages */
-    .alert {
-        background: #d4edda;
-        color: #155724;
-        padding: var(--spacing-md);
-        border-radius: var(--radius-sm);
-        margin-bottom: var(--spacing-lg);
-        border: 1px solid #c3e6cb;
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-sm);
+    .option-correct {
+        border-color: var(--success);
+        background: linear-gradient(135deg, rgba(5, 150, 105, 0.1), rgba(16, 185, 129, 0.1));
+    }
+    .option-correct-multiple {
+        border-color: var(--info);
+        background: linear-gradient(135deg, rgba(8, 145, 178, 0.1), rgba(14, 165, 233, 0.1));
     }
     
-    .alert i {
-        color: var(--success);
+    .option-correct::after {
+        content: "? Correct";
+        position: absolute;
+        top: -10px;
+        right: 8px;
+        background: linear-gradient(90deg, var(--success), #10b981);
+        color: var(--white);
+        padding: 4px 10px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 500;
+        z-index: 1;
     }
     
-    /* Checkbox Styling */
-    .form-check {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-sm);
-        padding: var(--spacing-sm);
-        background: var(--light-gray);
-        border-radius: var(--radius-sm);
-        border: 1px solid var(--medium-gray);
-        transition: all var(--transition-fast);
-    }
-    
-    .form-check:hover {
-        background: var(--white);
-        border-color: var(--accent-blue);
-    }
-    
-    .form-check-label {
-        font-size: 13px;
-        color: var(--text-dark);
-        cursor: pointer;
-    }
-    
-    .form-check-input {
-        accent-color: var(--primary-blue);
-    }
-    
-    .form-hint {
-        font-size: 12px;
+    .option-label {
+        font-weight: 600;
         color: var(--dark-gray);
-        margin-top: var(--spacing-xs);
+        margin-bottom: var(--spacing-xs);
+        display: block;
+        font-size: 13px;
     }
     
-    /* Utility Classes */
-    .hidden {
-        display: none;
+    .option-text {
+        color: var(--text-dark);
+        font-weight: 500;
+        line-height: 1.4;
+        font-size: 14px;
+    }
+    
+    /* Question Meta Info */
+    .question-meta {
+        display: flex;
+        gap: var(--spacing-lg);
+        margin-top: var(--spacing-md);
+        font-size: 13px;
+        color: var(--dark-gray);
+    }
+    
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+    }
+    
+    /* No Questions Message */
+    .no-results {
+        text-align: center;
+        padding: var(--spacing-xl);
+        color: var(--dark-gray);
+        font-style: italic;
+        font-size: 14px;
+        background: var(--white);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--medium-gray);
+        box-shadow: var(--shadow-sm);
+    }
+    
+    /* Question Type Badge */
+    .question-type-badge {
+        display: inline-block;
+        background: var(--light-gray);
+        color: var(--text-dark);
+        padding: 2px 10px;
+        border-radius: 10px;
+        font-weight: 500;
+        font-size: 11px;
+        margin-left: var(--spacing-sm);
+        border: 1px solid var(--medium-gray);
+    }
+    
+    .question-type-badge.info {
+        background: linear-gradient(135deg, rgba(8, 145, 178, 0.1), rgba(14, 165, 233, 0.1));
+        color: var(--info);
+        border-color: var(--info);
     }
     
     /* Responsive Design - Consistent with profile page */
@@ -519,16 +476,30 @@
             text-align: center;
         }
         
-        .form-actions {
+        .question-header {
             flex-direction: column;
+            gap: var(--spacing-md);
+            align-items: flex-start;
+        }
+        
+        .question-actions {
+            width: 100%;
+            justify-content: space-between;
+        }
+        
+        .options-grid {
+            grid-template-columns: 1fr;
         }
         
         .btn {
             width: 100%;
+            justify-content: center;
         }
         
-        .options-grid {
-            grid-template-columns: repeat(2, 1fr);
+        .course-header {
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            text-align: center;
         }
     }
     
@@ -537,18 +508,18 @@
             padding: var(--spacing-md);
         }
         
-        .question-form {
+        .question-content {
             padding: var(--spacing-md);
         }
         
-        .options-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .card-header {
+        .question-meta {
             flex-direction: column;
             gap: var(--spacing-sm);
-            text-align: center;
+        }
+        
+        .question-actions {
+            flex-direction: column;
+            gap: var(--spacing-xs);
         }
     }
     
@@ -574,262 +545,6 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
-    /* Add these styles to eliminate scrolling */
-    .main-content {
-        position: relative;
-        max-height: calc(100vh - 100px);
-        overflow-y: auto;
-        padding-right: 10px;
-    }
-    
-    .main-content::-webkit-scrollbar {
-        width: 8px;
-    }
-    
-    .main-content::-webkit-scrollbar-track {
-        background: var(--light-gray);
-        border-radius: 4px;
-    }
-    
-    .main-content::-webkit-scrollbar-thumb {
-        background: var(--dark-gray);
-        border-radius: 4px;
-    }
-    
-    .question-card:first-of-type {
-        margin-bottom: 30px;
-    }
-    
-    .sticky-add-form {
-        position: sticky;
-        top: 20px;
-        background: var(--white);
-        box-shadow: var(--shadow-lg);
-        border: 2px solid var(--primary-blue);
-        border-radius: var(--radius-md);
-        z-index: 100;
-        margin-top: 20px;
-    }
-    
-    .quick-add-indicator {
-        background: linear-gradient(90deg, var(--success-light), #d4edda);
-        color: var(--success);
-        padding: 8px 12px;
-        border-radius: var(--radius-sm);
-        margin-bottom: 15px;
-        font-size: 13px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        border-left: 3px solid var(--success);
-        animation: fadeIn 0.5s ease;
-    }
-    
-    .quick-add-indicator i {
-        font-size: 14px;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(-10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .form-highlight {
-        animation: pulseHighlight 2s ease-in-out;
-    }
-    
-    @keyframes pulseHighlight {
-        0% { box-shadow: 0 0 0 0 rgba(9, 41, 77, 0.7); }
-        70% { box-shadow: 0 0 0 10px rgba(9, 41, 77, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(9, 41, 77, 0); }
-    }
-    
-    
-.scroll-indicator{
-    position:fixed;
-    right:20px;
-    bottom:20px;
-    width:48px;
-    height:48px;
-    background:#2563eb;
-    color:#fff;
-    border-radius:50%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    z-index:1000;
-    box-shadow:0 6px 20px rgba(0,0,0,.3);
-}
-</style>
-
-<style>
-/* Modal Styles */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-    animation: fadeIn 0.3s;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.modal-content {
-    background-color: #fff;
-    margin: 10% auto;
-    padding: 0;
-    border-radius: 8px;
-    width: 90%;
-    max-width: 500px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    animation: slideDown 0.3s;
-}
-
-@keyframes slideDown {
-    from { transform: translateY(-50px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-.modal-header {
-    padding: 16px 20px;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-    border-radius: 8px 8px 0 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-header h3 {
-    margin: 0;
-    color: #333;
-    font-size: 18px;
-}
-
-.close-modal {
-    color: #aaa;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    line-height: 20px;
-}
-
-.close-modal:hover {
-    color: #000;
-}
-
-.modal-body {
-    padding: 20px;
-    color: #333;
-    font-size: 16px;
-    line-height: 1.5;
-}
-
-.modal-footer {
-    padding: 16px 20px;
-    background-color: #f8f9fa;
-    border-top: 1px solid #dee2e6;
-    border-radius: 0 0 8px 8px;
-    text-align: right;
-}
-
-/* Toast Styles */
-.toast {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 1001;
-    min-width: 300px;
-    max-width: 400px;
-    animation: slideInRight 0.3s;
-}
-
-@keyframes slideInRight {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-
-.toast-content {
-    background: white;
-    border-radius: 8px;
-    padding: 16px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    display: flex;
-    align-items: flex-start;
-    border-left: 4px solid;
-}
-
-.toast.success {
-    border-left-color: #28a745;
-}
-
-.toast.error {
-    border-left-color: #dc3545;
-}
-
-.toast.warning {
-    border-left-color: #ffc107;
-}
-
-.toast.info {
-    border-left-color: #17a2b8;
-}
-
-.toast-message {
-    flex: 1;
-    margin-left: 12px;
-}
-
-.toast-message strong {
-    display: block;
-    margin-bottom: 4px;
-    color: #333;
-}
-
-.toast-message span {
-    color: #666;
-    font-size: 14px;
-}
-
-.toast-close {
-    background: none;
-    border: none;
-    color: #999;
-    font-size: 20px;
-    cursor: pointer;
-    padding: 0;
-    margin-left: 12px;
-    line-height: 1;
-}
-
-.toast-close:hover {
-    color: #666;
-}
-
-/* Form Validation Styles */
-.input-error {
-    border-color: #dc3545 !important;
-    background-color: #fff5f5 !important;
-}
-
-.error-message {
-    color: #dc3545;
-    font-size: 12px;
-    margin-top: 4px;
-    display: none;
-}
-
-.form-group.has-error .error-message {
-    display: block;
-}
 </style>
 
 <div class="dashboard-container">
@@ -859,528 +574,251 @@
                 <i class="fas fa-users"></i>
                 <h2>Accounts</h2>
             </a>
-
-            <a href="adm-page.jsp?pgprt=7" class="nav-item">
-               <i class="fas fa-users"></i>
-               <h2>Registers</h2>
-           </a>
         </nav>
     </aside>
     
     <!-- Main Content -->
     <main class="main-content">
-        <!-- Page Header -->
-        <header class="page-header">
-            <div class="page-title">
-                <i class="fas fa-question-circle"></i>
-                Question Management
+        <div class="questions-container">
+            <!-- Page Header -->
+            <header class="page-header">
+                <div class="page-title">
+                    <i class="fas fa-question-circle"></i>
+                    Course Questions
+                </div>
+                <div class="stats-badge">
+                    <%
+                        if (request.getParameter("coursename") != null) {
+                            ArrayList list = pDAO.getAllQuestions(request.getParameter("coursename"));
+                    %>
+                    <i class="fas fa-list-ol"></i>
+                    <%= list.size() %> Questions
+                    <%
+                        }
+                    %>
+                </div>
+            </header>
+            
+            <!-- Back Button -->
+            <a href="adm-page.jsp?pgprt=3" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i>
+                Back to Questions Management
+            </a>
+            
+            <%
+                if (request.getParameter("coursename") != null) {
+                    ArrayList list = pDAO.getAllQuestions(request.getParameter("coursename"));
+                    String courseName = request.getParameter("coursename");
+            %>
+            
+            <form action="controller.jsp" method="post">
+                <input type="hidden" name="page" value="questions">
+                <input type="hidden" name="operation" value="bulk_delete">
+                 <input type="hidden" name="coursename" value="<%= courseName %>">
+
+
+            <!-- Course Header -->
+            <div class="question-card" style="border-radius: var(--radius-md); margin-bottom: var(--spacing-lg);">
+                <div class="course-header">
+                    <div>
+                        <i class="fas fa-book"></i>
+                        <%= courseName %> - Questions
+                    </div>
+                    <div class="questions-count">
+                        <i class="fas fa-layer-group"></i>
+                        Total: <%= list.size() %> Questions
+                    </div>
+                </div>
             </div>
-            <div class="stats-badge">
-                <i class="fas fa-database"></i>
-                Manage Questions
-            </div>
-        </header>
-        
-        <!-- Show Questions Panel -->
-        <div class="question-card" id="showQuestionsPanel">
-            <div class="card-header">
-                <span><i class="fas fa-list"></i> Show All Questions</span>
-                <i class="fas fa-search" style="opacity: 0.8;"></i>
-            </div>
-            <div class="question-form">
-                <form action="adm-page.jsp">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-book" style="color: var(--accent-blue);"></i>
-                                Select Course
-                            </label>
-                            <select name="coursename" class="form-select" id="courseSelectShowAll" required>
-                                <% 
-                                ArrayList<String> courseNames = pDAO.getAllCourseNames(); 
-                                String lastCourseName = pDAO.getLastCourseName();
-                                
-                                if (courseNames.isEmpty()) {
-                                %>
-                                    <option value="">No courses available</option>
-                                <%
-                                } else {
-                                    for (String course : courseNames) {
-                                        boolean isSelected = (lastCourseName != null && lastCourseName.equals(course)) || 
-                                                           (lastCourseName == null && course.equals(courseNames.get(0)));
-                                %>
-                                <option value="<%=course%>" <%=isSelected ? "selected" : ""%>><%=course%></option>
-                                <% 
-                                    }
-                                } 
-                                %>
-                            </select>
+            
+            <%
+                    if (list.isEmpty()) {
+            %>
+                <div class="no-results">
+                    <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 16px; display: block; opacity: 0.5;"></i>
+                    No questions found for <%= courseName %>.
+                    <br>
+                    <small>Add questions to this course to see them listed here.</small>
+                </div>
+            <%
+                    } else {
+            %>
+                <button type="button" id="bulkDeleteBtn" class="btn btn-error">Delete Selected</button>
+                <br><br>
+            <%
+                        for (int i = 0; i < list.size(); i++) {
+                            Questions question = (Questions) list.get(i);
+                            String questionId = String.valueOf(question.getQuestionId());
+                            String questionNumber = String.valueOf(i + 1);
+                            String questionText = question.getQuestion();
+                            String opt1 = question.getOpt1();
+                            String opt2 = question.getOpt2();
+                            String opt3 = question.getOpt3();
+                            String opt4 = question.getOpt4();
+                            String correct = question.getCorrect();
+                            
+                            // Check if this is a multiple select question (contains pipe separator)
+                            boolean isMultipleSelect = correct != null && correct.contains("|");
+                            String[] correctAnswers = null;
+                            if (isMultipleSelect) {
+                                correctAnswers = correct.split("\\|");
+                            }
+            %>
+            
+            <!-- Question Card -->
+            <div class="question-card">
+                <div class="question-header">
+                    <div class="question-number">
+                        <input type="checkbox" name="questionIds" value="<%= questionId %>">
+                        <div class="question-badge">
+                            <%= questionNumber %>
                         </div>
-                    </div>
-                    
-                    <input type="hidden" name="pgprt" value="4">
-                    
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-success" <%=courseNames.isEmpty() ? "disabled" : ""%>>
-                            <i class="fas fa-eye"></i>
-                            Show Questions
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        <!-- Add New Question Panel -->
-        <div class="question-card" id="addQuestionPanel">
-            <div class="card-header">
-                <span><i class="fas fa-plus-circle"></i> Add New Question</span>
-                <i class="fas fa-edit" style="opacity: 0.8;"></i>
-            </div>
-            <div class="question-form">
-                <form action="controller.jsp" method="POST" id="questionForm">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-book" style="color: var(--accent-blue);"></i>
-                                Select Course
-                            </label>
-                            <select name="coursename" class="form-select" id="courseSelectAddNew" required>
-                                <% 
-                                ArrayList<String> allCourseNames = pDAO.getAllCourseNames();
-                                if (allCourseNames.isEmpty()) {
-                                %>
-                                    <option value="">No courses available. Please add courses first.</option>
-                                <%
-                                } else {
-                                %>
-                                    <option value="">Select Course</option>
-                                <%
-                                    for (String course : allCourseNames) {
-                                        boolean isSelected = (lastCourseName != null && lastCourseName.equals(course)) || 
-                                                           (lastCourseName == null && course.equals(allCourseNames.get(0)));
-                                %>
-                                <option value="<%=course%>" <%=isSelected ? "selected" : ""%>><%=course%></option>
-                                <% 
-                                    }
-                                } 
-                                %>
-                            </select>
-                            <% if (allCourseNames.isEmpty()) { %>
-                            <small style="color: var(--error); font-size: 12px;">
-                                <i class="fas fa-exclamation-triangle"></i> 
-                                You need to add courses first before adding questions.
-                            </small>
+                        <div class="question-text">
+                            <%= questionText %>
+                            <% if (isMultipleSelect) { %>
+                                <div style="margin-top: var(--spacing-xs);">
+                                    <span class="question-type-badge info">
+                                        <i class="fas fa-check-double"></i> Multiple Select (Choose Two)
+                                    </span>
+                                </div>
                             <% } %>
                         </div>
+                    </div>
+                    <div class="question-actions">
+                        <a href="edit_question.jsp?qid=<%= question.getQuestionId() %>&coursename=<%= courseName %>"
+                           class="btn btn-primary" style="font-size: 13px; padding: 8px 16px;">
+                            <i class="fas fa-edit"></i>
+                            Edit
+                        </a>
+
+                        <a href="controller.jsp?page=questions&operation=del&qid=<%= question.getQuestionId() %>&coursename=<%= courseName %>"
+                           class="btn btn-error single-delete-btn" style="font-size: 13px; padding: 8px 16px;">
+                            <i class="fas fa-trash"></i>
+                            Delete
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="question-content">
+                    <div class="options-grid">
+                        <!-- Option A -->
+                        <div class="option-item <%= isMultipleSelect ? 
+                              (containsAnswer(correctAnswers, opt1) ? "option-correct-multiple" : "") : 
+                              (correct != null && correct.equals(opt1) ? "option-correct" : "") %>">
+                            <span class="option-label">Option A</span>
+                            <div class="option-text"><%= opt1 %></div>
+                        </div>
                         
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-question" style="color: var(--info);"></i>
-                                Question Type
-                            </label>
-                            <select name="questionType" id="questionType" class="form-select" onchange="toggleOptions()">
-                                <option value="MCQ">Multiple Choice (Single Answer)</option>
-                                <option value="MultipleSelect">Multiple Select (Choose Two)</option>
-                                <option value="TrueFalse">True/False</option>
-                                <option value="Code">Code Snippet</option>
-                            </select>
+                        <!-- Option B -->
+                        <div class="option-item <%= isMultipleSelect ? 
+                              (containsAnswer(correctAnswers, opt2) ? "option-correct-multiple" : "") : 
+                              (correct != null && correct.equals(opt2) ? "option-correct" : "") %>">
+                            <span class="option-label">Option B</span>
+                            <div class="option-text"><%= opt2 %></div>
                         </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-pencil-alt" style="color: var(--success);"></i>
-                            Your Question
-                        </label>
-                        <textarea name="question" id="questionText" class="question-input" placeholder="Type your question here" required rows="3"></textarea>
-                        <div class="error-message" id="questionError">Question is required</div>
-                    </div>
-                    
-                    <div id="mcqOptions">
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-list-ol" style="color: var(--dark-gray);"></i>
-                                Options
-                            </label>
-                            <div class="options-grid">
-                                <div class="option-container">
-                                    <textarea name="opt1" class="option-input" placeholder="First Option" id="opt1" required rows="2"></textarea>
-                                    <div class="error-message" id="opt1Error">First option is required</div>
-                                </div>
-                                <div class="option-container">
-                                    <textarea name="opt2" class="option-input" placeholder="Second Option" id="opt2" required rows="2"></textarea>
-                                    <div class="error-message" id="opt2Error">Second option is required</div>
-                                </div>
-                                <div class="option-container">
-                                    <textarea name="opt3" class="option-input" placeholder="Third Option" id="opt3" rows="2"></textarea>
-                                    <div class="error-message" id="opt3Error">Third option is required</div>
-                                </div>
-                                <div class="option-container">
-                                    <textarea name="opt4" class="option-input" placeholder="Fourth Option" id="opt4" rows="2"></textarea>
-                                    <div class="error-message" id="opt4Error">Fourth option is required</div>
-                                </div>
-                            </div>
+                        
+                        <!-- Option C -->
+                        <% if (opt3 != null && !opt3.isEmpty()) { %>
+                        <div class="option-item <%= isMultipleSelect ? 
+                              (containsAnswer(correctAnswers, opt3) ? "option-correct-multiple" : "") : 
+                              (correct != null && correct.equals(opt3) ? "option-correct" : "") %>">
+                            <span class="option-label">Option C</span>
+                            <div class="option-text"><%= opt3 %></div>
                         </div>
+                        <% } %>
+                        
+                        <!-- Option D -->
+                        <% if (opt4 != null && !opt4.isEmpty()) { %>
+                        <div class="option-item <%= isMultipleSelect ? 
+                              (containsAnswer(correctAnswers, opt4) ? "option-correct-multiple" : "") : 
+                              (correct != null && correct.equals(opt4) ? "option-correct" : "") %>">
+                            <span class="option-label">Option D</span>
+                            <div class="option-text"><%= opt4 %></div>
+                        </div>
+                        <% } %>
                     </div>
                     
-                    <div class="form-group">
-                        <label class="form-label">
+                    <div class="question-meta">
+                        <div class="meta-item">
+                            <i class="fas fa-hashtag" style="color: var(--accent-blue);"></i>
+                            Question ID: <strong><%= questionId %></strong>
+                        </div>
+                        <% if (isMultipleSelect) { %>
+                        <div class="meta-item">
+                            <i class="fas fa-info-circle" style="color: var(--info);"></i>
+                            <span style="color: var(--info);"><strong>Multiple Correct Answers</strong> - Both highlighted answers must be selected</span>
+                        </div>
+                        <% } else { %>
+                        <div class="meta-item">
                             <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                            Correct Answer
-                        </label>
-                        
-                        <!-- Single Answer Input (for MCQ and True/False) -->
-                        <div id="correctAnswerContainer">
-                            <textarea id="correctAnswer" name="correct" class="form-control" placeholder="Enter correct answer" required rows="2"></textarea>
-                            <div class="error-message" id="correctAnswerError">Correct answer is required</div>
-                            <small id="correctAnswerHint" class="form-hint">Enter the correct answer (must match one of the options exactly)</small>
+                            Correct answer is highlighted in green
                         </div>
-                        
-                        <!-- Multiple Answer Selection (for MultipleSelect) -->
-                        <div id="multipleCorrectContainer" style="display: none;">
-                            <div class="options-grid">
-                                <div class="form-check">
-                                    <input type="checkbox" id="correctOpt1" class="form-check-input correct-checkbox" value="">
-                                    <label for="correctOpt1" class="form-check-label">Option 1</label>
-                                </div>
-                                <div class="form-check">
-                                    <input type="checkbox" id="correctOpt2" class="form-check-input correct-checkbox" value="">
-                                    <label for="correctOpt2" class="form-check-label">Option 2</label>
-                                </div>
-                                <div class="form-check">
-                                    <input type="checkbox" id="correctOpt3" class="form-check-input correct-checkbox" value="">
-                                    <label for="correctOpt3" class="form-check-label">Option 3</label>
-                                </div>
-                                <div class="form-check">
-                                    <input type="checkbox" id="correctOpt4" class="form-check-input correct-checkbox" value="">
-                                    <label for="correctOpt4" class="form-check-label">Option 4</label>
-                                </div>
-                            </div>
-                            <div class="error-message" id="multipleCorrectError">Select exactly 2 correct answers</div>
-                            <small id="multipleCorrectHint" class="form-hint">Select exactly 2 correct answers</small>
-                        </div>
+                        <% } %>
                     </div>
-                    
-                    <input type="hidden" name="page" value="questions">
-                    <input type="hidden" name="operation" value="addnew">
-                    
-                    <div class="form-actions">
-                        <button type="reset" class="btn btn-outline" onclick="resetQuestionForm()">
-                            <i class="fas fa-redo"></i>
-                            Reset Form
-                        </button>
-                        <button type="button" class="btn btn-primary" id="submitBtn" onclick="validateAndSubmit()">
-                            <i class="fas fa-plus"></i>
-                            Add Question
-                        </button>
-                    </div>
-                </form>
+                </div>
             </div>
+            <%
+                        }
+            %>
+            </form>
+            <%
+                    }
+                } else {
+            %>
+                <div class="no-results">
+                    <i class="fas fa-exclamation-circle" style="font-size: 3rem; margin-bottom: 16px; display: block; opacity: 0.5;"></i>
+                    Please select a course to view questions.
+                    <br>
+                    <small>Go back to Questions Management and select a course.</small>
+                </div>
+            <%
+                }
+            %>
         </div>
     </main>
 </div>
 
-<!-- Scroll Indicator Button -->
-<div class="scroll-indicator" id="scrollIndicator">
-    <i class="fas fa-arrow-down"></i>
-</div>
-
-<!-- Font Awesome -->
+<!-- Font Awesome for Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <!-- JavaScript for enhanced functionality -->
 <script>
-// Modal functions
-function showModal(title, message) {
-    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + title;
-    document.getElementById('modalMessage').textContent = message;
-    document.getElementById('validationModal').style.display = 'block';
-}
-
-function closeModal() {
-    document.getElementById('validationModal').style.display = 'none';
-}
-
-// Toast functions
-function showToast(type, title, message) {
-    const toast = document.getElementById('toast');
-    const toastIcon = document.getElementById('toastIcon');
-    const toastTitle = document.getElementById('toastTitle');
-    const toastText = document.getElementById('toastText');
-    
-    toast.className = 'toast ' + type;
-    toastTitle.textContent = title;
-    toastText.textContent = message;
-    
-    switch(type) {
-        case 'success':
-            toastIcon.className = 'fas fa-check-circle';
-            toastIcon.style.color = '#28a745';
-            break;
-        case 'error':
-            toastIcon.className = 'fas fa-times-circle';
-            toastIcon.style.color = '#dc3545';
-            break;
-        case 'warning':
-            toastIcon.className = 'fas fa-exclamation-triangle';
-            toastIcon.style.color = '#ffc107';
-            break;
-        case 'info':
-            toastIcon.className = 'fas fa-info-circle';
-            toastIcon.style.color = '#17a2b8';
-            break;
-    }
-    
-    toast.style.display = 'block';
-    setTimeout(hideToast, 5000);
-}
-
-function hideToast() {
-    document.getElementById('toast').style.display = 'none';
-}
-
-// Form validation functions
-function validateQuestionForm() {
-    let isValid = true;
-    const type = document.getElementById("questionType").value;
-    const question = document.getElementById("questionText").value.trim();
-    const course = document.getElementById("courseSelectAddNew").value;
-    
-    // Clear previous errors
-    clearErrors();
-    
-    // Basic validations
-    if (!question) {
-        showError('questionText', 'questionError', 'Question is required');
-        isValid = false;
-    }
-    
-    if (!course) {
-        showError('courseSelectAddNew', null, 'Please select a course');
-        isValid = false;
-    }
-    
-    // Type-specific validations
-    if (type === "TrueFalse") {
-        const correctAnswer = document.getElementById("correctAnswer").value.trim();
-        if (!correctAnswer) {
-            showError('correctAnswer', 'correctAnswerError', 'Correct answer is required');
-            isValid = false;
-        } else if (correctAnswer.toLowerCase() !== "true" && correctAnswer.toLowerCase() !== "false") {
-            showError('correctAnswer', 'correctAnswerError', 'Correct answer must be "True" or "False"');
-            isValid = false;
-        }
-        
-    } else if (type === "MultipleSelect") {
-        const opts = ['opt1', 'opt2', 'opt3', 'opt4'].map(id => document.getElementById(id).value.trim());
-        if (!opts[0]) { showError('opt1', 'opt1Error', 'First option is required'); isValid = false; }
-        if (!opts[1]) { showError('opt2', 'opt2Error', 'Second option is required'); isValid = false; }
-        
-        const filledOpts = opts.filter(Boolean);
-        if (new Set(filledOpts).size !== filledOpts.length) {
-            showModal('Duplicate Options', 'Options must be unique.');
-            return false;
-        }
-        
-        const selectedCount = document.querySelectorAll('.correct-checkbox:checked').length;
-        if (selectedCount !== 2) {
-            showError('multipleCorrectContainer', 'multipleCorrectError', 'Select exactly 2 correct answers');
-            isValid = false;
-        }
-        
-    } else { // MCQ or Code
-        const opts = ['opt1', 'opt2', 'opt3', 'opt4'].map(id => document.getElementById(id).value.trim());
-        if (!opts[0]) { showError('opt1', 'opt1Error', 'First option is required'); isValid = false; }
-        if (!opts[1]) { showError('opt2', 'opt2Error', 'Second option is required'); isValid = false; }
-        
-        const filledOpts = opts.filter(Boolean);
-        if (new Set(filledOpts).size !== filledOpts.length) {
-            showModal('Duplicate Options', 'Options must be unique.');
-            return false;
-        }
-        
-        const correctAnswer = document.getElementById("correctAnswer").value.trim();
-        if (!correctAnswer) {
-            showError('correctAnswer', 'correctAnswerError', 'Correct answer is required');
-            isValid = false;
-        } else if (!filledOpts.includes(correctAnswer)) {
-            showModal('Invalid Correct Answer', 'Correct answer must match one of the provided options.');
-            isValid = false;
-        }
-    }
-    
-    return isValid;
-}
-
-function showError(elementId, errorId, message) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        element.classList.add('input-error');
-        const container = element.closest('.option-container') || element.parentElement;
-        container.classList.add('has-error');
-    }
-    
-    const errorElement = document.getElementById(errorId);
-    if (errorElement) {
-        errorElement.textContent = message;
-        errorElement.style.display = 'block';
-    }
-}
-
-function clearErrors() {
-    document.querySelectorAll('.input-error, .has-error').forEach(el => el.classList.remove('input-error', 'has-error'));
-    document.querySelectorAll('.error-message').forEach(el => el.style.display = 'none');
-}
-
-function validateAndSubmit() {
-    if (validateQuestionForm()) {
-        const type = document.getElementById("questionType").value;
-        if (type === "MultipleSelect") {
-            const selectedAnswers = Array.from(document.querySelectorAll('.correct-checkbox:checked'))
-                .map(cb => cb.value)
-                .join('|');
-            document.getElementById('correctAnswer').value = selectedAnswers;
-        }
-        
-        const submitBtn = document.getElementById('submitBtn');
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding Question...';
-        submitBtn.disabled = true;
-        document.getElementById('questionForm').submit();
-    } else {
-        const firstError = document.querySelector('.input-error');
-        if (firstError) firstError.focus();
-    }
-}
-
-function updateCorrectOptionLabels() {
-    // Syncs the labels and values of the 'MultipleSelect' checkboxes with the option textareas
-    for (let i = 1; i <= 4; i++) {
-        const optInput = document.getElementById(`opt${i}`);
-        const checkbox = document.getElementById(`correctOpt${i}`);
-        const label = document.querySelector(`label[for="correctOpt${i}"]`);
-
-        if (optInput && checkbox && label) {
-            const value = optInput.value.trim();
-            label.textContent = value || `Option ${i}`;
-            checkbox.value = value;
-            checkbox.disabled = !value;
-            if (!value) {
-                checkbox.checked = false;
-            }
-        }
-    }
-}
-
-function toggleOptions() {
-    const type = document.getElementById("questionType").value;
-    const mcqOptions = document.getElementById("mcqOptions");
-    const singleAnswer = document.getElementById("correctAnswerContainer");
-    const multiAnswer = document.getElementById("multipleCorrectContainer");
-    const correctAnswer = document.getElementById("correctAnswer");
-    const hint = document.getElementById("correctAnswerHint");
-
-    mcqOptions.style.display = "none";
-    singleAnswer.style.display = "none";
-    multiAnswer.style.display = "none";
-
-    ['opt1', 'opt2', 'opt3', 'opt4'].forEach((id, i) => {
-        const opt = document.getElementById(id);
-        opt.required = false;
-        opt.placeholder = i < 2 ? `Option ${i+1}` : `Option ${i+1} (Optional)`;
-    });
-
-    clearErrors();
-
-    if (type === "TrueFalse") {
-        singleAnswer.style.display = "block";
-        correctAnswer.placeholder = "Enter 'True' or 'False'";
-        hint.textContent = "Enter 'True' or 'False'";
-        correctAnswer.required = true;
-    } else {
-        mcqOptions.style.display = "block";
-        document.getElementById('opt1').required = true;
-        document.getElementById('opt2').required = true;
-
-        if (type === "MultipleSelect") {
-            multiAnswer.style.display = "block";
-            correctAnswer.required = false;
-            updateCorrectOptionLabels();
-        } else {
-            singleAnswer.style.display = "block";
-            correctAnswer.placeholder = "Correct Answer";
-            hint.textContent = "Correct answer must match an option exactly.";
-            correctAnswer.required = true;
-            if (type === 'Code') {
-                hint.textContent = "Enter expected output, must match an option.";
-            }
-        }
-    }
-}
-
-function updateSubmitButton() {
-    const form = document.getElementById('questionForm');
-    document.getElementById('submitBtn').disabled = !form.checkValidity();
-}
-
-function resetQuestionForm() {
-    document.getElementById('questionForm').reset();
-    clearErrors();
-    toggleOptions();
-}
-
-function syncCourseDropdowns() {
-    const addNew = document.getElementById('courseSelectAddNew');
-    const showAll = document.getElementById('courseSelectShowAll');
-    addNew.addEventListener('change', () => showAll.value = addNew.value);
-    showAll.addEventListener('change', () => addNew.value = showAll.value);
-}
-
-// Scroll Indicator
-function scrollToShowQuestions(){document.getElementById("showQuestionsPanel").scrollIntoView({behavior:"smooth"});}
-function scrollToAddQuestion(){document.getElementById("addQuestionPanel").scrollIntoView({behavior:"smooth"});}
-function updateScrollIndicator(){
-    const indicator = document.getElementById("scrollIndicator");
-    const add = document.getElementById("addQuestionPanel");
-    const show = document.getElementById("showQuestionsPanel");
-    if(!indicator || !add || !show) return;
-    const addTop = Math.abs(add.getBoundingClientRect().top);
-    const showTop = Math.abs(show.getBoundingClientRect().top);
-    if(addTop < showTop){indicator.innerHTML='<i class="fas fa-arrow-down"></i>'; indicator.onclick = scrollToShowQuestions;}
-    else{indicator.innerHTML='<i class="fas fa-arrow-up"></i>'; indicator.onclick = scrollToAddQuestion;}
-}
-
-// Initialize on page load
-document.addEventListener("DOMContentLoaded", () => {
-    toggleOptions();
-    syncCourseDropdowns();
-    updateCorrectOptionLabels(); // Initialize checkbox values on page load
-
-    // Attach event listeners to each option textarea
-    for (let i = 1; i <= 4; i++) {
-        const optInput = document.getElementById(`opt${i}`);
-        if (optInput) {
-            optInput.addEventListener('input', updateCorrectOptionLabels);
-        }
-    }
-
-
-    document.querySelectorAll('.correct-checkbox').forEach(cb => {
-        cb.addEventListener('change', function() {
-            const selectedCount = document.querySelectorAll('.correct-checkbox:checked').length;
-            if (selectedCount > 2) {
-                this.checked = false;
-                showModal('Too Many Selections', 'You can only select 2 correct answers.');
-            }
+    // Add animation to question cards
+    document.addEventListener('DOMContentLoaded', function() {
+        const questionCards = document.querySelectorAll('.question-card');
+        questionCards.forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+            card.style.animation = 'fadeInUp 0.3s ease forwards';
+            card.style.opacity = '0';
         });
+        
+        // Add CSS animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
     });
-
-    window.onclick = (event) => {
-        const modal = document.getElementById('validationModal');
-        if (event.target == modal) closeModal();
-    };
-
-    updateScrollIndicator();
-    window.addEventListener("scroll", updateScrollIndicator);
-    window.addEventListener("resize", updateScrollIndicator);
-});
 </script>
+
+<%!
+// Helper method to check if an array contains a specific answer
+private boolean containsAnswer(String[] correctAnswers, String option) {
+    if (correctAnswers == null || option == null) return false;
+    for (String correctAnswer : correctAnswers) {
+        if (correctAnswer.trim().equals(option.trim())) {
+            return true;
+        }
+    }
+    return false;
+}
+%>
