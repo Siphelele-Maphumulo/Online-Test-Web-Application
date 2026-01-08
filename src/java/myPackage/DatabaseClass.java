@@ -1651,9 +1651,16 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
             Questions question;
             while(rs.next()){
                question = new Questions(
-                       rs.getInt(1),rs.getString(3),rs.getString(4),rs.getString(5),
-                       rs.getString(6),rs.getString(7),rs.getString(8),rs.getString(2)
-                    ); 
+                       rs.getInt("question_id"),
+                       rs.getString("question"),
+                       rs.getString("opt1"),
+                       rs.getString("opt2"),
+                       rs.getString("opt3"),
+                       rs.getString("opt4"),
+                       rs.getString("correct"),
+                       rs.getString("course_name"),
+                       rs.getString("question_type")
+               );
                list.add(question);
             }
             pstm.close();
@@ -1880,13 +1887,14 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
             String status = getAnswerStatus(ans == null ? "" : ans, correct); // Handle null answers
 
             PreparedStatement pstm = conn.prepareStatement(
-                "INSERT INTO answers (exam_id, question, answer, correct_answer, status) VALUES (?, ?, ?, ?, ?)"
+                "INSERT INTO answers (exam_id, question_id, question, answer, correct_answer, status) VALUES (?, ?, ?, ?, ?, ?)"
             );
             pstm.setInt(1, eId); // Exam ID
-            pstm.setString(2, question); // Question text
-            pstm.setString(3, ans == null ? "N/A" : ans); // User's answer (or "N/A" if unanswered)
-            pstm.setString(4, correct); // Correct answer
-            pstm.setString(5, status); // Status (correct/incorrect)
+            pstm.setInt(2, qid); // Question ID
+            pstm.setString(3, question); // Question text
+            pstm.setString(4, ans == null ? "N/A" : ans); // User's answer (or "N/A" if unanswered)
+            pstm.setString(5, correct); // Correct answer
+            pstm.setString(6, status); // Status (correct/incorrect)
             pstm.executeUpdate();
         } catch (SQLException ex) {
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
@@ -2362,22 +2370,32 @@ public ArrayList<Exams> getAllExamsWithResults() {
 
 
 private int getObtMarks(int examId, int tMarks, int size) {
-    int correctAnswersCount = 0;
+    float totalObtainedMarks = 0;
     try {
-        PreparedStatement pstm = conn.prepareStatement("SELECT COUNT(answer_id) FROM answers WHERE exam_id=? AND status='correct'");
+        String sql = "SELECT a.status, q.question_type " +
+                     "FROM answers a " +
+                     "JOIN questions q ON a.question_id = q.question_id " +
+                     "WHERE a.exam_id = ?";
+        PreparedStatement pstm = conn.prepareStatement(sql);
         pstm.setInt(1, examId);
         ResultSet rs = pstm.executeQuery();
 
-        if (rs.next()) {
-            correctAnswersCount = rs.getInt(1);
+        float marksPerQuestion = (size > 0) ? (float) tMarks / size : 0;
+
+        while (rs.next()) {
+            String status = rs.getString("status");
+            String questionType = rs.getString("question_type");
+
+            if ("correct".equals(status)) {
+                if ("MultipleSelect".equalsIgnoreCase(questionType)) {
+                    totalObtainedMarks += marksPerQuestion * 2;
+                } else {
+                    totalObtainedMarks += marksPerQuestion;
+                }
+            }
         }
         
-        // Calculate marks per question (float to avoid integer division)
-        float marksPerQuestion = (size > 0) ? (float) tMarks / size : 0;
-        float obtainedMarks = correctAnswersCount * marksPerQuestion;
-        
-        // Round to nearest integer
-        return Math.round(obtainedMarks);
+        return Math.round(totalObtainedMarks);
         
     } catch (SQLException ex) {
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);

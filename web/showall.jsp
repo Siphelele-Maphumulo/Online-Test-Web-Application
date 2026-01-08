@@ -1,11 +1,13 @@
 <%@page import="java.util.ArrayList"%>
-
-
 <%@page import="myPackage.DatabaseClass"%>
+<%@page import="myPackage.classes.Questions"%>
+<%@page import="java.util.Arrays"%>
+<%@page import="java.util.HashSet"%>
+<%@page import="java.util.Set"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
 
-<% 
-myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+<%
+    myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 %>
 
 <!-- Modal for validation messages -->
@@ -34,6 +36,61 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         </div>
         <button class="toast-close" onclick="hideToast()">&times;</button>
     </div>
+</div>
+
+<div class="question-display-container">
+    <%
+        String courseName = request.getParameter("coursename");
+        if (courseName != null && !courseName.isEmpty()) {
+            ArrayList<Questions> questions = pDAO.getAllQuestions(courseName);
+            for (Questions q : questions) {
+    %>
+    <div class="question-card">
+        <div class="card-header">
+            <span><%= q.getQuestion() %></span>
+            <span><%= q.getQuestionType() %></span>
+        </div>
+        <div class="card-body">
+            <div class="options-grid">
+                <%
+                    String correctAnswer = q.getCorrect();
+                    Set<String> correctAnswers = new HashSet<>();
+                    if ("MultipleSelect".equalsIgnoreCase(q.getQuestionType()) && correctAnswer != null && !correctAnswer.isEmpty()) {
+                        correctAnswers.addAll(Arrays.asList(correctAnswer.split("\\|")));
+                    }
+                %>
+                <% if (q.getOpt1() != null && !q.getOpt1().isEmpty()) { %>
+                    <div class="option <%= "MultipleSelect".equalsIgnoreCase(q.getQuestionType()) ? (correctAnswers.contains(q.getOpt1()) ? "option-correct-multiple" : "") : (q.getOpt1().equals(correctAnswer) ? "option-correct" : "") %>">
+                        Option A: <%= q.getOpt1() %>
+                    </div>
+                <% } %>
+                <% if (q.getOpt2() != null && !q.getOpt2().isEmpty()) { %>
+                    <div class="option <%= "MultipleSelect".equalsIgnoreCase(q.getQuestionType()) ? (correctAnswers.contains(q.getOpt2()) ? "option-correct-multiple" : "") : (q.getOpt2().equals(correctAnswer) ? "option-correct" : "") %>">
+                        Option B: <%= q.getOpt2() %>
+                    </div>
+                <% } %>
+                <% if (q.getOpt3() != null && !q.getOpt3().isEmpty()) { %>
+                    <div class="option <%= "MultipleSelect".equalsIgnoreCase(q.getQuestionType()) ? (correctAnswers.contains(q.getOpt3()) ? "option-correct-multiple" : "") : (q.getOpt3().equals(correctAnswer) ? "option-correct" : "") %>">
+                        Option C: <%= q.getOpt3() %>
+                    </div>
+                <% } %>
+                <% if (q.getOpt4() != null && !q.getOpt4().isEmpty()) { %>
+                    <div class="option <%= "MultipleSelect".equalsIgnoreCase(q.getQuestionType()) ? (correctAnswers.contains(q.getOpt4()) ? "option-correct-multiple" : "") : (q.getOpt4().equals(correctAnswer) ? "option-correct" : "") %>">
+                        Option D: <%= q.getOpt4() %>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+        <div class="card-footer">
+            <small>Question ID: <%= q.getQuestionId() %></small>
+            <a href="edit_question.jsp?qid=<%= q.getQuestionId() %>">Edit</a>
+            <a href="controller.jsp?page=questions&operation=del&qid=<%= q.getQuestionId() %>&coursename=<%= courseName %>">Delete</a>
+        </div>
+    </div>
+    <%
+            }
+        }
+    %>
 </div>
 
 <style>

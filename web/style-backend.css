@@ -553,3 +553,10 @@ body {
     text-align: left;
 }
 
+
+.option-correct,
+.option-correct-multiple {
+    background-color: #d4edda; /* Light green for correct */
+    border-left: 5px solid #28a745; /* Green border */
+    font-weight: bold;
+}
