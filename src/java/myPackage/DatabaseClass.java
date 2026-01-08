@@ -2111,11 +2111,32 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
     }
 
 private String getAnswerStatus(String ans, String correct) {
-    if (ans.equals(correct)) {
-        return "correct";
-    } else {
+    if (ans == null || correct == null) {
         return "incorrect";
     }
+
+    // For multi-select questions, the correct answer is stored with "|"
+    if (correct.contains("|")) {
+        // Normalize both strings by splitting, sorting, and rejoining.
+        String[] ansParts = ans.split("\\|");
+        String[] correctParts = correct.split("\\|");
+        java.util.Arrays.sort(ansParts);
+        java.util.Arrays.sort(correctParts);
+
+        String normalizedAns = String.join("|", ansParts);
+        String normalizedCorrect = String.join("|", correctParts);
+
+        if (normalizedAns.equals(normalizedCorrect)) {
+            return "correct";
+        }
+    } else {
+        // For single-answer questions, a direct comparison is sufficient.
+        if (ans.equals(correct)) {
+            return "correct";
+        }
+    }
+
+    return "incorrect";
 }
 
 
