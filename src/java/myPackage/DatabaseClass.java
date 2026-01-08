@@ -2455,6 +2455,35 @@ public Exams getResultByExamId(int examId) {
 }
 
 
+    public void deleteExamResults(String[] examIds) {
+        try {
+            ensureConnection();
+            conn.setAutoCommit(false);
+            String deleteAnswersSql = "DELETE FROM answers WHERE exam_id = ?";
+            String deleteExamSql = "DELETE FROM exams WHERE exam_id = ?";
+            try (PreparedStatement psAnswers = conn.prepareStatement(deleteAnswersSql);
+                 PreparedStatement psExams = conn.prepareStatement(deleteExamSql)) {
+                for (String examIdStr : examIds) {
+                    int examId = Integer.parseInt(examIdStr);
+                    psAnswers.setInt(1, examId);
+                    psAnswers.addBatch();
+                    psExams.setInt(1, examId);
+                    psExams.addBatch();
+                }
+                psAnswers.executeBatch();
+                psExams.executeBatch();
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                LOGGER.log(Level.SEVERE, "Error bulk deleting exam results", e);
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in deleteExamResults", e);
+        }
+    }
+
 public boolean deleteExamResult(int examId) {
     try {
         ensureConnection();
