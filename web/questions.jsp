@@ -1241,22 +1241,6 @@ function toggleOptions() {
     }
 }
 
-function updateCorrectOptionLabels() {
-    ['opt1', 'opt2', 'opt3', 'opt4'].forEach((id, i) => {
-        const input = document.getElementById(id);
-        const checkbox = document.getElementById(`correctOpt${i + 1}`);
-        const label = document.querySelector(`label[for="correctOpt${i + 1}"]`);
-        const value = input.value.trim();
-        
-        if (label) {
-            label.textContent = value || `Option ${i + 1}`;
-        }
-        checkbox.value = value;
-        checkbox.disabled = !value;
-        if (!value) checkbox.checked = false;
-    });
-}
-
 function updateSubmitButton() {
     const form = document.getElementById('questionForm');
     document.getElementById('submitBtn').disabled = !form.checkValidity();
@@ -1266,7 +1250,6 @@ function resetQuestionForm() {
     document.getElementById('questionForm').reset();
     clearErrors();
     toggleOptions();
-    updateCorrectOptionLabels();
 }
 
 function syncCourseDropdowns() {
@@ -1295,9 +1278,25 @@ document.addEventListener("DOMContentLoaded", () => {
     toggleOptions();
     syncCourseDropdowns();
 
-    ['opt1', 'opt2', 'opt3', 'opt4'].forEach(id => {
-        document.getElementById(id).addEventListener('input', updateCorrectOptionLabels);
-    });
+    // Attach event listeners to each option textarea
+    for (let i = 1; i <= 4; i++) {
+        const optInput = document.getElementById(`opt${i}`);
+        const checkbox = document.getElementById(`correctOpt${i}`);
+        const label = document.querySelector(`label[for="correctOpt${i}"]`);
+
+        if (optInput && checkbox && label) {
+            optInput.addEventListener('input', () => {
+                const value = optInput.value.trim();
+                label.textContent = value || `Option ${i}`;
+                checkbox.value = value;
+                checkbox.disabled = !value;
+                if (!value) {
+                    checkbox.checked = false;
+                }
+            });
+        }
+    }
+
 
     document.querySelectorAll('.correct-checkbox').forEach(cb => {
         cb.addEventListener('change', function() {
