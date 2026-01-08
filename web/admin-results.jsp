@@ -1533,12 +1533,45 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     // Call debug function on load
     setTimeout(debugButtonData, 1000);
 
+    // Event delegation for single-record actions
+    document.getElementById('resultsTableBody').addEventListener('click', function(e) {
+        const target = e.target.closest('a.btn-primary, button.delete-btn, button.edit-btn');
+        if (!target) return;
+
+        if (target.classList.contains('delete-btn') || target.classList.contains('edit-btn') || target.classList.contains('btn-primary')) {
+            e.preventDefault();
+            const examId = target.dataset.examId;
+            if (target.classList.contains('delete-btn')) {
+                const studentName = target.dataset.studentName;
+                const courseName = target.dataset.courseName;
+                showDeleteModal(examId, studentName, courseName);
+            } else if (target.classList.contains('edit-btn')) {
+                const row = target.closest('tr');
+                enableEditMode(row, examId);
+            } else if (target.href) {
+                window.location.href = target.href;
+            }
+        }
+    });
+
     // Select All functionality
     document.getElementById('selectAll').addEventListener('change', function(e) {
         const checkboxes = document.querySelectorAll('input[name="examIds"]');
         checkboxes.forEach(checkbox => {
             checkbox.checked = e.target.checked;
         });
+    });
+
+    document.getElementById('bulkDeleteForm').addEventListener('submit', function(e) {
+        const selected = document.querySelectorAll('input[name="examIds"]:checked').length;
+        if (selected === 0) {
+            alert('Please select at least one exam result to delete.');
+            e.preventDefault();
+            return;
+        }
+        if (!confirm('Are you sure you want to delete ' + selected + ' exam result(s)?')) {
+            e.preventDefault();
+        }
     });
 </script>
 
