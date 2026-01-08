@@ -643,7 +643,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             <%
                     } else {
             %>
-                <button type="submit" class="btn btn-error" onclick="return confirm('Are you sure you want to delete selected questions?');">Delete Selected</button>
+                <button type="button" id="bulkDeleteBtn" class="btn btn-error">Delete Selected</button>
                 <br><br>
             <%
                         for (int i = 0; i < list.size(); i++) {
@@ -692,8 +692,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         </a>
 
                         <a href="controller.jsp?page=questions&operation=del&qid=<%= question.getQuestionId() %>&coursename=<%= courseName %>"
-                           onclick="return confirm('Are you sure you want to delete this question? This action cannot be undone.');" 
-                           class="btn btn-error" style="font-size: 13px; padding: 8px 16px;">
+                           class="btn btn-error single-delete-btn" style="font-size: 13px; padding: 8px 16px;">
                             <i class="fas fa-trash"></i>
                             Delete
                         </a>
@@ -808,29 +807,6 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             }
         `;
         document.head.appendChild(style);
-    });
-    
-    // Add confirmation for delete actions
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.btn-error') || e.target.closest('a[onclick*="confirm"]')) {
-            const btn = e.target.closest('.btn-error') || e.target.closest('a[onclick*="confirm"]');
-            if (btn.classList.contains('loading')) {
-                e.preventDefault();
-                return false;
-            }
-            
-            // Add loading state
-            btn.classList.add('loading');
-            btn.disabled = true;
-            
-            // Remove loading state after 3 seconds if still on page
-            setTimeout(() => {
-                if (btn && btn.classList.contains('loading')) {
-                    btn.classList.remove('loading');
-                    btn.disabled = false;
-                }
-            }, 3000);
-        }
     });
 </script>
 
