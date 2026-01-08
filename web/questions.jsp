@@ -1,4 +1,6 @@
 <%@page import="java.util.ArrayList"%>
+
+
 <%@page import="myPackage.DatabaseClass"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
 
@@ -954,11 +956,11 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                                 </div>
                                 <div class="option-container">
                                     <textarea name="opt3" class="option-input" placeholder="Third Option" id="opt3" rows="2"></textarea>
-                                    <div class="error-message" id="opt3Error"></div>
+                                    <div class="error-message" id="opt3Error">Third option is required</div>
                                 </div>
                                 <div class="option-container">
                                     <textarea name="opt4" class="option-input" placeholder="Fourth Option" id="opt4" rows="2"></textarea>
-                                    <div class="error-message" id="opt4Error"></div>
+                                    <div class="error-message" id="opt4Error">Fourth option is required</div>
                                 </div>
                             </div>
                         </div>
@@ -981,19 +983,19 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         <div id="multipleCorrectContainer" style="display: none;">
                             <div class="options-grid">
                                 <div class="form-check">
-                                    <input type="checkbox" id="correctOpt1" name="correctOpt1" value="" class="form-check-input correct-checkbox">
+                                    <input type="checkbox" id="correctOpt1" name="correctOpt1" value="1" class="form-check-input correct-checkbox">
                                     <label for="correctOpt1" class="form-check-label">Option 1</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" id="correctOpt2" name="correctOpt2" value="" class="form-check-input correct-checkbox">
+                                    <input type="checkbox" id="correctOpt2" name="correctOpt2" value="2" class="form-check-input correct-checkbox">
                                     <label for="correctOpt2" class="form-check-label">Option 2</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" id="correctOpt3" name="correctOpt3" value="" class="form-check-input correct-checkbox">
+                                    <input type="checkbox" id="correctOpt3" name="correctOpt3" value="3" class="form-check-input correct-checkbox">
                                     <label for="correctOpt3" class="form-check-label">Option 3</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" id="correctOpt4" name="correctOpt4" value="" class="form-check-input correct-checkbox">
+                                    <input type="checkbox" id="correctOpt4" name="correctOpt4" value="4" class="form-check-input correct-checkbox">
                                     <label for="correctOpt4" class="form-check-label">Option 4</label>
                                 </div>
                             </div>
@@ -1332,20 +1334,22 @@ function toggleOptions() {
 }
 
 function updateCorrectOptionLabels() {
-    ['opt1','opt2','opt3','opt4'].forEach((id,i)=>{
-        const val = document.getElementById(id).value || `Option ${i+1}`;
-        const label = document.querySelector(`label[for="correctOpt${i+1}"]`);
-        const checkbox = document.getElementById(`correctOpt${i+1}`);
+    ['opt1','opt2','opt3','opt4'].forEach((id, i) => {
+        const val = document.getElementById(id).value || `Option ${i + 1}`;
+        const label = document.querySelector(`label[for="correctOpt${i + 1}"]`);
         if (label) label.textContent = val;
-        if (checkbox) checkbox.value = val;
     });
 }
 
 function updateMultipleCorrectAnswer() {
-    const selectedOptions = Array.from(document.querySelectorAll('.correct-checkbox:checked'))
-        .map(cb => cb.value.trim())
+    const selected = Array.from(document.querySelectorAll('.correct-checkbox:checked'))
+        .map(cb => {
+            const optIndex = cb.value;
+            return document.getElementById(`opt${optIndex}`).value.trim();
+        })
         .filter(v => v !== '');
-    document.getElementById('multipleCorrectAnswer').value = selectedOptions.join('|');
+
+    document.getElementById('multipleCorrectAnswer').value = selected.join('|');
 }
 
 function updateSubmitButton() {

@@ -1,3 +1,6 @@
+
+<!--This main page-->
+
 <%@page import="myPackage.classes.User"%>
 <%@page import="java.util.ArrayList"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
