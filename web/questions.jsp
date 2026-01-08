@@ -983,24 +983,22 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         <div id="multipleCorrectContainer" style="display: none;">
                             <div class="options-grid">
                                 <div class="form-check">
-                                    <input type="checkbox" id="correctOpt1" name="correctOpt1" value="1" class="form-check-input correct-checkbox">
+                                    <input type="checkbox" id="correctOpt1" class="form-check-input correct-checkbox">
                                     <label for="correctOpt1" class="form-check-label">Option 1</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" id="correctOpt2" name="correctOpt2" value="2" class="form-check-input correct-checkbox">
+                                    <input type="checkbox" id="correctOpt2" class="form-check-input correct-checkbox">
                                     <label for="correctOpt2" class="form-check-label">Option 2</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" id="correctOpt3" name="correctOpt3" value="3" class="form-check-input correct-checkbox">
+                                    <input type="checkbox" id="correctOpt3" class="form-check-input correct-checkbox">
                                     <label for="correctOpt3" class="form-check-label">Option 3</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" id="correctOpt4" name="correctOpt4" value="4" class="form-check-input correct-checkbox">
+                                    <input type="checkbox" id="correctOpt4" class="form-check-input correct-checkbox">
                                     <label for="correctOpt4" class="form-check-label">Option 4</label>
                                 </div>
                             </div>
-                            <!-- Hidden field that will store the combined correct answers -->
-                            <input type="hidden" id="multipleCorrectAnswer" name="correctMultiple">
                             <div class="error-message" id="multipleCorrectError">Select exactly 2 correct answers</div>
                             <small id="multipleCorrectHint" class="form-hint">Select exactly 2 correct answers</small>
                         </div>
@@ -1111,101 +1109,46 @@ function validateQuestionForm() {
         if (!correctAnswer) {
             showError('correctAnswer', 'correctAnswerError', 'Correct answer is required');
             isValid = false;
-        } else if (correctAnswer !== "True" && correctAnswer !== "False") {
+        } else if (correctAnswer.toLowerCase() !== "true" && correctAnswer.toLowerCase() !== "false") {
             showError('correctAnswer', 'correctAnswerError', 'Correct answer must be "True" or "False"');
             isValid = false;
         }
         
     } else if (type === "MultipleSelect") {
-        // Check options
-        const opt1 = document.getElementById("opt1").value.trim();
-        const opt2 = document.getElementById("opt2").value.trim();
+        const opts = ['opt1', 'opt2', 'opt3', 'opt4'].map(id => document.getElementById(id).value.trim());
+        if (!opts[0]) { showError('opt1', 'opt1Error', 'First option is required'); isValid = false; }
+        if (!opts[1]) { showError('opt2', 'opt2Error', 'Second option is required'); isValid = false; }
         
-        if (!opt1) {
-            showError('opt1', 'opt1Error', 'First option is required');
-            isValid = false;
-        }
-        if (!opt2) {
-            showError('opt2', 'opt2Error', 'Second option is required');
+        const filledOpts = opts.filter(Boolean);
+        if (new Set(filledOpts).size !== filledOpts.length) {
+            showModal('Duplicate Options', 'Options must be unique.');
             isValid = false;
         }
         
-        // Check for duplicate options
-        const options = [opt1, opt2];
-        if (document.getElementById("opt3").value.trim()) options.push(document.getElementById("opt3").value.trim());
-        if (document.getElementById("opt4").value.trim()) options.push(document.getElementById("opt4").value.trim());
-        
-        const uniqueOptions = [...new Set(options)];
-        if (uniqueOptions.length !== options.length) {
-            showModal('Duplicate Options', 'Options must be unique. Please provide different values for each option.');
-            isValid = false;
-        }
-        
-        // Check correct answers
-        const selectedCheckboxes = document.querySelectorAll('.correct-checkbox:checked');
-        const selectedCount = selectedCheckboxes.length;
-        
+        const selectedCount = document.querySelectorAll('.correct-checkbox:checked').length;
         if (selectedCount !== 2) {
             showError('multipleCorrectContainer', 'multipleCorrectError', 'Select exactly 2 correct answers');
             isValid = false;
-        } else {
-            // Validate that selected answers match actual options
-            const selectedValues = Array.from(selectedCheckboxes).map(cb => cb.value.trim());
-            const allOptions = [opt1, opt2, 
-                               document.getElementById("opt3").value.trim(),
-                               document.getElementById("opt4").value.trim()].filter(opt => opt !== "");
-            
-            for (const selectedValue of selectedValues) {
-                if (!allOptions.includes(selectedValue)) {
-                    showModal('Invalid Selection', 'Selected correct answer does not match any of the provided options.');
-                    isValid = false;
-                    break;
-                }
-            }
-            
-            updateMultipleCorrectAnswer();
         }
         
     } else { // MCQ or Code
-        // Check required options
-        const opt1 = document.getElementById("opt1").value.trim();
-        const opt2 = document.getElementById("opt2").value.trim();
+        const opts = ['opt1', 'opt2', 'opt3', 'opt4'].map(id => document.getElementById(id).value.trim());
+        if (!opts[0]) { showError('opt1', 'opt1Error', 'First option is required'); isValid = false; }
+        if (!opts[1]) { showError('opt2', 'opt2Error', 'Second option is required'); isValid = false; }
         
-        if (!opt1) {
-            showError('opt1', 'opt1Error', 'First option is required');
-            isValid = false;
-        }
-        if (!opt2) {
-            showError('opt2', 'opt2Error', 'Second option is required');
+        const filledOpts = opts.filter(Boolean);
+        if (new Set(filledOpts).size !== filledOpts.length) {
+            showModal('Duplicate Options', 'Options must be unique.');
             isValid = false;
         }
         
-        // Check for duplicate options
-        const options = [opt1, opt2];
-        if (document.getElementById("opt3").value.trim()) options.push(document.getElementById("opt3").value.trim());
-        if (document.getElementById("opt4").value.trim()) options.push(document.getElementById("opt4").value.trim());
-        
-        const uniqueOptions = [...new Set(options)];
-        if (uniqueOptions.length !== options.length) {
-            showModal('Duplicate Options', 'Options must be unique. Please provide different values for each option.');
-            isValid = false;
-        }
-        
-        // Check correct answer
         const correctAnswer = document.getElementById("correctAnswer").value.trim();
         if (!correctAnswer) {
             showError('correctAnswer', 'correctAnswerError', 'Correct answer is required');
             isValid = false;
-        } else {
-            // Check if correct answer matches one of the options
-            const allOptions = [opt1, opt2, 
-                               document.getElementById("opt3").value.trim(),
-                               document.getElementById("opt4").value.trim()].filter(opt => opt !== "");
-            
-            if (!allOptions.includes(correctAnswer)) {
-                showModal('Invalid Correct Answer', 'Correct answer must match one of the provided options.');
-                isValid = false;
-            }
+        } else if (!filledOpts.includes(correctAnswer)) {
+            showModal('Invalid Correct Answer', 'Correct answer must match one of the provided options.');
+            isValid = false;
         }
     }
     
@@ -1216,169 +1159,119 @@ function showError(elementId, errorId, message) {
     const element = document.getElementById(elementId);
     if (element) {
         element.classList.add('input-error');
-        element.parentElement.classList.add('has-error');
+        const container = element.closest('.option-container') || element.parentElement;
+        container.classList.add('has-error');
     }
     
-    if (errorId) {
-        const errorElement = document.getElementById(errorId);
-        if (errorElement) {
-            errorElement.textContent = message;
-            errorElement.style.display = 'block';
-        }
+    const errorElement = document.getElementById(errorId);
+    if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
     }
 }
 
 function clearErrors() {
-    // Remove error classes
-    document.querySelectorAll('.input-error').forEach(el => {
-        el.classList.remove('input-error');
-        el.parentElement.classList.remove('has-error');
-    });
-    
-    // Hide error messages
-    document.querySelectorAll('.error-message').forEach(el => {
-        el.style.display = 'none';
-    });
+    document.querySelectorAll('.input-error, .has-error').forEach(el => el.classList.remove('input-error', 'has-error'));
+    document.querySelectorAll('.error-message').forEach(el => el.style.display = 'none');
 }
 
 function validateAndSubmit() {
     if (validateQuestionForm()) {
-        // Show loading state
+        const type = document.getElementById("questionType").value;
+        if (type === "MultipleSelect") {
+            const selectedAnswers = Array.from(document.querySelectorAll('.correct-checkbox:checked'))
+                .map(cb => cb.value)
+                .join('|');
+            document.getElementById('correctAnswer').value = selectedAnswers;
+        }
+
         const submitBtn = document.getElementById('submitBtn');
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding Question...';
         submitBtn.disabled = true;
-        
-        // Submit the form
         document.getElementById('questionForm').submit();
     } else {
-        // Focus on first error
         const firstError = document.querySelector('.input-error');
         if (firstError) firstError.focus();
     }
 }
 
 function toggleOptions() {
-    const questionType = document.getElementById("questionType").value;
+    const type = document.getElementById("questionType").value;
     const mcqOptions = document.getElementById("mcqOptions");
-    const correctAnswerContainer = document.getElementById("correctAnswerContainer");
-    const multipleCorrectContainer = document.getElementById("multipleCorrectContainer");
+    const singleAnswer = document.getElementById("correctAnswerContainer");
+    const multiAnswer = document.getElementById("multipleCorrectContainer");
     const correctAnswer = document.getElementById("correctAnswer");
-    const correctAnswerHint = document.getElementById("correctAnswerHint");
-    const multipleCorrectHint = document.getElementById("multipleCorrectHint");
+    const hint = document.getElementById("correctAnswerHint");
 
-    // Clear errors when changing type
+    mcqOptions.style.display = "none";
+    singleAnswer.style.display = "none";
+    multiAnswer.style.display = "none";
+
+    ['opt1', 'opt2', 'opt3', 'opt4'].forEach((id, i) => {
+        const opt = document.getElementById(id);
+        opt.required = false;
+        opt.placeholder = i < 2 ? `Option ${i+1}` : `Option ${i+1} (Optional)`;
+    });
+
     clearErrors();
 
-    if (questionType === "TrueFalse") {
-        mcqOptions.style.display = "none";
-        correctAnswerContainer.style.display = "block";
-        multipleCorrectContainer.style.display = "none";
-        correctAnswer.value = "";
+    if (type === "TrueFalse") {
+        singleAnswer.style.display = "block";
         correctAnswer.placeholder = "Enter 'True' or 'False'";
-        correctAnswerHint.textContent = "Enter 'True' or 'False'";
+        hint.textContent = "Enter 'True' or 'False'";
         correctAnswer.required = true;
-
-        ['opt1','opt2','opt3','opt4'].forEach(id => {
-            const opt = document.getElementById(id);
-            opt.value = '';
-            opt.required = false;
-        });
-
-    } else if (questionType === "MultipleSelect") {
-        mcqOptions.style.display = "block";
-        correctAnswerContainer.style.display = "none";
-        multipleCorrectContainer.style.display = "block";
-        multipleCorrectHint.textContent = "Select exactly 2 correct answers";
-        correctAnswer.required = false;
-
-        ['opt1','opt2'].forEach(id => document.getElementById(id).required = true);
-        ['opt3','opt4'].forEach(id => document.getElementById(id).required = false);
-
-        updateCorrectOptionLabels();
-
-    } else if (questionType === "Code") {
-        mcqOptions.style.display = "block";
-        correctAnswerContainer.style.display = "block";
-        multipleCorrectContainer.style.display = "none";
-        correctAnswer.placeholder = "Expected output or answer";
-        correctAnswerHint.textContent = "Enter the expected output or correct answer for the code snippet";
-        correctAnswer.required = true;
-
-        ['opt1','opt2'].forEach(id => document.getElementById(id).required = true);
-        ['opt3','opt4'].forEach(id => document.getElementById(id).required = false);
-
-        document.getElementById('opt1').placeholder = "Option 1 (output interpretation)";
-        document.getElementById('opt2').placeholder = "Option 2 (output interpretation)";
-        document.getElementById('opt3').placeholder = "Option 3 (output interpretation)";
-        document.getElementById('opt4').placeholder = "Option 4 (output interpretation)";
-
     } else {
-        // Default Multiple Choice
         mcqOptions.style.display = "block";
-        correctAnswerContainer.style.display = "block";
-        multipleCorrectContainer.style.display = "none";
-        correctAnswer.placeholder = "Correct Answer";
-        correctAnswerHint.textContent = "Enter the correct answer (must match one of the options exactly)";
-        correctAnswer.required = true;
+        document.getElementById('opt1').required = true;
+        document.getElementById('opt2').required = true;
 
-        ['opt1','opt2'].forEach(id => document.getElementById(id).required = true);
-        ['opt3','opt4'].forEach(id => document.getElementById(id).required = false);
-
-        document.getElementById('opt1').placeholder = "First Option";
-        document.getElementById('opt2').placeholder = "Second Option";
-        document.getElementById('opt3').placeholder = "Third Option";
-        document.getElementById('opt4').placeholder = "Fourth Option";
+        if (type === "MultipleSelect") {
+            multiAnswer.style.display = "block";
+            correctAnswer.required = false;
+            updateCorrectOptionLabels();
+        } else {
+            singleAnswer.style.display = "block";
+            correctAnswer.placeholder = "Correct Answer";
+            hint.textContent = "Correct answer must match an option exactly.";
+            correctAnswer.required = true;
+            if (type === 'Code') {
+                hint.textContent = "Enter expected output, must match an option.";
+            }
+        }
     }
-
-    updateSubmitButton();
 }
 
 function updateCorrectOptionLabels() {
-    ['opt1','opt2','opt3','opt4'].forEach((id, i) => {
-        const val = document.getElementById(id).value || `Option ${i + 1}`;
-        const label = document.querySelector(`label[for="correctOpt${i + 1}"]`);
-        if (label) label.textContent = val;
+    ['opt1', 'opt2', 'opt3', 'opt4'].forEach((id, i) => {
+        const input = document.getElementById(id);
+        const checkbox = document.getElementById(`correctOpt${i + 1}`);
+        const label = checkbox.nextElementSibling;
+        const value = input.value.trim();
+
+        label.textContent = value || `Option ${i + 1}`;
+        checkbox.value = value;
+        checkbox.disabled = !value;
+        if (!value) checkbox.checked = false;
     });
-}
-
-function updateMultipleCorrectAnswer() {
-    const selected = Array.from(document.querySelectorAll('.correct-checkbox:checked'))
-        .map(cb => {
-            const optIndex = cb.value;
-            return document.getElementById(`opt${optIndex}`).value.trim();
-        })
-        .filter(v => v !== '');
-
-    document.getElementById('multipleCorrectAnswer').value = selected.join('|');
 }
 
 function updateSubmitButton() {
     const form = document.getElementById('questionForm');
-    const submitBtn = document.getElementById('submitBtn');
-    let isValid = form.checkValidity();
-
-    if (document.getElementById("questionType").value === "MultipleSelect") {
-        const selectedCount = document.querySelectorAll('.correct-checkbox:checked').length;
-        if (selectedCount !== 2) isValid = false;
-    }
-
-    submitBtn.disabled = !isValid;
+    document.getElementById('submitBtn').disabled = !form.checkValidity();
 }
 
 function resetQuestionForm() {
     document.getElementById('questionForm').reset();
-    ['opt1','opt2','opt3','opt4'].forEach((id,i)=>{
-        document.getElementById(id).placeholder = ["First Option","Second Option","Third Option","Fourth Option"][i];
-    });
     clearErrors();
     toggleOptions();
+    updateCorrectOptionLabels();
 }
 
 function syncCourseDropdowns() {
     const addNew = document.getElementById('courseSelectAddNew');
     const showAll = document.getElementById('courseSelectShowAll');
-    addNew.addEventListener('change', ()=> showAll.value = addNew.value);
-    showAll.addEventListener('change', ()=> addNew.value = showAll.value);
+    addNew.addEventListener('change', () => showAll.value = addNew.value);
+    showAll.addEventListener('change', () => addNew.value = showAll.value);
 }
 
 // Scroll Indicator
@@ -1396,59 +1289,31 @@ function updateScrollIndicator(){
 }
 
 // Initialize on page load
-document.addEventListener("DOMContentLoaded",()=>{
+document.addEventListener("DOMContentLoaded", () => {
     toggleOptions();
-    
-    // Add input listeners for real-time validation
-    ['opt1','opt2','opt3','opt4'].forEach(id=>{
-        const el=document.getElementById(id);
-        el?.addEventListener('input',()=>{
-            updateCorrectOptionLabels();
-            updateSubmitButton();
-            clearErrors();
-        });
-    });
-    
-    document.querySelectorAll('.correct-checkbox').forEach(cb=>{
-        cb.addEventListener('change', function(){
-            const selectedCount = document.querySelectorAll('.correct-checkbox:checked').length;
-            if(selectedCount > 2){
-                this.checked=false;
-                showModal('Too Many Selections', 'Select only 2 correct answers.');
-            }
-            updateMultipleCorrectAnswer();
-            updateSubmitButton();
-            clearErrors();
-        });
-    });
-    
-    document.getElementById('correctAnswer')?.addEventListener('input', () => {
-        updateSubmitButton();
-        clearErrors();
-    });
-    
-    document.getElementById('courseSelectAddNew')?.addEventListener('change', updateSubmitButton);
-    document.getElementById('questionText')?.addEventListener('input', updateSubmitButton);
-    
-    // Close modal when clicking outside
-    window.onclick = function(event) {
-        const modal = document.getElementById('validationModal');
-        if (event.target == modal) {
-            closeModal();
-        }
-    };
-    
-    // Initialize other functions
     syncCourseDropdowns();
-    updateSubmitButton();
+
+    ['opt1', 'opt2', 'opt3', 'opt4'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateCorrectOptionLabels);
+    });
+
+    document.querySelectorAll('.correct-checkbox').forEach(cb => {
+        cb.addEventListener('change', function() {
+            const selectedCount = document.querySelectorAll('.correct-checkbox:checked').length;
+            if (selectedCount > 2) {
+                this.checked = false;
+                showModal('Too Many Selections', 'You can only select 2 correct answers.');
+            }
+        });
+    });
+
+    window.onclick = (event) => {
+        const modal = document.getElementById('validationModal');
+        if (event.target == modal) closeModal();
+    };
+
     updateScrollIndicator();
     window.addEventListener("scroll", updateScrollIndicator);
     window.addEventListener("resize", updateScrollIndicator);
-    
-    // Check for session messages
-    if(sessionStorage.getItem('justAddedQuestion')==='true'){
-        window.scrollTo({top:0,behavior:'smooth'});
-        sessionStorage.removeItem('justAddedQuestion');
-    }
 });
 </script>
