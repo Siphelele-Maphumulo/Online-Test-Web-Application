@@ -2057,86 +2057,122 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
     }
     
     
-    public void insertAnswer(int eId, int qid, String question, String ans) {
-        try {
-            ensureConnection();
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Connection error in insertAnswer", e);
-            return;
-        }
-        
-        try {
-            String correct = getCorrectAnswer(qid); // Fetch correct answer
-            String status = getAnswerStatus(ans == null ? "" : ans, correct); // Handle null answers
-
-            PreparedStatement pstm = conn.prepareStatement(
-                "INSERT INTO answers (exam_id, question_id, question, answer, correct_answer, status) VALUES (?, ?, ?, ?, ?, ?)"
-            );
-            pstm.setInt(1, eId); // Exam ID
-            pstm.setInt(2, qid); // Question ID
-            pstm.setString(3, question); // Question text
-            pstm.setString(4, ans == null ? "N/A" : ans); // User's answer (or "N/A" if unanswered)
-            pstm.setString(5, correct); // Correct answer
-            pstm.setString(6, status); // Status (correct/incorrect)
-            pstm.executeUpdate();
-        } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-        }
+public void insertAnswer(int eId, int qid, String question, String ans) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in insertAnswer", e);
+        return;
     }
-
-
-    private String getCorrectAnswer(int qid) {
-        try {
-            ensureConnection();
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Connection error in getCorrectAnswer", e);
-            return "";
-        }
+    
+    PreparedStatement pstm = null;
+    try {
+        // Fetch the correct answer, which is now trimmed and null-safe
+        String correct = getCorrectAnswer(qid);
         
-        String ans="";
+        // Determine status using the robust getAnswerStatus method
+        String status = getAnswerStatus(ans, correct);
         
-        try {
-            PreparedStatement pstm=conn.prepareStatement("Select correct from questions where question_id=?");
-            pstm.setInt(1,qid);
-            ResultSet rs=pstm.executeQuery();
-            while(rs.next()){
-                ans=rs.getString(1);
+        // Normalize the user's answer for storage to avoid storing empty strings
+        String userAnswerForDb = (ans != null && !ans.trim().isEmpty()) ? ans.trim() : "N/A";
+
+        pstm = conn.prepareStatement(
+            "INSERT INTO answers (exam_id, question_id, question, answer, correct_answer, status) VALUES (?, ?, ?, ?, ?, ?)"
+        );
+        pstm.setInt(1, eId);
+        pstm.setInt(2, qid);
+        pstm.setString(3, question);
+        pstm.setString(4, userAnswerForDb); // Store the cleaned answer
+        pstm.setString(5, correct);         // Store the cleaned correct answer
+        pstm.setString(6, status);
+        pstm.executeUpdate();
+        
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+    } finally {
+        if (pstm != null) {
+            try {
+                pstm.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Failed to close PreparedStatement in insertAnswer", e);
             }
-        } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
-        
-        return ans;
     }
+}
+
+
+private String getCorrectAnswer(int qid) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getCorrectAnswer", e);
+        return "";
+    }
+    
+    String ans = ""; // Default to empty string
+    PreparedStatement pstm = null;
+    ResultSet rs = null;
+    
+    try {
+        pstm = conn.prepareStatement("SELECT correct FROM questions WHERE question_id=?");
+        pstm.setInt(1, qid);
+        rs = pstm.executeQuery();
+        
+        if (rs.next()) {
+            String result = rs.getString(1);
+            // Handle null from DB and trim whitespace
+            if (result != null) {
+                ans = result.trim();
+            }
+        }
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+    } finally {
+        try {
+            if (rs != null) rs.close();
+            if (pstm != null) pstm.close();
+        } catch (SQLException e) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in getCorrectAnswer", e);
+        }
+    }
+    
+    return ans;
+}
+
 
 private String getAnswerStatus(String ans, String correct) {
-    if (ans == null || correct == null) {
+    // 1. Normalize inputs: handle nulls and trim whitespace
+    String userAnswer = (ans != null) ? ans.trim() : "";
+    String correctAnswer = (correct != null) ? correct.trim() : "";
+
+    // 2. An unanswered question is always incorrect
+    if (userAnswer.isEmpty() || userAnswer.equals("N/A")) {
         return "incorrect";
     }
 
-    // For multi-select questions, the correct answer is stored with "|"
-    if (correct.contains("|")) {
-        // Normalize both strings by splitting, sorting, and rejoining.
-        String[] ansParts = ans.split("\\|");
-        String[] correctParts = correct.split("\\|");
+    // 3. Compare based on question type (multi-select or single)
+    if (correctAnswer.contains("|")) {
+        // Normalize multi-select answers by splitting, trimming, sorting, and rejoining
+        String[] ansParts = userAnswer.split("\\|");
+        for (int i = 0; i < ansParts.length; i++) {
+            ansParts[i] = ansParts[i].trim();
+        }
         java.util.Arrays.sort(ansParts);
+        
+        String[] correctParts = correctAnswer.split("\\|");
+        for (int i = 0; i < correctParts.length; i++) {
+            correctParts[i] = correctParts[i].trim();
+        }
         java.util.Arrays.sort(correctParts);
         
         String normalizedAns = String.join("|", ansParts);
         String normalizedCorrect = String.join("|", correctParts);
 
-        if (normalizedAns.equals(normalizedCorrect)) {
-            return "correct";
-        }
+        return normalizedAns.equals(normalizedCorrect) ? "correct" : "incorrect";
     } else {
-        // For single-answer questions, a direct comparison is sufficient.
-        if (ans.equals(correct)) {
-            return "correct";
-        }
+        // Simple case-insensitive comparison for single answers
+        return userAnswer.equalsIgnoreCase(correctAnswer) ? "correct" : "incorrect";
     }
-
-    return "incorrect";
 }
 
 
