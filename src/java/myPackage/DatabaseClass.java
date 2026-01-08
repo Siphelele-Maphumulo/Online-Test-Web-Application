@@ -2020,7 +2020,10 @@ public ArrayList getAllQuestions(String courseName) {
             Answers a;
             while(rs.next()){
                a = new Answers(
-                       rs.getString(3),rs.getString(4),rs.getString(5),rs.getString(6)
+                       rs.getString("question"),
+                       rs.getString("answer"),
+                       rs.getString("correct_answer"),
+                       rs.getString("status")
                     ); 
                list.add(a);
             }
