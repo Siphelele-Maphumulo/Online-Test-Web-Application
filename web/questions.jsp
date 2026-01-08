@@ -775,9 +775,6 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 }
 </style>
 
-<%@ include file="modal_assets.jspf" %>
-
-
 <div class="dashboard-container">
     <!-- Sidebar Navigation - Same as profile page -->
     <aside class="sidebar">
@@ -1125,7 +1122,7 @@ function validateQuestionForm() {
         const filledOpts = opts.filter(Boolean);
         if (new Set(filledOpts).size !== filledOpts.length) {
             showModal('Duplicate Options', 'Options must be unique.');
-            isValid = false;
+            return false;
         }
         
         const selectedCount = document.querySelectorAll('.correct-checkbox:checked').length;
@@ -1142,7 +1139,7 @@ function validateQuestionForm() {
         const filledOpts = opts.filter(Boolean);
         if (new Set(filledOpts).size !== filledOpts.length) {
             showModal('Duplicate Options', 'Options must be unique.');
-            isValid = false;
+            return false;
         }
         
         const correctAnswer = document.getElementById("correctAnswer").value.trim();
