@@ -643,8 +643,11 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             <%
                     } else {
             %>
-                <button type="button" id="bulkDeleteBtn" class="btn btn-error">Delete Selected</button>
-                <br><br>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button type="submit" id="bulkDeleteBtn" class="btn btn-error" onclick="return confirm('Are you sure you want to delete the selected questions?');">Delete Selected</button>
+                    <button type="button" id="selectAllBtn" class="btn btn-info">Select All</button>
+                    <button type="button" id="deselectAllBtn" class="btn btn-secondary" style="background-color: var(--dark-gray);">Deselect All</button>
+                </div>
             <%
                         for (int i = 0; i < list.size(); i++) {
                             Questions question = (Questions) list.get(i);
@@ -783,9 +786,25 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
 <!-- JavaScript for enhanced functionality -->
 <script>
-    // Add animation to question cards
+    // Add animation to question cards and handle bulk selection
     document.addEventListener('DOMContentLoaded', function() {
         const questionCards = document.querySelectorAll('.question-card');
+        const selectAllBtn = document.getElementById('selectAllBtn');
+        const deselectAllBtn = document.getElementById('deselectAllBtn');
+        const checkboxes = document.querySelectorAll('input[name="questionIds"]');
+
+        if (selectAllBtn) {
+            selectAllBtn.addEventListener('click', () => {
+                checkboxes.forEach(checkbox => checkbox.checked = true);
+            });
+        }
+
+        if (deselectAllBtn) {
+            deselectAllBtn.addEventListener('click', () => {
+                checkboxes.forEach(checkbox => checkbox.checked = false);
+            });
+        }
+
         questionCards.forEach((card, index) => {
             card.style.animationDelay = `${index * 0.1}s`;
             card.style.animation = 'fadeInUp 0.3s ease forwards';
