@@ -1195,6 +1195,25 @@ function validateAndSubmit() {
     }
 }
 
+function updateCorrectOptionLabels() {
+    // Syncs the labels and values of the 'MultipleSelect' checkboxes with the option textareas
+    for (let i = 1; i <= 4; i++) {
+        const optInput = document.getElementById(`opt${i}`);
+        const checkbox = document.getElementById(`correctOpt${i}`);
+        const label = document.querySelector(`label[for="correctOpt${i}"]`);
+
+        if (optInput && checkbox && label) {
+            const value = optInput.value.trim();
+            label.textContent = value || `Option ${i}`;
+            checkbox.value = value;
+            checkbox.disabled = !value;
+            if (!value) {
+                checkbox.checked = false;
+            }
+        }
+    }
+}
+
 function toggleOptions() {
     const type = document.getElementById("questionType").value;
     const mcqOptions = document.getElementById("mcqOptions");
@@ -1277,23 +1296,13 @@ function updateScrollIndicator(){
 document.addEventListener("DOMContentLoaded", () => {
     toggleOptions();
     syncCourseDropdowns();
+    updateCorrectOptionLabels(); // Initialize checkbox values on page load
 
     // Attach event listeners to each option textarea
     for (let i = 1; i <= 4; i++) {
         const optInput = document.getElementById(`opt${i}`);
-        const checkbox = document.getElementById(`correctOpt${i}`);
-        const label = document.querySelector(`label[for="correctOpt${i}"]`);
-
-        if (optInput && checkbox && label) {
-            optInput.addEventListener('input', () => {
-                const value = optInput.value.trim();
-                label.textContent = value || `Option ${i}`;
-                checkbox.value = value;
-                checkbox.disabled = !value;
-                if (!value) {
-                    checkbox.checked = false;
-                }
-            });
+        if (optInput) {
+            optInput.addEventListener('input', updateCorrectOptionLabels);
         }
     }
 
