@@ -794,26 +794,30 @@
         
         // Close sidebar when clicking outside on mobile
         document.addEventListener('click', function(e) {
-            if (window.innerWidth <= 768 && sidebar.classList.contains('active')) {
-                if (!sidebar.contains(e.target) && e.target !== sidebarToggle) {
-                    sidebar.classList.remove('active');
-                    sidebarOverlay.classList.remove('active');
-                    document.body.style.overflow = '';
+            if (sidebar && sidebarToggle && sidebarOverlay) {
+                if (window.innerWidth <= 768 && sidebar.classList.contains('active')) {
+                    if (!sidebar.contains(e.target) && e.target !== sidebarToggle) {
+                        sidebar.classList.remove('active');
+                        sidebarOverlay.classList.remove('active');
+                        document.body.style.overflow = '';
+                    }
                 }
             }
         });
         
         // Close sidebar when clicking nav items on mobile
         const navItems = document.querySelectorAll('.nav-item');
-        navItems.forEach(item => {
-            item.addEventListener('click', function() {
-                if (window.innerWidth <= 768) {
-                    sidebar.classList.remove('active');
-                    sidebarOverlay.classList.remove('active');
-                    document.body.style.overflow = '';
-                }
+        if (sidebar && sidebarOverlay) {
+            navItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    if (window.innerWidth <= 768) {
+                        sidebar.classList.remove('active');
+                        sidebarOverlay.classList.remove('active');
+                        document.body.style.overflow = '';
+                    }
+                });
             });
-        });
+        }
         
         // Add active state based on current page
         const currentPath = window.location.pathname + window.location.search;
