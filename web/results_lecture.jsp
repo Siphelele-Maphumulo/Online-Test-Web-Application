@@ -1,50 +1,24 @@
+<%@page import="myPackage.classes.User"%>
 <%@page import="myPackage.classes.Answers"%>
 <%@page import="myPackage.classes.Exams"%>
 <%@page import="myPackage.classes.Questions"%>
 <%@page import="java.util.ArrayList"%>
 <%@page import="java.util.UUID"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
- 
-<% 
-    String csrfToken = UUID.randomUUID().toString();
-    session.setAttribute("csrfToken", csrfToken);
-    myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
-%>
 
 <%
-    // Check for delete operation
-    String operation = request.getParameter("operation");
-    String examIdParam = request.getParameter("eid");
-    String csrfTokenParam = request.getParameter("csrfToken");
-    String sessionCsrfToken = (String) session.getAttribute("csrfToken");
-    
-    if ("del".equals(operation) && examIdParam != null && csrfTokenParam != null 
-        && csrfTokenParam.equals(sessionCsrfToken)) {
-        
-        try {
-            int examId = Integer.parseInt(examIdParam);
-            boolean success = pDAO.deleteExamResult(examId);
-            
-            if (success) {
-                session.setAttribute("message", "Exam result deleted successfully");
-            } else {
-                session.setAttribute("error", "Failed to delete exam result");
-            }
-            
-            // Redirect back to results page
-            response.sendRedirect("adm-page.jsp?pgprt=5");
-            return;
-            
-        } catch (Exception e) {
-            session.setAttribute("error", "Error deleting exam result: " + e.getMessage());
-            response.sendRedirect("adm-page.jsp?pgprt=5");
-            return;
-        }
+    // The main adm-page.jsp will handle user session checks.
+    // We just need the DAO and a fresh CSRF token.
+    myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+    String csrfToken = (String) session.getAttribute("csrfToken");
+    if (csrfToken == null) {
+        csrfToken = UUID.randomUUID().toString();
+        session.setAttribute("csrfToken", csrfToken);
     }
     
-    // Generate new CSRF token
-    csrfToken = UUID.randomUUID().toString();
-    session.setAttribute("csrfToken", csrfToken);
+    // Get the current user from the request scope, set by adm-page.jsp
+    User currentUser = (User) request.getAttribute("currentUser");
+
 %>
 
 <style>
@@ -528,138 +502,110 @@
                 <button onclick="resetFilters()" class="reset-button">Reset</button>
             </div>
 
-            <!-- Results Header -->
-            <div class="results-header">
-                <div>
-                    <div class="results-title">All Results</div>
-                    <div class="results-count" id="resultsCount">Loading...</div>
-                </div>
-                <div class="search-container">
-                    <input type="text" id="globalSearch" class="search-input" placeholder="Search in all columns...">
-                    <button onclick="performGlobalSearch()" class="filter-button">Search</button>
-                </div>
-            </div>
+            <!-- Main Form for Bulk Actions -->
+            <form id="resultsForm" action="controller.jsp" method="post">
+                <input type="hidden" name="page" value="results">
+                <input type="hidden" name="operation" id="bulkOperation" value="">
+                <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
 
-            <!-- Results Table -->
-            <table id="results-table">
-                <thead>
-                    <tr>
-                        <th onclick="sortTable(0)">Student Name</th>
-                        <th onclick="sortTable(1)">Date</th>
-                        <th onclick="sortTable(2)">Course</th>
-                        <th onclick="sortTable(3)">Time</th>
-                        <th onclick="sortTable(4)">Marks</th>
-                        <th onclick="sortTable(5)">Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="resultsBody">
-                    <% 
-                        // TEMPORARY WORKAROUND: You need to add a method in DatabaseClass that returns all results
-                        // For now, I'll create a list using an alternative approach
-                        ArrayList<Exams> list = new ArrayList<>();
-                        
-                        // Option 1: If you have access to all student IDs, you could loop through them
-                        // Option 2: Modify the DatabaseClass to add a getAllResultsFromExams() method
-                        // Option 3: Use a different method if available
-                        
-                        // For this example, let's assume you need to pass -1 or null to get all results
-                        // Check what your actual method signature is
-                        try {
-                            // Try calling with null or -1 to see if it works
-                            list = pDAO.getResultsFromExams(-1); // or pDAO.getAllResultsFromExams();
-                        } catch(Exception e) {
-                            // If the method doesn't exist, you'll need to add it to DatabaseClass
-                    %>
-                    <tr>
-                        <td colspan="7" class="no-results" style="color: red;">
-                            Error: Please add getAllResultsFromExams() method to DatabaseClass
-                            <br>
-                            <small>Current method requires a student ID parameter</small>
-                        </td>
-                    </tr>
-                    <%
-                        }
-                        
-                        if (list.isEmpty()) {
-                    %>
-                    <tr>
-                        <td colspan="7" class="no-results">No results found</td>
-                    </tr>
-                    <%
-                        } else {
-                            for (int i = 0; i < list.size(); i++) {
-                                Exams e = list.get(i);
-                                String statusClass = "";
-                                if (e.getStatus() != null) {
-                                    if (e.getStatus().equals("Pass")) {
+                <!-- Results Header -->
+                <div class="results-header">
+                    <div>
+                        <div class="results-title">All Results</div>
+                        <div class="results-count" id="resultsCount">Loading...</div>
+                    </div>
+                    <div class="search-container">
+                        <button type="button" class="btn btn-danger" id="bulkDeleteBtn" style="background: #dc3545;">
+                            <i class="fas fa-trash-alt"></i> Delete Selected
+                        </button>
+                        <input type="text" id="globalSearch" class="search-input" placeholder="Search in all columns...">
+                        <button type="button" onclick="performGlobalSearch()" class="filter-button">Search</button>
+                    </div>
+                </div>
+
+                <!-- Results Table -->
+                <table id="results-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 20px;"><input type="checkbox" id="selectAll"></th>
+                            <th onclick="sortTable(1)">Student Name</th>
+                            <th onclick="sortTable(2)">Date</th>
+                            <th onclick="sortTable(3)">Course</th>
+                            <th onclick="sortTable(4)">Time</th>
+                            <th onclick="sortTable(5)">Marks</th>
+                            <th onclick="sortTable(6)">Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <%
+                            ArrayList<Exams> list = pDAO.getAllExamResults(); // Assuming this gets all results
+                            
+                            if (list.isEmpty()) {
+                        %>
+                        <tr>
+                            <td colspan="8" class="no-results">No results found</td>
+                        </tr>
+                        <%
+                            } else {
+                                for (Exams e : list) {
+                                    String statusClass = "";
+                                    String statusText = e.getStatus() != null ? e.getStatus() : "Terminated";
+                                    if (statusText.equals("Pass")) {
                                         statusClass = "status-pass";
-                                    } else if (e.getStatus().equals("Fail")) {
+                                    } else if (statusText.equals("Fail")) {
                                         statusClass = "status-fail";
+                                    } else {
+                                        statusClass = "status-terminated";
                                     }
-                                } else {
-                                    statusClass = "status-terminated";
+                        %>
+                        <tr class="result-row"
+                            data-student="<%= e.getFullName().toLowerCase() %> <%= e.getEmail().toLowerCase() %>"
+                            data-course="<%= e.getcName() %>"
+                            data-status="<%= statusText %>"
+                            data-date="<%= e.getDate() %>">
+                            <td><input type="checkbox" name="eids" value="<%= e.getExamId() %>" class="record-checkbox"></td>
+                            <td><%= e.getFullName() %><br><small><%= e.getEmail() %></small></td>
+                            <td><%= e.getDate() %></td>
+                            <td><%= e.getcName() %></td>
+                            <td><%= e.getStartTime() + " - " + e.getEndTime() %></td>
+                            <td><strong><%= e.getObtMarks() %> / <%= e.gettMarks() %></strong></td>
+                            <td><span class="<%= statusClass %>"><%= statusText %></span></td>
+                            <td>
+                                <a href="adm-page.jsp?pgprt=5&eid=<%= e.getExamId() %>" class="action-link">Details</a>
+                                <button type="button" class="action-link delete-btn"
+                                        data-exam-id="<%= e.getExamId() %>"
+                                        data-student-name="<%= e.getFullName() %>"
+                                        data-course-name="<%= e.getcName() %>"
+                                        style="border: none; background: none; cursor: pointer; color: #dc3545; text-decoration: underline;">Delete</button>
+                            </td>
+                        </tr>
+                        <%
                                 }
-                    %>
-                    <tr class="result-row" 
-                        data-student="<%= e.getFullName().toLowerCase() %> <%= e.getEmail().toLowerCase() %>"
-                        data-course="<%= e.getcName() %>"
-                        data-status="<%= e.getStatus() != null ? e.getStatus() : "Terminated" %>"
-                        data-date="<%= e.getDate() %>">
-                        <td><%= e.getFullName() %><br><small><%= e.getEmail() %></small></td>
-                        <td><%= e.getDate() %></td>
-                        <td><%= e.getcName() %></td>
-                        <td><%= e.getStartTime() + " - " + e.getEndTime() %></td>
-                        <td><strong><%= e.getObtMarks() %> / <%= e.gettMarks() %></strong></td>
-                        <td><span class="<%= statusClass %>"><%= e.getStatus() != null ? e.getStatus() : "Terminated" %></span></td>
-                        <td>
-                            <a href="adm-page.jsp?pgprt=5&eid=<%= e.getExamId() %>" class="action-link">Details</a>
-                            <button class="action-link delete-btn"
-                                    data-exam-id="<%= e.getExamId() %>"
-                                    data-student-name="<%= e.getFullName() %>"
-                                    data-course-name="<%= e.getcName() %>"
-                                    style="border: none; background: none; cursor: pointer; color: #dc3545; text-decoration: underline;">Delete</button>
-                        </td>
-                    </tr>
-                    <% 
                             }
-                        }
-                    %>
-                </tbody>
-            </table>
-
+                        %>
+                    </tbody>
+                </table>
+            </form>
+            
             <!-- Delete Confirmation Modal -->
-            <div id="deleteResultModal" class="modal-overlay">
+            <div id="deleteConfirmationModal" class="modal-overlay">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h2 class="modal-title"><i class="fas fa-trash"></i> Confirm Deletion</h2>
                         <button class="close-button" onclick="closeDeleteModal()">&times;</button>
                     </div>
                     <div class="modal-body">
-                        <p>Are you sure you want to permanently delete the following exam result? This action cannot be undone.</p>
-                        <div id="resultDetails">
-                            <!-- Result details will be populated by JavaScript -->
-                        </div>
+                        <p id="deleteModalMessage"></p>
                     </div>
-                    <div class="modal-footer">
-                    <!-- To this: -->
-                    <form id="deleteResultForm" action="adm-page.jsp?pgprt=5" method="post" style="display: flex; gap: 8px;">
-                        <input type="hidden" name="page" value="results_lecture">
-                        <input type="hidden" name="operation" value="del">
-                        <input type="hidden" name="eid" id="deleteExamId">
-                        <input type="hidden" name="csrfToken" value="<%= session.getAttribute("csrfToken") %>">
-                        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">
-                            <i class="fas fa-times-circle"></i> Cancel
-                        </button>
-                        <button type="submit" class="btn btn-error" id="confirmDeleteBtn">
-                            <i class="fas fa-trash-alt"></i> Yes, Delete
-                        </button>
-                    </form>
+                    <div class="modal-footer" id="deleteModalFooter">
+                        <!-- Buttons will be populated by JavaScript -->
                     </div>
                 </div>
             </div>
+            
         <% } else { %>
-            <!-- Result Details View -->
+            <!-- Result Details View (this part remains unchanged) -->
             <div style="margin-bottom: 20px;">
                 <a href="adm-page.jsp?pgprt=5" class="back-button">? Back to All Results</a>
             </div>
@@ -718,33 +664,115 @@
 let originalResults = [];
 let currentSortColumn = -1;
 let sortDirection = 1; // 1 for ascending, -1 for descending
+const csrfToken = '<%= csrfToken %>';
 
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    // Store original results
-    const rows = document.querySelectorAll('#resultsBody tr.result-row');
-    originalResults = Array.from(rows).map(row => row.outerHTML);
-    
-    // Update results count
-    updateResultsCount();
-    
-    // Add event listeners for real-time filtering
-    document.getElementById('searchInput').addEventListener('input', applyFilters);
-    document.getElementById('courseFilter').addEventListener('change', applyFilters);
-    document.getElementById('statusFilter').addEventListener('change', applyFilters);
-    document.getElementById('dateFrom').addEventListener('change', applyFilters);
-    document.getElementById('dateTo').addEventListener('change', applyFilters);
-    document.getElementById('globalSearch').addEventListener('input', function(e) {
-        if (e.target.value.length >= 2 || e.target.value.length === 0) {
-            applyFilters();
-        }
-    });
+    if (document.getElementById('resultsBody')) {
+        const rows = document.querySelectorAll('#resultsBody tr.result-row');
+        originalResults = Array.from(rows).map(row => row.outerHTML);
+        updateResultsCount();
+
+        // Attach event listeners
+        document.getElementById('searchInput').addEventListener('input', applyFilters);
+        document.getElementById('courseFilter').addEventListener('change', applyFilters);
+        document.getElementById('statusFilter').addEventListener('change', applyFilters);
+        document.getElementById('dateFrom').addEventListener('change', applyFilters);
+        document.getElementById('dateTo').addEventListener('change', applyFilters);
+        document.getElementById('globalSearch').addEventListener('input', function(e) {
+            if (e.target.value.length >= 2 || e.target.value.length === 0) {
+                applyFilters();
+            }
+        });
+        
+        // --- DELETION LOGIC ---
+        // Select All Checkbox
+        document.getElementById('selectAll').addEventListener('change', function(e) {
+            document.querySelectorAll('.record-checkbox').forEach(checkbox => {
+                checkbox.checked = e.target.checked;
+            });
+        });
+
+        // Single Delete Buttons
+        document.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const examId = this.dataset.examId;
+                const studentName = this.dataset.studentName;
+                const courseName = this.dataset.courseName;
+                openDeleteModal(
+                    'Are you sure you want to delete the result for <strong>' + studentName + '</strong> in <strong>' + courseName + '</strong>?',
+                    () => submitSingleDelete(examId)
+                );
+            });
+        });
+
+        // Bulk Delete Button
+        document.getElementById('bulkDeleteBtn').addEventListener('click', function() {
+            const selectedIds = getSelectedIds();
+            if (selectedIds.length === 0) {
+                alert('Please select at least one record to delete.');
+                return;
+            }
+            openDeleteModal(
+                'Are you sure you want to delete the <strong>' + selectedIds.length + '</strong> selected record(s)? This action cannot be undone.',
+                () => submitBulkDelete()
+            );
+        });
+    }
 });
 
+function getSelectedIds() {
+    return Array.from(document.querySelectorAll('.record-checkbox:checked')).map(cb => cb.value);
+}
+
+function submitSingleDelete(examId) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = 'controller.jsp';
+    form.innerHTML = `
+        <input type="hidden" name="page" value="results">
+        <input type="hidden" name="operation" value="del">
+        <input type="hidden" name="eid" value="${examId}">
+        <input type="hidden" name="csrfToken" value="${csrfToken}">
+    `;
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function submitBulkDelete() {
+    const form = document.getElementById('resultsForm');
+    document.getElementById('bulkOperation').value = 'bulk_delete';
+    form.submit();
+}
+
+const deleteModal = document.getElementById('deleteConfirmationModal');
+const modalMessage = document.getElementById('deleteModalMessage');
+const modalFooter = document.getElementById('deleteModalFooter');
+
+function openDeleteModal(message, confirmCallback) {
+    modalMessage.innerHTML = message;
+    modalFooter.innerHTML = `
+        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+        <button type="button" class="btn btn-error" id="confirmDeleteBtn">Yes, Delete</button>
+    `;
+    document.getElementById('confirmDeleteBtn').onclick = function() {
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+        this.disabled = true;
+        confirmCallback();
+    };
+    deleteModal.style.display = 'flex';
+}
+
+function closeDeleteModal() {
+    deleteModal.style.display = 'none';
+}
+
+
+// --- FILTERING AND SORTING LOGIC ---
 function updateResultsCount() {
     const visibleRows = document.querySelectorAll('#resultsBody tr.result-row:not([style*="display: none"])').length;
     const totalRows = originalResults.length;
-    document.getElementById('resultsCount').textContent = `Showing ${visibleRows} of ${totalRows} results`;
+    document.getElementById('resultsCount').textContent = 'Showing ' + visibleRows + ' of ' + totalRows + ' results';
 }
 
 function applyFilters() {
@@ -760,52 +788,32 @@ function applyFilters() {
     rows.forEach(row => {
         let showRow = true;
         
-        // Search filter (student name/email)
-        if (searchTerm) {
-            const studentData = row.getAttribute('data-student');
-            if (!studentData.includes(searchTerm)) {
-                showRow = false;
-            }
+        if (searchTerm && !row.dataset.student.includes(searchTerm)) {
+            showRow = false;
         }
-        
-        // Course filter
-        if (courseFilter && row.getAttribute('data-course') !== courseFilter) {
+        if (courseFilter && row.dataset.course !== courseFilter) {
+            showRow = false;
+        }
+        if (statusFilter && row.dataset.status !== statusFilter) {
             showRow = false;
         }
         
-        // Status filter
-        if (statusFilter) {
-            const rowStatus = row.getAttribute('data-status');
-            if (statusFilter === 'Terminated' && rowStatus !== 'Terminated') {
-                showRow = false;
-            } else if (statusFilter !== 'Terminated' && rowStatus !== statusFilter) {
-                showRow = false;
-            }
-        }
-        
-        // Date range filter
         if (dateFrom || dateTo) {
-            const rowDate = new Date(row.getAttribute('data-date'));
-            if (dateFrom) {
-                const fromDate = new Date(dateFrom);
-                if (rowDate < fromDate) showRow = false;
+            const rowDate = new Date(row.dataset.date);
+            if (dateFrom && rowDate < new Date(dateFrom)) {
+                showRow = false;
             }
             if (dateTo) {
                 const toDate = new Date(dateTo);
-                toDate.setHours(23, 59, 59, 999); // End of day
+                toDate.setHours(23, 59, 59, 999);
                 if (rowDate > toDate) showRow = false;
             }
         }
         
-        // Global search (searches all visible text)
-        if (globalSearch) {
-            const rowText = row.textContent.toLowerCase();
-            if (!rowText.includes(globalSearch)) {
-                showRow = false;
-            }
+        if (globalSearch && !row.textContent.toLowerCase().includes(globalSearch)) {
+            showRow = false;
         }
         
-        // Show/hide row
         row.style.display = showRow ? '' : 'none';
     });
     
@@ -824,15 +832,12 @@ function resetFilters() {
     document.getElementById('dateTo').value = '';
     document.getElementById('globalSearch').value = '';
     
-    // Reset table body to original content
     const resultsBody = document.getElementById('resultsBody');
     resultsBody.innerHTML = originalResults.join('');
     
-    // Reset sorting
     currentSortColumn = -1;
     sortDirection = 1;
-    const headers = document.querySelectorAll('#results-table thead th');
-    headers.forEach(header => {
+    document.querySelectorAll('#results-table thead th').forEach(header => {
         header.classList.remove('sort-asc', 'sort-desc');
     });
     
@@ -844,7 +849,6 @@ function sortTable(columnIndex) {
     const tbody = table.querySelector('tbody');
     const rows = Array.from(tbody.querySelectorAll('tr.result-row:not([style*="display: none"])'));
     
-    // Update sort indicators
     const headers = table.querySelectorAll('thead th');
     headers.forEach((header, index) => {
         header.classList.remove('sort-asc', 'sort-desc');
@@ -859,136 +863,47 @@ function sortTable(columnIndex) {
         }
     });
     
-    // Sort rows
     rows.sort((a, b) => {
         let aValue, bValue;
         
-        // Get cell values based on column
         switch(columnIndex) {
-            case 0: // Student Name
-                aValue = a.cells[0].textContent.toLowerCase();
-                bValue = b.cells[0].textContent.toLowerCase();
+            case 1:
+                aValue = a.cells[1].textContent.toLowerCase();
+                bValue = b.cells[1].textContent.toLowerCase();
                 break;
-            case 1: // Date
-                aValue = new Date(a.getAttribute('data-date'));
-                bValue = new Date(b.getAttribute('data-date'));
+            case 2:
+                aValue = new Date(a.dataset.date);
+                bValue = new Date(b.dataset.date);
                 break;
-            case 2: // Course
-                aValue = a.cells[2].textContent.toLowerCase();
-                bValue = b.cells[2].textContent.toLowerCase();
-                break;
-            case 3: // Time
+            case 3:
                 aValue = a.cells[3].textContent.toLowerCase();
                 bValue = b.cells[3].textContent.toLowerCase();
                 break;
-            case 4: // Marks
-                const aMarks = a.cells[4].textContent.split('/');
-                const bMarks = b.cells[4].textContent.split('/');
+            case 4:
+                aValue = a.cells[4].textContent.toLowerCase();
+                bValue = b.cells[4].textContent.toLowerCase();
+                break;
+            case 5:
+                const aMarks = a.cells[5].textContent.split('/');
+                const bMarks = b.cells[5].textContent.split('/');
                 aValue = parseInt(aMarks[0]) / parseInt(aMarks[1]);
                 bValue = parseInt(bMarks[0]) / parseInt(bMarks[1]);
                 break;
-            case 5: // Status
-                aValue = a.getAttribute('data-status');
-                bValue = b.getAttribute('data-status');
-                // Custom order: Pass > Fail > Terminated
+            case 6:
                 const statusOrder = { 'Pass': 1, 'Fail': 2, 'Terminated': 3 };
-                aValue = statusOrder[aValue] || 4;
-                bValue = statusOrder[bValue] || 4;
+                aValue = statusOrder[a.dataset.status] || 4;
+                bValue = statusOrder[b.dataset.status] || 4;
                 break;
             default:
-                aValue = a.cells[columnIndex].textContent.toLowerCase();
-                bValue = b.cells[columnIndex].textContent.toLowerCase();
+                return 0;
         }
         
-        // Compare values
         if (aValue < bValue) return -1 * sortDirection;
         if (aValue > bValue) return 1 * sortDirection;
         return 0;
     });
     
-    // Reorder rows in DOM
     rows.forEach(row => tbody.appendChild(row));
     updateResultsCount();
 }
-
-function confirmDelete() {
-    const examId = document.getElementById('deleteExamId').value;
-    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-    
-    // Show loading
-    confirmDeleteBtn.classList.add('loading');
-    confirmDeleteBtn.disabled = true;
-    confirmDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
-    
-    // Submit via AJAX
-    fetch('deleteResult.jsp', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: 'examId=' + examId
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Result deleted successfully');
-            window.location.reload();
-        } else {
-            alert('Error: ' + data.message);
-            closeDeleteModal();
-        }
-    })
-    .catch(error => {
-        alert('Network error: ' + error);
-        closeDeleteModal();
-    });
-}
-
-// Modal handling functions for delete
-const deleteModal = document.getElementById('deleteResultModal');
-const deleteExamIdInput = document.getElementById('deleteExamId');
-const resultDetailsDiv = document.getElementById('resultDetails');
-const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-
-function openDeleteModal(examId, studentName, courseName) {
-    // Use standard string concatenation for broader compatibility
-    resultDetailsDiv.innerHTML = '<strong>Student:</strong> ' + studentName + '<br><strong>Course:</strong> ' + courseName;
-    deleteExamIdInput.value = examId;
-    deleteModal.style.display = 'flex';
-}
-
-function closeDeleteModal() {
-    deleteModal.style.display = 'none';
-}
-
-// Add loading indicator on form submission
-document.getElementById('deleteResultForm').addEventListener('submit', function() {
-    confirmDeleteBtn.classList.add('loading');
-    confirmDeleteBtn.disabled = true;
-    confirmDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
-});
-
-// Attach event listeners to delete buttons after DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    // Other initializations...
-
-    // Attach event listeners for delete buttons
-    const deleteButtons = document.querySelectorAll('.delete-btn');
-    deleteButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const examId = this.getAttribute('data-exam-id');
-            const studentName = this.getAttribute('data-student-name');
-            const courseName = this.getAttribute('data-course-name');
-            openDeleteModal(examId, studentName, courseName);
-        });
-    });
-});
-
-
-// Close modal if user clicks outside of it
-window.onclick = function(event) {
-    if (event.target === deleteModal) {
-        closeDeleteModal();
-    }
-};
 </script>
