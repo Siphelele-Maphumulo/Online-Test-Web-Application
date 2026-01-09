@@ -1319,14 +1319,12 @@
 
         <script src="https://cdn.jsdelivr.net/npm/vanilla-js-calendar@1.6.5/build/vanilla-js-calendar.min.js"></script>
         <script>
+            // Add confirmation for marking attendance
             document.addEventListener('DOMContentLoaded', function() {
                 const calendar = new VanillaJsCalendar('#calendar-container', {
                     events: JSON.parse('<%= pDAO.getAttendanceCalendarData(userId) %>'),
                 });
-            });
 
-            // Add confirmation for marking attendance
-            document.addEventListener('DOMContentLoaded', function() {
                 const markBtn = document.querySelector('.start-exam-btn');
                 if (markBtn && !markBtn.disabled) {
                     markBtn.addEventListener('click', function(e) {
