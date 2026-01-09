@@ -692,6 +692,7 @@
 </style>
 
 <%@ include file="header-messages.jsp" %>
+<%@ include file="modal_assets.jspf" %>
 
 <div class="dashboard-container">
 
@@ -804,42 +805,50 @@
                                                      lastNameFilter, courseNameFilter, dateFilter);
                     if (rs != null && rs.next()) {
             %>
-
-            <table class="results-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Student</th>
-                        <th>Student ID</th>
-                        <th>Course</th>
-                        <th>Exam ID</th>
-                        <th>Date</th>
-                        <th>Start</th>
-                        <th>End</th>
-                        <th>Duration</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                <%
-                    int i = 0;
-                    rs.beforeFirst();
-                    while (rs.next()) {
-                        i++;
-                        boolean completed = rs.getTime("end_time") != null;
-                %>
-                    <tr>
-                        <td><%= i %></td>
-                        <td>
-                            <strong><%= rs.getString("first_name") %> <%= rs.getString("last_name") %></strong><br>
-                            <small><%= rs.getString("email") %></small>
-                        </td>
-                        <td><%= rs.getInt("student_id") %></td>
-                        <td><%= rs.getString("course_name") %></td>
-                        <td><%= rs.getInt("exam_id") %></td>
-                        <td><%= rs.getDate("exam_date") %></td>
-                        <td><%= rs.getTime("start_time") %></td>
-                        <td><%= rs.getTime("end_time") != null ? rs.getTime("end_time") : "—" %></td>
+            <form id="bulkDeleteForm" action="controller.jsp" method="post">
+                <input type="hidden" name="page" value="exam-register">
+                <input type="hidden" name="operation" value="bulk_delete">
+                <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
+                <button type="submit" class="btn btn-danger" style="margin: 10px;">
+                    <i class="fas fa-trash"></i> Delete Selected
+                </button>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAll"></th>
+                            <th>#</th>
+                            <th>Student</th>
+                            <th>Student ID</th>
+                            <th>Course</th>
+                            <th>Exam ID</th>
+                            <th>Date</th>
+                            <th>Start</th>
+                            <th>End</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <%
+                        int i = 0;
+                        rs.beforeFirst();
+                        while (rs.next()) {
+                            i++;
+                            boolean completed = rs.getTime("end_time") != null;
+                    %>
+                        <tr>
+                            <td><input type="checkbox" name="registerIds" value="<%= rs.getInt("register_id") %>"></td>
+                            <td><%= i %></td>
+                            <td>
+                                <strong><%= rs.getString("first_name") %> <%= rs.getString("last_name") %></strong><br>
+                                <small><%= rs.getString("email") %></small>
+                            </td>
+                            <td><%= rs.getInt("student_id") %></td>
+                            <td><%= rs.getString("course_name") %></td>
+                            <td><%= rs.getInt("exam_id") %></td>
+                            <td><%= rs.getDate("exam_date") %></td>
+                            <td><%= rs.getTime("start_time") %></td>
+                            <td><%= rs.getTime("end_time") != null ? rs.getTime("end_time") : "—" %></td>
                         <td>
                             <%
                                 java.sql.Time endTime = rs.getTime("end_time");
@@ -870,7 +879,7 @@
                 <% } %>
                 </tbody>
             </table>
-
+            </form>
             <div class="results-count">
                 Total Records: <%= i %>
                             <!-- Standalone Export Form -->
@@ -913,3 +922,44 @@
         </div>
     </div>
 </div>
+
+<div id="deleteConfirmationModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h2>
+      <button class="close-button" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="deleteModalMessage">Are you sure you want to delete the selected records?</p>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+      <button id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+    document.getElementById('selectAll').addEventListener('change', function(e) {
+        const checkboxes = document.querySelectorAll('input[name="registerIds"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = e.target.checked;
+        });
+    });
+
+    document.getElementById('bulkDeleteForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const selected = document.querySelectorAll('input[name="registerIds"]:checked').length;
+        if (selected === 0) {
+            showAlert('Please select at least one record to delete.');
+            return;
+        }
+        
+        document.getElementById('deleteModalMessage').innerText = 'Are you sure you want to delete ' + selected + ' record(s)?';
+        showModal();
+
+        document.getElementById('confirmDeleteBtn').onclick = function() {
+            e.target.submit();
+        };
+    });
+</script>

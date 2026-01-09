@@ -1088,6 +1088,7 @@
         </style>
 
         <%@ include file="header-messages.jsp" %>
+        <%@ include file="modal_assets.jspf" %>
 
         <div class="results-wrapper">
             <!-- Sidebar Navigation -->
@@ -1192,6 +1193,53 @@
                     <% } %>
                 </div>
 
+                <!-- Attendance History -->
+                <div class="course-card">
+                    <h3 style="margin-bottom: var(--spacing-md); color: var(--text-dark); font-size: 18px;">
+                        <i class="fas fa-history"></i> Attendance History
+                    </h3>
+                    <% if (attendanceHistory != null && !attendanceHistory.isEmpty()) { %>
+                        <form id="bulkDeleteForm" action="controller.jsp" method="post">
+                            <input type="hidden" name="page" value="daily-register">
+                            <input type="hidden" name="operation" value="bulk_delete">
+                            <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
+                            <button type="submit" class="btn btn-error" style="margin-bottom: 20px;">
+                                <i class="fas fa-trash"></i> Delete Selected
+                            </button>
+                            <div class="results-table-container">
+                                <table class="results-table">
+                                    <thead>
+                                        <tr>
+                                            <th><input type="checkbox" id="selectAll"></th>
+                                            <th>#</th>
+                                            <th>Date</th>
+                                            <th>Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% 
+                                            int i = 0;
+                                            for (Map<String, String> record : attendanceHistory) {
+                                                i++;
+                                        %>
+                                        <tr>
+                                            <td><input type="checkbox" name="registerIds" value="<%= record.get("register_id") %>"></td>
+                                            <td><%= i %></td>
+                                            <td><%= record.get("registration_date") %></td>
+                                            <td><%= record.get("registration_time") %></td>
+                                        </tr>
+                                        <% } %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </form>
+                    <% } else { %>
+                        <div class="no-results">
+                            No attendance history found.
+                        </div>
+                    <% } %>
+                </div>
+
                 <!-- Attendance Statistics -->
                 <div class="course-card">
                     <h3 style="margin-bottom: var(--spacing-md); color: var(--text-dark); font-size: 18px;">
@@ -1230,6 +1278,22 @@
             </div>
         </div>
 
+<div id="deleteConfirmationModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h2>
+      <button class="close-button" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="deleteModalMessage">Are you sure you want to delete the selected records?</p>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+      <button id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+    </div>
+  </div>
+</div>
+
         <script>
             // Add confirmation for marking attendance
             document.addEventListener('DOMContentLoaded', function() {
@@ -1239,6 +1303,35 @@
                         if (!confirm('Are you sure you want to mark your attendance for today?')) {
                             e.preventDefault();
                         }
+                    });
+                }
+
+                const selectAllCheckbox = document.getElementById('selectAll');
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.addEventListener('change', function(e) {
+                        const checkboxes = document.querySelectorAll('input[name="registerIds"]');
+                        checkboxes.forEach(checkbox => {
+                            checkbox.checked = e.target.checked;
+                        });
+                    });
+                }
+
+                const bulkDeleteForm = document.getElementById('bulkDeleteForm');
+                if (bulkDeleteForm) {
+                    bulkDeleteForm.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        const selected = document.querySelectorAll('input[name="registerIds"]:checked').length;
+                        if (selected === 0) {
+                            showAlert('Please select at least one record to delete.');
+                            return;
+                        }
+                        
+                        document.getElementById('deleteModalMessage').innerText = 'Are you sure you want to delete ' + selected + ' record(s)?';
+                        showModal();
+
+                        document.getElementById('confirmDeleteBtn').onclick = function() {
+                            e.target.submit();
+                        };
                     });
                 }
                 

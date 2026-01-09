@@ -55,6 +55,8 @@
 
 </head>
 
+<%@ include file="modal_assets.jspf" %>
+
 <!-- CSS Styles remain the same -->
     <style>
     /* Use the same CSS Variables as the profile page */
@@ -862,10 +864,18 @@
             </div>
 
             <% if (!registerList.isEmpty()) { %>
+            <form id="bulkDeleteForm" action="controller.jsp" method="post">
+                <input type="hidden" name="page" value="class-register">
+                <input type="hidden" name="operation" value="bulk_delete">
+                <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
+                <button type="submit" class="btn btn-danger" style="margin-bottom: 20px;">
+                    <i class="fas fa-trash"></i> Delete Selected
+                </button>
                 <div class="results-table-container">
                     <table class="results-table">
                         <thead>
                             <tr>
+                                <th><input type="checkbox" id="selectAll"></th>
                                 <th onclick="sortTable('index')"># <i class="fas fa-sort sort-indicator"></i></th>
                                 <th onclick="sortTable('register_id')">Register ID <i class="fas fa-sort sort-indicator"></i></th>
                                 <th onclick="sortTable('student_id')">Student ID <i class="fas fa-sort sort-indicator"></i></th>
@@ -887,6 +897,7 @@
                                     String regTime = record.get("registration_time");
                             %>
                             <tr>
+                                <td><input type="checkbox" name="registerIds" value="<%= registerId %>"></td>
                                 <td><span class="badge badge-info"><%= i %></span></td>
                                 <td><code><%= registerId %></code></td>
                                 <td><strong><%= studentId %></strong></td>
@@ -921,6 +932,7 @@
                         </tbody>
                     </table>
                 </div>
+            </form>
                 
                 <div class="results-count">
                     Showing <%= registerList.size() %> record(s)
@@ -953,6 +965,22 @@
     </div>
 </div>
 
+<div id="deleteConfirmationModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h2>
+      <button class="close-button" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="deleteModalMessage">Are you sure you want to delete the selected records?</p>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+      <button id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+    </div>
+  </div>
+</div>
+
 <script>
     // JavaScript for enhanced functionality
     document.addEventListener('DOMContentLoaded', function() {
@@ -968,6 +996,29 @@
         
         // Highlight active filters
         highlightActiveFilters();
+    });
+
+    document.getElementById('selectAll').addEventListener('change', function(e) {
+        const checkboxes = document.querySelectorAll('input[name="registerIds"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = e.target.checked;
+        });
+    });
+
+    document.getElementById('bulkDeleteForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const selected = document.querySelectorAll('input[name="registerIds"]:checked').length;
+        if (selected === 0) {
+            showAlert('Please select at least one record to delete.');
+            return;
+        }
+
+        document.getElementById('deleteModalMessage').innerText = 'Are you sure you want to delete ' + selected + ' record(s)?';
+        showModal();
+
+        document.getElementById('confirmDeleteBtn').onclick = function() {
+            e.target.submit();
+        };
     });
     
     function setDateFilter(date) {
