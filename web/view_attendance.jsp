@@ -1349,70 +1349,35 @@
 </div>
 
         <script src="https://cdn.jsdelivr.net/npm/vanilla-js-calendar@1.6.5/build/vanilla-js-calendar.min.js"></script>
-        <script>
-            // Add confirmation for marking attendance
-            document.addEventListener('DOMContentLoaded', function() {
-                const calendar = new VanillaJsCalendar('#calendar-container', {
-                    events: JSON.parse('<%= pDAO.getAttendanceCalendarData(userId) %>'),
-                });
+<!-- Add FullCalendar CSS and JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
 
-                const markBtn = document.querySelector('.start-exam-btn');
-                if (markBtn && !markBtn.disabled) {
-                    markBtn.addEventListener('click', function(e) {
-                        if (!confirm('Are you sure you want to mark your attendance for today?')) {
-                            e.preventDefault();
-                        }
-                    });
-                }
+<div id="calendar-container"></div>
 
-                const selectAllCheckbox = document.getElementById('selectAll');
-                if (selectAllCheckbox) {
-                    selectAllCheckbox.addEventListener('change', function(e) {
-                        const checkboxes = document.querySelectorAll('input[name="registerIds"]');
-                        checkboxes.forEach(checkbox => {
-                            checkbox.checked = e.target.checked;
-                        });
-                    });
-                }
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        const calendarData = <%= pDAO.getAttendanceCalendarData(userId) %>;
+        
+        const calendarEl = document.getElementById('calendar-container');
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            events: calendarData.map(event => ({
+                title: getEventTitle(event.className),
+                start: event.date,
+                color: getEventColor(event.className),
+                allDay: true
+            })),
+            eventDisplay: 'block'
+        });
+        
+        calendar.render();
+    } catch (error) {
+        console.error('FullCalendar error:', error);
+    }
+});
+</script>
 
-                const bulkDeleteForm = document.getElementById('bulkDeleteForm');
-                if (bulkDeleteForm) {
-                    bulkDeleteForm.addEventListener('submit', function(e) {
-                        e.preventDefault();
-                        const selected = document.querySelectorAll('input[name="registerIds"]:checked').length;
-                        if (selected === 0) {
-                            showAlert('Please select at least one record to delete.');
-                            return;
-                        }
-                        
-                        document.getElementById('deleteModalMessage').innerText = 'Are you sure you want to delete ' + selected + ' record(s)?';
-                        showModal();
-
-                        document.getElementById('confirmDeleteBtn').onclick = function() {
-                            e.target.submit();
-                        };
-                    });
-                }
-                
-                // Set today's date as default in date filter
-                const dateFilter = document.querySelector('input[name="filter_date"]');
-                if (dateFilter && !dateFilter.value) {
-                    const today = new Date().toISOString().split('T')[0];
-                    dateFilter.value = today;
-                }
-                
-                // Add loading state to buttons
-                const forms = document.querySelectorAll('form');
-                forms.forEach(form => {
-                    form.addEventListener('submit', function() {
-                        const submitBtn = this.querySelector('button[type="submit"]');
-                        if (submitBtn) {
-                            submitBtn.classList.add('loading');
-                            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-                        }
-                    });
-                });
-            });
-        </script>
     </body>
 </html>

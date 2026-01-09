@@ -1469,12 +1469,8 @@
             document.addEventListener('DOMContentLoaded', function() {
                 // Initialize calendar with attendance data
                 try {
-                    // Get attendance data from backend
-                    const calendarData = <%= pDAO.getAttendanceCalendarData(userId) %>;
-                    
-                    // Configure calendar options
-                    const calendarOptions = {
-                        date: new Date(),
+                    const calendar = new VanillaJsCalendar('#calendar-container', {
+                        events: <%= pDAO.getAttendanceCalendarData(userId) %>,
                         settings: {
                             range: {
                                 start: new Date(new Date().getFullYear(), new Date().getMonth() - 2, 1),
@@ -1486,23 +1482,7 @@
                             },
                             lang: 'en'
                         },
-                        actions: {
-                            clickDay(event, dates) {
-                                // Handle day click if needed
-                                console.log('Day clicked:', dates[0]);
-                            }
-                        }
-                    };
-                    
-                    // Create calendar instance
-                    const calendar = new VanillaJsCalendar('#calendar-container', calendarOptions);
-                    
-                    // Add events to calendar
-                    if (calendarData && calendarData.length > 0) {
-                        calendarData.forEach(event => {
-                            calendar.addEvent(event);
-                        });
-                    }
+                    });
                 } catch (error) {
                     console.error('Error initializing calendar:', error);
                     document.getElementById('calendar-container').innerHTML = 

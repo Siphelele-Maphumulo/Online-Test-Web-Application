@@ -3539,72 +3539,79 @@ public ArrayList<String> getCourseList() {
         StringBuilder json = new StringBuilder("[");
         try {
             ensureConnection();
-            // Step 1: Find the student's first ever attendance date.
-            String firstDateSql = "SELECT MIN(registration_date) as first_date FROM daily_register WHERE student_id = ?";
-            PreparedStatement pstm = conn.prepareStatement(firstDateSql);
+            // Query to get attendance for the current month
+            String attendanceSql = "SELECT registration_date, registration_time FROM daily_register WHERE student_id = ? AND MONTH(registration_date) = MONTH(CURDATE()) AND YEAR(registration_date) = YEAR(CURDATE()) ORDER BY registration_date";
+            PreparedStatement pstm = conn.prepareStatement(attendanceSql);
             pstm.setInt(1, studentId);
             ResultSet rs = pstm.executeQuery();
 
-            if (rs.next()) {
-                java.sql.Date firstDate = rs.getDate("first_date");
+            // Get today's date
+            LocalDate today = LocalDate.now();
+            Map<LocalDate, LocalTime> attendanceMap = new HashMap<>();
 
-                // If the student has at least one attendance record, proceed.
-                if (firstDate != null) {
-                    LocalDate startDate = firstDate.toLocalDate();
-                    LocalDate today = LocalDate.now();
-                    // We show a maximum of 3 months of data, and we don't show future dates.
-                    LocalDate maxEndDate = startDate.plusMonths(3);
-                    LocalDate effectiveEndDate = maxEndDate.isBefore(today.plusDays(1)) ? maxEndDate : today.plusDays(1);
-
-                    // Step 2: Fetch all attendance records within the calculated date range.
-                    String attendanceSql = "SELECT registration_date, registration_time FROM daily_register WHERE student_id = ? AND registration_date >= ? AND registration_date < ?";
-                    PreparedStatement pstm2 = conn.prepareStatement(attendanceSql);
-                    pstm2.setInt(1, studentId);
-                    pstm2.setDate(2, java.sql.Date.valueOf(startDate));
-                    pstm2.setDate(3, java.sql.Date.valueOf(effectiveEndDate));
-                    ResultSet rs2 = pstm2.executeQuery();
-
-                    // Store records in a map for efficient lookup.
-                    Map<LocalDate, LocalTime> attendanceMap = new HashMap<>();
-                    while (rs2.next()) {
-                        attendanceMap.put(rs2.getDate("registration_date").toLocalDate(), rs2.getTime("registration_time").toLocalTime());
-                    }
-                    rs2.close();
-                    pstm2.close();
-
-                    boolean first = true;
-                    // Step 3: Iterate through each day in the range to build the JSON for the calendar.
-                    for (LocalDate date = startDate; date.isBefore(effectiveEndDate); date = date.plusDays(1)) {
-                        // Skip weekends.
-                        if (date.getDayOfWeek() != DayOfWeek.SATURDAY && date.getDayOfWeek() != DayOfWeek.SUNDAY) {
-                            if (!first) {
-                                json.append(",");
-                            }
-                            first = false;
-
-                            String status;
-                            if (attendanceMap.containsKey(date)) {
-                                // If a record exists, check if it was late.
-                                if (attendanceMap.get(date).isAfter(LocalTime.of(10, 0))) {
-                                    status = "event-late";
-                                } else {
-                                    status = "event-present";
-                                }
-                            } else {
-                                // If no record exists for a past or present weekday, it's an absent day.
-                                status = "event-absent";
-                            }
-                            json.append("{\"date\":\"").append(date).append("\",\"className\":\"").append(status).append("\"}");
-                        }
-                    }
-                }
+            while (rs.next()) {
+                attendanceMap.put(
+                    rs.getDate("registration_date").toLocalDate(),
+                    rs.getTime("registration_time").toLocalTime()
+                );
             }
             rs.close();
             pstm.close();
+
+            // Generate data for current month
+            LocalDate firstDay = today.withDayOfMonth(1);
+            LocalDate lastDay = today.withDayOfMonth(today.lengthOfMonth());
+
+            boolean first = true;
+            for (LocalDate date = firstDay; !date.isAfter(lastDay); date = date.plusDays(1)) {
+                if (!first) {
+                    json.append(",");
+                }
+                first = false;
+
+                String eventClass = "no-data";
+                String description = "No data";
+
+                if (attendanceMap.containsKey(date)) {
+                    if (attendanceMap.get(date).isAfter(LocalTime.of(10, 0))) {
+                        eventClass = "late";
+                        description = "Late arrival at " + attendanceMap.get(date);
+                    } else {
+                        eventClass = "present";
+                        description = "Present at " + attendanceMap.get(date);
+                    }
+                } else {
+                    // Check if it's a weekday in the past
+                    if (date.isBefore(today) && 
+                        date.getDayOfWeek() != DayOfWeek.SATURDAY && 
+                        date.getDayOfWeek() != DayOfWeek.SUNDAY) {
+                        eventClass = "absent";
+                        description = "Absent";
+                    }
+                }
+
+                json.append("{")
+                    .append("\"date\":\"").append(date).append("\",")
+                    .append("\"class\":\"").append(eventClass).append("\",")
+                    .append("\"description\":\"").append(description).append("\",")
+                    .append("\"backgroundColor\":\"").append(getColorForClass(eventClass)).append("\"")
+                    .append("}");
+            }
+
         } catch (SQLException ex) {
             LOGGER.log(Level.SEVERE, "Error in getAttendanceCalendarData", ex);
+            return "[]"; // Return empty array on error
         }
         json.append("]");
         return json.toString();
+    }
+
+    private String getColorForClass(String eventClass) {
+        switch (eventClass) {
+            case "present": return "#28a745";
+            case "late": return "#ffc107";
+            case "absent": return "#dc3545";
+            default: return "#6c757d";
+        }
     }
 }
