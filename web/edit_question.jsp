@@ -17,16 +17,17 @@
         pstm.setInt(1, questionId);
         ResultSet rs = pstm.executeQuery();
         if (rs.next()) {
-            questionToEdit = new Questions(
-                rs.getInt("question_id"),
-                rs.getString("question"),
-                rs.getString("opt1"),
-                rs.getString("opt2"),
-                rs.getString("opt3"),
-                rs.getString("opt4"),
-                rs.getString("correct"),
-                rs.getString("course_name")
-            );
+        questionToEdit = new Questions(
+            rs.getInt("question_id"),
+            rs.getString("question"),
+            rs.getString("opt1"),
+            rs.getString("opt2"),
+            rs.getString("opt3"),
+            rs.getString("opt4"),
+            rs.getString("correct"),
+            rs.getString("course_name"),
+            rs.getString("question_type")  // ADD THIS LINE - 9th parameter
+        );
             questionType = rs.getString("question_type") != null ? rs.getString("question_type") : "MCQ";
         }
         rs.close();
