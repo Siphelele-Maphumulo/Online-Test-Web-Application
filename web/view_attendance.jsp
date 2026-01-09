@@ -149,8 +149,8 @@
             }
             
             int attendanceRate = totalDays > 0 ? (presentDays * 100 / totalDays) : 0;
-            int absentDays = 0; // Not tracked in this simple system
-            int lateDays = 0;   // Not tracked in this simple system
+            int absentDays = pDAO.getDaysAbsentCount(userId);
+            int lateDays = pDAO.getDaysLateCount(userId);
         %>
 
         <!--Style-->
