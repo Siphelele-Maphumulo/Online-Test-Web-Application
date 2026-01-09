@@ -140,18 +140,12 @@
                 if (conn != null) try { conn.close(); } catch (SQLException e) {}
             }
             
-            // Calculate attendance statistics
-            int totalDays = 0;
-            int presentDays = 0;
             
-            if (attendanceHistory != null) {
-                totalDays = attendanceHistory.size();
-                presentDays = totalDays; // In this simple system, all recorded days are present days
-            }
-            
-            int attendanceRate = totalDays > 0 ? (presentDays * 100 / totalDays) : 0;
+            int presentDays = pDAO.getDaysPresentCount(userId);
             int absentDays = pDAO.getDaysAbsentCount(userId);
             int lateDays = pDAO.getDaysLateCount(userId);
+            int totalDays = presentDays + absentDays;
+            int attendanceRate = totalDays > 0 ? (presentDays * 100 / totalDays) : 0;
         %>
 
         <!--Style-->
@@ -1324,14 +1318,18 @@
                             <input type="hidden" name="page" value="daily-register">
                             <input type="hidden" name="operation" value="bulk_delete">
                             <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
+                             <% if (!"student".equals(userType)) { %>
                             <button type="submit" class="btn btn-error" style="margin-bottom: 20px;">
                                 <i class="fas fa-trash"></i> Delete Selected
                             </button>
+                             <% } %>
                             <div class="results-table-container">
                                 <table class="results-table">
                                     <thead>
                                         <tr>
+                                            <% if (!"student".equals(userType)) { %>
                                             <th><input type="checkbox" id="selectAll"></th>
+                                            <% } %>
                                             <th>#</th>
                                             <th>Date</th>
                                             <th>Time</th>
@@ -1344,7 +1342,9 @@
                                                 i++;
                                         %>
                                         <tr>
+                                            <% if (!"student".equals(userType)) { %>
                                             <td><input type="checkbox" name="registerIds" value="<%= record.get("register_id") %>"></td>
+                                            <% } %>
                                             <td><%= i %></td>
                                             <td><%= record.get("registration_date") %></td>
                                             <td><%= record.get("registration_time") %></td>
@@ -1444,6 +1444,10 @@
         border-radius: 4px !important;
         font-weight: normal !important;
         opacity: 0.7 !important;
+    }
+    .event-weekend {
+        background-color: #f8f9fa !important;
+        color: #6c757d !important;
     }
 </style>
 
