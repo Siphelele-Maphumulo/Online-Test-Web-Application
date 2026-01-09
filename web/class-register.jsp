@@ -692,6 +692,14 @@
     .quick-filter-row .btn {
         margin: 2px;
     }
+
+    .floating-delete-btn {
+        position: sticky;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 999;
+    }
 </style>
 
 <body>
@@ -868,7 +876,7 @@
                 <input type="hidden" name="page" value="class-register">
                 <input type="hidden" name="operation" value="bulk_delete">
                 <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
-                <button type="submit" class="btn btn-danger" style="margin-bottom: 20px;">
+                <button type="submit" class="btn btn-danger floating-delete-btn" style="margin-bottom: 20px;">
                     <i class="fas fa-trash"></i> Delete Selected
                 </button>
                 <div class="results-table-container">
