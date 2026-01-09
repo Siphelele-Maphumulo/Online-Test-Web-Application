@@ -1357,31 +1357,50 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css">
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
 
-<div id="calendar-container"></div>
+<!-- Add FullCalendar instead -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        try {
-            const calendar = new VanillaJsCalendar('#calendar-container', {
-                events: <%= pDAO.getAttendanceCalendarData(userId) %>,
-                settings: {
-                    range: {
-                        start: new Date(new Date().getFullYear(), new Date().getMonth() - 2, 1),
-                        end: new Date(new Date().getFullYear(), new Date().getMonth() + 3, 0)
-                    },
-                    visibility: {
-                        daysOutside: false,
-                        weekend: true
-                    },
-                    lang: 'en'
-                },
-            });
-        } catch (error) {
-            console.error('Error initializing calendar:', error);
-            document.getElementById('calendar-container').innerHTML =
-                '<div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> Could not load calendar. Please try again later.</div>';
-        }
-    });
+function loadFullCalendar() {
+    try {
+        const attendanceData = <%= pDAO.getAttendanceCalendarData(userId) %>;
+        
+        const calendarEl = document.getElementById('calendar-container');
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            height: 500,
+            events: attendanceData.map(item => ({
+                title: item.class.replace('event-', '').toUpperCase(),
+                start: item.date,
+                backgroundColor: getEventColor(item.class),
+                borderColor: getEventColor(item.class),
+                textColor: 'white'
+            })),
+            eventContent: function(arg) {
+                return {
+                    html: `<div style="padding: 2px; font-size: 11px;">${arg.event.title}</div>`
+                };
+            }
+        });
+        
+        calendar.render();
+        
+    } catch (error) {
+        console.error('FullCalendar error:', error);
+        showCalendarError();
+    }
+}
+
+function getEventColor(className) {
+    switch(className) {
+        case 'event-present': return '#28a745';
+        case 'event-late': return '#ffc107';
+        case 'event-absent': return '#dc3545';
+        case 'event-future': return '#6c757d';
+        default: return '#007bff';
+    }
+}
 </script>
 
     </body>

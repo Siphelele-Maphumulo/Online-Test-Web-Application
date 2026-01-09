@@ -16,7 +16,9 @@
         <title>Daily Attendance Register</title>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vanilla-js-calendar@1.6.5/build/vanilla-js-calendar.min.css">
+        <!-- Add this BEFORE your script -->
+        <link rel="stylesheet" href="https://unpkg.com/@easepick/bundle@1.2.1/dist/index.css">
+        <script src="https://unpkg.com/@easepick/bundle@1.2.1/dist/index.umd.min.js"></script>
     </head>
     <body>
         <%
@@ -1200,6 +1202,13 @@
             .color-box.present { background-color: var(--success); }
             .color-box.late { background-color: var(--warning); }
             .color-box.absent { background-color: var(--error); }
+            .event-present { background-color: #28a745; }
+            .event-late { background-color: #ffc107; }
+            .event-absent { background-color: #dc3545; }
+            .event-weekend { background-color: #f8f9fa; }
+            .event-future { background-color: #e9ecef; }
+
+
         </style>
 
         <%@ include file="header-messages.jsp" %>
@@ -1468,101 +1477,228 @@
 </div>
 
         <script src="https://cdn.jsdelivr.net/npm/vanilla-js-calendar@1.6.5/build/vanilla-js-calendar.min.js"></script>
-        <script>
-            // Add confirmation for marking attendance
-            document.addEventListener('DOMContentLoaded', function() {
-                // Initialize calendar with attendance data
-                try {
-                    const calendar = new VanillaJsCalendar('#calendar-container', {
-                        events: <%= pDAO.getAttendanceCalendarData(userId) %>,
-                        settings: {
-                            range: {
-                                start: new Date(new Date().getFullYear(), new Date().getMonth() - 2, 1),
-                                end: new Date(new Date().getFullYear(), new Date().getMonth() + 3, 0)
-                            },
-                            visibility: {
-                                daysOutside: false,
-                                weekend: true
-                            },
-                            lang: 'en'
-                        },
-                    });
-                } catch (error) {
-                    console.error('Error initializing calendar:', error);
-                    document.getElementById('calendar-container').innerHTML = 
-                        '<div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> Could not load calendar. Please try again later.</div>';
-                }
+<script>
+<% 
+// Get current month and year
+java.time.LocalDate currentDate = java.time.LocalDate.now();
+int currentYear = currentDate.getYear();
+int currentMonth = currentDate.getMonthValue();
+String monthName = currentDate.getMonth().toString();
+%>
 
-                const markBtn = document.querySelector('.start-exam-btn');
-                if (markBtn && !markBtn.disabled) {
-                    markBtn.addEventListener('click', function(e) {
-                        if (!confirm('Are you sure you want to mark your attendance for today?')) {
-                            e.preventDefault();
+<div class="course-card">
+    <h3 style="margin-bottom: var(--spacing-md); color: var(--text-dark); font-size: 18px;">
+        <i class="fas fa-calendar-alt"></i> Attendance Calendar - <%= monthName %> <%= currentYear %>
+    </h3>
+    
+    <div style="overflow-x: auto;">
+        <table class="simple-calendar">
+            <thead>
+                <tr>
+                    <th>Sun</th>
+                    <th>Mon</th>
+                    <th>Tue</th>
+                    <th>Wed</th>
+                    <th>Thu</th>
+                    <th>Fri</th>
+                    <th>Sat</th>
+                </tr>
+            </thead>
+            <tbody>
+                <%
+                // Get first day of month
+                java.time.LocalDate firstDay = java.time.LocalDate.of(currentYear, currentMonth, 1);
+                int startDay = firstDay.getDayOfWeek().getValue() % 7; // 0=Sunday, 1=Monday, etc.
+                
+                // Get last day of month
+                int daysInMonth = firstDay.lengthOfMonth();
+                
+                // Parse attendance data
+                java.util.Map<String, String> attendanceMap = new java.util.HashMap<>();
+                String calendarData = pDAO.getAttendanceCalendarData(userId);
+                if (calendarData != null && !calendarData.isEmpty()) {
+                    // Simple parsing - assuming format [{"date":"yyyy-MM-dd","class":"status"},...]
+                    String[] items = calendarData.replace("[", "").replace("]", "").split("\\},\\{");
+                    for (String item : items) {
+                        String cleaned = item.replace("{", "").replace("}", "").replace("\"", "");
+                        String[] parts = cleaned.split(",");
+                        if (parts.length >= 2) {
+                            String date = parts[0].split(":")[1];
+                            String status = parts[1].split(":")[1];
+                            attendanceMap.put(date, status);
                         }
-                    });
+                    }
                 }
-
-                const selectAllCheckbox = document.getElementById('selectAll');
-                if (selectAllCheckbox) {
-                    selectAllCheckbox.addEventListener('change', function(e) {
-                        const checkboxes = document.querySelectorAll('input[name="registerIds"]');
-                        checkboxes.forEach(checkbox => {
-                            checkbox.checked = e.target.checked;
-                        });
-                    });
-                }
-
-                const bulkDeleteForm = document.getElementById('bulkDeleteForm');
-                if (bulkDeleteForm) {
-                    bulkDeleteForm.addEventListener('submit', function(e) {
-                        e.preventDefault();
-                        const selected = document.querySelectorAll('input[name="registerIds"]:checked').length;
-                        if (selected === 0) {
-                            showAlert('Please select at least one record to delete.');
-                            return;
+                
+                int day = 1;
+                boolean monthComplete = false;
+                
+                while (!monthComplete) {
+                    out.print("<tr>");
+                    for (int i = 0; i < 7; i++) {
+                        out.print("<td>");
+                        
+                        if ((day == 1 && i < startDay) || day > daysInMonth) {
+                            // Empty cell
+                            out.print("&nbsp;");
+                        } else {
+                            // Create date string
+                            String dateStr = String.format("%04d-%02d-%02d", currentYear, currentMonth, day);
+                            String status = attendanceMap.get(dateStr);
+                            String statusClass = "day-future";
+                            String statusText = "";
+                            
+                            if (status != null) {
+                                switch(status) {
+                                    case "present": statusClass = "day-present"; statusText = "P"; break;
+                                    case "late": statusClass = "day-late"; statusText = "L"; break;
+                                    case "absent": statusClass = "day-absent"; statusText = "A"; break;
+                                    case "weekend": statusClass = "day-weekend"; statusText = "W"; break;
+                                    default: statusClass = "day-future"; statusText = day + ""; break;
+                                }
+                            } else {
+                                statusText = day + "";
+                                
+                                // Check if it's a weekend
+                                java.time.LocalDate cellDate = java.time.LocalDate.of(currentYear, currentMonth, day);
+                                if (cellDate.getDayOfWeek().getValue() >= 6) {
+                                    statusClass = "day-weekend";
+                                } else if (cellDate.isBefore(currentDate)) {
+                                    statusClass = "day-absent";
+                                }
+                            }
+                            
+                            // Highlight today
+                            if (day == currentDate.getDayOfMonth()) {
+                                statusClass += " day-today";
+                            }
+                            
+                            out.print("<div class='calendar-day " + statusClass + "' title='" + dateStr + "'>" + statusText + "</div>");
+                            day++;
                         }
                         
-                        document.getElementById('deleteModalMessage').innerText = 'Are you sure you want to delete ' + selected + ' record(s)?';
-                        showModal();
-
-                        document.getElementById('confirmDeleteBtn').onclick = function() {
-                            e.target.submit();
-                        };
-                    });
-                }
-                
-                // Set today's date as default in date filter
-                const dateFilter = document.querySelector('input[name="filter_date"]');
-                if (dateFilter && !dateFilter.value) {
-                    const today = new Date().toISOString().split('T')[0];
-                    dateFilter.value = today;
-                }
-                
-                // Add loading state to buttons
-                const forms = document.querySelectorAll('form');
-                forms.forEach(form => {
-                    form.addEventListener('submit', function() {
-                        const submitBtn = this.querySelector('button[type="submit"]');
-                        if (submitBtn) {
-                            submitBtn.classList.add('loading');
-                            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                        out.print("</td>");
+                        
+                        if (day > daysInMonth) {
+                            monthComplete = true;
                         }
-                    });
-                });
-            });
-            
-            // Helper functions for modal (assuming these exist in modal_assets.jspf)
-            function showModal() {
-                document.getElementById('deleteConfirmationModal').style.display = 'flex';
-            }
-            
-            function closeModal() {
-                document.getElementById('deleteConfirmationModal').style.display = 'none';
-            }
-            
-            function showAlert(message) {
-                alert(message); // Replace with your preferred alert implementation
-            }
-        </script>
+                    }
+                    out.print("</tr>");
+                }
+                %>
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Legend -->
+    <div class="calendar-legend" style="margin-top: 20px;">
+        <div class="legend-item">
+            <span class="color-box" style="background: #28a745;"></span> Present
+        </div>
+        <div class="legend-item">
+            <span class="color-box" style="background: #ffc107;"></span> Late
+        </div>
+        <div class="legend-item">
+            <span class="color-box" style="background: #dc3545;"></span> Absent
+        </div>
+        <div class="legend-item">
+            <span class="color-box" style="background: #e9ecef;"></span> Future/Weekend
+        </div>
+        <div class="legend-item">
+            <span class="color-box" style="background: #007bff; border: 2px solid #0056b3;"></span> Today
+        </div>
+    </div>
+</div>
+
+<style>
+.simple-calendar {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+.simple-calendar th {
+    background: #f8f9fa;
+    padding: 10px;
+    text-align: center;
+    font-weight: 600;
+    color: #495057;
+    border: 1px solid #dee2e6;
+}
+
+.simple-calendar td {
+    padding: 5px;
+    text-align: center;
+    border: 1px solid #dee2e6;
+    height: 50px;
+    vertical-align: middle;
+}
+
+.calendar-day {
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    border-radius: 50%;
+    margin: 0 auto;
+    font-weight: 600;
+    cursor: default;
+}
+
+.day-present {
+    background: #28a745;
+    color: white;
+}
+
+.day-late {
+    background: #ffc107;
+    color: #212529;
+}
+
+.day-absent {
+    background: #dc3545;
+    color: white;
+}
+
+.day-weekend {
+    background: #e9ecef;
+    color: #6c757d;
+}
+
+.day-future {
+    background: #f8f9fa;
+    color: #adb5bd;
+}
+
+.day-today {
+    border: 2px solid #007bff !important;
+    box-shadow: 0 0 0 1px #007bff;
+}
+
+.calendar-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+}
+
+.color-box {
+    width: 15px;
+    height: 15px;
+    border-radius: 3px;
+    display: inline-block;
+}
+</style>
+</script>
+
+
+
     </body>
 </html>

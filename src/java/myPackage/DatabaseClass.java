@@ -4,6 +4,7 @@ import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.*;
 import java.time.format.DateTimeFormatter;
 import java.text.SimpleDateFormat;
 import java.util.logging.Level;
@@ -14,11 +15,13 @@ import myPackage.classes.Questions;
 import myPackage.classes.User;
 import org.mindrot.jbcrypt.BCrypt;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.sql.Types;
 import java.util.Map;
@@ -3554,73 +3557,130 @@ public ArrayList<String> getCourseList() {
         return absentDays < 0 ? 0 : absentDays;
     }
 
-    public String getAttendanceCalendarData(int studentId) {
+ public String getAttendanceCalendarData(int studentId) {
+    Connection conn = null;
+    PreparedStatement pstm = null;
+    ResultSet rs = null;
+    
     StringBuilder json = new StringBuilder("[");
     try {
-        ensureConnection();
-
+        conn = getConnection(); // Use getConnection() instead of ensureConnection()
+        
         // 1. Define the 3-month period based on the current date
         LocalDate today = LocalDate.now();
         LocalDate startDate = today.minusMonths(2).withDayOfMonth(1);
         LocalDate endDate = today.plusMonths(1).withDayOfMonth(today.plusMonths(1).lengthOfMonth());
+        
+        System.out.println("Calendar Period: " + startDate + " to " + endDate); // Debug
 
         // 2. Fetch all attendance records within this 3-month period
-        String attendanceSql = "SELECT registration_date, registration_time FROM daily_register WHERE student_id = ? AND registration_date >= ? AND registration_date <= ? ORDER BY registration_date";
-        PreparedStatement pstm = conn.prepareStatement(attendanceSql);
+        String attendanceSql = "SELECT DATE(registration_date) as reg_date, TIME(registration_time) as reg_time " +
+                              "FROM daily_register WHERE student_id = ? " +
+                              "AND DATE(registration_date) BETWEEN ? AND ? " +
+                              "ORDER BY registration_date";
+        
+        pstm = conn.prepareStatement(attendanceSql);
         pstm.setInt(1, studentId);
         pstm.setDate(2, java.sql.Date.valueOf(startDate));
         pstm.setDate(3, java.sql.Date.valueOf(endDate));
-        ResultSet rs = pstm.executeQuery();
+        
+        rs = pstm.executeQuery();
 
         Map<LocalDate, LocalTime> attendanceMap = new HashMap<>();
         while (rs.next()) {
-            attendanceMap.put(
-                rs.getDate("registration_date").toLocalDate(),
-                rs.getTime("registration_time").toLocalTime()
-            );
+            try {
+                Date sqlDate = rs.getDate("reg_date");
+                Time sqlTime = rs.getTime("reg_time");
+                
+                if (sqlDate != null && sqlTime != null) {
+                    attendanceMap.put(
+                        sqlDate.toLocalDate(),
+                        sqlTime.toLocalTime()
+                    );
+                }
+            } catch (Exception e) {
+                System.out.println("Error processing record: " + e.getMessage());
+            }
         }
-        rs.close();
-        pstm.close();
+        
+        System.out.println("Found " + attendanceMap.size() + " attendance records"); // Debug
 
         // 3. Generate JSON for each day in the 3-month period
         boolean first = true;
-        for (LocalDate date = startDate; date.isBefore(endDate.plusDays(1)); date = date.plusDays(1)) {
+        LocalDate currentDate = startDate;
+        
+        while (!currentDate.isAfter(endDate)) {
             if (!first) {
                 json.append(",");
             }
             first = false;
 
-            String eventClass = "future"; 
-
-            if (date.isBefore(today) || date.isEqual(today)) {
-                
-                if (attendanceMap.containsKey(date)) {
-                    if (attendanceMap.get(date).isAfter(LocalTime.of(10, 0))) {
+            String eventClass = "future"; // Default for future dates
+            
+            // Check if date is in the past or today
+            if (currentDate.isBefore(today) || currentDate.isEqual(today)) {
+                // Check if attendance was recorded
+                if (attendanceMap.containsKey(currentDate)) {
+                    LocalTime time = attendanceMap.get(currentDate);
+                    if (time.isAfter(LocalTime.of(10, 0))) {
                         eventClass = "late";
                     } else {
                         eventClass = "present";
                     }
                 } else {
-                    
-                    if (date.getDayOfWeek() != DayOfWeek.SATURDAY && date.getDayOfWeek() != DayOfWeek.SUNDAY) {
+                    // No attendance recorded
+                    if (currentDate.getDayOfWeek() != DayOfWeek.SATURDAY && 
+                        currentDate.getDayOfWeek() != DayOfWeek.SUNDAY) {
+                        // Weekday with no attendance = absent
                         eventClass = "absent";
                     } else {
-                         eventClass = "weekend";
+                        // Weekend
+                        eventClass = "weekend";
                     }
                 }
+            } else if (currentDate.getDayOfWeek() == DayOfWeek.SATURDAY || 
+                      currentDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
+                // Future weekend
+                eventClass = "weekend";
             }
 
+            // Format the date properly
+            String dateStr = currentDate.toString();
+            
             json.append("{")
-                .append("\"date\":\"").append(date).append("\",")
-                .append("\"class\":\"event-").append(eventClass).append("\"")
+                .append("\"date\":\"").append(dateStr).append("\",")
+                .append("\"class\":\"").append(eventClass).append("\"")
                 .append("}");
+            
+            // Debug output for first few days
+            if (currentDate.getDayOfMonth() <= 3) {
+                System.out.println("Day " + dateStr + ": " + eventClass);
+            }
+            
+            currentDate = currentDate.plusDays(1);
         }
 
     } catch (SQLException ex) {
         LOGGER.log(Level.SEVERE, "Error in getAttendanceCalendarData", ex);
+        System.out.println("SQL Error: " + ex.getMessage());
         return "[]"; 
+    } catch (Exception ex) {
+        LOGGER.log(Level.SEVERE, "Unexpected error in getAttendanceCalendarData", ex);
+        System.out.println("Unexpected Error: " + ex.getMessage());
+        return "[]";
+    } finally {
+        // Close all resources properly
+        try { if (rs != null) rs.close(); } catch (SQLException e) {}
+        try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
+        try { if (conn != null) conn.close(); } catch (SQLException e) {}
     }
+    
     json.append("]");
-    return json.toString();
-    }
+    
+    String result = json.toString();
+    System.out.println("Generated JSON length: " + result.length()); // Debug
+    System.out.println("First 200 chars of JSON: " + result.substring(0, Math.min(result.length(), 200))); // Debug
+    
+    return result;
+}
 }
