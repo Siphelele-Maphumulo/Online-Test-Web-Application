@@ -615,6 +615,52 @@ try {
             response.sendRedirect("adm-page.jsp?pgprt=5");
         }
     
+    /* =========================
+       EXAM REGISTER
+       ========================= */
+    } else if ("exam-register".equalsIgnoreCase(pageParam)) {
+        String operation = nz(request.getParameter("operation"), "");
+        if ("bulk_delete".equalsIgnoreCase(operation)) {
+            String[] registerIds = request.getParameterValues("registerIds");
+            if (registerIds != null && registerIds.length > 0) {
+                pDAO.deleteExamRegisterRecords(registerIds);
+                session.setAttribute("message", "Selected exam register records deleted successfully.");
+            } else {
+                session.setAttribute("error", "No records selected for deletion.");
+            }
+            response.sendRedirect("adm-page.jsp?pgprt=7");
+        }
+    /* =========================
+       CLASS REGISTER
+       ========================= */
+    } else if ("class-register".equalsIgnoreCase(pageParam)) {
+        String operation = nz(request.getParameter("operation"), "");
+        if ("bulk_delete".equalsIgnoreCase(operation)) {
+            String[] registerIds = request.getParameterValues("registerIds");
+            if (registerIds != null && registerIds.length > 0) {
+                pDAO.deleteDailyRegisterRecords(registerIds);
+                session.setAttribute("message", "Selected class register records deleted successfully.");
+            } else {
+                session.setAttribute("error", "No records selected for deletion.");
+            }
+            response.sendRedirect("adm-page.jsp?pgprt=8");
+        }
+
+    /* =========================
+       DAILY REGISTER (STUDENT)
+       ========================= */
+    } else if ("daily-register".equalsIgnoreCase(pageParam)) {
+        String operation = nz(request.getParameter("operation"), "");
+        if ("bulk_delete".equalsIgnoreCase(operation)) {
+            String[] registerIds = request.getParameterValues("registerIds");
+            if (registerIds != null && registerIds.length > 0) {
+                pDAO.deleteDailyRegisterRecords(registerIds);
+                session.setAttribute("message", "Selected attendance records deleted successfully.");
+            } else {
+                session.setAttribute("error", "No records selected for deletion.");
+            }
+            response.sendRedirect("std-page.jsp?pgprt=3");
+        }
         
     /* =========================
        LOGOUT

@@ -862,10 +862,18 @@
             </div>
 
             <% if (!registerList.isEmpty()) { %>
+            <form id="bulkDeleteForm" action="controller.jsp" method="post">
+                <input type="hidden" name="page" value="class-register">
+                <input type="hidden" name="operation" value="bulk_delete">
+                <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
+                <button type="submit" class="btn btn-danger" style="margin-bottom: 20px;">
+                    <i class="fas fa-trash"></i> Delete Selected
+                </button>
                 <div class="results-table-container">
                     <table class="results-table">
                         <thead>
                             <tr>
+                                <th><input type="checkbox" id="selectAll"></th>
                                 <th onclick="sortTable('index')"># <i class="fas fa-sort sort-indicator"></i></th>
                                 <th onclick="sortTable('register_id')">Register ID <i class="fas fa-sort sort-indicator"></i></th>
                                 <th onclick="sortTable('student_id')">Student ID <i class="fas fa-sort sort-indicator"></i></th>
@@ -887,6 +895,7 @@
                                     String regTime = record.get("registration_time");
                             %>
                             <tr>
+                                <td><input type="checkbox" name="registerIds" value="<%= registerId %>"></td>
                                 <td><span class="badge badge-info"><%= i %></span></td>
                                 <td><code><%= registerId %></code></td>
                                 <td><strong><%= studentId %></strong></td>
@@ -921,6 +930,7 @@
                         </tbody>
                     </table>
                 </div>
+            </form>
                 
                 <div class="results-count">
                     Showing <%= registerList.size() %> record(s)
@@ -968,6 +978,25 @@
         
         // Highlight active filters
         highlightActiveFilters();
+    });
+
+    document.getElementById('selectAll').addEventListener('change', function(e) {
+        const checkboxes = document.querySelectorAll('input[name="registerIds"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = e.target.checked;
+        });
+    });
+
+    document.getElementById('bulkDeleteForm').addEventListener('submit', function(e) {
+        const selected = document.querySelectorAll('input[name="registerIds"]:checked').length;
+        if (selected === 0) {
+            alert('Please select at least one record to delete.');
+            e.preventDefault();
+            return;
+        }
+        if (!confirm('Are you sure you want to delete ' + selected + ' record(s)?')) {
+            e.preventDefault();
+        }
     });
     
     function setDateFilter(date) {
