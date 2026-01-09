@@ -454,7 +454,7 @@
             <div class="institution-logo">
             <div class="logo-col">
                 <a href="index.jsp" class="logo-link logo-symbol">
-                    <img src="https://github.com/Siphelele-Maphumulo/Online-Test-Web-Application/blob/fix/export-button-filtered-data-18053524147114085452/web/IMG/mut.png?raw=true" 
+                    <img src="https://raw.githubusercontent.com/Siphelele-Maphumulo/Online-Test-Web-Application/refs/heads/main/images/Design.png" 
                          alt="MUT Logo" 
                          class="header-logo logo-symbol">
                 </a>

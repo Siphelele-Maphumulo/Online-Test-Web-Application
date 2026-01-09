@@ -689,6 +689,14 @@
     .quick-filter-row .btn {
         margin: 2px;
     }
+    
+    .floating-delete-btn {
+        position: sticky;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 999;
+    }
 </style>
 
 <%@ include file="header-messages.jsp" %>
@@ -809,7 +817,7 @@
                 <input type="hidden" name="page" value="exam-register">
                 <input type="hidden" name="operation" value="bulk_delete">
                 <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
-                <button type="submit" class="btn btn-danger" style="margin: 10px;">
+                <button type="submit" class="btn btn-danger floating-delete-btn" style="margin: 10px;">
                     <i class="fas fa-trash"></i> Delete Selected
                 </button>
                 <table class="results-table">
