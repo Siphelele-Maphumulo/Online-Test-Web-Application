@@ -63,6 +63,81 @@ try {
     /* =========================
        REGISTER
        ========================= */
+    } else if ("send_code".equalsIgnoreCase(pageParam)) {
+        String fName     = nz(request.getParameter("fname"), "");
+        String lName     = nz(request.getParameter("lname"), "");
+        String email     = nz(request.getParameter("email"), "");
+
+        // Store all form data in session
+        session.setAttribute("signup_fname", fName);
+        session.setAttribute("signup_lname", lName);
+        session.setAttribute("signup_uname", nz(request.getParameter("uname"), ""));
+        session.setAttribute("signup_email", email);
+        session.setAttribute("signup_pass", nz(request.getParameter("pass"), ""));
+        session.setAttribute("signup_contactno", nz(request.getParameter("contactno"), ""));
+        session.setAttribute("signup_city", nz(request.getParameter("city"), ""));
+        session.setAttribute("signup_address", nz(request.getParameter("address"), ""));
+        session.setAttribute("signup_user_type", nz(request.getParameter("user_type"), ""));
+
+        if (pDAO.getUserByEmail(email) != null) {
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\": false, \"message\": \"Email already exists.\"}");
+            return;
+        }
+
+        String code = myPackage.Email.generateRandomCode();
+        try {
+            pDAO.saveSignupCode(fName, lName, email, code);
+            myPackage.Email.sendAcceptanceEmail(email, fName, code);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\": true}");
+        } catch (Exception e) {
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\": false, \"message\": \"Failed to send email.\"}");
+        }
+        return;
+
+    } else if ("verify_code".equalsIgnoreCase(pageParam)) {
+        String email = nz(request.getParameter("email"), "");
+        String code = nz(request.getParameter("code"), "");
+
+        try {
+            String fName = (String) session.getAttribute("signup_fname");
+            String lName = (String) session.getAttribute("signup_lname");
+                String uName = (String) session.getAttribute("signup_uname");
+                String pass = (String) session.getAttribute("signup_pass");
+                String contactNo = (String) session.getAttribute("signup_contactno");
+                String city = (String) session.getAttribute("signup_city");
+                String address = (String) session.getAttribute("signup_address");
+                String userType = (String) session.getAttribute("signup_user_type");
+
+                String hashedPass = PasswordUtils.bcryptHashPassword(pass);
+
+                pDAO.createUserAfterVerification(fName, lName, uName, email, hashedPass, contactNo, city, address, userType, code);
+
+                // Clean up session attributes
+                session.removeAttribute("signup_fname");
+                session.removeAttribute("signup_lname");
+                session.removeAttribute("signup_uname");
+                session.removeAttribute("signup_email");
+                session.removeAttribute("signup_pass");
+                session.removeAttribute("signup_contactno");
+                session.removeAttribute("signup_city");
+                session.removeAttribute("signup_address");
+                session.removeAttribute("signup_user_type");
+
+                session.setAttribute("message", "Registration successful! Please login");
+                response.sendRedirect("login.jsp");
+            } else {
+                session.setAttribute("error", "Invalid verification code.");
+                response.sendRedirect("signup.jsp");
+            }
+        } catch (Exception e) {
+            session.setAttribute("error", "An error occurred during verification.");
+            response.sendRedirect("signup.jsp");
+        }
+        return;
+
     } else if ("register".equalsIgnoreCase(pageParam)) {
         String fName     = nz(request.getParameter("fname"), "");
         String lName     = nz(request.getParameter("lname"), "");

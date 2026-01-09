@@ -182,8 +182,35 @@
     <jsp:include page="footer.jsp"/>
   </footer>
 
+  <!-- Verification Modal -->
+  <div class="modal fade" id="verificationModal" tabindex="-1" role="dialog" aria-labelledby="verificationModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="verificationModalLabel">Enter Verification Code</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>A verification code has been sent to your email address. Please enter the code below to complete your registration.</p>
+          <form id="verificationForm" action="controller.jsp" method="POST">
+            <input type="hidden" name="page" value="verify_code"/>
+            <input type="hidden" name="email" id="verificationEmail"/>
+            <div class="form-group">
+              <label for="verificationCode">Verification Code</label>
+              <input type="text" class="form-control" id="verificationCode" name="code" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Verify and Sign Up</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    function validateForm(){
+    function validateForm(event){
+      event.preventDefault();
       let valid = true;
       const fname = document.getElementById("fname");
       const lname = document.getElementById("lname");
@@ -201,7 +228,23 @@
       setErr("errorEmail", /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim()) ? "" : "Enter a valid email address.");
       setErr("errorPassword", pass.value.length >= 6 ? "" : "Password must be at least 6 characters.");
       setErr("errorConfirmPassword", pass.value === cpass.value ? "" : "Passwords do not match.");
-      return valid;
+
+      if (valid) {
+        const formData = new FormData(event.target);
+        formData.set("page", "send_code");
+        fetch("controller.jsp", {
+          method: "POST",
+          body: formData
+        }).then(response => response.json()).then(data => {
+          if (data.success) {
+            document.getElementById("verificationEmail").value = email.value.trim();
+            $('#verificationModal').modal('show');
+          } else {
+            setErr("errorEmail", data.message);
+          }
+        });
+      }
+      return false;
     }
 
     function togglePassword(fieldId, icon){
