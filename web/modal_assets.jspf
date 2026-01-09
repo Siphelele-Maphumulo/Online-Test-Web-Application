@@ -129,6 +129,14 @@
 </div>
 
 <script>
+    function showModal() {
+        document.getElementById('deleteConfirmationModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('deleteConfirmationModal').style.display = 'none';
+    }
+
     function showAlert(message, title = 'Alert') {
         document.getElementById('alertModalTitle').textContent = title;
         document.getElementById('alertModalMessage').textContent = message;

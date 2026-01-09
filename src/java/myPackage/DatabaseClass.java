@@ -3422,5 +3422,50 @@ public ArrayList<String> getCourseList() {
         return registerList;
     }
     
+    public void deleteExamRegisterRecords(String[] registerIds) {
+        try {
+            ensureConnection();
+            conn.setAutoCommit(false);
+            String deleteSql = "DELETE FROM exam_register WHERE register_id = ?";
+            try (PreparedStatement ps = conn.prepareStatement(deleteSql)) {
+                for (String registerId : registerIds) {
+                    ps.setInt(1, Integer.parseInt(registerId));
+                    ps.addBatch();
+                }
+                ps.executeBatch();
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                LOGGER.log(Level.SEVERE, "Error bulk deleting exam register records", e);
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in deleteExamRegisterRecords", e);
+        }
+    }
+
+    public void deleteDailyRegisterRecords(String[] registerIds) {
+        try {
+            ensureConnection();
+            conn.setAutoCommit(false);
+            String deleteSql = "DELETE FROM daily_register WHERE register_id = ?";
+            try (PreparedStatement ps = conn.prepareStatement(deleteSql)) {
+                for (String registerId : registerIds) {
+                    ps.setInt(1, Integer.parseInt(registerId));
+                    ps.addBatch();
+                }
+                ps.executeBatch();
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                LOGGER.log(Level.SEVERE, "Error bulk deleting daily register records", e);
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in deleteDailyRegisterRecords", e);
+        }
+    }
 
 }
