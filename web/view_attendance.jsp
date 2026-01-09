@@ -1352,9 +1352,17 @@
         <script>
             // Add confirmation for marking attendance
             document.addEventListener('DOMContentLoaded', function() {
-                const calendar = new VanillaJsCalendar('#calendar-container', {
-                    events: JSON.parse('<%= pDAO.getAttendanceCalendarData(userId) %>'),
-                });
+                try {
+                    const calendar = new VanillaJsCalendar('#calendar-container', {
+                        events: <%= pDAO.getAttendanceCalendarData(userId) %>,
+                    });
+                } catch (error) {
+                    console.error('Error initializing calendar:', error);
+                    const calendarContainer = document.getElementById('calendar-container');
+                    if (calendarContainer) {
+                        calendarContainer.innerHTML = '<div style="color: red; padding: 10px; border: 1px solid red; border-radius: 5px;">Could not load calendar. Please try again later.</div>';
+                    }
+                }
 
                 const markBtn = document.querySelector('.start-exam-btn');
                 if (markBtn && !markBtn.disabled) {
