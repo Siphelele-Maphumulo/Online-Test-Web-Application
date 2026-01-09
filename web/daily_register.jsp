@@ -152,6 +152,55 @@
             int attendanceRate = totalDays > 0 ? (presentDays * 100 / totalDays) : 0;
             int absentDays = pDAO.getDaysAbsentCount(userId);
             int lateDays = pDAO.getDaysLateCount(userId);
+            
+            // Get calendar data - FIXED: Call method without JSON.parse in JSP
+            // We'll generate calendar events from attendance history
+            String calendarEventsJson = "[]";
+            if (attendanceHistory != null && !attendanceHistory.isEmpty()) {
+                // Build calendar events from attendance history
+                List<Map<String, String>> calendarEvents = new ArrayList<>();
+                for (Map<String, String> attendance : attendanceHistory) {
+                    String date = attendance.get("registration_date");
+                    String time = attendance.get("registration_time");
+                    
+                    // Determine status based on time (example: late if after 9:00 AM)
+                    String status = "present";
+                    if (time != null) {
+                        try {
+                            String[] timeParts = time.split(":");
+                            int hour = Integer.parseInt(timeParts[0]);
+                            if (hour >= 9) { // Example: late if 9 AM or later
+                                status = "late";
+                            }
+                        } catch (Exception e) {
+                            // Keep as present if time parsing fails
+                        }
+                    }
+                    
+                    // Create event data
+                    Map<String, String> event = new HashMap<>();
+                    event.put("date", date);
+                    event.put("status", status);
+                    calendarEvents.add(event);
+                }
+                
+                // Convert to JSON
+                calendarEventsJson = "[";
+                for (int i = 0; i < calendarEvents.size(); i++) {
+                    Map<String, String> event = calendarEvents.get(i);
+                    calendarEventsJson += String.format(
+                        "{\"date\":\"%s\",\"class\":\"event-%s\",\"title\":\"%s\",\"badge\":\"%s\"}",
+                        event.get("date"),
+                        event.get("status"),
+                        event.get("status").toUpperCase(),
+                        event.get("status").toUpperCase()
+                    );
+                    if (i < calendarEvents.size() - 1) {
+                        calendarEventsJson += ",";
+                    }
+                }
+                calendarEventsJson += "]";
+            }
         %>
 
         <!--Style-->
@@ -241,73 +290,58 @@
                 background: transparent;
             }
             
-            /* Sidebar Styles - Enhanced */
+            /* Sidebar - Modern Design */
             .sidebar {
-                width: 220px;
-                background: linear-gradient(180deg, var(--primary-blue), #0f3c7a);
+                width: 200px;
+                background: linear-gradient(180deg, var(--primary-blue) 0%, #0d3060 100%);
                 color: var(--white);
                 flex-shrink: 0;
-                position: sticky;
+                position: fixed;
                 top: 0;
+                left: 0;
                 height: 100vh;
-                overflow-y: auto;
-                overflow-x: hidden;
-                z-index: var(--z-sidebar);
-                box-shadow: var(--shadow-md);
+                z-index: var(--z-sticky);
+                box-shadow: var(--shadow-lg);
                 border-right: 1px solid rgba(255, 255, 255, 0.1);
+                overflow-y: auto;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
             }
 
             .sidebar::-webkit-scrollbar {
-                width: 8px;
-            }
-
-            .sidebar::-webkit-scrollbar-thumb {
-                background: rgba(255, 255, 255, 0.25);
-                border-radius: var(--radius-full);
-                transition: background var(--transition-fast);
-            }
-
-            .sidebar::-webkit-scrollbar-thumb:hover {
-                background: rgba(255, 255, 255, 0.4);
+                width: 6px;
             }
 
             .sidebar::-webkit-scrollbar-track {
                 background: transparent;
             }
 
-            .sidebar-header {
-                padding: var(--spacing-xl) var(--spacing-lg);
-                text-align: center;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-                position: relative;
-                overflow: hidden;
+            .sidebar::-webkit-scrollbar-thumb {
+                background-color: rgba(255, 255, 255, 0.3);
+                border-radius: var(--radius-full);
             }
 
-            .sidebar-header::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 4px;
-                background: linear-gradient(90deg, var(--accent-blue), #3b82f6);
+            .sidebar-header {
+                padding-top: 35%;
+                text-align: center;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                background: rgba(255, 255, 255, 0.05);
+                backdrop-filter: blur(10px);
             }
 
             .mut-logo {
-                max-height: 140px;
+                max-height: 150px;
                 width: auto;
                 filter: brightness(0) invert(1);
-                transition: transform var(--transition-normal);
             }
-
+            
             .mut-logo:hover {
                 transform: scale(1.05);
             }
-
+            
             .sidebar-nav {
-                padding: var(--spacing-md) 0;
+                padding: var(--spacing-lg) 0;
             }
-    
             
             /* Main Content Area */
             .content-area,
@@ -902,7 +936,7 @@
                 flex-wrap: wrap;
                 justify-content: center;
                 gap: var(--spacing-lg);
-                margin-top: var(--spacing-xl);
+                margin-top: var(--spacing-lg);
                 padding-top: var(--spacing-lg);
                 border-top: 1px solid var(--border-color);
             }
@@ -926,6 +960,7 @@
             .color-box.present { background-color: var(--success); }
             .color-box.late { background-color: var(--warning); }
             .color-box.absent { background-color: var(--error); }
+            .color-box.future { background-color: #e9ecef; }
             
             .stat-card {
                 background: linear-gradient(135deg, var(--white) 0%, #fafcff 100%);
@@ -978,52 +1013,60 @@
                 font-size: 14px;
             }
             
-            /* Start Exam Button */
-            .start-exam-btn {
-                background: linear-gradient(135deg, var(--success), #34d399);
-                color: var(--white);
-                padding: 14px 28px;
-                border-radius: var(--radius-md);
-                border: none;
-                font-size: 16px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all var(--transition-normal);
-                display: inline-flex;
-                align-items: center;
-                gap: var(--spacing-sm);
-                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
-                font-family: inherit;
-                position: relative;
-                overflow: hidden;
+            /* Calendar Container */
+            #calendar-container {
+                margin-top: 20px;
+                background: var(--white);
+                border-radius: var(--radius-lg);
+                padding: var(--spacing-lg);
+                box-shadow: var(--shadow-md);
+                border: 1px solid var(--border-color);
             }
             
-            .start-exam-btn::after {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-                transform: translateX(-100%);
-                transition: transform 0.6s;
+            /* Calendar Styles */
+            .vanilla-calendar-header {
+                background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue)) !important;
+                color: var(--white) !important;
+                border-radius: var(--radius-md) var(--radius-md) 0 0 !important;
             }
             
-            .start-exam-btn:hover::after {
-                transform: translateX(100%);
+            .vanilla-calendar-day__btn {
+                border-radius: var(--radius-sm) !important;
+                transition: all var(--transition-fast) !important;
             }
             
-            .start-exam-btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+            .vanilla-calendar-day__btn:hover {
+                background: var(--light-gray) !important;
+                transform: scale(1.05) !important;
             }
             
-            .start-exam-btn:disabled {
-                background: var(--medium-gray);
-                cursor: not-allowed;
-                transform: none;
-                box-shadow: none;
+            /* Calendar Event Colors */
+            .event-present {
+                background-color: #28a745 !important;
+                color: white !important;
+                font-weight: bold !important;
+                border: 2px solid #1e7e34 !important;
+            }
+            
+            .event-late {
+                background-color: #ffc107 !important;
+                color: #212529 !important;
+                font-weight: bold !important;
+                border: 2px solid #e0a800 !important;
+            }
+            
+            .event-absent {
+                background-color: #dc3545 !important;
+                color: white !important;
+                font-weight: bold !important;
+                border: 2px solid #c82333 !important;
+            }
+            
+            .event-future {
+                background-color: #e9ecef !important;
+                color: #6c757d !important;
+                border: 1px solid #dee2e6 !important;
+                opacity: 0.7 !important;
             }
             
             /* Responsive Design */
@@ -1104,6 +1147,12 @@
                     padding: var(--spacing-md);
                     font-size: 13px;
                 }
+                
+                .calendar-legend {
+                    flex-direction: column;
+                    align-items: center;
+                    gap: var(--spacing-sm);
+                }
             }
             
             @media (max-width: 480px) {
@@ -1126,16 +1175,10 @@
                 .filter-container {
                     padding: var(--spacing-md);
                 }
-                
-                .start-exam-btn {
-                    padding: 12px 20px;
-                    font-size: 15px;
-                }
             }
         </style>
 
         <%@ include file="header-messages.jsp" %>
-        <%@ include file="modal_assets.jspf" %>
 
         <div class="results-wrapper">
             <!-- Sidebar Navigation -->
@@ -1157,11 +1200,11 @@
                             <i class="fas fa-chart-line"></i>
                             <span>Results</span>
                         </a>
-                        <a class="nav-item active" href="std-page.jsp?pgprt=3">
+                        <a class="nav-item" href="std-page.jsp?pgprt=3">
                             <i class="fas fa-calendar-check"></i>
                             <span>Register</span>
                         </a>
-                        <a class="nav-item" href="std-page.jsp?pgprt=4">
+                        <a class="nav-item active" href="std-page.jsp?pgprt=4">
                             <i class="fas fa-eye"></i>
                             <span>Attendance</span>
                         </a>
@@ -1173,7 +1216,7 @@
                 <!-- Page Header -->
                 <div class="page-header">
                     <div class="page-title">
-                        <i class="fas fa-calendar-check"></i> Daily Attendance Register
+                        <i class="fas fa-calendar-check"></i> View Daily Attendances
                     </div>
                     <div class="stats-badge">
                         <i class="fas fa-user-graduate"></i> Student Portal
@@ -1208,86 +1251,99 @@
                     <p><i class="fas fa-calendar-day"></i> <strong>Today's Date:</strong> <%= todayDate %></p>
                 </div>
 
-                <!-- Today's Attendance Card -->
-                <div class="course-card">
-                    <h3 style="margin-bottom: var(--spacing-md); color: var(--text-dark); font-size: 18px;">
-                        <i class="fas fa-calendar-day"></i> Today's Attendance
-                    </h3>
-                    
-                    <% if (attendanceMarkedToday) { %>
-                        <div class="attendance-status status-present" style="margin-bottom: var(--spacing-lg);">
-                            <i class="fas fa-check-circle"></i> Attendance already marked for today
-                        </div>
-                        <p style="color: var(--dark-gray); margin-bottom: var(--spacing-lg); font-size: 15px;">
-                            You have successfully marked your attendance for <strong><%= todayDate %></strong>.
-                        </p>
-                        <button class="start-exam-btn" disabled>
-                            <i class="fas fa-check"></i> Attendance Marked
-                        </button>
-                    <% } else { %>
-                        <div class="attendance-status status-absent" style="margin-bottom: var(--spacing-lg);">
-                            <i class="fas fa-exclamation-circle"></i> Attendance not marked for today
-                        </div>
-                        <p style="color: var(--dark-gray); margin-bottom: var(--spacing-lg); font-size: 15px;">
-                            Please mark your attendance for <strong><%= todayDate %></strong> by clicking the button below.
-                        </p>
-                        <form method="post" onsubmit="return confirm('Are you sure you want to mark attendance for today?');">
-                            <input type="hidden" name="operation" value="mark_attendance">
-                            <button type="submit" class="start-exam-btn">
-                                <i class="fas fa-check"></i> Mark Today's Attendance
-                            </button>
-                        </form>
-                    <% } %>
-                </div>
-
-                <!-- Attendance History -->
-                <div class="course-card">
+                <!-- Filter Container -->
+                <div class="filter-container">
                     <h3 style="margin-bottom: var(--spacing-md); color: var(--text-dark); font-size: 18px;">
                         <i class="fas fa-history"></i> Attendance History
                     </h3>
-                    <% if (attendanceHistory != null && !attendanceHistory.isEmpty()) { %>
-                        <form id="bulkDeleteForm" action="controller.jsp" method="post">
-                            <input type="hidden" name="page" value="daily-register">
-                            <input type="hidden" name="operation" value="bulk_delete">
-                            <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
-                            <button type="submit" class="btn btn-error" style="margin-bottom: 20px;">
-                                <i class="fas fa-trash"></i> Delete Selected
-                            </button>
-                            <div class="results-table-container">
-                                <table class="results-table">
-                                    <thead>
-                                        <tr>
-                                            <th><input type="checkbox" id="selectAll"></th>
-                                            <th>#</th>
-                                            <th>Date</th>
-                                            <th>Time</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <% 
-                                            int i = 0;
-                                            for (Map<String, String> record : attendanceHistory) {
-                                                i++;
-                                        %>
-                                        <tr>
-                                            <td><input type="checkbox" name="registerIds" value="<%= record.get("register_id") %>"></td>
-                                            <td><%= i %></td>
-                                            <td><%= record.get("registration_date") %></td>
-                                            <td><%= record.get("registration_time") %></td>
-                                        </tr>
-                                        <% } %>
-                                    </tbody>
-                                </table>
+                    <form method="get" action="std-page.jsp">
+                        <input type="hidden" name="pgprt" value="3">
+                        <div class="filter-grid">
+                            <div class="filter-group">
+                                <label class="filter-label"><i class="fas fa-calendar"></i> Filter by Date</label>
+                                <input type="date" name="filter_date" class="filter-control" value="<%= filterDate %>">
                             </div>
-                        </form>
+                        </div>
+                        <div class="quick-filter-row">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-search"></i> Apply Filters
+                            </button>
+                            <a href="std-page.jsp?pgprt=3" class="btn btn-outline">
+                                <i class="fas fa-times"></i> Clear
+                            </a>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Attendance Records -->
+                <div class="results-card">
+                    <div class="card-header">
+                        <span><i class="fas fa-table"></i> Attendance Records</span>
+                        <span><i class="fas fa-user-check"></i> Student Attendance</span>
+                    </div>
+
+                    <%
+                        try {
+                            if (attendanceHistory != null && !attendanceHistory.isEmpty()) {
+                    %>
+                    <div class="results-table-container">
+                        <table class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Student ID</th>
+                                    <th>Student Name</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <%
+                                int i = 0;
+                                for (Map<String, String> attendance : attendanceHistory) {
+                                    i++;
+                            %>
+                                <tr>
+                                    <td><%= i %></td>
+                                    <td><%= attendance.get("registration_date") %></td>
+                                    <td><%= attendance.get("registration_time") %></td>
+                                    <td><%= attendance.get("student_id") %></td>
+                                    <td><%= attendance.get("student_name") %></td>
+                                    <td>
+                                        <span class="attendance-status status-present">
+                                            <i class="fas fa-check"></i>
+                                            Present
+                                        </span>
+                                    </td>
+                                </tr>
+                            <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="results-count">
+                        Total Attendance Records: <%= i %>
+                    </div>
                     <% } else { %>
                         <div class="no-results">
-                            No attendance history found.
+                            <i class="fas fa-clipboard-list fa-2x" style="margin-bottom: var(--spacing-md); opacity: 0.5;"></i>
+                            <p>No attendance records found.</p>
+                            <p style="font-size: 15px; margin-top: var(--spacing-sm);">Start by marking today's attendance above.</p>
+                        </div>
+                    <% }
+                    } catch (Exception e) {
+                    %>
+                        <div class="no-results">
+                            <i class="fas fa-clipboard-list fa-2x" style="margin-bottom: var(--spacing-md); opacity: 0.5;"></i>
+                            <p>No attendance records available.</p>
+                            <p style="font-size: 14px; margin-top: var(--spacing-sm); color: var(--dark-gray);">
+                                Attendance records will appear here once you start marking attendance.
+                            </p>
                         </div>
                     <% } %>
                 </div>
 
-                <!-- Attendance Statistics -->
+                <!-- Attendance Statistics with Calendar -->
                 <div class="course-card">
                     <h3 style="margin-bottom: var(--spacing-md); color: var(--text-dark); font-size: 18px;">
                         <i class="fas fa-chart-pie"></i> Attendance Statistics
@@ -1321,8 +1377,11 @@
                     <p style="margin-top: var(--spacing-lg); font-size: 14px; color: var(--dark-gray); text-align: center;">
                         Based on <%= totalDays %> recorded attendance days.
                     </p>
-                     <div id="calendar-container" style="margin-top: 20px;"></div>
-                    <!-- Add the calendar legend here -->
+                    
+                    <!-- Calendar Container -->
+                    <div id="calendar-container"></div>
+                    
+                    <!-- Calendar Legend -->
                     <div class="calendar-legend">
                         <div class="legend-item">
                             <span class="color-box present"></span> Present
@@ -1333,77 +1392,99 @@
                         <div class="legend-item">
                             <span class="color-box absent"></span> Absent
                         </div>
+                        <div class="legend-item">
+                            <span class="color-box future"></span> Future Date
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-<style>
-    .event-present { background-color: #28a745 !important; color: white !important; }
-    .event-late { background-color: #ffc107 !important; color: white !important; }
-    .event-absent { background-color: #dc3545 !important; color: white !important; }
-</style>
-
-<div id="deleteConfirmationModal" class="modal-overlay" style="display: none;">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h2>
-      <button class="close-button" onclick="closeModal()">&times;</button>
-    </div>
-    <div class="modal-body">
-      <p id="deleteModalMessage">Are you sure you want to delete the selected records?</p>
-    </div>
-    <div class="modal-footer">
-      <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
-      <button id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
-    </div>
-  </div>
-</div>
-
         <script src="https://cdn.jsdelivr.net/npm/vanilla-js-calendar@1.6.5/build/vanilla-js-calendar.min.js"></script>
         <script>
-            // Add confirmation for marking attendance
             document.addEventListener('DOMContentLoaded', function() {
-                const calendar = new VanillaJsCalendar('#calendar-container', {
-                    events: JSON.parse('<%= pDAO.getAttendanceCalendarData(userId) %>'),
-                });
-
-                const markBtn = document.querySelector('.start-exam-btn');
-                if (markBtn && !markBtn.disabled) {
-                    markBtn.addEventListener('click', function(e) {
-                        if (!confirm('Are you sure you want to mark your attendance for today?')) {
-                            e.preventDefault();
+                try {
+                    // Get calendar events from JSP-generated JSON
+                    const calendarEvents = <%= calendarEventsJson %>;
+                    
+                    // Get current date
+                    const today = new Date();
+                    
+                    // Initialize calendar with configuration
+                    const calendar = new VanillaCalendar('#calendar-container', {
+                        type: 'month',
+                        date: {
+                            year: today.getFullYear(),
+                            month: today.getMonth() + 1,
+                            day: today.getDate()
+                        },
+                        settings: {
+                            lang: 'en',
+                        },
+                        actions: {
+                            changeMonth(e, months) {
+                                // Optional: handle month change
+                            },
+                            clickDay(e, dates) {
+                                // Optional: handle day click
+                                console.log('Day clicked:', dates[0]);
+                            }
                         }
                     });
-                }
-
-                const selectAllCheckbox = document.getElementById('selectAll');
-                if (selectAllCheckbox) {
-                    selectAllCheckbox.addEventListener('change', function(e) {
-                        const checkboxes = document.querySelectorAll('input[name="registerIds"]');
-                        checkboxes.forEach(checkbox => {
-                            checkbox.checked = e.target.checked;
-                        });
-                    });
-                }
-
-                const bulkDeleteForm = document.getElementById('bulkDeleteForm');
-                if (bulkDeleteForm) {
-                    bulkDeleteForm.addEventListener('submit', function(e) {
-                        e.preventDefault();
-                        const selected = document.querySelectorAll('input[name="registerIds"]:checked').length;
-                        if (selected === 0) {
-                            showAlert('Please select at least one record to delete.');
-                            return;
-                        }
+                    
+                    // Initialize the calendar
+                    calendar.init();
+                    
+                    // Add events to the calendar
+                    if (calendarEvents && calendarEvents.length > 0) {
+                        setTimeout(() => {
+                            calendarEvents.forEach(event => {
+                                // Find the day element and add the event class
+                                const dayElement = document.querySelector(`[data-calendar-day="${event.date}"]`);
+                                if (dayElement) {
+                                    const dayBtn = dayElement.querySelector('.vanilla-calendar-day__btn');
+                                    if (dayBtn) {
+                                        dayBtn.classList.add(event.class);
+                                        if (event.title) {
+                                            dayBtn.setAttribute('title', event.title);
+                                        }
+                                    }
+                                }
+                            });
+                        }, 100); // Small delay to ensure calendar is rendered
+                    }
+                    
+                    // Mark future dates
+                    setTimeout(() => {
+                        const allDayElements = document.querySelectorAll('[data-calendar-day]');
+                        const todayStr = today.toISOString().split('T')[0];
                         
-                        document.getElementById('deleteModalMessage').innerText = 'Are you sure you want to delete ' + selected + ' record(s)?';
-                        showModal();
-
-                        document.getElementById('confirmDeleteBtn').onclick = function() {
-                            e.target.submit();
-                        };
-                    });
+                        allDayElements.forEach(dayElement => {
+                            const dayDate = dayElement.getAttribute('data-calendar-day');
+                            const dayBtn = dayElement.querySelector('.vanilla-calendar-day__btn');
+                            
+                            if (dayDate && dayBtn) {
+                                const date = new Date(dayDate);
+                                const now = new Date();
+                                now.setHours(0, 0, 0, 0);
+                                
+                                if (date > now) {
+                                    // Future date
+                                    dayBtn.classList.add('event-future');
+                                    dayBtn.setAttribute('title', 'Future Date');
+                                } else if (date.toISOString().split('T')[0] === todayStr) {
+                                    // Today
+                                    dayBtn.style.border = '2px solid var(--accent-blue)';
+                                    dayBtn.style.fontWeight = 'bold';
+                                }
+                            }
+                        });
+                    }, 100);
+                    
+                } catch (error) {
+                    console.error('Error initializing calendar:', error);
+                    document.getElementById('calendar-container').innerHTML = 
+                        '<div class="alert alert-error" style="margin-top: 20px;"><i class="fas fa-exclamation-circle"></i> Could not load calendar. Please try again later.</div>';
                 }
                 
                 // Set today's date as default in date filter
