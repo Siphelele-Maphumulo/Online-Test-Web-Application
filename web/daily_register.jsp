@@ -149,10 +149,11 @@
             }
             
             int attendanceRate = totalDays > 0 ? (presentDays * 100 / totalDays) : 0;
-            int absentDays = 0; // Not tracked in this simple system
-            int lateDays = 0;   // Not tracked in this simple system
+            int absentDays = pDAO.getDaysAbsentCount(userId);
+            int lateDays = pDAO.getDaysLateCount(userId);
         %>
 
+        <!--Style-->
         <!--Style-->
         <style>
             /* CSS Variables for Maintainability - PROFESSIONAL THEME */
@@ -240,73 +241,58 @@
                 background: transparent;
             }
             
-            /* Sidebar Styles - Enhanced */
+            /* Sidebar - Modern Design */
             .sidebar {
-                width: 220px;
-                background: linear-gradient(180deg, var(--primary-blue), #0f3c7a);
+                width: 200px;
+                background: linear-gradient(180deg, var(--primary-blue) 0%, #0d3060 100%);
                 color: var(--white);
                 flex-shrink: 0;
-                position: sticky;
+                position: fixed;
                 top: 0;
+                left: 0;
                 height: 100vh;
-                overflow-y: auto;
-                overflow-x: hidden;
-                z-index: var(--z-sidebar);
-                box-shadow: var(--shadow-md);
+                z-index: var(--z-sticky);
+                box-shadow: var(--shadow-lg);
                 border-right: 1px solid rgba(255, 255, 255, 0.1);
+                overflow-y: auto;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
             }
 
             .sidebar::-webkit-scrollbar {
-                width: 8px;
-            }
-
-            .sidebar::-webkit-scrollbar-thumb {
-                background: rgba(255, 255, 255, 0.25);
-                border-radius: var(--radius-full);
-                transition: background var(--transition-fast);
-            }
-
-            .sidebar::-webkit-scrollbar-thumb:hover {
-                background: rgba(255, 255, 255, 0.4);
+                width: 6px;
             }
 
             .sidebar::-webkit-scrollbar-track {
                 background: transparent;
             }
 
-            .sidebar-header {
-                padding: var(--spacing-xl) var(--spacing-lg);
-                text-align: center;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-                position: relative;
-                overflow: hidden;
+            .sidebar::-webkit-scrollbar-thumb {
+                background-color: rgba(255, 255, 255, 0.3);
+                border-radius: var(--radius-full);
             }
 
-            .sidebar-header::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 4px;
-                background: linear-gradient(90deg, var(--accent-blue), #3b82f6);
+            .sidebar-header {
+                padding-top: 35%;
+                text-align: center;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                background: rgba(255, 255, 255, 0.05);
+                backdrop-filter: blur(10px);
             }
 
             .mut-logo {
-                max-height: 140px;
+                max-height: 150px;
                 width: auto;
                 filter: brightness(0) invert(1);
-                transition: transform var(--transition-normal);
             }
-
+            
             .mut-logo:hover {
                 transform: scale(1.05);
             }
-
+            
             .sidebar-nav {
-                padding: var(--spacing-md) 0;
+                padding: var(--spacing-lg) 0;
             }
-    
             
             /* Main Content Area */
             .content-area,

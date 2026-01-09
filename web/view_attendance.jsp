@@ -149,8 +149,8 @@
             }
             
             int attendanceRate = totalDays > 0 ? (presentDays * 100 / totalDays) : 0;
-            int absentDays = 0; // Not tracked in this simple system
-            int lateDays = 0;   // Not tracked in this simple system
+            int absentDays = pDAO.getDaysAbsentCount(userId);
+            int lateDays = pDAO.getDaysLateCount(userId);
         %>
 
         <!--Style-->
@@ -1088,6 +1088,7 @@
         </style>
 
         <%@ include file="header-messages.jsp" %>
+        <%@ include file="modal_assets.jspf" %>
 
         <div class="results-wrapper">
             <!-- Sidebar Navigation -->
@@ -1109,11 +1110,11 @@
                             <i class="fas fa-chart-line"></i>
                             <span>Results</span>
                         </a>
-                        <a class="nav-item" href="std-page.jsp?pgprt=3">
+                        <a class="nav-item active" href="std-page.jsp?pgprt=3">
                             <i class="fas fa-calendar-check"></i>
                             <span>Register</span>
                         </a>
-                        <a class="nav-item active" href="std-page.jsp?pgprt=4">
+                        <a class="nav-item" href="std-page.jsp?pgprt=4">
                             <i class="fas fa-eye"></i>
                             <span>Attendance</span>
                         </a>
@@ -1125,7 +1126,7 @@
                 <!-- Page Header -->
                 <div class="page-header">
                     <div class="page-title">
-                        <i class="fas fa-calendar-check"></i> View Daily Attendances
+                        <i class="fas fa-calendar-check"></i> Daily Attendance Register
                     </div>
                     <div class="stats-badge">
                         <i class="fas fa-user-graduate"></i> Student Portal
@@ -1160,7 +1161,7 @@
                     <p><i class="fas fa-calendar-day"></i> <strong>Today's Date:</strong> <%= todayDate %></p>
                 </div>
 
-<!--                 Today's Attendance Card 
+                <!-- Today's Attendance Card -->
                 <div class="course-card">
                     <h3 style="margin-bottom: var(--spacing-md); color: var(--text-dark); font-size: 18px;">
                         <i class="fas fa-calendar-day"></i> Today's Attendance
@@ -1190,107 +1191,51 @@
                             </button>
                         </form>
                     <% } %>
-                </div>-->
+                </div>
 
                 <!-- Attendance History -->
-                <div class="filter-container">
+                <div class="course-card">
                     <h3 style="margin-bottom: var(--spacing-md); color: var(--text-dark); font-size: 18px;">
                         <i class="fas fa-history"></i> Attendance History
                     </h3>
-                    <form method="get" action="std-page.jsp">
-                        <input type="hidden" name="pgprt" value="3">
-                        <div class="filter-grid">
-                            <div class="filter-group">
-                                <label class="filter-label"><i class="fas fa-calendar"></i> Filter by Date</label>
-                                <input type="date" name="filter_date" class="filter-control" value="<%= filterDate %>">
-                            </div>
-<!--                            <div class="filter-group">
-                                <label class="filter-label"><i class="fas fa-book"></i> Filter by Course</label>
-                                <select name="filter_course" class="filter-select">
-                                    <option value="">All Courses</option>
-                                    <% for (String course : studentCourses) { %>
-                                        <option value="<%= course %>" <%= course.equals(filterCourse) ? "selected" : "" %>>
-                                            <%= course %>
-                                        </option>
-                                    <% } %>
-                                </select>
-                            </div>-->
-                        </div>
-                        <div class="quick-filter-row">
-                            <button class="btn btn-primary" type="submit">
-                                <i class="fas fa-search"></i> Apply Filters
+                    <% if (attendanceHistory != null && !attendanceHistory.isEmpty()) { %>
+                        <form id="bulkDeleteForm" action="controller.jsp" method="post">
+                            <input type="hidden" name="page" value="daily-register">
+                            <input type="hidden" name="operation" value="bulk_delete">
+                            <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
+                            <button type="submit" class="btn btn-error" style="margin-bottom: 20px;">
+                                <i class="fas fa-trash"></i> Delete Selected
                             </button>
-                            <a href="std-page.jsp?pgprt=3" class="btn btn-outline">
-                                <i class="fas fa-times"></i> Clear
-                            </a>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Attendance Records -->
-                <div class="results-card">
-                    <div class="card-header">
-                        <span><i class="fas fa-table"></i> Attendance Records</span>
-                        <span><i class="fas fa-user-check"></i> Student Attendance</span>
-                    </div>
-
-                    <%
-                        try {
-                            if (attendanceHistory != null && !attendanceHistory.isEmpty()) {
-                    %>
-                    <div class="results-table-container">
-                        <table class="results-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Date</th>
-                                    <th>Time</th>
-                                    <th>Student ID</th>
-                                    <th>Student Name</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            <%
-                                int i = 0;
-                                for (Map<String, String> attendance : attendanceHistory) {
-                                    i++;
-                            %>
-                                <tr>
-                                    <td><%= i %></td>
-                                    <td><%= attendance.get("registration_date") %></td>
-                                    <td><%= attendance.get("registration_time") %></td>
-                                    <td><%= attendance.get("student_id") %></td>
-                                    <td><%= attendance.get("student_name") %></td>
-                                    <td>
-                                        <span class="attendance-status status-present">
-                                            <i class="fas fa-check"></i>
-                                            Present
-                                        </span>
-                                    </td>
-                                </tr>
-                            <% } %>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="results-count">
-                        Total Attendance Records: <%= i %>
-                    </div>
+                            <div class="results-table-container">
+                                <table class="results-table">
+                                    <thead>
+                                        <tr>
+                                            <th><input type="checkbox" id="selectAll"></th>
+                                            <th>#</th>
+                                            <th>Date</th>
+                                            <th>Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% 
+                                            int i = 0;
+                                            for (Map<String, String> record : attendanceHistory) {
+                                                i++;
+                                        %>
+                                        <tr>
+                                            <td><input type="checkbox" name="registerIds" value="<%= record.get("register_id") %>"></td>
+                                            <td><%= i %></td>
+                                            <td><%= record.get("registration_date") %></td>
+                                            <td><%= record.get("registration_time") %></td>
+                                        </tr>
+                                        <% } %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </form>
                     <% } else { %>
                         <div class="no-results">
-                            <i class="fas fa-clipboard-list fa-2x" style="margin-bottom: var(--spacing-md); opacity: 0.5;"></i>
-                            <p>No attendance records found.</p>
-                            <p style="font-size: 15px; margin-top: var(--spacing-sm);">Start by marking today's attendance above.</p>
-                        </div>
-                    <% }
-                    } catch (Exception e) {
-                    %>
-                        <div class="no-results">
-                            <i class="fas fa-clipboard-list fa-2x" style="margin-bottom: var(--spacing-md); opacity: 0.5;"></i>
-                            <p>No attendance records available.</p>
-                            <p style="font-size: 14px; margin-top: var(--spacing-sm); color: var(--dark-gray);">
-                                Attendance records will appear here once you start marking attendance.
-                            </p>
+                            No attendance history found.
                         </div>
                     <% } %>
                 </div>
@@ -1333,6 +1278,22 @@
             </div>
         </div>
 
+<div id="deleteConfirmationModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h2>
+      <button class="close-button" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="deleteModalMessage">Are you sure you want to delete the selected records?</p>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+      <button id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+    </div>
+  </div>
+</div>
+
         <script>
             // Add confirmation for marking attendance
             document.addEventListener('DOMContentLoaded', function() {
@@ -1342,6 +1303,35 @@
                         if (!confirm('Are you sure you want to mark your attendance for today?')) {
                             e.preventDefault();
                         }
+                    });
+                }
+
+                const selectAllCheckbox = document.getElementById('selectAll');
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.addEventListener('change', function(e) {
+                        const checkboxes = document.querySelectorAll('input[name="registerIds"]');
+                        checkboxes.forEach(checkbox => {
+                            checkbox.checked = e.target.checked;
+                        });
+                    });
+                }
+
+                const bulkDeleteForm = document.getElementById('bulkDeleteForm');
+                if (bulkDeleteForm) {
+                    bulkDeleteForm.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        const selected = document.querySelectorAll('input[name="registerIds"]:checked').length;
+                        if (selected === 0) {
+                            showAlert('Please select at least one record to delete.');
+                            return;
+                        }
+                        
+                        document.getElementById('deleteModalMessage').innerText = 'Are you sure you want to delete ' + selected + ' record(s)?';
+                        showModal();
+
+                        document.getElementById('confirmDeleteBtn').onclick = function() {
+                            e.target.submit();
+                        };
                     });
                 }
                 

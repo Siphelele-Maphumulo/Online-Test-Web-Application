@@ -1,5 +1,6 @@
 package myPackage;
 
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -3468,4 +3469,69 @@ public ArrayList<String> getCourseList() {
         }
     }
 
+    public int getDaysLateCount(int studentId) {
+        int lateDays = 0;
+        try {
+            ensureConnection();
+            String sql = "SELECT COUNT(*) FROM daily_register WHERE student_id = ? AND registration_time > '10:00:00'";
+            PreparedStatement pstm = conn.prepareStatement(sql);
+            pstm.setInt(1, studentId);
+            ResultSet rs = pstm.executeQuery();
+            if (rs.next()) {
+                lateDays = rs.getInt(1);
+            }
+            rs.close();
+            pstm.close();
+        } catch (SQLException ex) {
+            LOGGER.log(Level.SEVERE, "Error in getDaysLateCount", ex);
+        }
+        return lateDays;
+    }
+
+    public int getDaysAbsentCount(int studentId) {
+        int absentDays = 0;
+        try {
+            ensureConnection();
+            String firstDateSql = "SELECT MIN(registration_date) as first_date FROM daily_register WHERE student_id = ?";
+            PreparedStatement pstm = conn.prepareStatement(firstDateSql);
+            pstm.setInt(1, studentId);
+            ResultSet rs = pstm.executeQuery();
+
+            if (rs.next()) {
+                java.sql.Date firstDate = rs.getDate("first_date");
+
+                if (firstDate != null) {
+                    LocalDate startDate = firstDate.toLocalDate();
+                    LocalDate endDate = startDate.plusMonths(3);
+
+                    String presentDaysSql = "SELECT COUNT(*) as present_days FROM daily_register WHERE student_id = ? AND registration_date >= ? AND registration_date < ?";
+                    PreparedStatement pstm2 = conn.prepareStatement(presentDaysSql);
+                    pstm2.setInt(1, studentId);
+                    pstm2.setDate(2, java.sql.Date.valueOf(startDate));
+                    pstm2.setDate(3, java.sql.Date.valueOf(endDate));
+                    ResultSet rs2 = pstm2.executeQuery();
+
+                    int presentDays = 0;
+                    if (rs2.next()) {
+                        presentDays = rs2.getInt("present_days");
+                    }
+
+                    long weekdays = 0;
+                    for (LocalDate date = startDate; date.isBefore(endDate); date = date.plusDays(1)) {
+                        if (date.getDayOfWeek() != DayOfWeek.SATURDAY && date.getDayOfWeek() != DayOfWeek.SUNDAY) {
+                            weekdays++;
+                        }
+                    }
+                    absentDays = (int) weekdays - presentDays;
+                    rs2.close();
+                    pstm2.close();
+                }
+            }
+            rs.close();
+            pstm.close();
+        } catch (SQLException ex) {
+            LOGGER.log(Level.SEVERE, "Error in getDaysAbsentCount", ex);
+        }
+        return absentDays < 0 ? 0 : absentDays;
+    }
 }
