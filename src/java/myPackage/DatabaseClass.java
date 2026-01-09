@@ -3534,4 +3534,66 @@ public ArrayList<String> getCourseList() {
         }
         return absentDays < 0 ? 0 : absentDays;
     }
+
+    public String getAttendanceCalendarData(int studentId) {
+        StringBuilder json = new StringBuilder("[");
+        try {
+            ensureConnection();
+            String firstDateSql = "SELECT MIN(registration_date) as first_date FROM daily_register WHERE student_id = ?";
+            PreparedStatement pstm = conn.prepareStatement(firstDateSql);
+            pstm.setInt(1, studentId);
+            ResultSet rs = pstm.executeQuery();
+
+            if (rs.next()) {
+                java.sql.Date firstDate = rs.getDate("first_date");
+
+                if (firstDate != null) {
+                    LocalDate startDate = firstDate.toLocalDate();
+                    LocalDate endDate = startDate.plusMonths(3);
+
+                    String attendanceSql = "SELECT registration_date, registration_time FROM daily_register WHERE student_id = ? AND registration_date >= ? AND registration_date < ?";
+                    PreparedStatement pstm2 = conn.prepareStatement(attendanceSql);
+                    pstm2.setInt(1, studentId);
+                    pstm2.setDate(2, java.sql.Date.valueOf(startDate));
+                    pstm2.setDate(3, java.sql.Date.valueOf(endDate));
+                    ResultSet rs2 = pstm2.executeQuery();
+
+                    Map<LocalDate, LocalTime> attendanceMap = new HashMap<>();
+                    while (rs2.next()) {
+                        attendanceMap.put(rs2.getDate("registration_date").toLocalDate(), rs2.getTime("registration_time").toLocalTime());
+                    }
+
+                    boolean first = true;
+                    for (LocalDate date = startDate; date.isBefore(endDate); date = date.plusDays(1)) {
+                        if (date.getDayOfWeek() != DayOfWeek.SATURDAY && date.getDayOfWeek() != DayOfWeek.SUNDAY) {
+                            if (!first) {
+                                json.append(",");
+                            }
+                            first = false;
+
+                            String status;
+                            if (attendanceMap.containsKey(date)) {
+                                if (attendanceMap.get(date).isAfter(LocalTime.of(10, 0))) {
+                                    status = "event-late";
+                                } else {
+                                    status = "event-present";
+                                }
+                            } else {
+                                status = "event-absent";
+                            }
+                            json.append("{\"date\":\"").append(date).append("\",\"className\":\"").append(status).append("\"}");
+                        }
+                    }
+                    rs2.close();
+                    pstm2.close();
+                }
+            }
+            rs.close();
+            pstm.close();
+        } catch (SQLException ex) {
+            LOGGER.log(Level.SEVERE, "Error in getAttendanceCalendarData", ex);
+        }
+        json.append("]");
+        return json.toString();
+    }
 }
