@@ -152,6 +152,71 @@
             int attendanceRate = totalDays > 0 ? (presentDays * 100 / totalDays) : 0;
             int absentDays = pDAO.getDaysAbsentCount(userId);
             int lateDays = pDAO.getDaysLateCount(userId);
+
+            // Calendar data generation
+            StringBuilder calendarJsonBuilder = new StringBuilder("[");
+            try {
+                conn = pDAO.getConnection();
+                String firstDateSql = "SELECT MIN(registration_date) as first_date FROM daily_register WHERE student_id = ?";
+                pstmt = conn.prepareStatement(firstDateSql);
+                pstmt.setInt(1, userId);
+                rs = pstmt.executeQuery();
+
+                if (rs.next()) {
+                    java.sql.Date firstDate = rs.getDate("first_date");
+                    if (firstDate != null) {
+                        LocalDate startDate = firstDate.toLocalDate();
+                        LocalDate today = LocalDate.now();
+                        LocalDate maxEndDate = startDate.plusMonths(3);
+
+                        Map<LocalDate, LocalTime> attendanceMap = new HashMap<>();
+                        if (attendanceHistory != null) {
+                            for (Map<String, String> record : attendanceHistory) {
+                                try {
+                                    LocalDate recordDate = LocalDate.parse(record.get("registration_date"));
+                                    LocalTime recordTime = LocalTime.parse(record.get("registration_time"));
+                                    attendanceMap.put(recordDate, recordTime);
+                                } catch (Exception e) {
+                                    // Ignore records with invalid date/time format
+                                }
+                            }
+                        }
+
+                        boolean first = true;
+                        for (LocalDate date = startDate; date.isBefore(maxEndDate); date = date.plusDays(1)) {
+                            if (date.getDayOfWeek() != DayOfWeek.SATURDAY && date.getDayOfWeek() != DayOfWeek.SUNDAY) {
+                                if (!first) {
+                                    calendarJsonBuilder.append(",");
+                                }
+                                first = false;
+
+                                String status;
+                                if (date.isAfter(today)) {
+                                    status = "event-future";
+                                } else if (attendanceMap.containsKey(date)) {
+                                    if (attendanceMap.get(date).isAfter(LocalTime.of(10, 0))) {
+                                        status = "event-late";
+                                    } else {
+                                        status = "event-present";
+                                    }
+                                } else {
+                                    status = "event-absent";
+                                }
+                                String escapedDate = StringEscapeUtils.escapeJson(date.toString());
+                                calendarJsonBuilder.append("{\"date\":\"").append(escapedDate).append("\",\"className\":\"").append(status).append("\"}");
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Log error
+            } finally {
+                if (rs != null) try { rs.close(); } catch (SQLException e) {}
+                if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
+                if (conn != null) try { conn.close(); } catch (SQLException e) {}
+            }
+            calendarJsonBuilder.append("]");
+            String calendarEventsJson = calendarJsonBuilder.toString();
         %>
 
 
@@ -1288,6 +1353,9 @@
                         <div class="legend-item">
                             <span class="color-box absent"></span> Absent
                         </div>
+                        <div class="legend-item">
+                            <span class="color-box future"></span> Future Date
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1297,6 +1365,15 @@
     .event-present { background-color: #28a745 !important; color: white !important; }
     .event-late { background-color: #ffc107 !important; color: white !important; }
     .event-absent { background-color: #dc3545 !important; color: white !important; }
+    .event-future { background-color: #6c757d !important; color: white !important; }
+    .vanilla-js-calendar-day--today { border: 2px solid #007bff !important; }
+    .calendar-legend { display: flex; justify-content: center; gap: 20px; margin-top: 20px; }
+    .legend-item { display: flex; align-items: center; gap: 8px; }
+    .color-box { width: 20px; height: 20px; border-radius: 4px; }
+    .present { background-color: #28a745; }
+    .late { background-color: #ffc107; }
+    .absent { background-color: #dc3545; }
+    .future { background-color: #6c757d; }
 </style>
 
 <div id="deleteConfirmationModal" class="modal-overlay" style="display: none;">
@@ -1315,13 +1392,26 @@
   </div>
 </div>
 
+<%@page import="java.time.DayOfWeek"%>
+<%@page import="java.time.LocalDate"%>
+<%@page import="java.time.LocalTime"%>
+<%@page import="java.time.format.DateTimeFormatter"%>
+<%@page import="org.apache.commons.text.StringEscapeUtils"%>
         <script src="https://cdn.jsdelivr.net/npm/vanilla-js-calendar@1.6.5/build/vanilla-js-calendar.min.js"></script>
         <script>
             // Add confirmation for marking attendance
             document.addEventListener('DOMContentLoaded', function() {
-                const calendar = new VanillaJsCalendar('#calendar-container', {
-                    events: JSON.parse('<%= pDAO.getAttendanceCalendarData(userId) %>'),
-                });
+                try {
+                    const calendar = new VanillaJsCalendar('#calendar-container', {
+                        events: JSON.parse('<%= calendarEventsJson %>'),
+                    });
+                } catch (e) {
+                    console.error("Failed to initialize calendar:", e);
+                    const container = document.getElementById('calendar-container');
+                    if (container) {
+                        container.innerHTML = '<div class="alert alert-error">Could not load calendar.</div>';
+                    }
+                }
 
                 const markBtn = document.querySelector('.start-exam-btn');
                 if (markBtn && !markBtn.disabled) {
