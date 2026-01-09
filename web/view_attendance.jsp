@@ -1106,17 +1106,11 @@
             }
             
             // Calculate attendance statistics
-            int totalDays = 0;
-            int presentDays = 0;
-            
-            if (attendanceHistory != null) {
-                totalDays = attendanceHistory.size();
-                presentDays = totalDays; // In this simple system, all recorded days are present days
-            }
-            
-            int attendanceRate = totalDays > 0 ? (presentDays * 100 / totalDays) : 0;
+            int presentDays = pDAO.getDaysPresentCount(userId);
             int absentDays = pDAO.getDaysAbsentCount(userId);
             int lateDays = pDAO.getDaysLateCount(userId);
+            int totalDays = presentDays + absentDays;
+            int attendanceRate = totalDays > 0 ? (presentDays * 100 / totalDays) : 0;
         %>
 
         <!--Style-->
@@ -1238,14 +1232,18 @@
                             <input type="hidden" name="page" value="daily-register">
                             <input type="hidden" name="operation" value="bulk_delete">
                             <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
+                            <% if (!"student".equals(userType)) { %>
                             <button type="submit" class="btn btn-error" style="margin-bottom: 20px;">
                                 <i class="fas fa-trash"></i> Delete Selected
                             </button>
+                            <% } %>
                             <div class="results-table-container">
                                 <table class="results-table">
                                     <thead>
                                         <tr>
+                                            <% if (!"student".equals(userType)) { %>
                                             <th><input type="checkbox" id="selectAll"></th>
+                                            <% } %>
                                             <th>#</th>
                                             <th>Date</th>
                                             <th>Time</th>
@@ -1258,7 +1256,9 @@
                                                 i++;
                                         %>
                                         <tr>
+                                            <% if (!"student".equals(userType)) { %>
                                             <td><input type="checkbox" name="registerIds" value="<%= record.get("register_id") %>"></td>
+                                            <% } %>
                                             <td><%= i %></td>
                                             <td><%= record.get("registration_date") %></td>
                                             <td><%= record.get("registration_time") %></td>
@@ -1330,6 +1330,10 @@
     .event-present { background-color: #28a745 !important; color: white !important; }
     .event-late { background-color: #ffc107 !important; color: white !important; }
     .event-absent { background-color: #dc3545 !important; color: white !important; }
+    .event-weekend {
+        background-color: #f8f9fa !important;
+        color: #6c757d !important;
+    }
 </style>
 
 <div id="deleteConfirmationModal" class="modal-overlay" style="display: none;">
@@ -1356,27 +1360,28 @@
 <div id="calendar-container"></div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    try {
-        const calendarData = <%= pDAO.getAttendanceCalendarData(userId) %>;
-        
-        const calendarEl = document.getElementById('calendar-container');
-        const calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            events: calendarData.map(event => ({
-                title: getEventTitle(event.className),
-                start: event.date,
-                color: getEventColor(event.className),
-                allDay: true
-            })),
-            eventDisplay: 'block'
-        });
-        
-        calendar.render();
-    } catch (error) {
-        console.error('FullCalendar error:', error);
-    }
-});
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            const calendar = new VanillaJsCalendar('#calendar-container', {
+                events: JSON.parse('<%= pDAO.getAttendanceCalendarData(userId) %>'),
+                settings: {
+                    range: {
+                        start: new Date(new Date().getFullYear(), new Date().getMonth() - 2, 1),
+                        end: new Date(new Date().getFullYear(), new Date().getMonth() + 3, 0)
+                    },
+                    visibility: {
+                        daysOutside: false,
+                        weekend: true
+                    },
+                    lang: 'en'
+                },
+            });
+        } catch (error) {
+            console.error('Error initializing calendar:', error);
+            document.getElementById('calendar-container').innerHTML =
+                '<div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> Could not load calendar. Please try again later.</div>';
+        }
+    });
 </script>
 
     </body>

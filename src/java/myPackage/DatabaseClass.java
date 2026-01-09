@@ -3488,6 +3488,25 @@ public ArrayList<String> getCourseList() {
         return lateDays;
     }
 
+    public int getDaysPresentCount(int studentId) {
+    int presentDays = 0;
+    try {
+        ensureConnection();
+        String sql = "SELECT COUNT(*) FROM daily_register WHERE student_id = ?";
+        PreparedStatement pstm = conn.prepareStatement(sql);
+        pstm.setInt(1, studentId);
+        ResultSet rs = pstm.executeQuery();
+        if (rs.next()) {
+            presentDays = rs.getInt(1);
+        }
+        rs.close();
+        pstm.close();
+    } catch (SQLException ex) {
+        LOGGER.log(Level.SEVERE, "Error in getDaysPresentCount", ex);
+    }
+    return presentDays;
+}
+
     public int getDaysAbsentCount(int studentId) {
         int absentDays = 0;
         try {
@@ -3536,82 +3555,72 @@ public ArrayList<String> getCourseList() {
     }
 
     public String getAttendanceCalendarData(int studentId) {
-        StringBuilder json = new StringBuilder("[");
-        try {
-            ensureConnection();
-            // Query to get attendance for the current month
-            String attendanceSql = "SELECT registration_date, registration_time FROM daily_register WHERE student_id = ? AND MONTH(registration_date) = MONTH(CURDATE()) AND YEAR(registration_date) = YEAR(CURDATE()) ORDER BY registration_date";
-            PreparedStatement pstm = conn.prepareStatement(attendanceSql);
-            pstm.setInt(1, studentId);
-            ResultSet rs = pstm.executeQuery();
+    StringBuilder json = new StringBuilder("[");
+    try {
+        ensureConnection();
 
-            // Get today's date
-            LocalDate today = LocalDate.now();
-            Map<LocalDate, LocalTime> attendanceMap = new HashMap<>();
+        // 1. Define the 3-month period based on the current date
+        LocalDate today = LocalDate.now();
+        LocalDate startDate = today.minusMonths(2).withDayOfMonth(1);
+        LocalDate endDate = today.plusMonths(1).withDayOfMonth(today.plusMonths(1).lengthOfMonth());
 
-            while (rs.next()) {
-                attendanceMap.put(
-                    rs.getDate("registration_date").toLocalDate(),
-                    rs.getTime("registration_time").toLocalTime()
-                );
+        // 2. Fetch all attendance records within this 3-month period
+        String attendanceSql = "SELECT registration_date, registration_time FROM daily_register WHERE student_id = ? AND registration_date >= ? AND registration_date <= ? ORDER BY registration_date";
+        PreparedStatement pstm = conn.prepareStatement(attendanceSql);
+        pstm.setInt(1, studentId);
+        pstm.setDate(2, java.sql.Date.valueOf(startDate));
+        pstm.setDate(3, java.sql.Date.valueOf(endDate));
+        ResultSet rs = pstm.executeQuery();
+
+        Map<LocalDate, LocalTime> attendanceMap = new HashMap<>();
+        while (rs.next()) {
+            attendanceMap.put(
+                rs.getDate("registration_date").toLocalDate(),
+                rs.getTime("registration_time").toLocalTime()
+            );
+        }
+        rs.close();
+        pstm.close();
+
+        // 3. Generate JSON for each day in the 3-month period
+        boolean first = true;
+        for (LocalDate date = startDate; date.isBefore(endDate.plusDays(1)); date = date.plusDays(1)) {
+            if (!first) {
+                json.append(",");
             }
-            rs.close();
-            pstm.close();
+            first = false;
 
-            // Generate data for current month
-            LocalDate firstDay = today.withDayOfMonth(1);
-            LocalDate lastDay = today.withDayOfMonth(today.lengthOfMonth());
+            String eventClass = "future";
 
-            boolean first = true;
-            for (LocalDate date = firstDay; !date.isAfter(lastDay); date = date.plusDays(1)) {
-                if (!first) {
-                    json.append(",");
-                }
-                first = false;
-
-                String eventClass = "no-data";
-                String description = "No data";
+            if (date.isBefore(today) || date.isEqual(today)) {
 
                 if (attendanceMap.containsKey(date)) {
                     if (attendanceMap.get(date).isAfter(LocalTime.of(10, 0))) {
                         eventClass = "late";
-                        description = "Late arrival at " + attendanceMap.get(date);
                     } else {
                         eventClass = "present";
-                        description = "Present at " + attendanceMap.get(date);
                     }
                 } else {
-                    // Check if it's a weekday in the past
-                    if (date.isBefore(today) && 
-                        date.getDayOfWeek() != DayOfWeek.SATURDAY && 
-                        date.getDayOfWeek() != DayOfWeek.SUNDAY) {
+
+                    if (date.getDayOfWeek() != DayOfWeek.SATURDAY && date.getDayOfWeek() != DayOfWeek.SUNDAY) {
                         eventClass = "absent";
-                        description = "Absent";
+                    } else {
+                         eventClass = "weekend";
                     }
                 }
-
-                json.append("{")
-                    .append("\"date\":\"").append(date).append("\",")
-                    .append("\"class\":\"").append(eventClass).append("\",")
-                    .append("\"description\":\"").append(description).append("\",")
-                    .append("\"backgroundColor\":\"").append(getColorForClass(eventClass)).append("\"")
-                    .append("}");
             }
 
-        } catch (SQLException ex) {
-            LOGGER.log(Level.SEVERE, "Error in getAttendanceCalendarData", ex);
-            return "[]"; // Return empty array on error
+            json.append("{")
+                .append("\"date\":\"").append(date).append("\",")
+                .append("\"class\":\"event-").append(eventClass).append("\"")
+                .append("}");
         }
-        json.append("]");
-        return json.toString();
-    }
 
-    private String getColorForClass(String eventClass) {
-        switch (eventClass) {
-            case "present": return "#28a745";
-            case "late": return "#ffc107";
-            case "absent": return "#dc3545";
-            default: return "#6c757d";
-        }
+    } catch (SQLException ex) {
+        LOGGER.log(Level.SEVERE, "Error in getAttendanceCalendarData", ex);
+        return "[]";
+    }
+    json.append("]");
+    return json.toString();
     }
 }
