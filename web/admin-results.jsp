@@ -6,8 +6,8 @@
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
 
 <% 
-    String csrfToken = UUID.randomUUID().toString();
-    session.setAttribute("csrfToken", csrfToken);
+    String csrf_token = UUID.randomUUID().toString();
+    session.setAttribute("csrf_token", csrf_token);
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
 // Get ALL exam results (for admin view)
@@ -776,7 +776,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                 <form id="bulkDeleteForm" action="controller.jsp" method="post">
                     <input type="hidden" name="page" value="admin-results">
                     <input type="hidden" name="operation" value="bulk_delete">
-                    <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
+                    <input type="hidden" name="csrf_token" value="<%= csrf_token %>">
                 <div style="overflow-x:auto;">
                     <table class="results-table" id="resultsTable">
                         <thead>
@@ -1006,7 +1006,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     let deleteExamId = null;
     let deleteStudentName = null;
     let deleteCourseName = null;
-    const csrfToken = '<%= session.getAttribute("csrfToken") %>';
+    const csrf_token = '<%= session.getAttribute("csrf_token") %>';
 
     // Initialize when page loads
     document.addEventListener('DOMContentLoaded', function() {
@@ -1146,111 +1146,20 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         form.submit();
     }
     
-    function showDeleteModal(examId, studentName, courseName) {
-        console.log('showDeleteModal called with:', {
-            examId: examId,
-            studentName: studentName,
-            courseName: courseName
-        });
-        
-        deleteExamId = examId;
-        
-        const modal = document.getElementById('deleteModal');
-        if (!modal) {
-            console.error('Modal element not found!');
-            alert('Error: Modal not found. Please refresh the page.');
-            return;
+    async function showDeleteModal(examId, studentName, courseName) {
+        const confirmed = await showConfirm(`Are you sure you want to delete the exam result for ${studentName} in the course ${courseName} (Exam ID: ${examId})? This action cannot be undone.`, 'Delete Exam Result');
+        if (confirmed) {
+            confirmDelete(examId);
         }
-
-        const modalMessage = document.getElementById('deleteModalMessage');
-        if (!modalMessage) {
-            console.error('Modal message element not found!');
-            alert('Error: Modal message element not found.');
-            return;
-        }
-
-        // Clean up text for display - handle empty/null values
-        const cleanStudentName = studentName && studentName !== 'null' ? 
-            escapeHtml(studentName.trim()) : 'Unknown Student';
-        const cleanCourseName = courseName && courseName !== 'null' ? 
-            escapeHtml(courseName.trim()) : 'Unknown Course';
-        
-        console.log('Cleaned values:', {cleanStudentName, cleanCourseName});
-
-        modalMessage.innerHTML =
-            '<div style="text-align: left;">' +
-                '<p>Are you sure you want to delete the following exam result?</p>' +
-                '<div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">' +
-                    '<p><strong>Student:</strong> ' + cleanStudentName + '</p>' +
-                    '<p><strong>Course:</strong> ' + cleanCourseName + '</p>' +
-                    '<p><strong>Exam ID:</strong> ' + examId + '</p>' +
-                '</div>' +
-                '<p style="color: #dc3545; font-weight: bold;">' +
-                    '<i class="fas fa-exclamation-triangle"></i> ' +
-                    'This action will permanently delete:<br>' +
-                    '? The exam record<br>' +
-                    '? All related answers<br>' +
-                    '? This cannot be undone!' +
-                '</p>' +
-            '</div>';
-
-        modal.style.display = 'flex';
     }
 
-    // Helper function to escape HTML special characters
-    function escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    // Optional: AJAX function to fetch exam details
-    function fetchExamDetails(examId) {
-        fetch(`controller.jsp?page=results&operation=getDetails&eid=${examId}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Update modal with additional details
-                    updateModalWithDetails(data.details);
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching exam details:', error);
-            });
-    }
-    
-    function closeDeleteModal() {
-        const modal = document.getElementById('deleteModal');
-        if (modal) {
-            modal.style.display = 'none';
-        }
-        deleteExamId = null;
-        deleteStudentName = null;
-        deleteCourseName = null;
-    }
-    
-    function confirmDelete() {
-        if (!deleteExamId) {
-            alert('No exam selected for deletion.');
+    function confirmDelete(examId) {
+        if (!examId) {
+            showAlert('No exam selected for deletion.');
             return;
         }
         
-        console.log('Confirming delete for exam ID:', deleteExamId);
-        
-        // Show loading state
-        const deleteBtn = document.querySelector('#deleteModal .modal-footer .btn-danger');
-        if (deleteBtn) {
-            const originalText = deleteBtn.innerHTML;
-            deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
-            deleteBtn.disabled = true;
-            
-            // Revert button after 5 seconds if something goes wrong
-            setTimeout(() => {
-                deleteBtn.innerHTML = originalText;
-                deleteBtn.disabled = false;
-            }, 5000);
-        }
+        console.log('Confirming delete for exam ID:', examId);
 
         // Submit delete request
         const form = document.createElement('form');
@@ -1260,8 +1169,8 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         // Add CSRF token
         const csrfInput = document.createElement('input');
         csrfInput.type = 'hidden';
-        csrfInput.name = 'csrfToken';
-        csrfInput.value = csrfToken;
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrf_token;
         form.appendChild(csrfInput);
 
         const pageInput = document.createElement('input');
@@ -1273,16 +1182,16 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         const operationInput = document.createElement('input');
         operationInput.type = 'hidden';
         operationInput.name = 'operation';
-        operationInput.value = 'delete';
+        operationInput.value = 'delete_result';
         form.appendChild(operationInput);
 
         const examIdInput = document.createElement('input');
         examIdInput.type = 'hidden';
         examIdInput.name = 'eid';
-        examIdInput.value = deleteExamId;
+        examIdInput.value = examId;
         form.appendChild(examIdInput);
 
-        console.log('Submitting delete form for exam ID:', deleteExamId);
+        console.log('Submitting delete form for exam ID:', examId);
         document.body.appendChild(form);
         form.submit();
     }
@@ -1518,20 +1427,26 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         }
     });
     
-    // Debug function to check button data attributes
-    function debugButtonData() {
-        document.querySelectorAll('.delete-btn').forEach((button, index) => {
-            console.log(`Button ${index}:`, {
-                examId: button.getAttribute('data-exam-id'),
-                studentName: button.getAttribute('data-student-name'),
-                courseName: button.getAttribute('data-course-name'),
-                innerHTML: button.innerHTML
-            });
-        });
-    }
-    
-    // Call debug function on load
-    setTimeout(debugButtonData, 1000);
+    // Event delegation for single-record actions
+    document.getElementById('resultsTableBody').addEventListener('click', function(e) {
+        const target = e.target.closest('a.btn-primary, button.delete-btn, button.edit-btn');
+        if (!target) return;
+
+        if (target.classList.contains('delete-btn') || target.classList.contains('edit-btn') || target.classList.contains('btn-primary')) {
+            e.preventDefault();
+            const examId = target.dataset.examId;
+            if (target.classList.contains('delete-btn')) {
+                const studentName = target.dataset.studentName;
+                const courseName = target.dataset.courseName;
+                showDeleteModal(examId, studentName, courseName);
+            } else if (target.classList.contains('edit-btn')) {
+                const row = target.closest('tr');
+                enableEditMode(row, examId);
+            } else if (target.href) {
+                window.location.href = target.href;
+            }
+        }
+    });
 
     // Select All functionality
     document.getElementById('selectAll').addEventListener('change', function(e) {
@@ -1539,6 +1454,19 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         checkboxes.forEach(checkbox => {
             checkbox.checked = e.target.checked;
         });
+    });
+
+    document.getElementById('bulkDeleteForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const selected = document.querySelectorAll('input[name="examIds"]:checked').length;
+        if (selected === 0) {
+            showAlert('Please select at least one exam result to delete.');
+            return;
+        }
+        const confirmed = await showConfirm('Are you sure you want to delete ' + selected + ' exam result(s)?');
+        if (confirmed) {
+            this.submit();
+        }
     });
 </script>
 

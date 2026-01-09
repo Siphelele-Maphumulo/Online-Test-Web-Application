@@ -572,8 +572,8 @@ try {
     } else if ("admin-results".equalsIgnoreCase(pageParam)) {
         String operation = nz(request.getParameter("operation"), "");
         if ("bulk_delete".equalsIgnoreCase(operation)) {
-            String submittedToken = request.getParameter("csrfToken");
-            String sessionToken = (String) session.getAttribute("csrfToken");
+            String submittedToken = request.getParameter("csrf_token");
+            String sessionToken = (String) session.getAttribute("csrf_token");
             if (sessionToken == null || !sessionToken.equals(submittedToken)) {
                 session.setAttribute("error", "Invalid request. Please try again.");
                 response.sendRedirect("adm-page.jsp?pgprt=5");
@@ -598,7 +598,7 @@ try {
             }
 
             try {
-                int examId = Integer.parseInt(nz(request.getParameter("examId"), "0"));
+                int examId = Integer.parseInt(nz(request.getParameter("eid"), "0"));
                 if (examId > 0) {
                     boolean success = pDAO.deleteExamResult(examId);
                     if (success) {

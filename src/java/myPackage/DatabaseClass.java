@@ -2092,23 +2092,19 @@ public void insertAnswer(int eId, int qid, String question, String ans) {
     
     PreparedStatement pstm = null;
     try {
-        // Fetch the correct answer, which is now trimmed and null-safe
         String correct = getCorrectAnswer(qid);
-        
-        // Determine status using the robust getAnswerStatus method
         String status = getAnswerStatus(ans, correct);
         
-        // Normalize the user's answer for storage to avoid storing empty strings
         String userAnswerForDb = (ans != null && !ans.trim().isEmpty()) ? ans.trim() : "N/A";
 
         pstm = conn.prepareStatement(
             "INSERT INTO answers (exam_id, question_id, question, answer, correct_answer, status) VALUES (?, ?, ?, ?, ?, ?)"
         );
         pstm.setInt(1, eId);
-        pstm.setInt(2, qid);
+        pstm.setInt(2, qid); // Add the question_id
         pstm.setString(3, question);
-        pstm.setString(4, userAnswerForDb); // Store the cleaned answer
-        pstm.setString(5, correct);         // Store the cleaned correct answer
+        pstm.setString(4, userAnswerForDb);
+        pstm.setString(5, correct);
         pstm.setString(6, status);
         pstm.executeUpdate();
         

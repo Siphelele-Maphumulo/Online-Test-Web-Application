@@ -94,3 +94,85 @@
         to { transform: translateY(0); opacity: 1; }
     }
 </style>
+
+<!-- Generic Alert Modal -->
+<div id="alertModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="alertModalTitle" class="modal-title">Alert</h3>
+            <button id="alertModalClose" class="close-button">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p id="alertModalMessage"></p>
+        </div>
+        <div class="modal-footer">
+            <button id="alertModalOk" class="btn btn-primary">OK</button>
+        </div>
+    </div>
+</div>
+
+<!-- Generic Confirmation Modal -->
+<div id="confirmModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="confirmModalTitle" class="modal-title">Confirmation</h3>
+            <button id="confirmModalClose" class="close-button">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p id="confirmModalMessage"></p>
+        </div>
+        <div class="modal-footer">
+            <button id="confirmModalCancel" class="btn btn-secondary">Cancel</button>
+            <button id="confirmModalConfirm" class="btn btn-danger">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showAlert(message, title = 'Alert') {
+        document.getElementById('alertModalTitle').textContent = title;
+        document.getElementById('alertModalMessage').textContent = message;
+        document.getElementById('alertModal').style.display = 'flex';
+    }
+
+    document.getElementById('alertModalClose').addEventListener('click', () => {
+        document.getElementById('alertModal').style.display = 'none';
+    });
+    document.getElementById('alertModalOk').addEventListener('click', () => {
+        document.getElementById('alertModal').style.display = 'none';
+    });
+
+    function showConfirm(message, title = 'Confirmation') {
+        return new Promise((resolve) => {
+            document.getElementById('confirmModalTitle').textContent = title;
+            document.getElementById('confirmModalMessage').textContent = message;
+            document.getElementById('confirmModal').style.display = 'flex';
+
+            const confirmBtn = document.getElementById('confirmModalConfirm');
+            const cancelBtn = document.getElementById('confirmModalCancel');
+            const closeBtn = document.getElementById('confirmModalClose');
+
+            const resolveTrue = () => {
+                document.getElementById('confirmModal').style.display = 'none';
+                resolve(true);
+                removeListeners();
+            };
+
+            const resolveFalse = () => {
+                document.getElementById('confirmModal').style.display = 'none';
+                resolve(false);
+                removeListeners();
+            };
+
+            const removeListeners = () => {
+                confirmBtn.removeEventListener('click', resolveTrue);
+                cancelBtn.removeEventListener('click', resolveFalse);
+                closeBtn.removeEventListener('click', resolveFalse);
+            };
+
+            confirmBtn.addEventListener('click', resolveTrue);
+            cancelBtn.addEventListener('click', resolveFalse);
+            closeBtn.addEventListener('click', resolveFalse);
+        });
+    }
+</script>
