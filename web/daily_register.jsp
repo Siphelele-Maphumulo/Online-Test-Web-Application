@@ -896,6 +896,37 @@
                 margin-top: var(--spacing-lg);
             }
             
+            /* Calendar Legend Styles */
+            .calendar-legend {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: var(--spacing-lg);
+                margin-top: var(--spacing-xl);
+                padding-top: var(--spacing-lg);
+                border-top: 1px solid var(--border-color);
+            }
+
+            .legend-item {
+                display: flex;
+                align-items: center;
+                gap: var(--spacing-sm);
+                font-size: 14px;
+                font-weight: 500;
+                color: var(--dark-gray);
+            }
+
+            .color-box {
+                width: 16px;
+                height: 16px;
+                border-radius: var(--radius-sm);
+                border: 1px solid rgba(0, 0, 0, 0.1);
+            }
+
+            .color-box.present { background-color: var(--success); }
+            .color-box.late { background-color: var(--warning); }
+            .color-box.absent { background-color: var(--error); }
+            
             .stat-card {
                 background: linear-gradient(135deg, var(--white) 0%, #fafcff 100%);
                 border: 2px solid var(--border-color);
@@ -1290,7 +1321,19 @@
                     <p style="margin-top: var(--spacing-lg); font-size: 14px; color: var(--dark-gray); text-align: center;">
                         Based on <%= totalDays %> recorded attendance days.
                     </p>
-                    <div id="calendar-container" style="margin-top: 20px;"></div>
+                     <div id="calendar-container" style="margin-top: 20px;"></div>
+                    <!-- Add the calendar legend here -->
+                    <div class="calendar-legend">
+                        <div class="legend-item">
+                            <span class="color-box present"></span> Present
+                        </div>
+                        <div class="legend-item">
+                            <span class="color-box late"></span> Late
+                        </div>
+                        <div class="legend-item">
+                            <span class="color-box absent"></span> Absent
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

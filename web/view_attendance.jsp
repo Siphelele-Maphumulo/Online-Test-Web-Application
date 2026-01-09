@@ -241,58 +241,73 @@
                 background: transparent;
             }
             
-            /* Sidebar - Modern Design */
+            /* Sidebar Styles - Enhanced */
             .sidebar {
-                width: 200px;
-                background: linear-gradient(180deg, var(--primary-blue) 0%, #0d3060 100%);
+                width: 220px;
+                background: linear-gradient(180deg, var(--primary-blue), #0f3c7a);
                 color: var(--white);
                 flex-shrink: 0;
-                position: fixed;
+                position: sticky;
                 top: 0;
-                left: 0;
                 height: 100vh;
-                z-index: var(--z-sticky);
-                box-shadow: var(--shadow-lg);
-                border-right: 1px solid rgba(255, 255, 255, 0.1);
                 overflow-y: auto;
-                scrollbar-width: thin;
-                scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+                overflow-x: hidden;
+                z-index: var(--z-sidebar);
+                box-shadow: var(--shadow-md);
+                border-right: 1px solid rgba(255, 255, 255, 0.1);
             }
 
             .sidebar::-webkit-scrollbar {
-                width: 6px;
+                width: 8px;
+            }
+
+            .sidebar::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.25);
+                border-radius: var(--radius-full);
+                transition: background var(--transition-fast);
+            }
+
+            .sidebar::-webkit-scrollbar-thumb:hover {
+                background: rgba(255, 255, 255, 0.4);
             }
 
             .sidebar::-webkit-scrollbar-track {
                 background: transparent;
             }
 
-            .sidebar::-webkit-scrollbar-thumb {
-                background-color: rgba(255, 255, 255, 0.3);
-                border-radius: var(--radius-full);
+            .sidebar-header {
+                padding: var(--spacing-xl) var(--spacing-lg);
+                text-align: center;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+                position: relative;
+                overflow: hidden;
             }
 
-            .sidebar-header {
-                padding-top: 35%;
-                text-align: center;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-                background: rgba(255, 255, 255, 0.05);
-                backdrop-filter: blur(10px);
+            .sidebar-header::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 4px;
+                background: linear-gradient(90deg, var(--accent-blue), #3b82f6);
             }
 
             .mut-logo {
-                max-height: 150px;
+                max-height: 140px;
                 width: auto;
                 filter: brightness(0) invert(1);
+                transition: transform var(--transition-normal);
             }
-            
+
             .mut-logo:hover {
                 transform: scale(1.05);
             }
-            
+
             .sidebar-nav {
-                padding: var(--spacing-lg) 0;
+                padding: var(--spacing-md) 0;
             }
+    
             
             /* Main Content Area */
             .content-area,
@@ -881,6 +896,37 @@
                 margin-top: var(--spacing-lg);
             }
             
+            /* Calendar Legend Styles */
+            .calendar-legend {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: var(--spacing-lg);
+                margin-top: var(--spacing-xl);
+                padding-top: var(--spacing-lg);
+                border-top: 1px solid var(--border-color);
+            }
+
+            .legend-item {
+                display: flex;
+                align-items: center;
+                gap: var(--spacing-sm);
+                font-size: 14px;
+                font-weight: 500;
+                color: var(--dark-gray);
+            }
+
+            .color-box {
+                width: 16px;
+                height: 16px;
+                border-radius: var(--radius-sm);
+                border: 1px solid rgba(0, 0, 0, 0.1);
+            }
+
+            .color-box.present { background-color: var(--success); }
+            .color-box.late { background-color: var(--warning); }
+            .color-box.absent { background-color: var(--error); }
+            
             .stat-card {
                 background: linear-gradient(135deg, var(--white) 0%, #fafcff 100%);
                 border: 2px solid var(--border-color);
@@ -1089,6 +1135,7 @@
         </style>
 
         <%@ include file="header-messages.jsp" %>
+        <%@ include file="modal_assets.jspf" %>
 
         <div class="results-wrapper">
             <!-- Sidebar Navigation -->
@@ -1110,11 +1157,11 @@
                             <i class="fas fa-chart-line"></i>
                             <span>Results</span>
                         </a>
-                        <a class="nav-item" href="std-page.jsp?pgprt=3">
+                        <a class="nav-item active" href="std-page.jsp?pgprt=3">
                             <i class="fas fa-calendar-check"></i>
                             <span>Register</span>
                         </a>
-                        <a class="nav-item active" href="std-page.jsp?pgprt=4">
+                        <a class="nav-item" href="std-page.jsp?pgprt=4">
                             <i class="fas fa-eye"></i>
                             <span>Attendance</span>
                         </a>
@@ -1126,7 +1173,7 @@
                 <!-- Page Header -->
                 <div class="page-header">
                     <div class="page-title">
-                        <i class="fas fa-calendar-check"></i> View Daily Attendances
+                        <i class="fas fa-calendar-check"></i> Daily Attendance Register
                     </div>
                     <div class="stats-badge">
                         <i class="fas fa-user-graduate"></i> Student Portal
@@ -1161,7 +1208,7 @@
                     <p><i class="fas fa-calendar-day"></i> <strong>Today's Date:</strong> <%= todayDate %></p>
                 </div>
 
-<!--                 Today's Attendance Card 
+                <!-- Today's Attendance Card -->
                 <div class="course-card">
                     <h3 style="margin-bottom: var(--spacing-md); color: var(--text-dark); font-size: 18px;">
                         <i class="fas fa-calendar-day"></i> Today's Attendance
@@ -1191,107 +1238,51 @@
                             </button>
                         </form>
                     <% } %>
-                </div>-->
+                </div>
 
                 <!-- Attendance History -->
-                <div class="filter-container">
+                <div class="course-card">
                     <h3 style="margin-bottom: var(--spacing-md); color: var(--text-dark); font-size: 18px;">
                         <i class="fas fa-history"></i> Attendance History
                     </h3>
-                    <form method="get" action="std-page.jsp">
-                        <input type="hidden" name="pgprt" value="3">
-                        <div class="filter-grid">
-                            <div class="filter-group">
-                                <label class="filter-label"><i class="fas fa-calendar"></i> Filter by Date</label>
-                                <input type="date" name="filter_date" class="filter-control" value="<%= filterDate %>">
-                            </div>
-<!--                            <div class="filter-group">
-                                <label class="filter-label"><i class="fas fa-book"></i> Filter by Course</label>
-                                <select name="filter_course" class="filter-select">
-                                    <option value="">All Courses</option>
-                                    <% for (String course : studentCourses) { %>
-                                        <option value="<%= course %>" <%= course.equals(filterCourse) ? "selected" : "" %>>
-                                            <%= course %>
-                                        </option>
-                                    <% } %>
-                                </select>
-                            </div>-->
-                        </div>
-                        <div class="quick-filter-row">
-                            <button class="btn btn-primary" type="submit">
-                                <i class="fas fa-search"></i> Apply Filters
+                    <% if (attendanceHistory != null && !attendanceHistory.isEmpty()) { %>
+                        <form id="bulkDeleteForm" action="controller.jsp" method="post">
+                            <input type="hidden" name="page" value="daily-register">
+                            <input type="hidden" name="operation" value="bulk_delete">
+                            <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
+                            <button type="submit" class="btn btn-error" style="margin-bottom: 20px;">
+                                <i class="fas fa-trash"></i> Delete Selected
                             </button>
-                            <a href="std-page.jsp?pgprt=3" class="btn btn-outline">
-                                <i class="fas fa-times"></i> Clear
-                            </a>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Attendance Records -->
-                <div class="results-card">
-                    <div class="card-header">
-                        <span><i class="fas fa-table"></i> Attendance Records</span>
-                        <span><i class="fas fa-user-check"></i> Student Attendance</span>
-                    </div>
-
-                    <%
-                        try {
-                            if (attendanceHistory != null && !attendanceHistory.isEmpty()) {
-                    %>
-                    <div class="results-table-container">
-                        <table class="results-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Date</th>
-                                    <th>Time</th>
-                                    <th>Student ID</th>
-                                    <th>Student Name</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            <%
-                                int i = 0;
-                                for (Map<String, String> attendance : attendanceHistory) {
-                                    i++;
-                            %>
-                                <tr>
-                                    <td><%= i %></td>
-                                    <td><%= attendance.get("registration_date") %></td>
-                                    <td><%= attendance.get("registration_time") %></td>
-                                    <td><%= attendance.get("student_id") %></td>
-                                    <td><%= attendance.get("student_name") %></td>
-                                    <td>
-                                        <span class="attendance-status status-present">
-                                            <i class="fas fa-check"></i>
-                                            Present
-                                        </span>
-                                    </td>
-                                </tr>
-                            <% } %>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="results-count">
-                        Total Attendance Records: <%= i %>
-                    </div>
+                            <div class="results-table-container">
+                                <table class="results-table">
+                                    <thead>
+                                        <tr>
+                                            <th><input type="checkbox" id="selectAll"></th>
+                                            <th>#</th>
+                                            <th>Date</th>
+                                            <th>Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% 
+                                            int i = 0;
+                                            for (Map<String, String> record : attendanceHistory) {
+                                                i++;
+                                        %>
+                                        <tr>
+                                            <td><input type="checkbox" name="registerIds" value="<%= record.get("register_id") %>"></td>
+                                            <td><%= i %></td>
+                                            <td><%= record.get("registration_date") %></td>
+                                            <td><%= record.get("registration_time") %></td>
+                                        </tr>
+                                        <% } %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </form>
                     <% } else { %>
                         <div class="no-results">
-                            <i class="fas fa-clipboard-list fa-2x" style="margin-bottom: var(--spacing-md); opacity: 0.5;"></i>
-                            <p>No attendance records found.</p>
-                            <p style="font-size: 15px; margin-top: var(--spacing-sm);">Start by marking today's attendance above.</p>
-                        </div>
-                    <% }
-                    } catch (Exception e) {
-                    %>
-                        <div class="no-results">
-                            <i class="fas fa-clipboard-list fa-2x" style="margin-bottom: var(--spacing-md); opacity: 0.5;"></i>
-                            <p>No attendance records available.</p>
-                            <p style="font-size: 14px; margin-top: var(--spacing-sm); color: var(--dark-gray);">
-                                Attendance records will appear here once you start marking attendance.
-                            </p>
+                            No attendance history found.
                         </div>
                     <% } %>
                 </div>
@@ -1330,16 +1321,45 @@
                     <p style="margin-top: var(--spacing-lg); font-size: 14px; color: var(--dark-gray); text-align: center;">
                         Based on <%= totalDays %> recorded attendance days.
                     </p>
-                    <div id="calendar-container" style="margin-top: 20px;"></div>
+                     <div id="calendar-container" style="margin-top: 20px;"></div>
+                    <!-- Add the calendar legend here -->
+                    <div class="calendar-legend">
+                        <div class="legend-item">
+                            <span class="color-box present"></span> Present
+                        </div>
+                        <div class="legend-item">
+                            <span class="color-box late"></span> Late
+                        </div>
+                        <div class="legend-item">
+                            <span class="color-box absent"></span> Absent
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <style>
-            .event-present { background-color: #28a745 !important; color: white !important; }
-            .event-late { background-color: #ffc107 !important; color: white !important; }
-            .event-absent { background-color: #dc3545 !important; color: white !important; }
-        </style>
+<style>
+    .event-present { background-color: #28a745 !important; color: white !important; }
+    .event-late { background-color: #ffc107 !important; color: white !important; }
+    .event-absent { background-color: #dc3545 !important; color: white !important; }
+</style>
+
+<div id="deleteConfirmationModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h2>
+      <button class="close-button" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="deleteModalMessage">Are you sure you want to delete the selected records?</p>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+      <button id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+    </div>
+  </div>
+</div>
+
         <script src="https://cdn.jsdelivr.net/npm/vanilla-js-calendar@1.6.5/build/vanilla-js-calendar.min.js"></script>
         <script>
             // Add confirmation for marking attendance
@@ -1354,6 +1374,35 @@
                         if (!confirm('Are you sure you want to mark your attendance for today?')) {
                             e.preventDefault();
                         }
+                    });
+                }
+
+                const selectAllCheckbox = document.getElementById('selectAll');
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.addEventListener('change', function(e) {
+                        const checkboxes = document.querySelectorAll('input[name="registerIds"]');
+                        checkboxes.forEach(checkbox => {
+                            checkbox.checked = e.target.checked;
+                        });
+                    });
+                }
+
+                const bulkDeleteForm = document.getElementById('bulkDeleteForm');
+                if (bulkDeleteForm) {
+                    bulkDeleteForm.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        const selected = document.querySelectorAll('input[name="registerIds"]:checked').length;
+                        if (selected === 0) {
+                            showAlert('Please select at least one record to delete.');
+                            return;
+                        }
+                        
+                        document.getElementById('deleteModalMessage').innerText = 'Are you sure you want to delete ' + selected + ' record(s)?';
+                        showModal();
+
+                        document.getElementById('confirmDeleteBtn').onclick = function() {
+                            e.target.submit();
+                        };
                     });
                 }
                 
