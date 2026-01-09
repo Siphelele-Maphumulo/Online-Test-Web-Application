@@ -16,6 +16,7 @@
         <title>Daily Attendance Register</title>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vanilla-js-calendar@1.6.5/build/vanilla-js-calendar.min.css">
     </head>
     <body>
         <%
@@ -1289,9 +1290,16 @@
                     <p style="margin-top: var(--spacing-lg); font-size: 14px; color: var(--dark-gray); text-align: center;">
                         Based on <%= totalDays %> recorded attendance days.
                     </p>
+                    <div id="calendar-container" style="margin-top: 20px;"></div>
                 </div>
             </div>
         </div>
+
+<style>
+    .event-present { background-color: #28a745 !important; color: white !important; }
+    .event-late { background-color: #ffc107 !important; color: white !important; }
+    .event-absent { background-color: #dc3545 !important; color: white !important; }
+</style>
 
 <div id="deleteConfirmationModal" class="modal-overlay" style="display: none;">
   <div class="modal-content">
@@ -1309,7 +1317,14 @@
   </div>
 </div>
 
+        <script src="https://cdn.jsdelivr.net/npm/vanilla-js-calendar@1.6.5/build/vanilla-js-calendar.min.js"></script>
         <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const calendar = new VanillaJsCalendar('#calendar-container', {
+                    events: JSON.parse('<%= pDAO.getAttendanceCalendarData(userId) %>'),
+                });
+            });
+
             // Add confirmation for marking attendance
             document.addEventListener('DOMContentLoaded', function() {
                 const markBtn = document.querySelector('.start-exam-btn');
