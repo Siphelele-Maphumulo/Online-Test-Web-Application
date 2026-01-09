@@ -18,145 +18,8 @@
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vanilla-js-calendar@1.6.5/build/vanilla-js-calendar.min.css">
     </head>
-    <body>
-        <%
-            // Authentication check
-            if (session.getAttribute("userId") == null) {
-                response.sendRedirect("login.jsp");
-                return;
-            }
-
-            int userId = Integer.parseInt(session.getAttribute("userId").toString());
-            DatabaseClass pDAO = DatabaseClass.getInstance();
-            Connection conn = null;
-            PreparedStatement pstmt = null;
-            ResultSet rs = null;
-            
-            // Determine user type
-            String userType = (String) session.getAttribute("userType");
-            if (userType == null) {
-                User user = pDAO.getUserDetails(String.valueOf(userId));
-                if (user != null) {
-                    userType = user.getType();
-                    session.setAttribute("userType", userType);
-                }
-            }
-
-            // Redirect non-students to appropriate pages
-            if ("admin".equals(userType)) {
-                response.sendRedirect("adm-page.jsp?pgprt=7");
-                return;
-            } else if ("lecture".equals(userType)) {
-                response.sendRedirect("lec-page.jsp");
-                return;
-            }
-
-            // Get student details
-            User student = pDAO.getUserDetails(String.valueOf(userId));
-            String studentName = "Student";
-            String studentEmail = "";
-            
-            if (student != null) {
-                studentName = student.getFirstName() + " " + student.getLastName();
-                studentEmail = student.getEmail();
-            }
-            
-            // Get today's date
-            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
-            String todayDate = sdf.format(new java.util.Date());
-            
-            // Check if attendance already marked today
-            boolean attendanceMarkedToday = false;
-            try {
-                conn = pDAO.getConnection();
-                String checkQuery = "SELECT COUNT(*) as count FROM daily_register WHERE student_id = ? AND DATE(registration_date) = ?";
-                pstmt = conn.prepareStatement(checkQuery);
-                pstmt.setInt(1, userId);
-                pstmt.setString(2, todayDate);
-                rs = pstmt.executeQuery();
-                if (rs.next()) {
-                    attendanceMarkedToday = rs.getInt("count") > 0;
-                }
-            } catch (Exception e) {
-                attendanceMarkedToday = false;
-            } finally {
-                // Close resources
-                if (rs != null) try { rs.close(); } catch (SQLException e) {}
-                if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
-            }
-            
-            // Handle attendance marking if form was submitted
-            String operation = request.getParameter("operation");
-            if ("mark_attendance".equals(operation) && !attendanceMarkedToday) {
-                boolean marked = pDAO.markAttendance(userId, studentName);
-                if (marked) {
-                    session.setAttribute("message", "Attendance marked successfully!");
-                    attendanceMarkedToday = true;
-                } else {
-                    session.setAttribute("error", "Failed to mark attendance. Please try again.");
-                }
-            }
-            
-            // Get attendance history
-            ArrayList<Map<String, String>> attendanceHistory = null;
-            try {
-                attendanceHistory = pDAO.getAttendanceByStudentId(userId);
-            } catch (Exception e) {
-                // Handle error - table might not exist yet
-            }
-            
-            // Get filter parameters
-            String filterDate = request.getParameter("filter_date");
-            if (filterDate == null || filterDate.isEmpty()) {
-                filterDate = todayDate;
-            }
-            
-            String filterCourse = request.getParameter("filter_course");
-            if (filterCourse == null) filterCourse = "";
-            
-            // Get student courses for dropdown
-            List<String> studentCourses = new ArrayList<>();
-            try {
-                conn = pDAO.getConnection();
-                String coursesQuery = "SELECT DISTINCT course_name FROM exam_register WHERE student_id = ?";
-                pstmt = conn.prepareStatement(coursesQuery);
-                pstmt.setInt(1, userId);
-                rs = pstmt.executeQuery();
-                while (rs.next()) {
-                    String course = rs.getString("course_name");
-                    if (course != null && !course.trim().isEmpty()) {
-                        studentCourses.add(course.trim());
-                    }
-                }
-            } catch (Exception e) {
-                // Add default courses if query fails
-                studentCourses.add("Computer Science");
-                studentCourses.add("Mathematics");
-                studentCourses.add("Physics");
-            } finally {
-                // Close resources
-                if (rs != null) try { rs.close(); } catch (SQLException e) {}
-                if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
-                if (conn != null) try { conn.close(); } catch (SQLException e) {}
-            }
-            
-            // Calculate attendance statistics
-            int totalDays = 0;
-            int presentDays = 0;
-            
-            if (attendanceHistory != null) {
-                totalDays = attendanceHistory.size();
-                presentDays = totalDays; // In this simple system, all recorded days are present days
-            }
-            
-            int attendanceRate = totalDays > 0 ? (presentDays * 100 / totalDays) : 0;
-            int absentDays = pDAO.getDaysAbsentCount(userId);
-            int lateDays = pDAO.getDaysLateCount(userId);
-        %>
-
-
-        <!--Style-->
-        <style>
+    
+            <style>
             /* CSS Variables for Maintainability - PROFESSIONAL THEME */
             :root {
                 /* Primary Colors - Professional Blue Theme */
@@ -368,6 +231,7 @@
                 font-weight: 500;
                 letter-spacing: 0.3px;
             }
+            
             
             /* Page Header */
             .page-header {
@@ -882,6 +746,37 @@
                 margin-top: var(--spacing-lg);
             }
             
+            /* Calendar Legend Styles */
+            .calendar-legend {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: var(--spacing-lg);
+                margin-top: var(--spacing-xl);
+                padding-top: var(--spacing-lg);
+                border-top: 1px solid var(--border-color);
+            }
+
+            .legend-item {
+                display: flex;
+                align-items: center;
+                gap: var(--spacing-sm);
+                font-size: 14px;
+                font-weight: 500;
+                color: var(--dark-gray);
+            }
+
+            .color-box {
+                width: 16px;
+                height: 16px;
+                border-radius: var(--radius-sm);
+                border: 1px solid rgba(0, 0, 0, 0.1);
+            }
+
+            .color-box.present { background-color: var(--success); }
+            .color-box.late { background-color: var(--warning); }
+            .color-box.absent { background-color: var(--error); }
+            
             .stat-card {
                 background: linear-gradient(135deg, var(--white) 0%, #fafcff 100%);
                 border: 2px solid var(--border-color);
@@ -1088,6 +983,144 @@
                 }
             }
         </style>
+    <body>
+        <%
+            // Authentication check
+            if (session.getAttribute("userId") == null) {
+                response.sendRedirect("login.jsp");
+                return;
+            }
+
+            int userId = Integer.parseInt(session.getAttribute("userId").toString());
+            DatabaseClass pDAO = DatabaseClass.getInstance();
+            Connection conn = null;
+            PreparedStatement pstmt = null;
+            ResultSet rs = null;
+            
+            // Determine user type
+            String userType = (String) session.getAttribute("userType");
+            if (userType == null) {
+                User user = pDAO.getUserDetails(String.valueOf(userId));
+                if (user != null) {
+                    userType = user.getType();
+                    session.setAttribute("userType", userType);
+                }
+            }
+
+            // Redirect non-students to appropriate pages
+            if ("admin".equals(userType)) {
+                response.sendRedirect("adm-page.jsp?pgprt=7");
+                return;
+            } else if ("lecture".equals(userType)) {
+                response.sendRedirect("lec-page.jsp");
+                return;
+            }
+
+            // Get student details
+            User student = pDAO.getUserDetails(String.valueOf(userId));
+            String studentName = "Student";
+            String studentEmail = "";
+            
+            if (student != null) {
+                studentName = student.getFirstName() + " " + student.getLastName();
+                studentEmail = student.getEmail();
+            }
+            
+            // Get today's date
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+            String todayDate = sdf.format(new java.util.Date());
+            
+            // Check if attendance already marked today
+            boolean attendanceMarkedToday = false;
+            try {
+                conn = pDAO.getConnection();
+                String checkQuery = "SELECT COUNT(*) as count FROM daily_register WHERE student_id = ? AND DATE(registration_date) = ?";
+                pstmt = conn.prepareStatement(checkQuery);
+                pstmt.setInt(1, userId);
+                pstmt.setString(2, todayDate);
+                rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    attendanceMarkedToday = rs.getInt("count") > 0;
+                }
+            } catch (Exception e) {
+                attendanceMarkedToday = false;
+            } finally {
+                // Close resources
+                if (rs != null) try { rs.close(); } catch (SQLException e) {}
+                if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
+            }
+            
+            // Handle attendance marking if form was submitted
+            String operation = request.getParameter("operation");
+            if ("mark_attendance".equals(operation) && !attendanceMarkedToday) {
+                boolean marked = pDAO.markAttendance(userId, studentName);
+                if (marked) {
+                    session.setAttribute("message", "Attendance marked successfully!");
+                    attendanceMarkedToday = true;
+                } else {
+                    session.setAttribute("error", "Failed to mark attendance. Please try again.");
+                }
+            }
+            
+            // Get attendance history
+            ArrayList<Map<String, String>> attendanceHistory = null;
+            try {
+                attendanceHistory = pDAO.getAttendanceByStudentId(userId);
+            } catch (Exception e) {
+                // Handle error - table might not exist yet
+            }
+            
+            // Get filter parameters
+            String filterDate = request.getParameter("filter_date");
+            if (filterDate == null || filterDate.isEmpty()) {
+                filterDate = todayDate;
+            }
+            
+            String filterCourse = request.getParameter("filter_course");
+            if (filterCourse == null) filterCourse = "";
+            
+            // Get student courses for dropdown
+            List<String> studentCourses = new ArrayList<>();
+            try {
+                conn = pDAO.getConnection();
+                String coursesQuery = "SELECT DISTINCT course_name FROM exam_register WHERE student_id = ?";
+                pstmt = conn.prepareStatement(coursesQuery);
+                pstmt.setInt(1, userId);
+                rs = pstmt.executeQuery();
+                while (rs.next()) {
+                    String course = rs.getString("course_name");
+                    if (course != null && !course.trim().isEmpty()) {
+                        studentCourses.add(course.trim());
+                    }
+                }
+            } catch (Exception e) {
+                // Add default courses if query fails
+                studentCourses.add("Computer Science");
+                studentCourses.add("Mathematics");
+                studentCourses.add("Physics");
+            } finally {
+                // Close resources
+                if (rs != null) try { rs.close(); } catch (SQLException e) {}
+                if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
+                if (conn != null) try { conn.close(); } catch (SQLException e) {}
+            }
+            
+            // Calculate attendance statistics
+            int totalDays = 0;
+            int presentDays = 0;
+            
+            if (attendanceHistory != null) {
+                totalDays = attendanceHistory.size();
+                presentDays = totalDays; // In this simple system, all recorded days are present days
+            }
+            
+            int attendanceRate = totalDays > 0 ? (presentDays * 100 / totalDays) : 0;
+            int absentDays = pDAO.getDaysAbsentCount(userId);
+            int lateDays = pDAO.getDaysLateCount(userId);
+        %>
+
+        <!--Style-->
+
 
         <%@ include file="header-messages.jsp" %>
         <%@ include file="modal_assets.jspf" %>
