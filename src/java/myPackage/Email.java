@@ -1,8 +1,6 @@
 
 package myPackage;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.SecureRandom;
@@ -18,14 +16,14 @@ import javax.mail.internet.MimeMessage;
 
 public class Email {
 
-    private static Properties env = new Properties();
+    private static Properties mailProperties = new Properties();
 
     static {
-        try (InputStream input = Email.class.getClassLoader().getResourceAsStream("myPackage/.env")) {
+        try (InputStream input = Email.class.getClassLoader().getResourceAsStream("mail.properties")) {
             if (input == null) {
-                System.out.println("Sorry, unable to find .env file");
+                System.out.println("Sorry, unable to find mail.properties");
             } else {
-                env.load(input);
+                mailProperties.load(input);
             }
         } catch (IOException ex) {
             ex.printStackTrace();
@@ -43,14 +41,16 @@ public class Email {
     }
 
     public static void sendAcceptanceEmail(String to, String firstName, String code) throws MessagingException {
-        final String username = env.getProperty("EMAIL_USER");
-        final String password = env.getProperty("EMAIL_PASS");
+        final String username = mailProperties.getProperty("EMAIL_USER");
+        final String password = mailProperties.getProperty("EMAIL_PASS");
 
         Properties props = new Properties();
         props.put("mail.smtp.auth", "true");
         props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.smtp.host", env.getProperty("SMTP_HOST"));
-        props.put("mail.smtp.port", env.getProperty("SMTP_PORT"));
+        props.put("mail.smtp.host", mailProperties.getProperty("SMTP_HOST"));
+        props.put("mail.smtp.port", mailProperties.getProperty("SMTP_PORT"));
+        props.put("mail.smtp.ssl.trust", mailProperties.getProperty("SMTP_HOST"));
+
 
         Session session = Session.getInstance(props, new Authenticator() {
             protected PasswordAuthentication getPasswordAuthentication() {
@@ -59,7 +59,7 @@ public class Email {
         });
 
         Message message = new MimeMessage(session);
-        message.setFrom(new InternetAddress(env.getProperty("EMAIL_FROM")));
+        message.setFrom(new InternetAddress(mailProperties.getProperty("EMAIL_FROM")));
         message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(to));
         message.setSubject("CONGRATULATIONS: You are nearly there - Code SA Institute Pty Ltd");
         message.setContent(

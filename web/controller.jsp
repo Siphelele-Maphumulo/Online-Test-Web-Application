@@ -17,11 +17,13 @@
 <%@ page import="myPackage.classes.User" %>
 <%@ page import="myPackage.classes.Questions" %>
 <%@ page import="org.mindrot.jbcrypt.BCrypt" %>
+<%@ page import="myPackage.SignupDAO" %>
 
 <%@ page contentType="text/html" pageEncoding="UTF-8"%>
 
 <%
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+myPackage.SignupDAO signupDAO = new myPackage.SignupDAO();
 
 /** Returns value if non-null/non-empty, otherwise fallback. */
 %>
@@ -87,7 +89,7 @@ try {
 
         String code = myPackage.Email.generateRandomCode();
         try {
-            pDAO.saveSignupCode(fName, lName, email, code);
+            signupDAO.saveSignupCode(fName, lName, email, code);
             myPackage.Email.sendAcceptanceEmail(email, fName, code);
             response.setContentType("application/json");
             response.getWriter().write("{\"success\": true}");
@@ -104,67 +106,35 @@ try {
         try {
             String fName = (String) session.getAttribute("signup_fname");
             String lName = (String) session.getAttribute("signup_lname");
-                String uName = (String) session.getAttribute("signup_uname");
-                String pass = (String) session.getAttribute("signup_pass");
-                String contactNo = (String) session.getAttribute("signup_contactno");
-                String city = (String) session.getAttribute("signup_city");
-                String address = (String) session.getAttribute("signup_address");
-                String userType = (String) session.getAttribute("signup_user_type");
+            String uName = (String) session.getAttribute("signup_uname");
+            String pass = (String) session.getAttribute("signup_pass");
+            String contactNo = (String) session.getAttribute("signup_contactno");
+            String city = (String) session.getAttribute("signup_city");
+            String address = (String) session.getAttribute("signup_address");
+            String userType = (String) session.getAttribute("signup_user_type");
 
-                String hashedPass = PasswordUtils.bcryptHashPassword(pass);
+            String hashedPass = PasswordUtils.bcryptHashPassword(pass);
 
-                pDAO.createUserAfterVerification(fName, lName, uName, email, hashedPass, contactNo, city, address, userType, code);
+            signupDAO.createUserAfterVerification(fName, lName, uName, email, hashedPass, contactNo, city, address, userType, code);
 
-                // Clean up session attributes
-                session.removeAttribute("signup_fname");
-                session.removeAttribute("signup_lname");
-                session.removeAttribute("signup_uname");
-                session.removeAttribute("signup_email");
-                session.removeAttribute("signup_pass");
-                session.removeAttribute("signup_contactno");
-                session.removeAttribute("signup_city");
-                session.removeAttribute("signup_address");
-                session.removeAttribute("signup_user_type");
+            // Clean up session attributes
+            session.removeAttribute("signup_fname");
+            session.removeAttribute("signup_lname");
+            session.removeAttribute("signup_uname");
+            session.removeAttribute("signup_email");
+            session.removeAttribute("signup_pass");
+            session.removeAttribute("signup_contactno");
+            session.removeAttribute("signup_city");
+            session.removeAttribute("signup_address");
+            session.removeAttribute("signup_user_type");
 
-                session.setAttribute("message", "Registration successful! Please login");
-                response.sendRedirect("login.jsp");
-            } else {
-                session.setAttribute("error", "Invalid verification code.");
-                response.sendRedirect("signup.jsp");
-            }
+            session.setAttribute("message", "Registration successful! Please login");
+            response.sendRedirect("login.jsp");
         } catch (Exception e) {
-            session.setAttribute("error", "An error occurred during verification.");
+            session.setAttribute("error", "An error occurred during verification: " + e.getMessage());
             response.sendRedirect("signup.jsp");
         }
         return;
-
-    } else if ("register".equalsIgnoreCase(pageParam)) {
-        String fName     = nz(request.getParameter("fname"), "");
-        String lName     = nz(request.getParameter("lname"), "");
-        String uName     = nz(request.getParameter("uname"), "");
-        String email     = nz(request.getParameter("email"), "");
-        String pass      = nz(request.getParameter("pass"), "");
-        String contactNo = nz(request.getParameter("contactno"), "");
-        String city      = nz(request.getParameter("city"), "");
-        String address   = nz(request.getParameter("address"), "");
-
-        String userType = nz(request.getParameter("user_type"), "");
-        String fromPage = nz(request.getParameter("from_page"), "");
-
-        String hashedPass = PasswordUtils.bcryptHashPassword(pass);
-
-        pDAO.addNewUser(fName, lName, uName, email, hashedPass, contactNo, city, address, userType);
-
-        boolean isAdminOrLecture = "admin".equalsIgnoreCase(userType) || "lecture".equalsIgnoreCase(userType)
-                                   || "account".equalsIgnoreCase(fromPage);
-
-        if (isAdminOrLecture) {
-            session.setAttribute("message", "Student added successfully!");
-            response.sendRedirect("accounts.jsp");
-        } else {
-            session.setAttribute("message", "Registration successful! Please login");
-            response.sendRedirect("login.jsp");
-        }
 
     /* =========================
        STAFF REGISTER
