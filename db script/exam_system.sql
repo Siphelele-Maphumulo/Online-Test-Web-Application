@@ -136,3 +136,22 @@ CREATE TABLE `users` (
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2017-08-06 21:26:29
+
+--
+-- Table structure for table `signup_codes`
+--
+
+DROP TABLE IF EXISTS `signup_codes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `signup_codes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `first_names` varchar(100) NOT NULL,
+  `surname` varchar(100) NOT NULL,
+  `email_address` varchar(255) NOT NULL,
+  `code` varchar(10) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email_address_UNIQUE` (`email_address`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
