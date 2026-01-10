@@ -17,11 +17,13 @@
 <%@ page import="myPackage.classes.User" %>
 <%@ page import="myPackage.classes.Questions" %>
 <%@ page import="org.mindrot.jbcrypt.BCrypt" %>
+<%@ page import="myPackage.SignupDAO" %>
 
 <%@ page contentType="text/html" pageEncoding="UTF-8"%>
 
 <%
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+myPackage.SignupDAO signupDAO = new myPackage.SignupDAO();
 
 /** Returns value if non-null/non-empty, otherwise fallback. */
 %>
@@ -59,37 +61,189 @@ try {
             session.setAttribute("error", "Invalid username or password");
             response.sendRedirect("login.jsp");
         }
+/* =========================
+   CHECK EMAIL (in users table)
+   ========================= */
+} else if ("check_email".equalsIgnoreCase(pageParam)) {
+    String email = nz(request.getParameter("email"), "");
+    System.out.println("DEBUG: check_email called with email: " + email);
+    
+    boolean exists = false;
+    
+    try {
+        Connection conn = pDAO.getConnection();
+        String sql = "SELECT COUNT(*) as count FROM users WHERE email = ?";
+        PreparedStatement pstm = conn.prepareStatement(sql);
+        pstm.setString(1, email);
+        ResultSet rs = pstm.executeQuery();
+        if (rs.next()) {
+            exists = rs.getInt("count") > 0;
+        }
+        rs.close();
+        pstm.close();
+        System.out.println("DEBUG: email exists in users table: " + exists);
+    } catch (SQLException ex) {
+        System.err.println("ERROR in check_email: " + ex.getMessage());
+        ex.printStackTrace();
+    }
+    
+    response.setContentType("application/json");
+    response.setCharacterEncoding("UTF-8");
+    String jsonResponse = "{\"exists\": " + exists + "}";
+    System.out.println("DEBUG: Sending JSON response: " + jsonResponse);
+    response.getWriter().write(jsonResponse);
+    return;
+    
+/* =========================
+   CHECK STAFF EMAIL (checks both staff and lectures tables)
+   ========================= */
+} else if ("check_staff_email".equalsIgnoreCase(pageParam)) {
+    String email = nz(request.getParameter("email"), "");
+    System.out.println("DEBUG: check_staff_email called with email: " + email);
+    
+    boolean existsInStaff = false;
+    boolean existsInLectures = false;
+    
+    try {
+        Connection conn = pDAO.getConnection();
+        
+        // Check staff table (authorization)
+        String staffSql = "SELECT COUNT(*) as count FROM staff WHERE email = ?";
+        PreparedStatement staffPstm = conn.prepareStatement(staffSql);
+        staffPstm.setString(1, email);
+        ResultSet staffRs = staffPstm.executeQuery();
+        if (staffRs.next()) {
+            existsInStaff = staffRs.getInt("count") > 0;
+        }
+        staffRs.close();
+        staffPstm.close();
+        
+        // Check lectures table (existing lecturer accounts)
+        String lectureSql = "SELECT COUNT(*) as count FROM lectures WHERE email = ?";
+        PreparedStatement lecturePstm = conn.prepareStatement(lectureSql);
+        lecturePstm.setString(1, email);
+        ResultSet lectureRs = lecturePstm.executeQuery();
+        if (lectureRs.next()) {
+            existsInLectures = lectureRs.getInt("count") > 0;
+        }
+        lectureRs.close();
+        lecturePstm.close();
+        
+        System.out.println("DEBUG: email exists in staff table: " + existsInStaff);
+        System.out.println("DEBUG: email exists in lectures table: " + existsInLectures);
+        
+        // Email is valid if it exists in EITHER staff (authorized) OR lectures (already a lecturer)
+        boolean isValid = existsInStaff || existsInLectures;
+        
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        String jsonResponse = "{\"exists\": " + isValid + "}";
+        System.out.println("DEBUG: Sending JSON response: " + jsonResponse);
+        response.getWriter().write(jsonResponse);
+        
+    } catch (SQLException ex) {
+        System.err.println("ERROR in check_staff_email: " + ex.getMessage());
+        ex.printStackTrace();
+        
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write("{\"exists\": false, \"error\": \"" + ex.getMessage() + "\"}");
+    }
+    return;
 
+    /* =========================
+       REGISTER (Direct form submission - fallback)
+       ========================= */
+    } else if ("register".equalsIgnoreCase(pageParam)) {
+        // This handles direct form submissions if JavaScript fails
+        // Redirect to the signup page with parameters
+        String userType = nz(request.getParameter("user_type"), "student");
+        String fromPage = nz(request.getParameter("from_page"), "");
+
+        StringBuilder redirectUrl = new StringBuilder("signup.jsp?user_type=");
+        redirectUrl.append(userType);
+        if (!fromPage.isEmpty()) {
+            redirectUrl.append("&from=").append(fromPage);
+        }
+
+        // Add a message about JavaScript requirement
+        session.setAttribute("error", "Please enable JavaScript for proper form validation and submission.");
+        response.sendRedirect(redirectUrl.toString());
+        return;    
+    
     /* =========================
        REGISTER
        ========================= */
-    } else if ("register".equalsIgnoreCase(pageParam)) {
+    } else if ("send_code".equalsIgnoreCase(pageParam)) {
         String fName     = nz(request.getParameter("fname"), "");
         String lName     = nz(request.getParameter("lname"), "");
-        String uName     = nz(request.getParameter("uname"), "");
         String email     = nz(request.getParameter("email"), "");
-        String pass      = nz(request.getParameter("pass"), "");
-        String contactNo = nz(request.getParameter("contactno"), "");
-        String city      = nz(request.getParameter("city"), "");
-        String address   = nz(request.getParameter("address"), "");
 
-        String userType = nz(request.getParameter("user_type"), "");
-        String fromPage = nz(request.getParameter("from_page"), "");
+        // Store all form data in session
+        session.setAttribute("signup_fname", fName);
+        session.setAttribute("signup_lname", lName);
+        session.setAttribute("signup_uname", nz(request.getParameter("uname"), ""));
+        session.setAttribute("signup_email", email);
+        session.setAttribute("signup_pass", nz(request.getParameter("pass"), ""));
+        session.setAttribute("signup_contactno", nz(request.getParameter("contactno"), ""));
+        session.setAttribute("signup_city", nz(request.getParameter("city"), ""));
+        session.setAttribute("signup_address", nz(request.getParameter("address"), ""));
+        session.setAttribute("signup_user_type", nz(request.getParameter("user_type"), ""));
 
-        String hashedPass = PasswordUtils.bcryptHashPassword(pass);
+        if (pDAO.getUserByEmail(email) != null) {
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\": false, \"message\": \"Email already exists.\"}");
+            return;
+        }
 
-        pDAO.addNewUser(fName, lName, uName, email, hashedPass, contactNo, city, address, userType);
+        String code = myPackage.Email.generateRandomCode();
+        try {
+            signupDAO.saveSignupCode(fName, lName, email, code);
+            myPackage.Email.sendAcceptanceEmail(email, fName, code);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\": true}");
+        } catch (Exception e) {
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\": false, \"message\": \"Failed to send email.\"}");
+        }
+        return;
 
-        boolean isAdminOrLecture = "admin".equalsIgnoreCase(userType) || "lecture".equalsIgnoreCase(userType)
-                                   || "account".equalsIgnoreCase(fromPage);
+    } else if ("verify_code".equalsIgnoreCase(pageParam)) {
+        String email = nz(request.getParameter("email"), "");
+        String code = nz(request.getParameter("code"), "");
 
-        if (isAdminOrLecture) {
-            session.setAttribute("message", "Student added successfully!");
-            response.sendRedirect("accounts.jsp");
-        } else {
+        try {
+            String fName = (String) session.getAttribute("signup_fname");
+            String lName = (String) session.getAttribute("signup_lname");
+            String uName = (String) session.getAttribute("signup_uname");
+            String pass = (String) session.getAttribute("signup_pass");
+            String contactNo = (String) session.getAttribute("signup_contactno");
+            String city = (String) session.getAttribute("signup_city");
+            String address = (String) session.getAttribute("signup_address");
+            String userType = (String) session.getAttribute("signup_user_type");
+
+            String hashedPass = PasswordUtils.bcryptHashPassword(pass);
+
+            signupDAO.createUserAfterVerification(fName, lName, uName, email, hashedPass, contactNo, city, address, userType, code);
+
+            // Clean up session attributes
+            session.removeAttribute("signup_fname");
+            session.removeAttribute("signup_lname");
+            session.removeAttribute("signup_uname");
+            session.removeAttribute("signup_email");
+            session.removeAttribute("signup_pass");
+            session.removeAttribute("signup_contactno");
+            session.removeAttribute("signup_city");
+            session.removeAttribute("signup_address");
+            session.removeAttribute("signup_user_type");
+
             session.setAttribute("message", "Registration successful! Please login");
             response.sendRedirect("login.jsp");
+        } catch (Exception e) {
+            session.setAttribute("error", "An error occurred during verification: " + e.getMessage());
+            response.sendRedirect("signup.jsp");
         }
+        return;
 
     /* =========================
        STAFF REGISTER
@@ -561,11 +715,25 @@ try {
        ========================= */
     } else if ("check_username".equalsIgnoreCase(pageParam)) {
         String username = request.getParameter("username");
-        boolean exists = pDAO.checkUserExists(username);
+        System.out.println("DEBUG: check_username called with username: " + username);
+
+        boolean exists = false;
+
+        try {
+            exists = pDAO.checkUserExists(username);
+            System.out.println("DEBUG: checkUserExists returned: " + exists);
+        } catch (Exception e) {
+            System.err.println("ERROR in check_username: " + e.getMessage());
+            e.printStackTrace();
+        }
+
         response.setContentType("application/json");
-        response.getWriter().write("{\"exists\": " + exists + "}");
+        response.setCharacterEncoding("UTF-8");
+        String jsonResponse = "{\"exists\": " + exists + "}";
+        System.out.println("DEBUG: Sending JSON response: " + jsonResponse);
+        response.getWriter().write(jsonResponse);
         return;
-        
+
     /* =========================
        ADMIN RESULTS
        ========================= */

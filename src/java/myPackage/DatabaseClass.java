@@ -133,6 +133,8 @@ public class DatabaseClass {
         return exists;
     }
 
+    
+    
 // Fetch all students
 public ArrayList<User> getAllStudents() {
     try {
@@ -474,133 +476,290 @@ public ArrayList<User> getAllLecturers() {
         return userDetails;
     }
 
-    // add new lecturer/staff
-    public void addNewStaff(String staffNum, String email, String fullNames, String course_name) {
-        try {
-            ensureConnection();
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Connection error in addNewStaff", e);
-            return;
+// add new lecturer/staff
+public void addNewStaff(String staffNum, String email, String fullNames, String course_name) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in addNewStaff", e);
+        return;
+    }
+    
+    // Check if email already exists in staff table
+    String checkSql = "SELECT COUNT(*) as count FROM staff WHERE email = ?";
+    try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+        checkStmt.setString(1, email);
+        try (ResultSet rs = checkStmt.executeQuery()) {
+            if (rs.next() && rs.getInt("count") > 0) {
+                LOGGER.warning("Staff email already exists: " + email);
+                // Email already exists, you might want to throw an exception or return false
+                return;
+            }
         }
-        
-        String sql = "INSERT INTO staff (staffNum, email, fullNames, course_name) VALUES (?, ?, ?, ?)";
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, staffNum);
-            pstmt.setString(2, email);
-            pstmt.setString(3, fullNames);
-            pstmt.setString(4, course_name);
-            pstmt.executeUpdate();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Error checking existing staff email", e);
+        return;
+    }
+    
+    // Check if staff number already exists
+    checkSql = "SELECT COUNT(*) as count FROM staff WHERE staffNum = ?";
+    try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+        checkStmt.setString(1, staffNum);
+        try (ResultSet rs = checkStmt.executeQuery()) {
+            if (rs.next() && rs.getInt("count") > 0) {
+                LOGGER.warning("Staff number already exists: " + staffNum);
+                return;
+            }
+        }
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Error checking existing staff number", e);
+        return;
+    }
+    
+    String sql = "INSERT INTO staff (staffNum, email, fullNames, course_name) VALUES (?, ?, ?, ?)";
+    try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        pstmt.setString(1, staffNum);
+        pstmt.setString(2, email);
+        pstmt.setString(3, fullNames);
+        pstmt.setString(4, course_name);
+        pstmt.executeUpdate();
+        LOGGER.info("Staff added successfully: " + email + " - " + fullNames);
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Error adding new staff", e);
+        e.printStackTrace();
+    }
+}
+
+public void addNewUser(String fName, String lName, String uName, String email, String pass,
+                       String contact, String city, String address, String userTypeParam) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in addNewUser", e);
+        return;
+    }
+    
+    // FIRST: Check if email already exists in users table
+    try {
+        String checkSql = "SELECT COUNT(*) as count FROM users WHERE email = ?";
+        PreparedStatement checkStmt = conn.prepareStatement(checkSql);
+        checkStmt.setString(1, email);
+        ResultSet rs = checkStmt.executeQuery();
+        if (rs.next() && rs.getInt("count") > 0) {
+            LOGGER.warning("User email already exists: " + email);
+            rs.close();
+            checkStmt.close();
+            return; // Email already registered
+        }
+        rs.close();
+        checkStmt.close();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Error checking existing user email", e);
+        return;
+    }
+    
+    // SECOND: Check if username already exists
+    try {
+        String checkSql = "SELECT COUNT(*) as count FROM users WHERE user_name = ?";
+        PreparedStatement checkStmt = conn.prepareStatement(checkSql);
+        checkStmt.setString(1, uName);
+        ResultSet rs = checkStmt.executeQuery();
+        if (rs.next() && rs.getInt("count") > 0) {
+            LOGGER.warning("Username already exists: " + uName);
+            rs.close();
+            checkStmt.close();
+            return; // Username already taken
+        }
+        rs.close();
+        checkStmt.close();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Error checking existing username", e);
+        return;
+    }
+    
+    // THIRD: For lecturer/admin registration, check if email exists in staff table
+    String userType = "student";
+    if (userTypeParam != null && !userTypeParam.isEmpty()) {
+        userType = userTypeParam.toLowerCase();
+    }
+    
+    if ("lecture".equals(userType) || "admin".equals(userType)) {
+        try {
+            String checkSql = "SELECT staffNum, fullNames, course_name FROM staff WHERE email = ?";
+            PreparedStatement checkStmt = conn.prepareStatement(checkSql);
+            checkStmt.setString(1, email);
+            ResultSet rs = checkStmt.executeQuery();
+            if (!rs.next()) {
+                LOGGER.warning("Unauthorized " + userType + " registration attempt for email: " + email);
+                rs.close();
+                checkStmt.close();
+                return; // Email not found in staff table
+            }
+            rs.close();
+            checkStmt.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error checking staff email authorization", e);
+            return;
         }
     }
+    
+    PreparedStatement pstmUsers = null;
+    PreparedStatement pstmInsert = null;
+    ResultSet rsUserId = null;
 
+    try {
+        conn.setAutoCommit(false);
 
+        // Insert into users table
+        String sqlUsers = "INSERT INTO users (first_name, last_name, user_name, email, password, user_type, contact_no, city, address) " +
+                          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        pstmUsers = conn.prepareStatement(sqlUsers, Statement.RETURN_GENERATED_KEYS);
+        pstmUsers.setString(1, fName);
+        pstmUsers.setString(2, lName);
+        pstmUsers.setString(3, uName);
+        pstmUsers.setString(4, email);
+        pstmUsers.setString(5, pass);
+        pstmUsers.setString(6, userType);
+        pstmUsers.setString(7, contact);
+        pstmUsers.setString(8, city);
+        pstmUsers.setString(9, address);
+        pstmUsers.executeUpdate();
 
-    public void addNewUser(String fName, String lName, String uName, String email, String pass,
-                           String contact, String city, String address, String userTypeParam) {
-        try {
-            ensureConnection();
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Connection error in addNewUser", e);
-            return;
+        // Get the generated user_id
+        rsUserId = pstmUsers.getGeneratedKeys();
+        if (!rsUserId.next()) {
+            throw new SQLException("Failed to retrieve generated user_id for " + email);
         }
+        int userId = rsUserId.getInt(1);
+
+        // Insert into students or lectures table based on user type
+        String sqlInsert;
+        String courseName = "";
         
-        PreparedStatement pstmUsers = null;
-        PreparedStatement pstmInsert = null;
-        ResultSet rsUserId = null;
-
-        try {
-            conn.setAutoCommit(false);
-
-            String userType = "student";
-            if (userTypeParam != null && !userTypeParam.isEmpty()){
-                userType = userTypeParam;
-            }
-
-            // 2. Insert into users table (DO NOT include course_name here)
-            String sqlUsers = "INSERT INTO users (first_name, last_name, user_name, email, password, user_type, contact_no, city, address) " +
-                              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            pstmUsers = conn.prepareStatement(sqlUsers, Statement.RETURN_GENERATED_KEYS);
-            pstmUsers.setString(1, fName);
-            pstmUsers.setString(2, lName);
-            pstmUsers.setString(3, uName);
-            pstmUsers.setString(4, email);
-            pstmUsers.setString(5, pass);
-            pstmUsers.setString(6, userType);
-            pstmUsers.setString(7, contact);
-            pstmUsers.setString(8, city);
-            pstmUsers.setString(9, address);
-            pstmUsers.executeUpdate();
-
-            // 3. Get the generated user_id
-            rsUserId = pstmUsers.getGeneratedKeys();
-            if (!rsUserId.next()) {
-                throw new SQLException("Failed to retrieve generated user_id for " + email);
-            }
-            int userId = rsUserId.getInt(1);
-
-            // 4. Insert into students or lectures table
-            String sqlInsert;
-            if ("student".equals(userType)) {
-                sqlInsert = "INSERT INTO students (user_id, first_name, last_name, user_name, email, password, user_type, contact_no, city, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                pstmInsert = conn.prepareStatement(sqlInsert);
-                pstmInsert.setInt(1, userId);
-                pstmInsert.setString(2, fName);
-                pstmInsert.setString(3, lName);
-                pstmInsert.setString(4, uName);
-                pstmInsert.setString(5, email);
-                pstmInsert.setString(6, pass);
-                pstmInsert.setString(7, userType);
-                pstmInsert.setString(8, contact);
-                pstmInsert.setString(9, city);
-                pstmInsert.setString(10, address);
-            } else { // It's a lecturer
-                String courseName = "";
-                try (PreparedStatement pstmCheckStaff = conn.prepareStatement("SELECT course_name FROM staff WHERE email = ?")) {
-                    pstmCheckStaff.setString(1, email);
-                    try(ResultSet rsCheck = pstmCheckStaff.executeQuery()){
-                        if (rsCheck.next()) {
-                            courseName = rsCheck.getString("course_name");
-                        }
+        if ("student".equals(userType)) {
+            sqlInsert = "INSERT INTO students (user_id, first_name, last_name, user_name, email, password, user_type, contact_no, city, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            pstmInsert = conn.prepareStatement(sqlInsert);
+            pstmInsert.setInt(1, userId);
+            pstmInsert.setString(2, fName);
+            pstmInsert.setString(3, lName);
+            pstmInsert.setString(4, uName);
+            pstmInsert.setString(5, email);
+            pstmInsert.setString(6, pass);
+            pstmInsert.setString(7, userType);
+            pstmInsert.setString(8, contact);
+            pstmInsert.setString(9, city);
+            pstmInsert.setString(10, address);
+        } else { 
+            // For lecturer/admin, get course_name from staff table
+            try (PreparedStatement pstmCheckStaff = conn.prepareStatement("SELECT course_name FROM staff WHERE email = ?")) {
+                pstmCheckStaff.setString(1, email);
+                try(ResultSet rsCheck = pstmCheckStaff.executeQuery()){
+                    if (rsCheck.next()) {
+                        courseName = rsCheck.getString("course_name");
                     }
                 }
-                // For lecturers, insert into lectures table
+            }
+            
+            // Determine which table to insert into based on user type
+            if ("lecture".equals(userType)) {
                 sqlInsert = "INSERT INTO lectures (user_id, first_name, last_name, user_name, email, password, user_type, contact_no, city, address, course_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                pstmInsert = conn.prepareStatement(sqlInsert);
-                pstmInsert.setInt(1, userId);
-                pstmInsert.setString(2, fName);
-                pstmInsert.setString(3, lName);
-                pstmInsert.setString(4, uName);
-                pstmInsert.setString(5, email);
-                pstmInsert.setString(6, pass);
-                pstmInsert.setString(7, userType);
-                pstmInsert.setString(8, contact);
-                pstmInsert.setString(9, city);
-                pstmInsert.setString(10, address);
+            } else { // admin
+                sqlInsert = "INSERT INTO admin (user_id, first_name, last_name, user_name, email, password, user_type, contact_no, city, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            }
+            
+            pstmInsert = conn.prepareStatement(sqlInsert);
+            pstmInsert.setInt(1, userId);
+            pstmInsert.setString(2, fName);
+            pstmInsert.setString(3, lName);
+            pstmInsert.setString(4, uName);
+            pstmInsert.setString(5, email);
+            pstmInsert.setString(6, pass);
+            pstmInsert.setString(7, userType);
+            pstmInsert.setString(8, contact);
+            pstmInsert.setString(9, city);
+            pstmInsert.setString(10, address);
+            
+            // Add course_name only for lecturers
+            if ("lecture".equals(userType)) {
                 pstmInsert.setString(11, courseName != null ? courseName : "");
             }
-            pstmInsert.executeUpdate();
+        }
+        pstmInsert.executeUpdate();
 
-            conn.commit();
-        } catch (SQLException ex) {
-            try {
-                if (conn != null) conn.rollback();
-            } catch (SQLException rollbackEx) {
-                Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Rollback failed", rollbackEx);
-            }
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-        } finally {
-            try {
-                if (rsUserId != null) rsUserId.close();
-                if (pstmUsers != null) pstmUsers.close();
-                if (pstmInsert != null) pstmInsert.close();
-                conn.setAutoCommit(true);
-            } catch (SQLException e) {
-                Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, e);
-            }
+        conn.commit();
+        LOGGER.info("User registered successfully: " + email + " (" + userType + ")");
+        
+    } catch (SQLException ex) {
+        try {
+            if (conn != null) conn.rollback();
+        } catch (SQLException rollbackEx) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Rollback failed", rollbackEx);
+        }
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error in addNewUser", ex);
+        throw new RuntimeException("Registration failed: " + ex.getMessage(), ex);
+    } finally {
+        try {
+            if (rsUserId != null) rsUserId.close();
+            if (pstmUsers != null) pstmUsers.close();
+            if (pstmInsert != null) pstmInsert.close();
+            conn.setAutoCommit(true);
+        } catch (SQLException e) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error closing resources", e);
         }
     }
+}
+
+// Helper method to check if email exists in staff table (for frontend validation)
+// Helper method to check if email exists in staff table (for frontend validation)
+public boolean isEmailInStaffTable(String email) {
+    try {
+        ensureConnection();
+        String sql = "SELECT COUNT(*) as count FROM staff WHERE email = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, email);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() && rs.getInt("count") > 0;
+            }
+        }
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Error checking staff email", e);
+        return false;
+    }
+}
+
+// Helper method to check if email exists in users table
+public boolean isEmailRegistered(String email) {
+    try {
+        ensureConnection();
+        String sql = "SELECT COUNT(*) as count FROM users WHERE email = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, email);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() && rs.getInt("count") > 0;
+            }
+        }
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Error checking registered email", e);
+        return false;
+    }
+}
+
+// Helper method to check if username exists
+public boolean isUsernameTaken(String username) {
+    try {
+        ensureConnection();
+        String sql = "SELECT COUNT(*) as count FROM users WHERE user_name = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() && rs.getInt("count") > 0;
+            }
+        }
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Error checking username", e);
+        return false;
+    }
+}
 
 
     public boolean loginValidate(String userName, String userPass) throws SQLException {
@@ -3683,4 +3842,5 @@ public ArrayList<String> getCourseList() {
     
     return result;
 }
+
 }

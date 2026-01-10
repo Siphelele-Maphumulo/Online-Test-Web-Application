@@ -82,7 +82,8 @@
             <p class="text-center text-muted mb-4"><%= subtitle %></p>
 
             <!-- Add hidden fields for user_type and from_page -->
-            <form action="controller.jsp" method="POST" onsubmit="return validateForm();">
+           <!-- <form action="controller.jsp" method="POST" onsubmit="return validateForm();">-->
+              <form method="POST" onsubmit="return validateForm(event);">
               <input type="hidden" name="page" value="register"/>
               <input type="hidden" name="user_type" value="<%= userType != null ? userType : "" %>"/>
               <input type="hidden" name="from_page" value="<%= fromPage != null ? fromPage : "" %>"/>
@@ -182,49 +183,253 @@
     <jsp:include page="footer.jsp"/>
   </footer>
 
+  <!-- Verification Modal -->
+  <div class="modal fade" id="verificationModal" tabindex="-1" role="dialog" aria-labelledby="verificationModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="verificationModalLabel">Enter Verification Code</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>A verification code has been sent to your email address. Please enter the code below to complete your registration.</p>
+          <form id="verificationForm" action="controller.jsp" method="POST">
+            <input type="hidden" name="page" value="verify_code"/>
+            <input type="hidden" name="email" id="verificationEmail"/>
+            <div class="form-group">
+              <label for="verificationCode">Verification Code</label>
+              <input type="text" class="form-control" id="verificationCode" name="code" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Verify and Sign Up</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
   <script>
-    function validateForm(){
-      let valid = true;
-      const fname = document.getElementById("fname");
-      const lname = document.getElementById("lname");
-      const uname = document.getElementById("uname");
-      const contact = document.getElementById("contactno");
-      const email = document.getElementById("email");
-      const pass = document.getElementById("pass");
-      const cpass = document.getElementById("cpass");
-      const setErr = (id,msg)=>{ document.getElementById(id).textContent = msg; if(msg) valid=false; };
+    function validateForm(event){
+        event.preventDefault();
+        console.log("Form submitted - Starting validation");
 
-      setErr("errorFirstName", fname.value.trim() ? "" : "First name is required.");
-      setErr("errorLastName",  lname.value.trim() ? "" : "Last name is required.");
-      setErr("errorUsername",  uname.value.trim() ? "" : "Identity number is required.");
-      setErr("errorContact", /^[0-9+()\s-]{7,}$/.test(contact.value.trim()) ? "" : "Enter a valid contact number.");
-      setErr("errorEmail", /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim()) ? "" : "Enter a valid email address.");
-      setErr("errorPassword", pass.value.length >= 6 ? "" : "Password must be at least 6 characters.");
-      setErr("errorConfirmPassword", pass.value === cpass.value ? "" : "Passwords do not match.");
-      return valid;
-    }
+        // Clear errors
+        document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
 
-    function togglePassword(fieldId, icon){
-      const input = document.getElementById(fieldId);
-      const revealing = input.type === "password";
-      input.type = revealing ? "text" : "password";
-      icon.classList.toggle("fa-eye");
-      icon.classList.toggle("fa-eye-slash");
-    }
+        // Get form values
+        const fname = document.getElementById("fname").value.trim();
+        const lname = document.getElementById("lname").value.trim();
+        const uname = document.getElementById("uname").value.trim();
+        const email = document.getElementById("email").value.trim();
+        const pass = document.getElementById("pass").value;
+        const cpass = document.getElementById("cpass").value;
+        const userType = document.querySelector('input[name="user_type"]').value;
 
-    document.getElementById('uname').addEventListener('blur', function() {
-        const username = this.value;
-        if (username.length > 0) {
-            fetch('controller.jsp?page=check_username&username=' + username)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.exists) {
-                        document.getElementById('errorUsername').textContent = 'Username already exists.';
-                    } else {
-                        document.getElementById('errorUsername').textContent = '';
+        console.log("User type:", userType);
+        console.log("Username:", uname);
+        console.log("Email:", email);
+
+        // Basic validation
+        let valid = true;
+
+        if (!fname) {
+            document.getElementById("errorFirstName").textContent = "First name is required.";
+            valid = false;
+        }
+        if (!lname) {
+            document.getElementById("errorLastName").textContent = "Last name is required.";
+            valid = false;
+        }
+        if (!uname) {
+            document.getElementById("errorUsername").textContent = "Identity number is required.";
+            valid = false;
+        }
+        if (!email) {
+            document.getElementById("errorEmail").textContent = "Email is required.";
+            valid = false;
+        }
+        if (pass.length < 6) {
+            document.getElementById("errorPassword").textContent = "Password must be at least 6 characters.";
+            valid = false;
+        }
+        if (pass !== cpass) {
+            document.getElementById("errorConfirmPassword").textContent = "Passwords do not match.";
+            valid = false;
+        }
+
+        if (!valid) {
+            console.log("Basic validation failed");
+            return false;
+        }
+
+        // Change button to loading state
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Validating...';
+        submitBtn.disabled = true;
+
+        // Start validation chain
+        validateStepByStep();
+
+        function validateStepByStep() {
+            console.log("Step 1: Checking username availability...");
+
+            // Step 1: Check username
+            fetch('controller.jsp?page=check_username&username=' + encodeURIComponent(uname) + '&t=' + new Date().getTime())
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.text();
+                })
+                .then(text => {
+                    console.log("Username check response:", text);
+                    try {
+                        const data = JSON.parse(text);
+
+                        if (data.exists) {
+                            document.getElementById("errorUsername").textContent = "Username already exists.";
+                            resetButton();
+                            return;
+                        }
+
+                        // Step 2: Check email in users table
+                        console.log("Step 2: Checking if email is already registered...");
+                        return fetch('controller.jsp?page=check_staff_email&checkRegistered=1&email=' + encodeURIComponent(email) + '&t=' + new Date().getTime());
+                    } catch (e) {
+                        console.error("Failed to parse JSON:", e);
+                        document.getElementById("errorUsername").textContent = "Server error. Please try again.";
+                        resetButton();
+                        throw e;
                     }
+                })
+                .then(response => {
+                    if (response) {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.text();
+                    }
+                    return null;
+                })
+                .then(text => {
+                    if (text) {
+                        console.log("Email registration check response:", text);
+                        try {
+                            const data = JSON.parse(text);
+
+                            // Check if email is already registered as a user
+                            if (data.registered) {
+                                document.getElementById("errorEmail").textContent = "Email is already registered.";
+                                resetButton();
+                                return;
+                            }
+
+                            // Step 3: If lecturer/admin, check staff authorization
+                            if (userType === "lecture" || userType === "admin") {
+                                console.log("Step 3: Checking staff authorization for:", userType);
+                                return fetch('controller.jsp?page=check_staff_email&email=' + encodeURIComponent(email) + '&t=' + new Date().getTime());
+                            } else {
+                                // For students, proceed directly to verification
+                                console.log("Student registration - proceeding to verification");
+                                return Promise.resolve({text: () => Promise.resolve('{"exists": true}')});
+                            }
+                        } catch (e) {
+                            console.error("Failed to parse email check JSON:", e);
+                            document.getElementById("errorEmail").textContent = "Server error. Please try again.";
+                            resetButton();
+                            throw e;
+                        }
+                    }
+                    return null;
+                })
+                .then(response => {
+                    if (response && response.text) {
+                        return response.text();
+                    }
+                    return '{"exists": true}';
+                })
+                .then(text => {
+                    console.log("Staff authorization check response:", text);
+                    try {
+                        const data = JSON.parse(text);
+
+                        if ((userType === "lecture" || userType === "admin") && !data.exists) {
+                            document.getElementById("errorEmail").textContent = 
+                                "Email not authorized for " + userType + " registration. Please contact administrator.";
+                            resetButton();
+                            return;
+                        }
+
+                        // All checks passed, send verification code
+                        console.log("All validations passed, sending verification code...");
+                        sendVerificationCode(event);
+
+                    } catch (e) {
+                        console.error("Failed to parse staff authorization JSON:", e);
+                        document.getElementById("errorEmail").textContent = "Server error. Please try again.";
+                        resetButton();
+                    }
+                })
+                .catch(error => {
+                    console.error("Validation error:", error);
+                    document.getElementById("errorUsername").textContent = "Network error. Please check your connection.";
+                    resetButton();
                 });
         }
+
+        function resetButton() {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+
+        return false;
+    }
+
+    function sendVerificationCode(event) {
+        const form = event.target.closest('form');
+        const formData = new FormData(form);
+        formData.set("page", "send_code");
+
+        console.log("Sending verification code...");
+
+        fetch("controller.jsp", {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.text())
+        .then(text => {
+            console.log("Send code response:", text);
+            try {
+                const data = JSON.parse(text);
+                if (data.success) {
+                    document.getElementById("verificationEmail").value = document.getElementById("email").value.trim();
+                    $('#verificationModal').modal('show');
+                } else {
+                    document.getElementById("errorEmail").textContent = data.message || "Failed to send verification code.";
+                }
+            } catch (e) {
+                console.error("Failed to parse send code JSON:", e);
+                document.getElementById("errorEmail").textContent = "Server error. Please try again.";
+            }
+            resetButton();
+        })
+        .catch(error => {
+            console.error("Send code error:", error);
+            document.getElementById("errorEmail").textContent = "Network error. Please try again.";
+            resetButton();
+        });
+    }
+    function togglePassword(fieldId, icon){
+        const input = document.getElementById(fieldId);
+        const revealing = input.type === "password";
+        input.type = revealing ? "text" : "password";
+        icon.classList.toggle("fa-eye");
+        icon.classList.toggle("fa-eye-slash");
+    }
+
+    // Initialize password toggle icons
+    document.addEventListener('DOMContentLoaded', function() {
+        const passIcon = document.querySelector('#pass + .toggle-password');
+        const cpassIcon = document.querySelector('#cpass + .toggle-password');
+        if (passIcon) passIcon.classList.add('fa-eye');
+        if (cpassIcon) cpassIcon.classList.add('fa-eye');
     });
   </script>
 
