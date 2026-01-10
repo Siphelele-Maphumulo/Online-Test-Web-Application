@@ -293,7 +293,8 @@
 
                         // Step 2: Check email in users table
                         console.log("Step 2: Checking if email is already registered...");
-                        return fetch('controller.jsp?page=check_staff_email&checkRegistered=1&email=' + encodeURIComponent(email) + '&t=' + new Date().getTime());
+                        // Corrected endpoint to check against the 'users' table
+                        return fetch('controller.jsp?page=check_email&email=' + encodeURIComponent(email) + '&t=' + new Date().getTime());
                     } catch (e) {
                         console.error("Failed to parse JSON:", e);
                         document.getElementById("errorUsername").textContent = "Server error. Please try again.";
@@ -314,8 +315,8 @@
                         try {
                             const data = JSON.parse(text);
 
-                            // Check if email is already registered as a user
-                            if (data.registered) {
+                            // Check if email is already registered as a user (expects {"exists": true/false})
+                            if (data.exists) {
                                 document.getElementById("errorEmail").textContent = "Email is already registered.";
                                 resetButton();
                                 return;
