@@ -97,7 +97,7 @@ try {
         }
 
     /* =========================
-       REGISTER (WITH ENHANCED VALIDATION)
+       REGISTER
        ========================= */
     } else if ("register".equalsIgnoreCase(pageParam)) {
         String fName     = nz(request.getParameter("fname"), "");
@@ -112,71 +112,20 @@ try {
         String userType = nz(request.getParameter("user_type"), "");
         String fromPage = nz(request.getParameter("from_page"), "");
 
-        // Validate required fields
-        if (fName.isEmpty() || lName.isEmpty() || uName.isEmpty() || email.isEmpty() || pass.isEmpty()) {
-            session.setAttribute("error", "All required fields must be filled.");
-            response.sendRedirect("signup.jsp?user_type=" + userType + "&error=missing_fields");
-            return;
-        }
+    String hashedPass = PasswordUtils.bcryptHashPassword(pass);
 
-        // Validate ID number format (8 digits)
-        if (!uName.matches("\\d{8}")) {
-            session.setAttribute("error", "ID number must be 8 digits.");
-            response.sendRedirect("signup.jsp?user_type=" + userType + "&error=invalid_id");
-            return;
-        }
-
-        // Check for duplicates before proceeding
-        if (pDAO.checkUsernameExists(uName)) {
-            session.setAttribute("error", "Username/ID number already exists.");
-            response.sendRedirect("signup.jsp?user_type=" + userType + "&error=duplicate_username&fname=" + 
-                                 java.net.URLEncoder.encode(fName, "UTF-8") + "&lname=" + 
-                                 java.net.URLEncoder.encode(lName, "UTF-8") + "&email=" + 
-                                 java.net.URLEncoder.encode(email, "UTF-8"));
-            return;
-        }
-
-        if (pDAO.checkEmailExists(email)) {
-            session.setAttribute("error", "Email already registered.");
-            response.sendRedirect("signup.jsp?user_type=" + userType + "&error=duplicate_email&fname=" + 
-                                 java.net.URLEncoder.encode(fName, "UTF-8") + "&lname=" + 
-                                 java.net.URLEncoder.encode(lName, "UTF-8") + "&uname=" + 
-                                 java.net.URLEncoder.encode(uName, "UTF-8"));
-            return;
-        }
-
-        if (contactNo != null && !contactNo.isEmpty() && pDAO.checkContactNoExists(contactNo)) {
-            session.setAttribute("error", "Contact number already registered.");
-            response.sendRedirect("signup.jsp?user_type=" + userType + "&error=duplicate_contact&fname=" + 
-                                 java.net.URLEncoder.encode(fName, "UTF-8") + "&lname=" + 
-                                 java.net.URLEncoder.encode(lName, "UTF-8") + "&uname=" + 
-                                 java.net.URLEncoder.encode(uName, "UTF-8") + "&email=" + 
-                                 java.net.URLEncoder.encode(email, "UTF-8"));
-            return;
-        }
-
-        // Check if email is in staff table and adjust user type if needed
-        if (pDAO.checkStaffEmailExists(email) && !"lecture".equalsIgnoreCase(userType) && !"lecturer".equalsIgnoreCase(userType)) {
-            // Ask user for confirmation - this will be handled client-side
-            // For now, we'll default to student unless explicitly set
-            // The client-side modal will handle the confirmation
-        }
-
-        String hashedPass = PasswordUtils.bcryptHashPassword(pass);
-
-        pDAO.addNewUser(fName, lName, uName, email, hashedPass, contactNo, city, address, userType);
+    pDAO.addNewUser(fName, lName, uName, email, hashedPass, contactNo, city, address, userType);
 
         boolean isAdminOrLecture = "admin".equalsIgnoreCase(userType) || "lecture".equalsIgnoreCase(userType)
-                                   || "lecturer".equalsIgnoreCase(userType) || "account".equalsIgnoreCase(fromPage);
+                                   || "account".equalsIgnoreCase(fromPage);
 
-        if (isAdminOrLecture) {
-            session.setAttribute("message", "Student added successfully!");
-            response.sendRedirect("accounts.jsp");
-        } else {
-            session.setAttribute("message", "Registration successful! Please login");
-            response.sendRedirect("login.jsp");
-        }
-
+    if (isAdminOrLecture) {
+        session.setAttribute("message", "Student added successfully!");
+        response.sendRedirect("accounts.jsp");
+    } else {
+        session.setAttribute("message", "Registration successful! Please login");
+        response.sendRedirect("login.jsp");
+    }
     /* =========================
        STAFF REGISTER
        ========================= */
