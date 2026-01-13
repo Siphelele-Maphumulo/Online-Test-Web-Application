@@ -878,6 +878,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                                             <i class="fas fa-edit"></i> Edit
                                         </button>
                                         <button class="btn btn-danger delete-btn" 
+                                                type="button"
                                                 data-exam-id="<%= examId %>"
                                                 data-student-name="<%= fullName %>"
                                                 data-course-name="<%= e.getcName() %>"
@@ -1055,15 +1056,16 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
             });
         });
         
-        // Delete button click handler
+        // Delete button click handler - UPDATED
         document.querySelectorAll('.delete-btn').forEach(button => {
             button.addEventListener('click', function(e) {
+                e.preventDefault(); // Prevent form submission
                 e.stopPropagation(); // Prevent event bubbling
-                
+
                 const examId = this.getAttribute('data-exam-id');
                 const studentName = this.getAttribute('data-student-name');
                 const courseName = this.getAttribute('data-course-name');
-                
+
                 showDeleteModal(examId, studentName, courseName);
             });
         });
@@ -1158,10 +1160,10 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
             showAlert('No exam selected for deletion.');
             return;
         }
-        
+
         console.log('Confirming delete for exam ID:', examId);
 
-        // Submit delete request
+        // Create a separate form for single delete to avoid interfering with bulk delete
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = 'controller.jsp';
@@ -1456,16 +1458,28 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         });
     });
 
+    // Bulk Delete Form Submit Handler - UPDATED
     document.getElementById('bulkDeleteForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const selected = document.querySelectorAll('input[name="examIds"]:checked').length;
-        if (selected === 0) {
-            showAlert('Please select at least one exam result to delete.');
-            return;
-        }
-        const confirmed = await showConfirm('Are you sure you want to delete ' + selected + ' exam result(s)?');
-        if (confirmed) {
-            this.submit();
+        // Check if this is a bulk delete operation (from the Delete Selected button)
+        const deleteBtn = e.submitter || e.originalEvent?.submitter;
+        if (deleteBtn && deleteBtn.closest('.btn-danger') && deleteBtn.textContent.includes('Delete Selected')) {
+            e.preventDefault();
+            const selected = document.querySelectorAll('input[name="examIds"]:checked').length;
+            if (selected === 0) {
+                showAlert('Please select at least one exam result to delete.');
+                return;
+            }
+            const confirmed = await showConfirm('Are you sure you want to delete ' + selected + ' exam result(s)?');
+            if (confirmed) {
+                // Ensure the operation is set to bulk_delete
+                const operationInput = document.createElement('input');
+                operationInput.type = 'hidden';
+                operationInput.name = 'operation';
+                operationInput.value = 'bulk_delete';
+                this.appendChild(operationInput);
+
+                this.submit();
+            }
         }
     });
 </script>
