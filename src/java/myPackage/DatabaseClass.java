@@ -709,7 +709,7 @@ public void addNewUser(String fName, String lName, String uName, String email, S
     }
 }
 
-// Helper method to check if email exists in staff table (for frontend validation)
+
 // Helper method to check if email exists in staff table (for frontend validation)
 public boolean isEmailInStaffTable(String email) {
     try {

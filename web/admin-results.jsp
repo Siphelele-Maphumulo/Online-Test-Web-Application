@@ -972,28 +972,6 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     </main>
 </div>
 
-<!-- Delete Confirmation Modal -->
-<div id="deleteModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Delete Exam Result</h2>
-            <button class="close-button" onclick="closeDeleteModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <p id="deleteModalMessage">Are you sure you want to delete this exam result?</p>
-        </div>
-        <div class="modal-footer">
-            <button onclick="closeDeleteModal()" class="btn btn-secondary">Cancel</button>
-            <button onclick="confirmDelete()" class="btn btn-danger">
-                <i class="fas fa-trash"></i> Delete
-            </button>
-        </div>
-    </div>
-</div>
-
-<style>
-</style>
-
 <%@ include file="modal_assets.jspf" %>
 
 <!-- Font Awesome for Icons -->
@@ -1024,6 +1002,9 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         
         // Initialize edit/delete functionality
         initializeEditDeleteHandlers();
+        
+        // Debug: Check if all delete buttons have proper data attributes
+        debugDataAttributes();
         
         // Debug: Log to check if modal exists
         console.log('Modal element exists:', document.getElementById('deleteModal') !== null);
@@ -1056,17 +1037,79 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
             });
         });
         
-        // Delete button click handler - UPDATED
+        // Delete button click handler - UPDATED with better error handling
         document.querySelectorAll('.delete-btn').forEach(button => {
             button.addEventListener('click', function(e) {
                 e.preventDefault(); // Prevent form submission
                 e.stopPropagation(); // Prevent event bubbling
 
+                // Try multiple ways to get the data
                 const examId = this.getAttribute('data-exam-id');
                 const studentName = this.getAttribute('data-student-name');
                 const courseName = this.getAttribute('data-course-name');
+                
+                // If data attributes are missing, try to get from the table row
+                if (!examId || !studentName || !courseName) {
+                    const row = this.closest('tr.result-row');
+                    if (row) {
+                        const fallbackExamId = examId || row.getAttribute('data-index');
+                        const fallbackStudentName = studentName || row.cells[1]?.textContent?.trim();
+                        const fallbackCourseName = courseName || row.cells[5]?.textContent?.trim();
+                        
+                        console.log('Using fallback data from row:', {
+                            examId: fallbackExamId,
+                            studentName: fallbackStudentName,
+                            courseName: fallbackCourseName
+                        });
+                        
+                        showDeleteModal(fallbackExamId, fallbackStudentName, fallbackCourseName);
+                        return;
+                    }
+                }
 
                 showDeleteModal(examId, studentName, courseName);
+            });
+        });
+    }
+    
+    // Debug function to check data attributes
+    function debugDataAttributes() {
+        console.log('=== DEBUG: Checking data attributes ===');
+        
+        // Check delete button data
+        document.querySelectorAll('.delete-btn').forEach((button, index) => {
+            const examId = button.getAttribute('data-exam-id');
+            const studentName = button.getAttribute('data-student-name');
+            const courseName = button.getAttribute('data-course-name');
+            
+            console.log(`Delete button ${index + 1}:`, {
+                examId: examId,
+                studentName: studentName,
+                courseName: courseName,
+                hasExamId: !!examId,
+                hasStudentName: !!studentName,
+                hasCourseName: !!courseName
+            });
+            
+            // Check if attributes are properly set
+            if (!examId || examId === 'undefined' || examId === 'null') {
+                console.warn(`Button ${index + 1}: Invalid examId: "${examId}"`);
+            }
+            if (!studentName || studentName === 'undefined' || studentName === 'null') {
+                console.warn(`Button ${index + 1}: Invalid studentName: "${studentName}"`);
+            }
+            if (!courseName || courseName === 'undefined' || courseName === 'null') {
+                console.warn(`Button ${index + 1}: Invalid courseName: "${courseName}"`);
+            }
+        });
+        
+        // Check row data attributes
+        document.querySelectorAll('tr.result-row').forEach((row, index) => {
+            console.log(`Row ${index + 1} data:`, {
+                index: row.getAttribute('data-index'),
+                name: row.getAttribute('data-name'),
+                course: row.getAttribute('data-course'),
+                examId: row.cells[0]?.querySelector('input[name="examIds"]')?.value
             });
         });
     }
@@ -1149,10 +1192,116 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     }
     
     async function showDeleteModal(examId, studentName, courseName) {
-        const confirmed = await showConfirm(`Are you sure you want to delete the exam result for ${studentName} in the course ${courseName} (Exam ID: ${examId})? This action cannot be undone.`, 'Delete Exam Result');
-        if (confirmed) {
-            confirmDelete(examId);
+        // First, check if parameters are valid
+        console.log('=== DEBUG: showDeleteModal called ===');
+        console.log('examId:', examId, 'Type:', typeof examId);
+        console.log('studentName:', studentName, 'Type:', typeof studentName);
+        console.log('courseName:', courseName, 'Type:', typeof courseName);
+        
+        // Clean up the data
+        const cleanExamId = String(examId || '').trim();
+        const cleanStudentName = String(studentName || '').trim();
+        const cleanCourseName = String(courseName || '').trim();
+        
+        if (!cleanExamId || cleanExamId === 'undefined' || cleanExamId === 'null') {
+            console.error('Invalid exam ID:', examId);
+            showAlert('Error: Could not retrieve exam ID. Please try again.');
+            return;
         }
+        
+        if (!cleanStudentName || cleanStudentName === 'undefined' || cleanStudentName === 'null' || cleanStudentName === 'N/A') {
+            console.error('Invalid student name:', studentName);
+            showAlert('Error: Could not retrieve student name. Please try again.');
+            return;
+        }
+        
+        if (!cleanCourseName || cleanCourseName === 'undefined' || cleanCourseName === 'null') {
+            console.error('Invalid course name:', courseName);
+            showAlert('Error: Could not retrieve course name. Please try again.');
+            return;
+        }
+        
+        // Create the confirmation message with the actual data
+        const message = `Are you sure you want to delete the exam result for ${cleanStudentName} in the course ${cleanCourseName} (Exam ID: ${cleanExamId})? This action cannot be undone.`;
+        
+        // Use showConfirm function (make sure it's implemented)
+        const confirmed = await showConfirm(message, 'Delete Exam Result');
+        if (confirmed) {
+            confirmDelete(cleanExamId);
+        }
+    }
+
+    // If showConfirm is not implemented, here's a simple implementation
+    function showConfirm(message, title = 'Confirm') {
+        return new Promise((resolve) => {
+            // Create modal HTML
+            const modalId = 'confirmModal_' + Date.now();
+            const modalHtml = `
+                <div id="${modalId}" class="modal-overlay" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+                    <div class="modal-content" style="background: white; padding: 20px; border-radius: 8px; max-width: 500px; width: 90%;">
+                        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h2 class="modal-title" style="margin: 0; color: #333;"><i class="fas fa-question-circle"></i> ${title}</h2>
+                            <button class="close-button" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+                        </div>
+                        <div class="modal-body" style="margin-bottom: 20px;">
+                            <p style="margin: 0; line-height: 1.5;">${message}</p>
+                        </div>
+                        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px;">
+                            <button class="btn btn-secondary" style="padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+                            <button class="btn btn-danger" style="padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                <i class="fas fa-check"></i> Confirm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add to document
+            const modalDiv = document.createElement('div');
+            modalDiv.innerHTML = modalHtml;
+            document.body.appendChild(modalDiv);
+            
+            const modalElement = document.getElementById(modalId);
+            
+            // Setup event handlers
+            modalElement.querySelector('.close-button').addEventListener('click', function() {
+                modalElement.remove();
+                resolve(false);
+            });
+            
+            modalElement.querySelector('.btn-secondary').addEventListener('click', function() {
+                modalElement.remove();
+                resolve(false);
+            });
+            
+            modalElement.querySelector('.btn-danger').addEventListener('click', function() {
+                modalElement.remove();
+                resolve(true);
+            });
+            
+            // Close on outside click
+            modalElement.addEventListener('click', function(e) {
+                if (e.target === modalElement) {
+                    modalElement.remove();
+                    resolve(false);
+                }
+            });
+            
+            // Close on escape key
+            const escHandler = function(e) {
+                if (e.key === 'Escape') {
+                    modalElement.remove();
+                    document.removeEventListener('keydown', escHandler);
+                    resolve(false);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
+        });
+    }
+
+    // Simple alert function if not already defined
+    function showAlert(message) {
+        alert(message); // You can replace with a better modal if needed
     }
 
     function confirmDelete(examId) {
@@ -1428,20 +1577,64 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
             closeDeleteModal();
         }
     });
-    
-    // Event delegation for single-record actions
+
+    // Event delegation for single-record actions - UPDATED with better error handling
     document.getElementById('resultsTableBody').addEventListener('click', function(e) {
         const target = e.target.closest('a.btn-primary, button.delete-btn, button.edit-btn');
         if (!target) return;
 
         if (target.classList.contains('delete-btn') || target.classList.contains('edit-btn') || target.classList.contains('btn-primary')) {
             e.preventDefault();
-            const examId = target.dataset.examId;
+            
             if (target.classList.contains('delete-btn')) {
-                const studentName = target.dataset.studentName;
-                const courseName = target.dataset.courseName;
-                showDeleteModal(examId, studentName, courseName);
+                // Get data from multiple sources for redundancy
+                const examId = target.getAttribute('data-exam-id');
+                const studentName = target.getAttribute('data-student-name');
+                const courseName = target.getAttribute('data-course-name');
+                
+                // Try to get from row if button attributes are missing
+                let finalExamId = examId;
+                let finalStudentName = studentName;
+                let finalCourseName = courseName;
+                
+                if (!examId || !studentName || !courseName) {
+                    const row = target.closest('tr.result-row');
+                    if (row) {
+                        finalExamId = examId || row.getAttribute('data-index') || row.cells[0]?.querySelector('input[name="examIds"]')?.value;
+                        finalStudentName = studentName || row.cells[1]?.textContent?.trim();
+                        finalCourseName = courseName || row.cells[5]?.textContent?.trim();
+                        
+                        console.log('Using fallback data from row:', {
+                            examId: finalExamId,
+                            studentName: finalStudentName,
+                            courseName: finalCourseName
+                        });
+                    }
+                }
+                
+                // Validate the data
+                if (!finalExamId || finalExamId === 'undefined' || finalExamId === 'null') {
+                    console.error('Invalid exam ID after fallback:', finalExamId);
+                    showAlert('Error: Could not retrieve exam ID. Please try again.');
+                    return;
+                }
+                
+                if (!finalStudentName || finalStudentName === 'undefined' || finalStudentName === 'null' || finalStudentName === 'N/A') {
+                    console.error('Invalid student name after fallback:', finalStudentName);
+                    showAlert('Error: Could not retrieve student name. Please try again.');
+                    return;
+                }
+                
+                if (!finalCourseName || finalCourseName === 'undefined' || finalCourseName === 'null') {
+                    console.error('Invalid course name after fallback:', finalCourseName);
+                    showAlert('Error: Could not retrieve course name. Please try again.');
+                    return;
+                }
+                
+                showDeleteModal(finalExamId, finalStudentName, finalCourseName);
+                
             } else if (target.classList.contains('edit-btn')) {
+                const examId = target.getAttribute('data-exam-id');
                 const row = target.closest('tr');
                 enableEditMode(row, examId);
             } else if (target.href) {
@@ -1483,16 +1676,3 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         }
     });
 </script>
-
-<div id="deleteConfirmationModal" style="display:none; position:fixed; z-index:1001; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.4);">
-  <div style="background-color:#fefefe; margin:15% auto; padding:20px; border:1px solid #888; width:80%; max-width:500px; border-radius:8px; box-shadow:0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);">
-    <span onclick="closeModal()" style="color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer;">&times;</span>
-    <h2>Confirm Deletion</h2>
-    <p>Are you sure you want to delete the exam result for <strong id="modalStudentName"></strong> in the course <strong id="modalCourseName"></strong> (Exam ID: <strong id="modalExamId"></strong>)?</p>
-    <p>This action cannot be undone.</p>
-    <div style="text-align:right;">
-      <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
-      <button id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
-    </div>
-  </div>
-</div>
