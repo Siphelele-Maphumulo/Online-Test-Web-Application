@@ -972,28 +972,6 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     </main>
 </div>
 
-<!-- Delete Confirmation Modal -->
-<div id="deleteModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Delete Exam Result</h2>
-            <button class="close-button" onclick="closeDeleteModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <p id="deleteModalMessage">Are you sure you want to delete this exam result?</p>
-        </div>
-        <div class="modal-footer">
-            <button onclick="closeDeleteModal()" class="btn btn-secondary">Cancel</button>
-            <button onclick="confirmDelete()" class="btn btn-danger">
-                <i class="fas fa-trash"></i> Delete
-            </button>
-        </div>
-    </div>
-</div>
-
-<style>
-</style>
-
 <%@ include file="modal_assets.jspf" %>
 
 <!-- Font Awesome for Icons -->
@@ -1151,51 +1129,47 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     async function showDeleteModal(examId, studentName, courseName) {
         const confirmed = await showConfirm(`Are you sure you want to delete the exam result for ${studentName} in the course ${courseName} (Exam ID: ${examId})? This action cannot be undone.`, 'Delete Exam Result');
         if (confirmed) {
-            confirmDelete(examId);
+            if (!examId) {
+                showAlert('No exam selected for deletion.');
+                return;
+            }
+
+            console.log('Confirming delete for exam ID:', examId);
+
+            // Create a separate form for single delete to avoid interfering with bulk delete
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'controller.jsp';
+
+            // Add CSRF token
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrf_token;
+            form.appendChild(csrfInput);
+
+            const pageInput = document.createElement('input');
+            pageInput.type = 'hidden';
+            pageInput.name = 'page';
+            pageInput.value = 'admin-results';
+            form.appendChild(pageInput);
+
+            const operationInput = document.createElement('input');
+            operationInput.type = 'hidden';
+            operationInput.name = 'operation';
+            operationInput.value = 'delete_result';
+            form.appendChild(operationInput);
+
+            const examIdInput = document.createElement('input');
+            examIdInput.type = 'hidden';
+            examIdInput.name = 'eid';
+            examIdInput.value = examId;
+            form.appendChild(examIdInput);
+
+            console.log('Submitting delete form for exam ID:', examId);
+            document.body.appendChild(form);
+            form.submit();
         }
-    }
-
-    function confirmDelete(examId) {
-        if (!examId) {
-            showAlert('No exam selected for deletion.');
-            return;
-        }
-
-        console.log('Confirming delete for exam ID:', examId);
-
-        // Create a separate form for single delete to avoid interfering with bulk delete
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = 'controller.jsp';
-
-        // Add CSRF token
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = 'csrf_token';
-        csrfInput.value = csrf_token;
-        form.appendChild(csrfInput);
-
-        const pageInput = document.createElement('input');
-        pageInput.type = 'hidden';
-        pageInput.name = 'page';
-        pageInput.value = 'admin-results';
-        form.appendChild(pageInput);
-
-        const operationInput = document.createElement('input');
-        operationInput.type = 'hidden';
-        operationInput.name = 'operation';
-        operationInput.value = 'delete_result';
-        form.appendChild(operationInput);
-
-        const examIdInput = document.createElement('input');
-        examIdInput.type = 'hidden';
-        examIdInput.name = 'eid';
-        examIdInput.value = examId;
-        form.appendChild(examIdInput);
-
-        console.log('Submitting delete form for exam ID:', examId);
-        document.body.appendChild(form);
-        form.submit();
     }
 
     // Apply all filters
@@ -1483,16 +1457,3 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         }
     });
 </script>
-
-<div id="deleteConfirmationModal" style="display:none; position:fixed; z-index:1001; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.4);">
-  <div style="background-color:#fefefe; margin:15% auto; padding:20px; border:1px solid #888; width:80%; max-width:500px; border-radius:8px; box-shadow:0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);">
-    <span onclick="closeModal()" style="color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer;">&times;</span>
-    <h2>Confirm Deletion</h2>
-    <p>Are you sure you want to delete the exam result for <strong id="modalStudentName"></strong> in the course <strong id="modalCourseName"></strong> (Exam ID: <strong id="modalExamId"></strong>)?</p>
-    <p>This action cannot be undone.</p>
-    <div style="text-align:right;">
-      <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
-      <button id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
-    </div>
-  </div>
-</div>
