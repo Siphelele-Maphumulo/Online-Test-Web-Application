@@ -4,7 +4,6 @@ import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.*;
 import java.time.format.DateTimeFormatter;
 import java.text.SimpleDateFormat;
 import java.util.logging.Level;
@@ -895,171 +894,92 @@ public boolean isUsernameTaken(String username) {
         }
     }
     
+ 
+    // Add these methods to your DatabaseClass for duplicate checking
+    public boolean checkUsernameExists(String username) {
+        try {
+            ensureConnection();
+            String sql = "SELECT COUNT(*) FROM users WHERE username = ?";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, username);
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error checking username existence", e);
+        }
+        return false;
+    }
+
+    public boolean checkEmailExists(String email) {
+        try {
+            ensureConnection();
+            String sql = "SELECT COUNT(*) FROM users WHERE email = ?";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, email);
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error checking email existence", e);
+        }
+        return false;
+    }
+
+    public boolean checkContactNoExists(String contactNo) {
+        try {
+            ensureConnection();
+            String sql = "SELECT COUNT(*) FROM users WHERE contact_no = ?";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, contactNo);
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error checking contact number existence", e);
+        }
+        return false;
+    }
+
+    public boolean checkStaffEmailExists(String email) {
+        try {
+            ensureConnection();
+            String sql = "SELECT COUNT(*) FROM staff_numbers WHERE email = ?";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, email);
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error checking staff email existence", e);
+        }
+        return false;
+    }
+
     public boolean checkUserExists(String username) {
         try {
             ensureConnection();
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Connection error in checkUserExists", e);
-            return false;
-        }
-        
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-
-        try {
-            String sql = "SELECT 1 FROM users WHERE user_name = ? LIMIT 1";
-            ps = conn.prepareStatement(sql);
-            ps.setString(1, username);
-            rs = ps.executeQuery();
-
-            return rs.next();
-
-        } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "checkUserExists failed for username: " + username, ex);
-            return false;
-        } finally {
-            try {
-                if (rs != null) rs.close();
-                if (ps != null) ps.close();
-            } catch (SQLException ex) {
-                Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in checkUserExists", ex);
+            String sql = "SELECT COUNT(*) FROM users WHERE username = ?";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, username);
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
             }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error checking user existence", e);
         }
-    }
-    
-    // Add these methods to your DatabaseClass.java
-
-public boolean checkUsernameExists(String username) {
-    try {
-        ensureConnection();
-    } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Connection error in checkUsernameExists", e);
         return false;
     }
-    
-    PreparedStatement ps = null;
-    ResultSet rs = null;
-
-    try {
-        String sql = "SELECT COUNT(*) FROM users WHERE user_name = ?";
-        ps = conn.prepareStatement(sql);
-        ps.setString(1, username);
-        rs = ps.executeQuery();
-
-        if (rs.next()) {
-            return rs.getInt(1) > 0;
-        }
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "checkUsernameExists failed for username: " + username, ex);
-    } finally {
-        try {
-            if (rs != null) rs.close();
-            if (ps != null) ps.close();
-        } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in checkUsernameExists", ex);
-        }
-    }
-    return false;
-}
-
-public boolean checkEmailExists(String email) {
-    try {
-        ensureConnection();
-    } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Connection error in checkEmailExists", e);
-        return false;
-    }
-    
-    PreparedStatement ps = null;
-    ResultSet rs = null;
-
-    try {
-        String sql = "SELECT COUNT(*) FROM users WHERE email = ?";
-        ps = conn.prepareStatement(sql);
-        ps.setString(1, email);
-        rs = ps.executeQuery();
-
-        if (rs.next()) {
-            return rs.getInt(1) > 0;
-        }
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "checkEmailExists failed for email: " + email, ex);
-    } finally {
-        try {
-            if (rs != null) rs.close();
-            if (ps != null) ps.close();
-        } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in checkEmailExists", ex);
-        }
-    }
-    return false;
-}
-
-public boolean checkContactNoExists(String contactNo) {
-    try {
-        ensureConnection();
-    } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Connection error in checkContactNoExists", e);
-        return false;
-    }
-    
-    PreparedStatement ps = null;
-    ResultSet rs = null;
-
-    try {
-        String sql = "SELECT COUNT(*) FROM users WHERE contact_no = ?";
-        ps = conn.prepareStatement(sql);
-        ps.setString(1, contactNo);
-        rs = ps.executeQuery();
-
-        if (rs.next()) {
-            return rs.getInt(1) > 0;
-        }
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "checkContactNoExists failed for contact: " + contactNo, ex);
-    } finally {
-        try {
-            if (rs != null) rs.close();
-            if (ps != null) ps.close();
-        } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in checkContactNoExists", ex);
-        }
-    }
-    return false;
-}
-
-public boolean checkStaffEmailExists(String email) {
-    try {
-        ensureConnection();
-    } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Connection error in checkStaffEmailExists", e);
-        return false;
-    }
-    
-    PreparedStatement ps = null;
-    ResultSet rs = null;
-
-    try {
-        String sql = "SELECT COUNT(*) FROM staff WHERE email = ?";
-        ps = conn.prepareStatement(sql);
-        ps.setString(1, email);
-        rs = ps.executeQuery();
-
-        if (rs.next()) {
-            return rs.getInt(1) > 0;
-        }
-    } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "checkStaffEmailExists failed for email: " + email, ex);
-    } finally {
-        try {
-            if (rs != null) rs.close();
-            if (ps != null) ps.close();
-        } catch (SQLException ex) {
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in checkStaffEmailExists", ex);
-        }
-    }
-    return false;
-}
 
     public int getExamId(String courseName) {
         try {
@@ -3849,6 +3769,7 @@ public ArrayList<String> getCourseList() {
         }
         return absentDays < 0 ? 0 : absentDays;
     }
+    
 
  public String getAttendanceCalendarData(int studentId) {
     Connection conn = null;

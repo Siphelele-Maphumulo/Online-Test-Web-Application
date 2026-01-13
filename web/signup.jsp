@@ -25,54 +25,6 @@
     .btn-auth{ background:linear-gradient(135deg, var(--primary), #1e4580); border:none; }
     .btn-auth:hover{ background:#1e4580; }
     
-    /* Modal Styles */
-    .modal-overlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 9999;
-        align-items: center;
-        justify-content: center;
-    }
-    .modal-content {
-        background: white;
-        border-radius: 8px;
-        max-width: 500px;
-        width: 90%;
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-    .modal-header {
-        padding: 20px;
-        border-bottom: 1px solid #eee;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .modal-title {
-        margin: 0;
-        font-size: 1.25rem;
-    }
-    .close-button {
-        background: none;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
-        color: #666;
-    }
-    .modal-body {
-        padding: 20px;
-    }
-    .modal-footer {
-        padding: 20px;
-        border-top: 1px solid #eee;
-        text-align: right;
-    }
-    
     @media (max-width:575.98px){ .auth-card{ border-radius:.75rem; } .auth-title{ font-size:1.25rem; } }
   </style>
 </head>
@@ -119,6 +71,13 @@
     String sessionMessage = (String) session.getAttribute("message");
     String urlError = request.getParameter("error");
     
+    // Get ALL form values from parameters to preserve them
+    String fnameParam = request.getParameter("fname");
+    String lnameParam = request.getParameter("lname");
+    String unameParam = request.getParameter("uname");
+    String emailParam = request.getParameter("email");
+    String contactParam = request.getParameter("contactno");
+    
     // Map URL error codes to user-friendly messages
     String errorMessage = "";
     if (urlError != null && !urlError.isEmpty()) {
@@ -128,15 +87,23 @@
                 break;
             case "invalid_id":
                 errorMessage = "ID number must be 8 digits.";
+                // Clear only the ID field
+                unameParam = "";
                 break;
             case "duplicate_username":
                 errorMessage = "Username/ID number already exists.";
+                // Clear only the username field
+                unameParam = "";
                 break;
             case "duplicate_email":
                 errorMessage = "Email already registered.";
+                // Clear only the email field
+                emailParam = "";
                 break;
             case "duplicate_contact":
                 errorMessage = "Contact number already registered.";
+                // Clear only the contact field
+                contactParam = "";
                 break;
             default:
                 errorMessage = "An error occurred during registration.";
@@ -148,7 +115,7 @@
 
 <!-- Header -->
 <jsp:include page="header.jsp" />
-
+<%@include file="modal_assets.jspf" %>
 
 
 <!-- Main -->
@@ -186,9 +153,8 @@
                 </div>
             <% } %>
 
+            <!-- Add hidden fields for user_type and from_page -->
             <form id="registerForm" action="controller.jsp" method="POST">
-           <!-- <form action="controller.jsp" method="POST" onsubmit="return validateForm();">-->
-              <form method="POST" onsubmit="return validateForm(event);">
               <input type="hidden" name="page" value="register"/>
               <input type="hidden" id="hiddenUserType" name="user_type" value="<%= userType != null ? userType : "" %>"/>
               <input type="hidden" name="from_page" value="<%= fromPage != null ? fromPage : "" %>"/>
@@ -202,7 +168,7 @@
                   <div class="input-icon">
                     <i class="fas fa-user"></i>
                     <input id="fname" type="text" name="fname" class="form-control" placeholder="First Name" 
-                           value="<%= request.getParameter("fname") != null ? request.getParameter("fname") : "" %>" required/>
+                           value="<%= fnameParam != null ? fnameParam : "" %>" required/>
                   </div>
                   <span id="errorFirstName" class="error-message"></span>
                 </div>
@@ -212,7 +178,7 @@
                   <div class="input-icon">
                     <i class="fas fa-user"></i>
                     <input id="lname" type="text" name="lname" class="form-control" placeholder="Last Name" 
-                           value="<%= request.getParameter("lname") != null ? request.getParameter("lname") : "" %>" required/>
+                           value="<%= lnameParam != null ? lnameParam : "" %>" required/>
                   </div>
                   <span id="errorLastName" class="error-message"></span>
                 </div>
@@ -222,7 +188,7 @@
                   <div class="input-icon">
                     <i class="fas fa-id-badge"></i>
                     <input id="uname" type="text" name="uname" class="form-control" placeholder="8 digits of ID Number" 
-                           value="<%= request.getParameter("uname") != null ? request.getParameter("uname") : "" %>" required/>
+                           value="<%= unameParam != null ? unameParam : "" %>" required/>
                   </div>
                   <span id="errorUsername" class="error-message"></span>
                 </div>
@@ -232,21 +198,23 @@
                   <div class="input-icon">
                     <i class="fas fa-phone"></i>
                     <input id="contactno" type="tel" name="contactno" class="form-control" placeholder="Contact No" 
-                           value="<%= request.getParameter("contactno") != null ? request.getParameter("contactno") : "" %>" required/>
+                           value="<%= contactParam != null ? contactParam : "" %>" required/>
                   </div>
                   <span id="errorContact" class="error-message"></span>
                 </div>
 
-                  <div class="col-12">
+                <div class="col-12">
                   <label class="sr-only" for="email"><%= emailLabel %></label>
                   <div class="input-icon">
                     <i class="fas fa-envelope"></i>
                     <input id="email" type="email" name="email" class="form-control" placeholder="<%= emailLabel %>" 
-                           value="<%= request.getParameter("email") != null ? request.getParameter("email") : "" %>" required/>
+                           value="<%= emailParam != null ? emailParam : "" %>" required/>
                   </div>
                   <span id="errorEmail" class="error-message"></span>
                 </div>
-                  <br><br>
+                  
+                <br><br>
+                
                 <div class="col-12 col-md-6">
                   <label class="sr-only" for="pass">Password</label>
                   <div class="input-icon">
@@ -294,81 +262,25 @@
   </footer>
 
 <script>
-// Modal functions
-function showAlert(message, title = 'Alert') {
-    document.getElementById('alertModalTitle').textContent = title;
-    document.getElementById('alertModalMessage').textContent = message;
-    document.getElementById('alertModal').style.display = 'flex';
-}
-
-function showConfirm(message, title = 'Confirmation') {
-    return new Promise((resolve) => {
-        document.getElementById('confirmModalTitle').textContent = title;
-        document.getElementById('confirmModalMessage').textContent = message;
-        document.getElementById('confirmModal').style.display = 'flex';
-        
-        const confirmBtn = document.getElementById('confirmModalConfirm');
-        const cancelBtn = document.getElementById('confirmModalCancel');
-        const closeBtn = document.getElementById('confirmModalClose');
-        
-        const resolveTrue = () => {
-            document.getElementById('confirmModal').style.display = 'none';
-            resolve(true);
-            removeListeners();
-        };
-        
-        const resolveFalse = () => {
-            document.getElementById('confirmModal').style.display = 'none';
-            resolve(false);
-            removeListeners();
-        };
-        
-        const removeListeners = () => {
-            confirmBtn.removeEventListener('click', resolveTrue);
-            cancelBtn.removeEventListener('click', resolveFalse);
-            closeBtn.removeEventListener('click', resolveFalse);
-        };
-        
-        confirmBtn.addEventListener('click', resolveTrue);
-        cancelBtn.addEventListener('click', resolveFalse);
-        closeBtn.addEventListener('click', resolveFalse);
-    });
-}
-
-// Modal event listeners
-document.getElementById('alertModalClose').addEventListener('click', () => {
-    document.getElementById('alertModal').style.display = 'none';
-});
-
-document.getElementById('alertModalOk').addEventListener('click', () => {
-    document.getElementById('alertModal').style.display = 'none';
-});
-
 // Show any messages from server on page load
 window.onload = function() {
     <% if (sessionError != null && !sessionError.isEmpty()) { %>
-        showAlert('<%= sessionError %>', 'Error');
+        showAlert('<%= sessionError %>', 'error');
         <% session.removeAttribute("error"); %>
     <% } else if (urlError != null && !urlError.isEmpty()) { %>
-        showAlert('<%= errorMessage %>', 'Error');
+        showAlert('<%= errorMessage %>', 'error');
         
-        // Clear and focus on the problematic field based on error type
+        // Focus on the problematic field based on error type
         switch('<%= urlError %>') {
             case 'duplicate_username':
-                document.getElementById('uname').value = '';
+            case 'invalid_id':
                 document.getElementById('uname').focus();
                 break;
             case 'duplicate_email':
-                document.getElementById('email').value = '';
                 document.getElementById('email').focus();
                 break;
             case 'duplicate_contact':
-                document.getElementById('contactno').value = '';
                 document.getElementById('contactno').focus();
-                break;
-            case 'invalid_id':
-                document.getElementById('uname').value = '';
-                document.getElementById('uname').focus();
                 break;
             default:
                 // For other errors, just show the alert
@@ -377,456 +289,267 @@ window.onload = function() {
     <% } %>
     
     <% if (sessionMessage != null && !sessionMessage.isEmpty()) { %>
-        showAlert('<%= sessionMessage %>', 'Success');
+        showAlert('<%= sessionMessage %>', 'success');
         <% session.removeAttribute("message"); %>
     <% } %>
-    
-    // Check for any duplicate errors from preserved form data
-    checkForDuplicateErrors();
 };
 
-function checkForDuplicateErrors() {
-    // Check if any fields have values that might be duplicates
-    const uname = document.getElementById('uname').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const contact = document.getElementById('contactno').value.trim();
-    
-    if (uname) checkDuplicate('uname', 'check_username', 'Username already exists.', 'errorUsername');
-    if (email) checkDuplicate('email', 'check_email', 'Email already registered.', 'errorEmail');
-    if (contact) checkDuplicate('contactno', 'check_contact', 'Contact number already registered.', 'errorContact');
-}
+// =======================================================================================
+// REAL-TIME VALIDATION (CLIENT-SIDE)
+// =======================================================================================
 
-// Validation function
-function validateForm(){
-    let valid = true;
-    const fname = document.getElementById("fname");
-    const lname = document.getElementById("lname");
-    const uname = document.getElementById("uname");
-    const contact = document.getElementById("contactno");
-    const email = document.getElementById("email");
-    const pass = document.getElementById("pass");
-    const cpass = document.getElementById("cpass");
-    
-    const setErr = (id,msg)=>{ 
-        const elem = document.getElementById(id);
-        if(elem) {
-            elem.textContent = msg; 
-            if(msg) valid = false;
-        }
-    };
-
-    // Clear previous errors
-    setErr("errorFirstName", "");
-    setErr("errorLastName", "");
-    setErr("errorUsername", "");
-    setErr("errorContact", "");
-    setErr("errorEmail", "");
-    setErr("errorPassword", "");
-    setErr("errorConfirmPassword", "");
-
-    // Basic validation
-    if (!fname.value.trim()) {
-        setErr("errorFirstName", "First name is required.");
-    }
-    
-    if (!lname.value.trim()) {
-        setErr("errorLastName", "Last name is required.");
-    }
-    
-    if (!uname.value.trim()) {
-        setErr("errorUsername", "Identity number is required.");
-    } else if (!/^\d{8}$/.test(uname.value.trim())) {
-        setErr("errorUsername", "ID number must be 8 digits.");
-    }
-    
-    if (!contact.value.trim()) {
-        setErr("errorContact", "Contact number is required.");
-    } else if (!/^[0-9+()\s-]{7,}$/.test(contact.value.trim())) {
-        setErr("errorContact", "Enter a valid contact number.");
-    }
-    
-    if (!email.value.trim()) {
-        setErr("errorEmail", "Email is required.");
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
-        setErr("errorEmail", "Enter a valid email address.");
-    }
-    
-    if (!pass.value) {
-        setErr("errorPassword", "Password is required.");
-    } else if (pass.value.length < 6) {
-        setErr("errorPassword", "Password must be at least 6 characters.");
-    }
-    
-    if (!cpass.value) {
-        setErr("errorConfirmPassword", "Please confirm your password.");
-    } else if (pass.value !== cpass.value) {
-        setErr("errorConfirmPassword", "Passwords do not match.");
-    }
-    
-    // If basic validation fails, focus on first error field
-    if (!valid) {
-        const errorFields = [
-            {id: 'fname', errorId: 'errorFirstName'},
-            {id: 'lname', errorId: 'errorLastName'},
-            {id: 'uname', errorId: 'errorUsername'},
-            {id: 'contactno', errorId: 'errorContact'},
-            {id: 'email', errorId: 'errorEmail'},
-            {id: 'pass', errorId: 'errorPassword'},
-            {id: 'cpass', errorId: 'errorConfirmPassword'}
-        ];
-        
-        for (const field of errorFields) {
-            if (document.getElementById(field.errorId).textContent.trim() !== '') {
-                document.getElementById(field.id).focus();
-                break;
-            }
-        }
-        
-        document.querySelector('button[type="submit"]').disabled = true;
-        return false;
-    }
-    
-    // If basic validation passes, check duplicates
-    // Return false - we'll handle submission in the checkDuplicate callbacks
-    return false;
-}
-
-function checkDuplicate(fieldId, endpoint, errorMessage, errorElementId) {
+/**
+ * Validates and checks for duplicates in real-time
+ */
+async function validateField(fieldId, endpoint, errorMessage) {
     const field = document.getElementById(fieldId);
     const value = field.value.trim();
     
-    if (!value) return;
+    // Clear previous error
+    const fieldName = fieldId.charAt(0).toUpperCase() + fieldId.slice(1);
+    const errorSpan = document.getElementById('error' + fieldName);
+    if (errorSpan) errorSpan.textContent = '';
     
-    fetch('controller.jsp?page=' + endpoint + '&' + 
-          (endpoint === 'check_contact' ? 'contactno' : endpoint.split('_')[1]) + '=' + 
-          encodeURIComponent(value))
-        .then(response => response.json())
-        .then(data => {
-            if (data.exists) {
-                document.getElementById(errorElementId).textContent = errorMessage;
-                
-                // Clear the field and set focus to it
-                field.value = '';
-                field.focus();
-                
-                // Disable submit button
-                document.querySelector('button[type="submit"]').disabled = true;
+    if (!value) return true; // Empty fields will be caught by required attribute
+    
+    try {
+        // Check for duplicates via AJAX
+        const url = 'controller.jsp?page=' + endpoint + '&' + 
+                   (endpoint === 'check_username' ? 'username' : 
+                    endpoint === 'check_email' ? 'email' : 'contactno') + 
+                   '=' + encodeURIComponent(value);
+        
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Network error');
+        
+        const data = await response.json();
+        
+        if (data.exists) {
+            if (errorSpan) {
+                errorSpan.textContent = errorMessage;
             } else {
-                document.getElementById(errorElementId).textContent = '';
-                // Check if all validations passed
-                checkAllValidations();
+                showAlert(errorMessage, 'error');
             }
-        })
-        .catch(error => {
-            console.error('Error checking duplicate:', error);
-        });
-}
-
-function checkAllValidations() {
-    const errorElements = document.querySelectorAll('.error-message');
-    let hasErrors = false;
-    
-    errorElements.forEach(element => {
-        if (element.textContent.trim() !== '') {
-            hasErrors = true;
-=======
-  <!-- Verification Modal -->
-  <div class="modal fade" id="verificationModal" tabindex="-1" role="dialog" aria-labelledby="verificationModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="verificationModalLabel">Enter Verification Code</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <p>A verification code has been sent to your email address. Please enter the code below to complete your registration.</p>
-          <form id="verificationForm" action="controller.jsp" method="POST">
-            <input type="hidden" name="page" value="verify_code"/>
-            <input type="hidden" name="email" id="verificationEmail"/>
-            <div class="form-group">
-              <label for="verificationCode">Verification Code</label>
-              <input type="text" class="form-control" id="verificationCode" name="code" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Verify and Sign Up</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-  <script>
-    function validateForm(event){
-        event.preventDefault();
-        console.log("Form submitted - Starting validation");
-
-        // Clear errors
-        document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
-
-        // Get form values
-        const fname = document.getElementById("fname").value.trim();
-        const lname = document.getElementById("lname").value.trim();
-        const uname = document.getElementById("uname").value.trim();
-        const email = document.getElementById("email").value.trim();
-        const pass = document.getElementById("pass").value;
-        const cpass = document.getElementById("cpass").value;
-        const userType = document.querySelector('input[name="user_type"]').value;
-
-        console.log("User type:", userType);
-        console.log("Username:", uname);
-        console.log("Email:", email);
-
-        // Basic validation
-        let valid = true;
-
-        if (!fname) {
-            document.getElementById("errorFirstName").textContent = "First name is required.";
-            valid = false;
-        }
-        if (!lname) {
-            document.getElementById("errorLastName").textContent = "Last name is required.";
-            valid = false;
-        }
-        if (!uname) {
-            document.getElementById("errorUsername").textContent = "Identity number is required.";
-            valid = false;
-        }
-        if (!email) {
-            document.getElementById("errorEmail").textContent = "Email is required.";
-            valid = false;
-        }
-        if (pass.length < 6) {
-            document.getElementById("errorPassword").textContent = "Password must be at least 6 characters.";
-            valid = false;
-        }
-        if (pass !== cpass) {
-            document.getElementById("errorConfirmPassword").textContent = "Passwords do not match.";
-            valid = false;
-        }
-
-        if (!valid) {
-            console.log("Basic validation failed");
+            // Clear only this field and focus on it
+            field.value = '';
+            field.focus();
             return false;
         }
-
-        // Change button to loading state
-        const submitBtn = event.target.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Validating...';
-        submitBtn.disabled = true;
-
-        // Start validation chain
-        validateStepByStep();
-
-        function validateStepByStep() {
-            console.log("Step 1: Checking username availability...");
-
-            // Step 1: Check username
-            fetch('controller.jsp?page=check_username&username=' + encodeURIComponent(uname) + '&t=' + new Date().getTime())
-                .then(response => {
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    return response.text();
-                })
-                .then(text => {
-                    console.log("Username check response:", text);
-                    try {
-                        const data = JSON.parse(text);
-
-                        if (data.exists) {
-                            document.getElementById("errorUsername").textContent = "Username already exists.";
-                            resetButton();
-                            return;
-                        }
-
-                        // Step 2: Check email in users table
-                        console.log("Step 2: Checking if email is already registered...");
-                        return fetch('controller.jsp?page=check_staff_email&checkRegistered=1&email=' + encodeURIComponent(email) + '&t=' + new Date().getTime());
-                    } catch (e) {
-                        console.error("Failed to parse JSON:", e);
-                        document.getElementById("errorUsername").textContent = "Server error. Please try again.";
-                        resetButton();
-                        throw e;
-                    }
-                })
-                .then(response => {
-                    if (response) {
-                        if (!response.ok) throw new Error('Network response was not ok');
-                        return response.text();
-                    }
-                    return null;
-                })
-                .then(text => {
-                    if (text) {
-                        console.log("Email registration check response:", text);
-                        try {
-                            const data = JSON.parse(text);
-
-                            // Check if email is already registered as a user
-                            if (data.registered) {
-                                document.getElementById("errorEmail").textContent = "Email is already registered.";
-                                resetButton();
-                                return;
-                            }
-
-                            // Step 3: If lecturer/admin, check staff authorization
-                            if (userType === "lecture" || userType === "admin") {
-                                console.log("Step 3: Checking staff authorization for:", userType);
-                                return fetch('controller.jsp?page=check_staff_email&email=' + encodeURIComponent(email) + '&t=' + new Date().getTime());
-                            } else {
-                                // For students, proceed directly to verification
-                                console.log("Student registration - proceeding to verification");
-                                return Promise.resolve({text: () => Promise.resolve('{"exists": true}')});
-                            }
-                        } catch (e) {
-                            console.error("Failed to parse email check JSON:", e);
-                            document.getElementById("errorEmail").textContent = "Server error. Please try again.";
-                            resetButton();
-                            throw e;
-                        }
-                    }
-                    return null;
-                })
-                .then(response => {
-                    if (response && response.text) {
-                        return response.text();
-                    }
-                    return '{"exists": true}';
-                })
-                .then(text => {
-                    console.log("Staff authorization check response:", text);
-                    try {
-                        const data = JSON.parse(text);
-
-                        if ((userType === "lecture" || userType === "admin") && !data.exists) {
-                            document.getElementById("errorEmail").textContent = 
-                                "Email not authorized for " + userType + " registration. Please contact administrator.";
-                            resetButton();
-                            return;
-                        }
-
-                        // All checks passed, send verification code
-                        console.log("All validations passed, sending verification code...");
-                        sendVerificationCode(event);
-
-                    } catch (e) {
-                        console.error("Failed to parse staff authorization JSON:", e);
-                        document.getElementById("errorEmail").textContent = "Server error. Please try again.";
-                        resetButton();
-                    }
-                })
-                .catch(error => {
-                    console.error("Validation error:", error);
-                    document.getElementById("errorUsername").textContent = "Network error. Please check your connection.";
-                    resetButton();
-                });
->>>>>>> fa95ecc3cf6b0c77827494324f310daff6536fd0
-        }
-
-        function resetButton() {
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-        }
-
-        return false;
+        return true;
+    } catch (error) {
+        console.error('Validation error:', error);
+        return true; // Allow submission if validation fails
     }
+}
 
-    function sendVerificationCode(event) {
-        const form = event.target.closest('form');
-        const formData = new FormData(form);
-        formData.set("page", "send_code");
-
-        console.log("Sending verification code...");
-
-        fetch("controller.jsp", {
-            method: "POST",
-            body: formData
-        })
-        .then(response => response.text())
-        .then(text => {
-            console.log("Send code response:", text);
-            try {
-                const data = JSON.parse(text);
-                if (data.success) {
-                    document.getElementById("verificationEmail").value = document.getElementById("email").value.trim();
-                    $('#verificationModal').modal('show');
-                } else {
-                    document.getElementById("errorEmail").textContent = data.message || "Failed to send verification code.";
-                }
-            } catch (e) {
-                console.error("Failed to parse send code JSON:", e);
-                document.getElementById("errorEmail").textContent = "Server error. Please try again.";
-            }
-            resetButton();
-        })
-        .catch(error => {
-            console.error("Send code error:", error);
-            document.getElementById("errorEmail").textContent = "Network error. Please try again.";
-            resetButton();
-        });
+// Attach real-time validation for duplicate checking
+document.getElementById('uname').addEventListener('blur', async () => {
+    // First validate format
+    const unameField = document.getElementById('uname');
+    const value = unameField.value.trim();
+    const errorSpan = document.getElementById('errorUsername');
+    
+    if (value && !/^\d{8}$/.test(value)) {
+        errorSpan.textContent = 'ID number must be exactly 8 digits.';
+        unameField.value = '';
+        unameField.focus();
+        return;
     }
-    function togglePassword(fieldId, icon){
-        const input = document.getElementById(fieldId);
-        const revealing = input.type === "password";
-        input.type = revealing ? "text" : "password";
-        icon.classList.toggle("fa-eye");
-        icon.classList.toggle("fa-eye-slash");
+    
+    // Then check for duplicates
+    if (value) {
+        await validateField('uname', 'check_username', 'This ID number is already registered.');
     }
+});
 
-    // Initialize password toggle icons
-    document.addEventListener('DOMContentLoaded', function() {
-        const passIcon = document.querySelector('#pass + .toggle-password');
-        const cpassIcon = document.querySelector('#cpass + .toggle-password');
-        if (passIcon) passIcon.classList.add('fa-eye');
-        if (cpassIcon) cpassIcon.classList.add('fa-eye');
+document.getElementById('email').addEventListener('blur', async () => {
+    // First validate format
+    const emailField = document.getElementById('email');
+    const value = emailField.value.trim();
+    const errorSpan = document.getElementById('errorEmail');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (value && !emailRegex.test(value)) {
+        errorSpan.textContent = 'Please enter a valid email address.';
+        emailField.value = '';
+        emailField.focus();
+        return;
+    }
+    
+    // Then check for duplicates
+    if (value) {
+        await validateField('email', 'check_email', 'This email is already registered.');
+    }
+});
+
+document.getElementById('contactno').addEventListener('blur', async () => {
+    // First validate format
+    const contactField = document.getElementById('contactno');
+    const value = contactField.value.trim();
+    const errorSpan = document.getElementById('errorContact');
+    
+    if (value && !/^[\d\s\+\-\(\)]{8,15}$/.test(value)) {
+        errorSpan.textContent = 'Please enter a valid contact number (8-15 digits).';
+        contactField.value = '';
+        contactField.focus();
+        return;
+    }
+    
+    // Then check for duplicates
+    if (value) {
+        await validateField('contactno', 'check_contact', 'This contact number is already in use.');
+    }
+});
+
+// =======================================================================================
+// FINAL FORM VALIDATION ON SUBMIT
+// =======================================================================================
+
+document.getElementById('registerForm').addEventListener('submit', async function(event) {
+    event.preventDefault();
+    
+    const submitButton = this.querySelector('button[type="submit"]');
+    const originalText = submitButton.innerHTML;
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Validating...';
+    
+    // Clear all error messages before validation
+    document.querySelectorAll('.error-message').forEach(span => {
+        span.textContent = '';
     });
     
-    // Enable/disable submit button based on errors
-    document.querySelector('button[type="submit"]').disabled = hasErrors;
-    
-    // If no errors, check for staff email and proceed
-    if (!hasErrors) {
-        checkStaffEmailAndProceed();
-    }
-}
-
-function checkStaffEmailAndProceed() {
+    // Get field values
+    const username = document.getElementById('uname').value.trim();
     const email = document.getElementById('email').value.trim();
-    const userType = document.getElementById('hiddenUserType').value;
+    const contact = document.getElementById('contactno').value.trim();
+    const password = document.getElementById('pass').value;
+    const confirmPassword = document.getElementById('cpass').value;
+    let hasError = false;
+    let firstErrorField = null;
     
-    // Only check staff email if not already staff/lecturer
-    if (userType !== 'lecture' && userType !== 'lecturer') {
-        fetch('controller.jsp?page=check_staff_email&email=' + encodeURIComponent(email))
-            .then(response => response.json())
-            .then(data => {
-                if (data.exists) {
-                    // Email exists in staff table - ask for confirmation
-                    showConfirm('This email exists in our staff records. Would you like to register as a lecturer/staff member instead?', 'Staff Email Detected')
-                        .then(confirmed => {
-                            if (confirmed) {
-                                // Change user type to lecturer and submit form
-                                document.getElementById('hiddenUserType').value = 'lecture';
-                                document.getElementById('registerForm').submit();
-                            } else {
-                                // Continue as student
-                                document.getElementById('hiddenUserType').value = 'student';
-                                document.getElementById('registerForm').submit();
-                            }
-                        });
-                } else {
-                    // Email not in staff table, submit normally
-                    document.getElementById('registerForm').submit();
-                }
-            })
-            .catch(error => {
-                console.error('Error checking staff email:', error);
-                // On error, proceed with normal submission
-                document.getElementById('registerForm').submit();
-            });
-    } else {
-        // Already set as lecturer/staff, submit normally
-        document.getElementById('registerForm').submit();
+    // Validate ID number format
+    if (!/^\d{8}$/.test(username)) {
+        document.getElementById('errorUsername').textContent = 'ID number must be exactly 8 digits.';
+        if (!firstErrorField) firstErrorField = document.getElementById('uname');
+        hasError = true;
     }
-}
+    
+    // Validate password
+    if (password.length < 6) {
+        document.getElementById('errorPassword').textContent = 'Password must be at least 6 characters long.';
+        if (!firstErrorField) firstErrorField = document.getElementById('pass');
+        hasError = true;
+    }
+    
+    if (password !== confirmPassword) {
+        document.getElementById('errorConfirmPassword').textContent = 'Passwords do not match.';
+        if (!firstErrorField) firstErrorField = document.getElementById('cpass');
+        hasError = true;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        document.getElementById('errorEmail').textContent = 'Please enter a valid email address.';
+        if (!firstErrorField) firstErrorField = document.getElementById('email');
+        hasError = true;
+    }
+    
+    // Validate contact number (basic validation)
+    if (contact && !/^[\d\s\+\-\(\)]{8,15}$/.test(contact)) {
+        document.getElementById('errorContact').textContent = 'Please enter a valid contact number (8-15 digits).';
+        if (!firstErrorField) firstErrorField = document.getElementById('contactno');
+        hasError = true;
+    }
+    
+    // If there are format errors, clear only the problematic field and focus
+    if (hasError) {
+        if (firstErrorField) {
+            firstErrorField.value = '';
+            firstErrorField.focus();
+        }
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalText;
+        return;
+    }
+    
+    // Check for duplicates before submission
+    try {
+        submitButton.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Checking duplicates...';
+        
+        // Check username/ID
+        const usernameCheck = await validateField('uname', 'check_username', 'This ID number is already registered.');
+        if (!usernameCheck) {
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalText;
+            return;
+        }
+        
+        // Check email
+        const emailCheck = await validateField('email', 'check_email', 'This email is already registered.');
+        if (!emailCheck) {
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalText;
+            return;
+        }
+        
+        // Check contact number if provided
+        if (contact) {
+            const contactCheck = await validateField('contactno', 'check_contact', 'This contact number is already in use.');
+            if (!contactCheck) {
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalText;
+                return;
+            }
+        }
+        
+        // Special check for staff emails if user is registering as student
+        const userType = document.getElementById('hiddenUserType').value;
+        if (userType === 'student' || !userType) {
+            try {
+                submitButton.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Finalizing...';
+                
+                const staffCheckUrl = 'controller.jsp?page=check_staff_email&email=' + encodeURIComponent(email);
+                const response = await fetch(staffCheckUrl);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.exists) {
+                        // Show confirmation modal for staff email
+                        showConfirm(
+                            'This email is registered as a lecturer/staff email. Are you sure you want to register as a student?',
+                            () => {
+                                submitButton.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Creating account...';
+                                // Proceed with form submission
+                                document.getElementById('registerForm').submit();
+                            },
+                            {
+                                title: 'Staff Email Detected',
+                                confirmText: 'Yes, Register as Student',
+                                cancelText: 'Cancel'
+                            }
+                        );
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalText;
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.error('Staff email check failed:', error);
+                // Continue with registration even if check fails
+            }
+        }
+        
+        // All validations passed - submit the form
+        submitButton.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Creating account...';
+        this.submit();
+        
+    } catch (error) {
+        console.error('Validation error:', error);
+        showAlert('An error occurred during validation. Please try again.', 'error');
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalText;
+    }
+});
 
 function togglePassword(fieldId, icon){
     const input = document.getElementById(fieldId);
@@ -836,126 +559,23 @@ function togglePassword(fieldId, icon){
     icon.classList.toggle("fa-eye-slash");
 }
 
-// Real-time validation as user types
-document.addEventListener('DOMContentLoaded', function() {
-    const fieldsToValidate = ['fname', 'lname', 'uname', 'contactno', 'email', 'pass', 'cpass'];
-    
-    fieldsToValidate.forEach(fieldId => {
-        const field = document.getElementById(fieldId);
-        if (field) {
-            field.addEventListener('blur', function() {
-                // For specific fields, check duplicates on blur
-                if (fieldId === 'uname' || fieldId === 'email' || fieldId === 'contactno') {
-                    const endpointMap = {
-                        'uname': 'check_username',
-                        'email': 'check_email',
-                        'contactno': 'check_contact'
-                    };
-                    const errorMessageMap = {
-                        'uname': 'Username already exists.',
-                        'email': 'Email already registered.',
-                        'contactno': 'Contact number already registered.'
-                    };
-                    const errorElementId = fieldId === 'contactno' ? 'errorContact' : 'error' + fieldId.charAt(0).toUpperCase() + fieldId.slice(1);
-                    
-                    checkDuplicate(fieldId, endpointMap[fieldId], errorMessageMap[fieldId], errorElementId);
-                }
-                
-                // Basic validation on blur
-                validateField(fieldId);
-            });
-        }
-    });
-    
-    // Add a function to handle form submission
-    document.getElementById('registerForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // Clear all previous field-specific errors
-        document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
-        
-        // Run validation
-        if (validateForm()) {
-            // If validateForm returns true (basic validation passed), 
-            // it will handle async checks and submission
-            return false;
-        }
-        return false;
-    });
-});
-
-function validateField(fieldId) {
+// Helper function to clear individual field errors on input
+function clearFieldError(fieldId) {
     const field = document.getElementById(fieldId);
-    const value = field.value.trim();
-    
-    switch(fieldId) {
-        case 'fname':
-            if (!value) {
-                document.getElementById('errorFirstName').textContent = 'First name is required.';
-            } else {
-                document.getElementById('errorFirstName').textContent = '';
-            }
-            break;
-        case 'lname':
-            if (!value) {
-                document.getElementById('errorLastName').textContent = 'Last name is required.';
-            } else {
-                document.getElementById('errorLastName').textContent = '';
-            }
-            break;
-        case 'uname':
-            if (!value) {
-                document.getElementById('errorUsername').textContent = 'Identity number is required.';
-            } else if (!/^\d{8}$/.test(value)) {
-                document.getElementById('errorUsername').textContent = 'ID number must be 8 digits.';
-            } else {
-                document.getElementById('errorUsername').textContent = '';
-            }
-            break;
-        case 'contactno':
-            if (!value) {
-                document.getElementById('errorContact').textContent = 'Contact number is required.';
-            } else if (!/^[0-9+()\s-]{7,}$/.test(value)) {
-                document.getElementById('errorContact').textContent = 'Enter a valid contact number.';
-            } else {
-                document.getElementById('errorContact').textContent = '';
-            }
-            break;
-        case 'email':
-            if (!value) {
-                document.getElementById('errorEmail').textContent = 'Email is required.';
-            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-                document.getElementById('errorEmail').textContent = 'Enter a valid email address.';
-            } else {
-                document.getElementById('errorEmail').textContent = '';
-            }
-            break;
-        case 'pass':
-            if (!value) {
-                document.getElementById('errorPassword').textContent = 'Password is required.';
-            } else if (value.length < 6) {
-                document.getElementById('errorPassword').textContent = 'Password must be at least 6 characters.';
-            } else {
-                document.getElementById('errorPassword').textContent = '';
-            }
-            break;
-        case 'cpass':
-            const passValue = document.getElementById('pass').value;
-            if (!value) {
-                document.getElementById('errorConfirmPassword').textContent = 'Please confirm your password.';
-            } else if (value !== passValue) {
-                document.getElementById('errorConfirmPassword').textContent = 'Passwords do not match.';
-            } else {
-                document.getElementById('errorConfirmPassword').textContent = '';
-            }
-            break;
+    const fieldName = fieldId.charAt(0).toUpperCase() + fieldId.slice(1);
+    const errorSpan = document.getElementById('error' + fieldName);
+    if (errorSpan) {
+        errorSpan.textContent = '';
     }
-    
-    // Update submit button state
-    checkAllValidations();
 }
-</script>
 
+// Attach event listeners to clear errors when user starts typing
+document.getElementById('uname').addEventListener('input', () => clearFieldError('uname'));
+document.getElementById('email').addEventListener('input', () => clearFieldError('email'));
+document.getElementById('contactno').addEventListener('input', () => clearFieldError('contactno'));
+document.getElementById('pass').addEventListener('input', () => clearFieldError('pass'));
+document.getElementById('cpass').addEventListener('input', () => clearFieldError('cpass'));
+</script>
 
   <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>

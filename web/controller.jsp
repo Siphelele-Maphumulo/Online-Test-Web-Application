@@ -46,28 +46,28 @@ try {
         response.setContentType("application/json");
         response.getWriter().write("{\"exists\": " + exists + "}");
         return;
-        
+
     } else if ("check_email".equalsIgnoreCase(pageParam)) {
         String email = request.getParameter("email");
         boolean exists = pDAO.checkEmailExists(email);
         response.setContentType("application/json");
         response.getWriter().write("{\"exists\": " + exists + "}");
         return;
-        
+
     } else if ("check_contact".equalsIgnoreCase(pageParam)) {
         String contactNo = request.getParameter("contactno");
         boolean exists = pDAO.checkContactNoExists(contactNo);
         response.setContentType("application/json");
         response.getWriter().write("{\"exists\": " + exists + "}");
         return;
-        
+
     } else if ("check_staff_email".equalsIgnoreCase(pageParam)) {
         String email = request.getParameter("email");
         boolean exists = pDAO.checkStaffEmailExists(email);
         response.setContentType("application/json");
         response.getWriter().write("{\"exists\": " + exists + "}");
         return;
-        
+
     } else if ("check_user_exists".equalsIgnoreCase(pageParam)) {
         String username = request.getParameter("username");
         boolean exists = pDAO.checkUserExists(username);
