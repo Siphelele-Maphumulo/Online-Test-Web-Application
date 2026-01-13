@@ -186,13 +186,9 @@
                 </div>
             <% } %>
 
-            <!-- Add hidden fields for user_type and from_page -->
-<<<<<<< HEAD
             <form id="registerForm" action="controller.jsp" method="POST">
-=======
            <!-- <form action="controller.jsp" method="POST" onsubmit="return validateForm();">-->
               <form method="POST" onsubmit="return validateForm(event);">
->>>>>>> fa95ecc3cf6b0c77827494324f310daff6536fd0
               <input type="hidden" name="page" value="register"/>
               <input type="hidden" id="hiddenUserType" name="user_type" value="<%= userType != null ? userType : "" %>"/>
               <input type="hidden" name="from_page" value="<%= fromPage != null ? fromPage : "" %>"/>
@@ -297,7 +293,6 @@
     <jsp:include page="footer.jsp"/>
   </footer>
 
-<<<<<<< HEAD
 <script>
 // Modal functions
 function showAlert(message, title = 'Alert') {
