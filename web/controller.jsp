@@ -83,6 +83,7 @@ try {
         String userPass = nz(request.getParameter("password"), "");
 
         if (pDAO.loginValidate(userName, userPass)) {
+            session.setAttribute("success", "Welcome back!");
             session.setAttribute("userStatus", "1");
             session.setAttribute("userId", pDAO.getUserId(userName));
             // Forward to transition page so client-side loader has time to display
@@ -95,87 +96,166 @@ try {
             session.setAttribute("error", "Invalid username or password");
             response.sendRedirect("login.jsp");
         }
+/* =========================
+   REGISTER (WITH ENHANCED VALIDATION)
+   ========================= */
+} else if ("register".equalsIgnoreCase(pageParam)) {
+    
+    // Use character encoding for proper parameter handling
+    request.setCharacterEncoding("UTF-8");
+    
+    String fName     = nz(request.getParameter("fname"), "");
+    String lName     = nz(request.getParameter("lname"), "");
+    String uName     = nz(request.getParameter("uname"), "");
+    String email     = nz(request.getParameter("email"), "");
+    String pass      = nz(request.getParameter("pass"), "");
+    String contactNo = nz(request.getParameter("contactno"), "");
+    String city      = nz(request.getParameter("city"), "");
+    String address   = nz(request.getParameter("address"), "");
 
-    /* =========================
-       REGISTER (WITH ENHANCED VALIDATION)
-       ========================= */
-    } else if ("register".equalsIgnoreCase(pageParam)) {
-        String fName     = nz(request.getParameter("fname"), "");
-        String lName     = nz(request.getParameter("lname"), "");
-        String uName     = nz(request.getParameter("uname"), "");
-        String email     = nz(request.getParameter("email"), "");
-        String pass      = nz(request.getParameter("pass"), "");
-        String contactNo = nz(request.getParameter("contactno"), "");
-        String city      = nz(request.getParameter("city"), "");
-        String address   = nz(request.getParameter("address"), "");
+    String userType = nz(request.getParameter("user_type"), "");
+    String fromPage = nz(request.getParameter("from_page"), "");
+    
+    // Store all form data in request attributes for repopulation
+    request.setAttribute("fname", fName);
+    request.setAttribute("lname", lName);
+    request.setAttribute("uname", uName);
+    request.setAttribute("email", email);
+    request.setAttribute("contactno", contactNo);
+    request.setAttribute("city", city);
+    request.setAttribute("address", address);
 
-        String userType = nz(request.getParameter("user_type"), "");
-        String fromPage = nz(request.getParameter("from_page"), "");
+    // Validate required fields
+    if (fName.isEmpty() || lName.isEmpty() || uName.isEmpty() || email.isEmpty() || pass.isEmpty()) {
+        session.setAttribute("error", "Please fill in all required fields");
+        session.setAttribute("errorField", "required");
+        request.getRequestDispatcher("signup.jsp?user_type=" + userType).forward(request, response);
+        return;
+    }
 
-        // Validate required fields
-        if (fName.isEmpty() || lName.isEmpty() || uName.isEmpty() || email.isEmpty() || pass.isEmpty()) {
-            session.setAttribute("error", "All required fields must be filled.");
-            response.sendRedirect("signup.jsp?user_type=" + userType + "&error=missing_fields");
+    // Validate ID number format (8 digits)
+    if (!uName.matches("\\d{8}")) {
+        session.setAttribute("error", "ID number must be exactly 8 digits");
+        session.setAttribute("errorField", "uname");
+        // Clear only the ID field
+        request.setAttribute("uname", "");
+        request.getRequestDispatcher("signup.jsp?user_type=" + userType).forward(request, response);
+        return;
+    }
+
+    // Check for duplicates in ORDER: username → contact → email
+    // 1. Check username first
+    if (pDAO.checkUsernameExists(uName)) {
+        session.setAttribute("error", "This ID number is already registered");
+        session.setAttribute("errorField", "uname");
+        // Clear only the ID field
+        request.setAttribute("uname", "");
+        request.getRequestDispatcher("signup.jsp?user_type=" + userType).forward(request, response);
+        return;
+    }
+
+    // 2. Check contact number second
+    if (contactNo != null && !contactNo.isEmpty()) {
+        if (pDAO.checkContactNoExists(contactNo)) {
+            session.setAttribute("error", "This contact number is already registered");
+            session.setAttribute("errorField", "contactno");
+            // Clear only the contact field
+            request.setAttribute("contactno", "");
+            request.getRequestDispatcher("signup.jsp?user_type=" + userType).forward(request, response);
             return;
         }
+    }
 
-        // Validate ID number format (8 digits)
-        if (!uName.matches("\\d{8}")) {
-            session.setAttribute("error", "ID number must be 8 digits.");
-            response.sendRedirect("signup.jsp?user_type=" + userType + "&error=invalid_id");
-            return;
-        }
+    // 3. Check email last
+    if (pDAO.checkEmailExists(email)) {
+        session.setAttribute("error", "This email is already registered");
+        session.setAttribute("errorField", "email");
+        // Clear only the email field
+        request.setAttribute("email", "");
+        request.getRequestDispatcher("signup.jsp?user_type=" + userType).forward(request, response);
+        return;
+    }
 
-        // Check for duplicates before proceeding
-        if (pDAO.checkUsernameExists(uName)) {
-            session.setAttribute("error", "Username/ID number already exists.");
-            response.sendRedirect("signup.jsp?user_type=" + userType + "&error=duplicate_username&fname=" + 
-                                 java.net.URLEncoder.encode(fName, "UTF-8") + "&lname=" + 
-                                 java.net.URLEncoder.encode(lName, "UTF-8") + "&email=" + 
-                                 java.net.URLEncoder.encode(email, "UTF-8"));
-            return;
-        }
-
-        if (pDAO.checkEmailExists(email)) {
-            session.setAttribute("error", "Email already registered.");
-            response.sendRedirect("signup.jsp?user_type=" + userType + "&error=duplicate_email&fname=" + 
-                                 java.net.URLEncoder.encode(fName, "UTF-8") + "&lname=" + 
-                                 java.net.URLEncoder.encode(lName, "UTF-8") + "&uname=" + 
-                                 java.net.URLEncoder.encode(uName, "UTF-8"));
-            return;
-        }
-
-        if (contactNo != null && !contactNo.isEmpty() && pDAO.checkContactNoExists(contactNo)) {
-            session.setAttribute("error", "Contact number already registered.");
-            response.sendRedirect("signup.jsp?user_type=" + userType + "&error=duplicate_contact&fname=" + 
-                                 java.net.URLEncoder.encode(fName, "UTF-8") + "&lname=" + 
-                                 java.net.URLEncoder.encode(lName, "UTF-8") + "&uname=" + 
-                                 java.net.URLEncoder.encode(uName, "UTF-8") + "&email=" + 
-                                 java.net.URLEncoder.encode(email, "UTF-8"));
-            return;
-        }
-
-        // Check if email is in staff table and adjust user type if needed
-        if (pDAO.checkStaffEmailExists(email) && !"lecture".equalsIgnoreCase(userType) && !"lecturer".equalsIgnoreCase(userType)) {
-            // Ask user for confirmation - this will be handled client-side
-            // For now, we'll default to student unless explicitly set
-            // The client-side modal will handle the confirmation
-        }
-
+    try {
+        // Hash password
         String hashedPass = PasswordUtils.bcryptHashPassword(pass);
-
+        
+        // Call the ORIGINAL addNewUser method which is void
         pDAO.addNewUser(fName, lName, uName, email, hashedPass, contactNo, city, address, userType);
 
-        boolean isAdminOrLecture = "admin".equalsIgnoreCase(userType) || "lecture".equalsIgnoreCase(userType)
-                                   || "lecturer".equalsIgnoreCase(userType) || "account".equalsIgnoreCase(fromPage);
-
-        if (isAdminOrLecture) {
-            session.setAttribute("message", "Student added successfully!");
+        // Clear any previous error fields
+        session.removeAttribute("errorField");
+        
+        // Set success message - FIXED: Use session attribute
+        session.setAttribute("success", "Registration successful! You can now login.");
+        
+        // Determine redirect based on user type
+        boolean isAdminOrLecturer = "admin".equalsIgnoreCase(userType) || 
+                                   "lecture".equalsIgnoreCase(userType) || 
+                                   "lecturer".equalsIgnoreCase(userType);
+        
+        if (isAdminOrLecturer || "account".equalsIgnoreCase(fromPage)) {
+            // For admin/lecturer registrations
+            session.setAttribute("message", "User added successfully!");
             response.sendRedirect("accounts.jsp");
         } else {
-            session.setAttribute("message", "Registration successful! Please login");
+            // Store success message in session ONLY
+            session.setAttribute("success", "Registration successful! Please login.");
+
+            // Redirect cleanly (NO query params)
             response.sendRedirect("login.jsp");
+
         }
+        
+    } catch (RuntimeException ex) {
+        // The addNewUser method throws RuntimeException on SQL failure
+        
+        // Check if duplicates were created despite checks
+        boolean usernameCheck = pDAO.checkUsernameExists(uName);
+        boolean emailCheck = pDAO.checkEmailExists(email);
+        boolean contactCheck = contactNo != null && !contactNo.isEmpty() && pDAO.checkContactNoExists(contactNo);
+        
+        if (usernameCheck) {
+            session.setAttribute("error", "This ID number is already registered");
+            session.setAttribute("errorField", "uname");
+            request.setAttribute("uname", "");
+        } else if (contactCheck) {
+            session.setAttribute("error", "This contact number is already registered");
+            session.setAttribute("errorField", "contactno");
+            request.setAttribute("contactno", "");
+        } else if (emailCheck) {
+            session.setAttribute("error", "This email is already registered");
+            session.setAttribute("errorField", "email");
+            request.setAttribute("email", "");
+        } else {
+            // Get the root cause
+            Throwable cause = ex.getCause();
+            String errorMsg = "Registration failed. ";
+            if (cause != null && cause.getMessage() != null) {
+                if (cause.getMessage().contains("Duplicate")) {
+                    errorMsg += "The information may already be registered.";
+                } else {
+                    errorMsg += "Database error: " + cause.getMessage();
+                }
+            } else {
+                errorMsg += "Please check all fields and try again.";
+            }
+            session.setAttribute("error", errorMsg);
+            session.setAttribute("errorField", "general");
+        }
+        
+        // Forward to signup page with all form data preserved
+        request.getRequestDispatcher("signup.jsp?user_type=" + userType).forward(request, response);
+        
+    } catch (Exception e) {
+        // Catch any other exceptions (like password hashing errors)
+        
+        session.setAttribute("error", "Registration failed: " + e.getMessage());
+        session.setAttribute("errorField", "general");
+        
+        // Forward to signup page with all form data preserved
+        request.getRequestDispatcher("signup.jsp?user_type=" + userType).forward(request, response);
+    }
 
     /* =========================
        STAFF REGISTER

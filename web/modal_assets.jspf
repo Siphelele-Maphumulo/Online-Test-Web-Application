@@ -1,73 +1,153 @@
 <%-- modal_assets.jspf --%>
+<!-- Make sure Bootstrap 4 is loaded first -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<!-- Then include bootstrap-modal CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-modal/2.2.6/css/bootstrap-modal-bs4patch.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-modal/2.2.6/css/bootstrap-modal.min.css">
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-modal/2.2.6/js/bootstrap-modal.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-modal/2.2.6/js/bootstrap-modalmanager.min.js"></script>
 
 <style>
+    /* Make sure modal styles don't conflict with Bootstrap 4 */
     .modal-custom {
         border-radius: 12px;
         box-shadow: 0 10px 30px rgba(0,0,0,0.2);
     }
+    
+    /* Ensure proper z-index */
+    .modal {
+        z-index: 1050 !important;
+    }
+    
+    .modal-backdrop {
+        z-index: 1040 !important;
+    }
+    
     .modal-custom .modal-header {
         background: linear-gradient(135deg, #09294D, #1e4580);
         color: white;
         border-radius: 12px 12px 0 0;
         padding: 15px 20px;
+        border-bottom: none;
     }
+    
     .modal-custom .modal-title {
         font-weight: 600;
         font-size: 18px;
+        display: flex;
+        align-items: center;
     }
+    
     .modal-custom .modal-body {
         padding: 25px;
         font-size: 15px;
         line-height: 1.6;
     }
+    
     .modal-custom .modal-footer {
         border-top: 1px solid #eee;
         padding: 15px 20px;
+        background: #f8f9fa;
+        border-radius: 0 0 12px 12px;
     }
+    
     .btn-modal {
         min-width: 100px;
         padding: 8px 20px;
         font-weight: 500;
         border-radius: 6px;
+        border: none;
+        transition: all 0.3s ease;
     }
+    
     .btn-modal-primary {
         background: linear-gradient(135deg, #09294D, #1e4580);
-        border: none;
         color: white;
     }
+    
     .btn-modal-primary:hover {
         background: #1e4580;
         color: white;
+        transform: translateY(-2px);
     }
+    
     .modal-icon {
         font-size: 24px;
         margin-right: 10px;
+        vertical-align: middle;
     }
+    
+    /* Override close button color */
+    .modal-custom .modal-header .close {
+        color: white;
+        text-shadow: none;
+        opacity: 0.8;
+        padding: 0;
+        margin: -10px -10px -10px auto;
+    }
+    
+    .modal-custom .modal-header .close:hover {
+        opacity: 1;
+        color: white;
+    }
+    
     .modal-error .modal-header {
         background: linear-gradient(135deg, #dc3545, #c82333);
     }
+    
     .modal-success .modal-header {
         background: linear-gradient(135deg, #28a745, #218838);
     }
+    
     .modal-warning .modal-header {
         background: linear-gradient(135deg, #ffc107, #e0a800);
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 576px) {
+        .modal-custom .modal-body {
+            padding: 20px 15px;
+        }
+        
+        .modal-custom .modal-footer {
+            padding: 10px 15px;
+        }
+        
+        .btn-modal {
+            min-width: 80px;
+            padding: 6px 15px;
+        }
     }
 </style>
 
 <script>
-    // Function to show modal alerts
+    // Initialize modal manager
+    $(function() {
+        $.fn.modalmanager.defaults.resize = true;
+        $.fn.modal.defaults.spinner = $.fn.modalmanager.defaults.spinner = 
+            '<div class="loading-spinner" style="width: 200px; margin-left: -100px;">' +
+            '<div class="progress progress-striped active">' +
+            '<div class="progress-bar" style="width: 100%;"></div>' +
+            '</div>' +
+            '</div>';
+    });
+    
+    // Function to show modal alerts with proper Bootstrap 4 compatibility
     function showAlert(message, type = 'info', options = {}) {
         const modalId = 'alertModal_' + Date.now();
         const title = options.title || type.charAt(0).toUpperCase() + type.slice(1);
         const icon = options.icon || getIconForType(type);
         
         const modalClass = `modal-custom modal-${type}`;
-        const titleClass = type === 'error' ? 'danger' : type;
+        const titleColor = type === 'error' ? 'danger' : type;
         
         const modalHtml = `
-            <div id="${modalId}" class="modal fade" tabindex="-1" role="dialog">
+            <div id="${modalId}" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered" role="document">
                     <div class="modal-content ${modalClass}">
                         <div class="modal-header">
@@ -75,14 +155,14 @@
                                 <i class="${icon} modal-icon"></i> ${title}
                             </h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true" style="color: white;">&times;</span>
+                                <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
                         <div class="modal-body">
                             ${message}
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary btn-modal" data-dismiss="modal">OK</button>
+                            <button type="button" class="btn btn-modal btn-secondary" data-dismiss="modal">OK</button>
                         </div>
                     </div>
                 </div>
@@ -93,22 +173,29 @@
         $('.modal.alert-modal').remove();
         
         // Append new modal
-        $(modalHtml).appendTo('body').addClass('alert-modal');
+        $('body').append(modalHtml);
+        const $modal = $('#' + modalId).addClass('alert-modal');
         
-        // Show modal
-        $(`#${modalId}`).modal('show');
+        // Show modal with proper initialization
+        $modal.modal({
+            backdrop: 'static',
+            keyboard: true,
+            show: true
+        });
         
         // Auto-close if specified
         if (options.autoClose) {
             setTimeout(() => {
-                $(`#${modalId}`).modal('hide');
+                $modal.modal('hide');
             }, options.autoClose);
         }
         
         // Remove modal from DOM after hiding
-        $(`#${modalId}`).on('hidden.bs.modal', function () {
+        $modal.on('hidden.bs.modal', function () {
             $(this).remove();
         });
+        
+        return $modal;
     }
     
     function getIconForType(type) {
@@ -134,7 +221,7 @@
         const cancelText = options.cancelText || 'Cancel';
         
         const modalHtml = `
-            <div id="${modalId}" class="modal fade" tabindex="-1" role="dialog">
+            <div id="${modalId}" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered" role="document">
                     <div class="modal-content modal-custom modal-warning">
                         <div class="modal-header">
@@ -142,15 +229,15 @@
                                 <i class="fas fa-question-circle modal-icon"></i> ${title}
                             </h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true" style="color: white;">&times;</span>
+                                <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
                         <div class="modal-body">
                             ${message}
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary btn-modal" data-dismiss="modal">${cancelText}</button>
-                            <button type="button" class="btn btn-primary btn-modal btn-modal-primary" id="confirmBtn">${confirmText}</button>
+                            <button type="button" class="btn btn-modal btn-secondary" data-dismiss="modal">${cancelText}</button>
+                            <button type="button" class="btn btn-modal btn-modal-primary" id="confirmBtn">${confirmText}</button>
                         </div>
                     </div>
                 </div>
@@ -161,25 +248,29 @@
         $('.modal.confirm-modal').remove();
         
         // Append new modal
-        $(modalHtml).appendTo('body').addClass('confirm-modal');
+        $('body').append(modalHtml);
+        const $modal = $('#' + modalId).addClass('confirm-modal');
         
         // Show modal
-        const modal = $(`#${modalId}`);
-        modal.modal('show');
+        $modal.modal({
+            backdrop: 'static',
+            keyboard: false,
+            show: true
+        });
         
         // Handle confirm button click
-        modal.find('#confirmBtn').click(function() {
-            modal.modal('hide');
+        $modal.find('#confirmBtn').click(function() {
+            $modal.modal('hide');
             if (typeof callback === 'function') {
                 callback();
             }
         });
         
         // Remove modal from DOM after hiding
-        modal.on('hidden.bs.modal', function () {
+        $modal.on('hidden.bs.modal', function () {
             $(this).remove();
         });
         
-        return modal;
+        return $modal;
     }
 </script>
