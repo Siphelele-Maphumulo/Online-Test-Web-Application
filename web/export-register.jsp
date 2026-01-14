@@ -404,7 +404,7 @@
                         
                         int count = 0;
                         int completedCount = 0;
-                        int inProgressCount = 0;
+                        int inCompleteCount = 0;
                         long totalDuration = 0;
                         
                         if (rs != null) {
@@ -439,14 +439,14 @@
                                     duration = String.format("%02d:%02d:%02d", hours, minutes, secs);
                                 }
                                 
-                                String status = "Incomplete";
-                                String statusClass = "status-inprogress";
+                                String status = "incomplete";
+                                String statusClass = "status-incomplete";
                                 if (examEndTime != null) {
                                     status = "Completed";
                                     statusClass = "status-completed";
                                     completedCount++;
                                 } else {
-                                    inProgressCount++;
+                                    inCompleteCount++;
                                 }
                                 
                                 // Format date
@@ -518,7 +518,7 @@
                         <div class="summary-label">Exams Completed</div>
                     </div>
                     <div class="summary-card">
-                        <div class="summary-value"><%= inProgressCount %></div>
+                        <div class="summary-value"><%= inCompleteCount %></div>
                         <div class="summary-label">In Progress</div>
                     </div>
                     <div class="summary-card">

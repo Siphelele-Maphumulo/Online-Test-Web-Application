@@ -1765,7 +1765,7 @@ public ArrayList getQuestions(String courseName, int questions) {
             pstm.setString(4, getCourseTimeByName(cName));
             pstm.setInt(5, sId);
             pstm.setInt(6, getTotalMarksByName(cName));
-            pstm.setString(7, "in_progress");       // Set initial status
+            pstm.setString(7, "incomplete");       // Set initial status
             pstm.setNull(8, Types.VARCHAR);         // result_status is NULL initially
 
             pstm.executeUpdate();
@@ -3188,7 +3188,7 @@ public ResultSet getExamRegisterStatistics(int examId, String courseName, String
     sql.append("SELECT ");
     sql.append("    COUNT(*) as total_students, ");
     sql.append("    SUM(CASE WHEN end_time IS NOT NULL THEN 1 ELSE 0 END) as completed, ");
-    sql.append("    SUM(CASE WHEN end_time IS NULL THEN 1 ELSE 0 END) as in_progress, ");
+    sql.append("    SUM(CASE WHEN end_time IS NULL THEN 1 ELSE 0 END) as Incomplete, ");
     sql.append("    AVG(CASE WHEN duration_seconds > 0 THEN duration_seconds ELSE NULL END) as avg_duration ");
     sql.append("FROM exam_register er ");
     sql.append("WHERE 1=1 ");

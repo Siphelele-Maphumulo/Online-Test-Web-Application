@@ -1684,7 +1684,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                           statusText = "Terminated";
                           statusClass = "status-terminated";
                       } else {
-                          statusText = "Incomplete";
+                          statusText = "InComplete";
                           statusClass = "status-terminated";
                       }
                       

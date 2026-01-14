@@ -941,7 +941,7 @@
                             </td>
                             <td>
                                 <span class="badge <%= completed ? "badge-success" : "badge-warning" %>">
-                                    <%= completed ? "Completed" : "Incomplete" %>
+                                    <%= completed ? "Completed" : "incomplete" %>
                                 </span>
                             </td>
                         </tr>
