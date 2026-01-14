@@ -1,276 +1,175 @@
-<%-- modal_assets.jspf --%>
-<!-- Make sure Bootstrap 4 is loaded first -->
-<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
-<!-- Then include bootstrap-modal CSS -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-modal/2.2.6/css/bootstrap-modal-bs4patch.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-modal/2.2.6/css/bootstrap-modal.min.css">
-
-<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-modal/2.2.6/js/bootstrap-modal.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-modal/2.2.6/js/bootstrap-modalmanager.min.js"></script>
+<%-- /web/modal_assets.jspf --%>
 
 <style>
-    /* Make sure modal styles don't conflict with Bootstrap 4 */
-    .modal-custom {
-        border-radius: 12px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    /* ================= MODAL OVERLAY ================= */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1050;
+        animation: fadeIn 0.25s ease;
     }
-    
-    /* Ensure proper z-index */
-    .modal {
-        z-index: 1050 !important;
+
+    .modal-content {
+        background: #ffffff;
+        width: 90%;
+        max-width: 480px;
+        border-radius: 14px;
+        box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+        padding: 24px;
+        animation: slideIn 0.25s ease;
+        border-top: 5px solid #09294d;
     }
-    
-    .modal-backdrop {
-        z-index: 1040 !important;
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #e0e0e0;
+        padding-bottom: 12px;
+        margin-bottom: 16px;
     }
-    
-    .modal-custom .modal-header {
-        background: linear-gradient(135deg, #09294D, #1e4580);
-        color: white;
-        border-radius: 12px 12px 0 0;
-        padding: 15px 20px;
-        border-bottom: none;
-    }
-    
-    .modal-custom .modal-title {
-        font-weight: 600;
+
+    .modal-title {
         font-size: 18px;
+        font-weight: 600;
+        color: #09294d;
         display: flex;
         align-items: center;
+        gap: 8px;
     }
-    
-    .modal-custom .modal-body {
-        padding: 25px;
-        font-size: 15px;
-        line-height: 1.6;
+
+    .modal-title i {
+        font-size: 18px;
     }
-    
-    .modal-custom .modal-footer {
-        border-top: 1px solid #eee;
-        padding: 15px 20px;
-        background: #f8f9fa;
-        border-radius: 0 0 12px 12px;
-    }
-    
-    .btn-modal {
-        min-width: 100px;
-        padding: 8px 20px;
-        font-weight: 500;
-        border-radius: 6px;
+
+    .close-button {
+        background: none;
         border: none;
-        transition: all 0.3s ease;
-    }
-    
-    .btn-modal-primary {
-        background: linear-gradient(135deg, #09294D, #1e4580);
-        color: white;
-    }
-    
-    .btn-modal-primary:hover {
-        background: #1e4580;
-        color: white;
-        transform: translateY(-2px);
-    }
-    
-    .modal-icon {
         font-size: 24px;
-        margin-right: 10px;
-        vertical-align: middle;
+        cursor: pointer;
+        color: #555;
     }
-    
-    /* Override close button color */
-    .modal-custom .modal-header .close {
-        color: white;
-        text-shadow: none;
-        opacity: 0.8;
-        padding: 0;
-        margin: -10px -10px -10px auto;
+
+    .close-button:hover {
+        color: #dc3545;
     }
-    
-    .modal-custom .modal-header .close:hover {
-        opacity: 1;
-        color: white;
+
+    .modal-body {
+        font-size: 14px;
+        line-height: 1.6;
+        margin-bottom: 20px;
+        color: #333;
     }
-    
-    .modal-error .modal-header {
-        background: linear-gradient(135deg, #dc3545, #c82333);
+
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
     }
-    
-    .modal-success .modal-header {
-        background: linear-gradient(135deg, #28a745, #218838);
+
+    /* ================= BUTTONS ================= */
+    .btn {
+        padding: 8px 18px;
+        border-radius: 6px;
+        font-size: 14px;
+        border: none;
+        cursor: pointer;
     }
-    
-    .modal-warning .modal-header {
-        background: linear-gradient(135deg, #ffc107, #e0a800);
+
+    .btn-primary {
+        background: #09294d;
+        color: #fff;
     }
-    
-    /* Responsive adjustments */
-    @media (max-width: 576px) {
-        .modal-custom .modal-body {
-            padding: 20px 15px;
-        }
-        
-        .modal-custom .modal-footer {
-            padding: 10px 15px;
-        }
-        
-        .btn-modal {
-            min-width: 80px;
-            padding: 6px 15px;
-        }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: #fff;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: #fff;
+    }
+
+    /* ================= ANIMATIONS ================= */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideIn {
+        from { transform: translateY(-25px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
     }
 </style>
 
+<!-- ================= ALERT MODAL ================= -->
+<div id="alertModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title" id="alertModalTitle">
+                <i class="fas fa-info-circle"></i> Alert
+            </h3>
+            <button class="close-button" onclick="closeAlert()">&times;</button>
+        </div>
+        <div class="modal-body" id="alertModalMessage"></div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="closeAlert()">OK</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= CONFIRM MODAL ================= -->
+<div id="confirmModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title" id="confirmModalTitle">
+                <i class="fas fa-question-circle"></i> Confirmation
+            </h3>
+            <button class="close-button" onclick="resolveConfirm(false)">&times;</button>
+        </div>
+        <div class="modal-body" id="confirmModalMessage"></div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="resolveConfirm(false)">Cancel</button>
+            <button class="btn btn-danger" onclick="resolveConfirm(true)">Confirm</button>
+        </div>
+    </div>
+</div>
+
 <script>
-    // Initialize modal manager
-    $(function() {
-        $.fn.modalmanager.defaults.resize = true;
-        $.fn.modal.defaults.spinner = $.fn.modalmanager.defaults.spinner = 
-            '<div class="loading-spinner" style="width: 200px; margin-left: -100px;">' +
-            '<div class="progress progress-striped active">' +
-            '<div class="progress-bar" style="width: 100%;"></div>' +
-            '</div>' +
-            '</div>';
-    });
-    
-    // Function to show modal alerts with proper Bootstrap 4 compatibility
-    function showAlert(message, type = 'info', options = {}) {
-        const modalId = 'alertModal_' + Date.now();
-        const title = options.title || type.charAt(0).toUpperCase() + type.slice(1);
-        const icon = options.icon || getIconForType(type);
-        
-        const modalClass = `modal-custom modal-${type}`;
-        const titleColor = type === 'error' ? 'danger' : type;
-        
-        const modalHtml = `
-            <div id="${modalId}" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered" role="document">
-                    <div class="modal-content ${modalClass}">
-                        <div class="modal-header">
-                            <h5 class="modal-title">
-                                <i class="${icon} modal-icon"></i> ${title}
-                            </h5>
-                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            ${message}
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-modal btn-secondary" data-dismiss="modal">OK</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Remove any existing alert modal
-        $('.modal.alert-modal').remove();
-        
-        // Append new modal
-        $('body').append(modalHtml);
-        const $modal = $('#' + modalId).addClass('alert-modal');
-        
-        // Show modal with proper initialization
-        $modal.modal({
-            backdrop: 'static',
-            keyboard: true,
-            show: true
-        });
-        
-        // Auto-close if specified
-        if (options.autoClose) {
-            setTimeout(() => {
-                $modal.modal('hide');
-            }, options.autoClose);
-        }
-        
-        // Remove modal from DOM after hiding
-        $modal.on('hidden.bs.modal', function () {
-            $(this).remove();
-        });
-        
-        return $modal;
+    let confirmResolver = null;
+
+    /* ================= ALERT ================= */
+    function showAlert(message, title = 'Alert', icon = 'fa-info-circle') {
+        document.getElementById('alertModalTitle').innerHTML =
+            `<i class="fas ${icon}"></i> ${title}`;
+        document.getElementById('alertModalMessage').textContent = message;
+        document.getElementById('alertModal').style.display = 'flex';
     }
-    
-    function getIconForType(type) {
-        switch(type.toLowerCase()) {
-            case 'success':
-                return 'fas fa-check-circle';
-            case 'error':
-                return 'fas fa-exclamation-circle';
-            case 'warning':
-                return 'fas fa-exclamation-triangle';
-            case 'info':
-                return 'fas fa-info-circle';
-            default:
-                return 'fas fa-info-circle';
-        }
+
+    function closeAlert() {
+        document.getElementById('alertModal').style.display = 'none';
     }
-    
-    // Function to show confirmation modal
-    function showConfirm(message, callback, options = {}) {
-        const modalId = 'confirmModal_' + Date.now();
-        const title = options.title || 'Confirmation Required';
-        const confirmText = options.confirmText || 'Yes, Continue';
-        const cancelText = options.cancelText || 'Cancel';
-        
-        const modalHtml = `
-            <div id="${modalId}" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered" role="document">
-                    <div class="modal-content modal-custom modal-warning">
-                        <div class="modal-header">
-                            <h5 class="modal-title">
-                                <i class="fas fa-question-circle modal-icon"></i> ${title}
-                            </h5>
-                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            ${message}
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-modal btn-secondary" data-dismiss="modal">${cancelText}</button>
-                            <button type="button" class="btn btn-modal btn-modal-primary" id="confirmBtn">${confirmText}</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Remove any existing confirm modal
-        $('.modal.confirm-modal').remove();
-        
-        // Append new modal
-        $('body').append(modalHtml);
-        const $modal = $('#' + modalId).addClass('confirm-modal');
-        
-        // Show modal
-        $modal.modal({
-            backdrop: 'static',
-            keyboard: false,
-            show: true
+
+    /* ================= CONFIRM ================= */
+    function showConfirm(message, title = 'Confirmation') {
+        document.getElementById('confirmModalTitle').innerHTML =
+            `<i class="fas fa-question-circle"></i> ${title}`;
+        document.getElementById('confirmModalMessage').textContent = message;
+        document.getElementById('confirmModal').style.display = 'flex';
+
+        return new Promise((resolve) => {
+            confirmResolver = resolve;
         });
-        
-        // Handle confirm button click
-        $modal.find('#confirmBtn').click(function() {
-            $modal.modal('hide');
-            if (typeof callback === 'function') {
-                callback();
-            }
-        });
-        
-        // Remove modal from DOM after hiding
-        $modal.on('hidden.bs.modal', function () {
-            $(this).remove();
-        });
-        
-        return $modal;
+    }
+
+    function resolveConfirm(result) {
+        document.getElementById('confirmModal').style.display = 'none';
+        if (confirmResolver) confirmResolver(result);
+        confirmResolver = null;
     }
 </script>

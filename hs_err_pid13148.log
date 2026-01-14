@@ -16,7 +16,7 @@
 #     placed in the first 4GB address space. The Java Heap base address is the
 #     maximum limit for the native heap growth. Please use -XX:HeapBaseMinAddress
 #     to set the Java Heap base and to place the Java Heap above 4GB virtual address.
-# This output file may be truncated or incomplete.
+# This output file may be truncated or Incomplete.
 #
 #  Out of Memory Error (arena.cpp:168), pid=13148, tid=24912
 #

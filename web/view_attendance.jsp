@@ -1306,35 +1306,11 @@
                             </div>
                         </div>
                     </div>
-                    <p style="margin-top: var(--spacing-lg); font-size: 14px; color: var(--dark-gray); text-align: center;">
-                        Based on <%= totalDays %> recorded attendance days.
-                    </p>
-                     <div id="calendar-container" style="margin-top: 20px;"></div>
-                    <!-- Add the calendar legend here -->
-                    <div class="calendar-legend">
-                        <div class="legend-item">
-                            <span class="color-box present"></span> Present
-                        </div>
-                        <div class="legend-item">
-                            <span class="color-box late"></span> Late
-                        </div>
-                        <div class="legend-item">
-                            <span class="color-box absent"></span> Absent
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
 
-<style>
-    .event-present { background-color: #28a745 !important; color: white !important; }
-    .event-late { background-color: #ffc107 !important; color: white !important; }
-    .event-absent { background-color: #dc3545 !important; color: white !important; }
-    .event-weekend {
-        background-color: #f8f9fa !important;
-        color: #6c757d !important;
-    }
-</style>
+
 
 <div id="deleteConfirmationModal" class="modal-overlay" style="display: none;">
   <div class="modal-content">
@@ -1351,57 +1327,6 @@
     </div>
   </div>
 </div>
-
-        <script src="https://cdn.jsdelivr.net/npm/vanilla-js-calendar@1.6.5/build/vanilla-js-calendar.min.js"></script>
-<!-- Add FullCalendar CSS and JS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css">
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
-
-<!-- Add FullCalendar instead -->
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
-
-<script>
-function loadFullCalendar() {
-    try {
-        const attendanceData = <%= pDAO.getAttendanceCalendarData(userId) %>;
-        
-        const calendarEl = document.getElementById('calendar-container');
-        const calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            height: 500,
-            events: attendanceData.map(item => ({
-                title: item.class.replace('event-', '').toUpperCase(),
-                start: item.date,
-                backgroundColor: getEventColor(item.class),
-                borderColor: getEventColor(item.class),
-                textColor: 'white'
-            })),
-            eventContent: function(arg) {
-                return {
-                    html: `<div style="padding: 2px; font-size: 11px;">${arg.event.title}</div>`
-                };
-            }
-        });
-        
-        calendar.render();
-        
-    } catch (error) {
-        console.error('FullCalendar error:', error);
-        showCalendarError();
-    }
-}
-
-function getEventColor(className) {
-    switch(className) {
-        case 'event-present': return '#28a745';
-        case 'event-late': return '#ffc107';
-        case 'event-absent': return '#dc3545';
-        case 'event-future': return '#6c757d';
-        default: return '#007bff';
-    }
-}
-</script>
 
     </body>
 </html>

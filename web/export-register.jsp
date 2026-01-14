@@ -29,6 +29,32 @@
     
     DatabaseClass pDAO = DatabaseClass.getInstance();
     
+    // Handle delete operation if requested
+    String deleteAction = request.getParameter("delete_action");
+    String deleteExamId = request.getParameter("delete_exam_id");
+    String deleteStudentId = request.getParameter("delete_student_id");
+    
+    if ("confirm_delete".equals(deleteAction) && deleteExamId != null && deleteStudentId != null) {
+        try {
+            // Perform the delete operation
+            boolean deleted = pDAO.deleteExamRecord(Integer.parseInt(deleteExamId), 
+                                                     Integer.parseInt(deleteStudentId));
+            if (deleted) {
+                // Refresh the page with success message
+                response.sendRedirect("exam-register-report.jsp?success=Record+deleted+successfully");
+                return;
+            }
+        } catch (NumberFormatException e) {
+            // Handle invalid ID format
+            response.sendRedirect("exam-register-report.jsp?error=Invalid+record+ID");
+            return;
+        } catch (SQLException e) {
+            // Handle database error
+            response.sendRedirect("exam-register-report.jsp?error=Database+error:+" + e.getMessage());
+            return;
+        }
+    }
+    
     // Get all filter parameters
     int examId = 0;
     String examIdParam = request.getParameter("exam_id");
@@ -81,7 +107,7 @@
     if (!examDate.isEmpty()) {
         filename += "_" + examDate.replace("-", "");
     }
-    filename += ".html";  // HTML extension for better formatting
+    filename += ".html";
     
     // Set headers for HTML download
     response.setContentType("application/vnd.ms-excel");
@@ -94,371 +120,187 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Exam Register Report</title>
     <style>
-        /* Professional Exam Register Report Styling */
-        :root {
-            --primary-blue: #09294d;
-            --secondary-blue: #1a3d6d;
-            --accent-blue: #4a90e2;
-            --success-green: #059669;
-            --warning-orange: #d97706;
-            --light-gray: #f8fafc;
-            --medium-gray: #e2e8f0;
-            --dark-gray: #64748b;
-            --text-dark: #1e293b;
-            --white: #ffffff;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: var(--text-dark);
-            background-color: var(--white);
-            padding: 20px;
-        }
-        
-        /* Report Container */
-        .report-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            border: 1px solid var(--medium-gray);
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-        
-        /* Header Section */
-        .report-header {
-            background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
-            color: var(--white);
-            padding: 30px;
-            text-align: center;
-            border-bottom: 4px solid var(--accent-blue);
-        }
-        
-        .institution-logo {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .logo-symbol {
-            width: 60px;
-            height: 60px;
-            background: var(--white);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--primary-blue);
-            font-size: 28px;
-            font-weight: bold;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        
-        .institution-name {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
-        
-        .report-title {
-            font-size: 32px;
-            font-weight: 800;
-            margin: 10px 0;
-            letter-spacing: 1px;
-        }
-        
-        .report-subtitle {
-            font-size: 18px;
-            font-weight: 300;
-            opacity: 0.9;
-            margin-bottom: 15px;
-        }
-        
-        /* Metadata Section */
-        .metadata-section {
-            background: var(--light-gray);
-            padding: 20px;
-            border-bottom: 2px solid var(--medium-gray);
-        }
-        
-        .metadata-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 15px;
-        }
-        
-        .metadata-card {
-            background: var(--white);
-            padding: 15px;
-            border-radius: 6px;
-            border-left: 4px solid var(--accent-blue);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-        
-        .metadata-label {
-            font-weight: 600;
-            color: var(--primary-blue);
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 5px;
-        }
-        
-        .metadata-value {
-            font-size: 14px;
-            color: var(--text-dark);
-            font-weight: 500;
-        }
-        
-        /* Filters Section */
-        .filters-section {
-            background: var(--white);
-            padding: 20px;
-            border-bottom: 1px dashed var(--medium-gray);
-        }
-        
-        .filters-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--primary-blue);
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .filters-title:before {
-            content: "??";
-            font-size: 14px;
-        }
-        
-        .filters-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
-        }
-        
-        .filter-item {
-            padding: 8px 12px;
-            background: var(--light-gray);
-            border-radius: 4px;
-            font-size: 13px;
-        }
-        
-        .filter-label {
-            font-weight: 600;
-            color: var(--dark-gray);
-            margin-right: 5px;
-        }
-        
-        /* Data Table */
-        .data-section {
-            padding: 0;
-        }
-        
-        .data-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            font-size: 13px;
-        }
-        
-        .data-table thead th {
-            background: linear-gradient(to bottom, var(--primary-blue), var(--secondary-blue));
-            color: var(--white);
-            padding: 14px 12px;
-            text-align: left;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-size: 12px;
-            border: none;
-            position: sticky;
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
             top: 0;
-            z-index: 10;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
         }
         
-        .data-table thead th:first-child {
-            border-top-left-radius: 0;
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 400px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            position: relative;
         }
         
-        .data-table thead th:last-child {
-            border-top-right-radius: 0;
+        .modal-header {
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
         }
         
-        .data-table tbody tr {
-            transition: background-color 0.2s ease;
+        .modal-title {
+            font-size: 18px;
+            color: #d32f2f;
+            font-weight: bold;
         }
         
-        .data-table tbody tr:nth-child(even) {
-            background-color: var(--light-gray);
+        .modal-body {
+            padding: 10px 0;
+            margin-bottom: 15px;
         }
         
-        .data-table tbody tr:hover {
-            background-color: #e8f4ff;
+        .modal-footer {
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+            text-align: right;
         }
         
-        .data-table td {
-            padding: 12px;
-            border-bottom: 1px solid var(--medium-gray);
-            vertical-align: middle;
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-left: 8px;
         }
         
-        .data-table td:first-child {
-            font-weight: 600;
-            color: var(--primary-blue);
+        .btn-danger {
+            background-color: #d32f2f;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #b71c1c;
+        }
+        
+        .btn-secondary {
+            background-color: #757575;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #616161;
+        }
+        
+        .close-btn {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            font-size: 20px;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .close-btn:hover {
+            color: #333;
+        }
+        
+        /* Delete Button Style */
+        .delete-btn {
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            margin: 2px;
+        }
+        
+        .delete-btn:hover {
+            background-color: #cc0000;
+        }
+        
+        /* Action Column Style */
+        .action-cell {
+            text-align: center;
+            white-space: nowrap;
         }
         
         /* Status Badges */
         .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
         }
         
         .status-completed {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: var(--white);
+            background-color: #4caf50;
+            color: white;
         }
         
         .status-inprogress {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            color: var(--white);
+            background-color: #ff9800;
+            color: white;
         }
-        
-        /* Summary Section */
-        .summary-section {
-            background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
-            color: var(--white);
-            padding: 25px;
-            margin-top: 20px;
-            border-radius: 8px;
-        }
-        
-        .summary-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .summary-title:before {
-            content: "?";
-            font-size: 16px;
-        }
-        
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-        }
-        
-        .summary-card {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 20px;
-            border-radius: 6px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .summary-value {
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-        
-        .summary-label {
-            font-size: 12px;
-            opacity: 0.9;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .highlight-stat {
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-        }
-        
-        /* Footer */
-        .report-footer {
-            background: var(--light-gray);
-            padding: 20px;
-            text-align: center;
-            border-top: 1px solid var(--medium-gray);
-            margin-top: 30px;
-        }
-        
-        .footer-text {
-            font-size: 12px;
-            color: var(--dark-gray);
-            margin-bottom: 5px;
-        }
-        
-        .report-id {
-            font-family: 'Courier New', monospace;
-            font-weight: 600;
-            color: var(--primary-blue);
-        }
-        
-        /* Print-specific styles */
-        @media print {
-            body {
-                padding: 0;
-            }
-            
-            .report-container {
-                box-shadow: none;
-                border: 1px solid #000;
-            }
-            
-            .data-table thead th {
-                background: #000 !important;
-                color: #fff !important;
-                -webkit-print-color-adjust: exact;
-            }
-        }
-        
-        /* Column-specific widths */
-        .col-serial { width: 50px; }
-        .col-name { width: 200px; }
-        .col-id { width: 100px; }
-        .col-course { width: 150px; }
-        .col-exam-id { width: 80px; }
-        .col-date { width: 100px; }
-        .col-time { width: 80px; }
-        .col-duration { width: 90px; }
-        .col-email { width: 180px; }
-        .col-status { width: 100px; }
     </style>
 </head>
 <body>
     <div class="report-container">
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteModal" class="modal">
+            <div class="modal-content">
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+                <div class="modal-header">
+                    <div class="modal-title">Confirm Deletion</div>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this exam record?</p>
+                    <p><strong>This action cannot be undone.</strong></p>
+                    <div id="recordDetails" style="background-color: #f5f5f5; padding: 10px; border-radius: 4px; margin-top: 10px;"></div>
+                </div>
+                <div class="modal-footer">
+                    <form id="deleteForm" method="post" style="display: inline;">
+                        <input type="hidden" name="delete_action" value="confirm_delete">
+                        <input type="hidden" id="deleteExamIdInput" name="delete_exam_id">
+                        <input type="hidden" id="deleteStudentIdInput" name="delete_student_id">
+                        <!-- Keep filter parameters for redirect -->
+                        <% if (examId > 0) { %>
+                        <input type="hidden" name="exam_id" value="<%= examId %>">
+                        <% } %>
+                        <% if (studentId > 0) { %>
+                        <input type="hidden" name="student_id" value="<%= studentId %>">
+                        <% } %>
+                        <% if (!firstName.isEmpty()) { %>
+                        <input type="hidden" name="first_name" value="<%= firstName %>">
+                        <% } %>
+                        <% if (!lastName.isEmpty()) { %>
+                        <input type="hidden" name="last_name" value="<%= lastName %>">
+                        <% } %>
+                        <% if (!courseName.isEmpty()) { %>
+                        <input type="hidden" name="course_name" value="<%= courseName %>">
+                        <% } %>
+                        <% if (!examDate.isEmpty()) { %>
+                        <input type="hidden" name="exam_date" value="<%= examDate %>">
+                        <% } %>
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Delete Record</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- Report Header -->
         <div class="report-header">
             <div class="institution-logo">
-            <div class="logo-col">
-                <a href="index.jsp" class="logo-link logo-symbol">
-                    <img src="https://raw.githubusercontent.com/Siphelele-Maphumulo/Online-Test-Web-Application/refs/heads/main/images/Design.png" 
-                         alt="MUT Logo" 
-                         class="header-logo logo-symbol">
-                </a>
-            </div>
+                <div class="logo-col">
+                    <a href="index.jsp" class="logo-link logo-symbol">
+                        <img src="https://raw.githubusercontent.com/Siphelele-Maphumulo/Online-Test-Web-Application/refs/heads/main/images/Design.png" 
+                             alt="MUT Logo" 
+                             class="header-logo logo-symbol">
+                    </a>
+                </div>
                 <div class="institution-name">CODE SA TESTINGS</div>
             </div>
             <h1 class="report-title">ATTENDANCE REGISTER</h1>
@@ -485,7 +327,6 @@
         
         <!-- Filters Section -->
         <div class="filters-section">
-<!--            <div class="filters-title">APPLIED FILTERS</div>-->
             <div class="filters-grid">
                 <% 
                     boolean hasFilters = false;
@@ -553,6 +394,7 @@
                         <th class="col-duration">Duration</th>
                         <th class="col-email">Email</th>
                         <th class="col-status">Status</th>
+                        <th class="col-actions">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -597,7 +439,7 @@
                                     duration = String.format("%02d:%02d:%02d", hours, minutes, secs);
                                 }
                                 
-                                String status = "In Progress";
+                                String status = "Incomplete";
                                 String statusClass = "status-inprogress";
                                 if (examEndTime != null) {
                                     status = "Completed";
@@ -637,6 +479,12 @@
                     <td><small><%= email != null ? email : "N/A" %></small></td>
                     <td class="text-center">
                         <span class="status-badge <%= statusClass %>"><%= status %></span>
+                    </td>
+                    <td class="action-cell">
+                        <button class="delete-btn" 
+                                onclick="showDeleteModal('<%= currentExamId %>', '<%= rsStudentId %>', '<%= studentName %>', '<%= course %>', '<%= formattedDate %>')">
+                            Delete
+                        </button>
                     </td>
                 </tr>
                 <%
@@ -697,12 +545,50 @@
         <div class="report-footer">
             <div class="footer-text">This is an official document generated by the Professional Testing System</div>
             <div class="footer-text">Report ID: <span class="report-id">EXR-<%= timestamp %></span> | System Version: 2.1</div>
-            <div class="footer-text">© <%= new SimpleDateFormat("yyyy").format(now) %> CodeSA Institute Pty Ltd. All rights reserved.</div>
+            <div class="footer-text">ï¿½ <%= new SimpleDateFormat("yyyy").format(now) %> CodeSA Institute Pty Ltd. All rights reserved.</div>
             <div class="footer-text" style="margin-top: 10px; font-size: 11px; color: var(--dark-gray);">
                 Document Classification: INTERNAL USE | Valid until: <%= new SimpleDateFormat("dd MMM yyyy").format(new Date(now.getTime() + 3L * 30 * 24 * 60 * 60 * 1000)) %>
             </div>
         </div>
     </div>
+    
+    <script>
+        // Modal functions
+        function showDeleteModal(examId, studentId, studentName, course, examDate) {
+            document.getElementById('deleteExamIdInput').value = examId;
+            document.getElementById('deleteStudentIdInput').value = studentId;
+            
+            // Display record details in modal
+            document.getElementById('recordDetails').innerHTML = 
+                '<strong>Exam ID:</strong> ' + examId + '<br>' +
+                '<strong>Student ID:</strong> ' + studentId + '<br>' +
+                '<strong>Name:</strong> ' + studentName + '<br>' +
+                '<strong>Course:</strong> ' + course + '<br>' +
+                '<strong>Exam Date:</strong> ' + examDate;
+            
+            document.getElementById('deleteModal').style.display = 'block';
+        }
+        
+        function closeModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            var modal = document.getElementById('deleteModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+        
+        // Add confirmation before form submission
+        document.getElementById('deleteForm').addEventListener('submit', function(e) {
+            if (!confirm('Are you absolutely sure? This record will be permanently deleted.')) {
+                e.preventDefault();
+                closeModal();
+            }
+        });
+    </script>
 </body>
 </html>
 <%

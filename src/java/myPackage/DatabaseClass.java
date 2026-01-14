@@ -2429,6 +2429,73 @@ public Exams getResultByExamId(int examId) {
             LOGGER.log(Level.SEVERE, "Connection error in deleteExamResults", e);
         }
     }
+    
+    
+public boolean deleteExamRecord(int examId, int studentId) throws SQLException {
+    try {
+        ensureConnection();
+        
+        // First, check if the record exists
+        String checkSql = "SELECT COUNT(*) FROM exams e " +
+                         "JOIN answers a ON e.exam_id = a.exam_id " +
+                         "WHERE e.exam_id = ? AND a.student_id = ?";
+        
+        try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+            checkStmt.setInt(1, examId);
+            checkStmt.setInt(2, studentId);
+            
+            ResultSet rs = checkStmt.executeQuery();
+            if (rs.next() && rs.getInt(1) == 0) {
+                // Record doesn't exist
+                return false;
+            }
+        }
+        
+        // Start transaction
+        conn.setAutoCommit(false);
+        
+        try {
+            // Delete from answers table first (foreign key constraint)
+            String deleteAnswersSql = "DELETE FROM answers WHERE exam_id = ? AND student_id = ?";
+            try (PreparedStatement psAnswers = conn.prepareStatement(deleteAnswersSql)) {
+                psAnswers.setInt(1, examId);
+                psAnswers.setInt(2, studentId);
+                psAnswers.executeUpdate();
+            }
+            
+            // Check if this was the last student for this exam
+            String countStudentsSql = "SELECT COUNT(*) FROM answers WHERE exam_id = ?";
+            try (PreparedStatement countStmt = conn.prepareStatement(countStudentsSql)) {
+                countStmt.setInt(1, examId);
+                ResultSet rs = countStmt.executeQuery();
+                
+                if (rs.next() && rs.getInt(1) == 0) {
+                    // No more students for this exam, delete the exam itself
+                    String deleteExamSql = "DELETE FROM exams WHERE exam_id = ?";
+                    try (PreparedStatement psExams = conn.prepareStatement(deleteExamSql)) {
+                        psExams.setInt(1, examId);
+                        psExams.executeUpdate();
+                    }
+                }
+            }
+            
+            conn.commit();
+            return true;
+            
+        } catch (SQLException e) {
+            conn.rollback();
+            LOGGER.log(Level.SEVERE, "Error deleting exam record for examId: " + 
+                      examId + ", studentId: " + studentId, e);
+            throw e; // Re-throw to handle in calling code
+        } finally {
+            conn.setAutoCommit(true);
+        }
+        
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in deleteExamRecord", e);
+        throw e;
+    }
+}
 
 public boolean deleteExamResult(int examId) {
     try {

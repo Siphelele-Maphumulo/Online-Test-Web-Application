@@ -1764,7 +1764,13 @@
                 <div class="questions-container">
                 <% for (int i=0; i<totalQ; i++){
                     Questions q = questionsList.get(i);
-                    boolean isMultiTwo = "MultipleSelect".equalsIgnoreCase(q.getQuestionType());
+                    boolean isMultiTwo = false;
+                    try{
+                        String qt = q.getQuestion().toLowerCase();
+                        isMultiTwo = qt.contains("select two") || qt.contains("choose two") || 
+                                    qt.contains("pick two") || qt.contains("multiple answers") || 
+                                    qt.contains("two options");
+                    } catch(Exception e) { isMultiTwo = false; }
 
                     String fullQuestion = q.getQuestion(), questionPart = "", codePart = "";
                     if(fullQuestion.contains("```")){
@@ -1822,7 +1828,7 @@
                             %>
                                 <div class="form-check">
                                     <input class="form-check-input answer-input <%= isMultiTwo?"multi":"single" %>" 
-                                        type="<%= isMultiTwo ? "checkbox" : "radio" %>" 
+                                        type="<%= isMultiTwo?"checkbox":"radio" %>" 
                                         id="<%= inputId %>" 
                                         name="<%= isMultiTwo ? ("ans"+i+"_"+oi) : ("ans"+i) %>" 
                                         value="<%= optVal %>" 
@@ -1836,7 +1842,7 @@
                         </div>
                         <input type="hidden" name="question<%= i %>" value="<%= q.getQuestion() %>">
                         <input type="hidden" name="qid<%= i %>" value="<%= q.getQuestionId() %>">
-                        <input type="hidden" name="qtype<%= i %>" value="<%= isMultiTwo?"MultipleSelect":"single" %>">
+                        <input type="hidden" name="qtype<%= i %>" value="<%= isMultiTwo?"multi2":"single" %>">
                     </div>
                 <% } %>
                 </div>
@@ -2350,14 +2356,156 @@
                         String resultStatus = "";
                         
                         if (result != null) {
-                            studentFullName = result.getFullName();
-                            courseName = result.getcName();
-                            examDate = result.getDate();
-                            startTime = result.getStartTime();
-                            endTime = result.getEndTime();
-                            obtainedMarks = result.getObtMarks();
-                            totalMarks = result.gettMarks();
-                            resultStatus = result.getStatus();
+                            try {
+                                // Get the actual values from the Exams object
+                                // Try different possible getter method names
+                                
+                                // Get first name
+                                String firstName = "";
+                                try {
+                                    java.lang.reflect.Method getFirstNameMethod = result.getClass().getMethod("getFirstName");
+                                    firstName = (String) getFirstNameMethod.invoke(result);
+                                } catch (Exception e1) {
+                                    try {
+                                        java.lang.reflect.Method getFirst_nameMethod = result.getClass().getMethod("getFirst_name");
+                                        firstName = (String) getFirst_nameMethod.invoke(result);
+                                    } catch (Exception e2) {
+                                        firstName = "";
+                                    }
+                                }
+                                
+                                // Get last name
+                                String lastName = "";
+                                try {
+                                    java.lang.reflect.Method getLastNameMethod = result.getClass().getMethod("getLastName");
+                                    lastName = (String) getLastNameMethod.invoke(result);
+                                } catch (Exception e1) {
+                                    try {
+                                        java.lang.reflect.Method getLast_nameMethod = result.getClass().getMethod("getLast_name");
+                                        lastName = (String) getLast_nameMethod.invoke(result);
+                                    } catch (Exception e2) {
+                                        lastName = "";
+                                    }
+                                }
+                                
+                                studentFullName = (firstName + " " + lastName).trim();
+                                
+                                // If empty, try user_name
+                                if (studentFullName.isEmpty()) {
+                                    try {
+                                        java.lang.reflect.Method getUserNameMethod = result.getClass().getMethod("getUserName");
+                                        studentFullName = (String) getUserNameMethod.invoke(result);
+                                    } catch (Exception e) {
+                                        // Try email as last resort
+                                        try {
+                                            java.lang.reflect.Method getEmailMethod = result.getClass().getMethod("getEmail");
+                                            studentFullName = (String) getEmailMethod.invoke(result);
+                                        } catch (Exception ex) {
+                                            studentFullName = "Student";
+                                        }
+                                    }
+                                }
+                                
+                                // Get course name
+                                try {
+                                    java.lang.reflect.Method getCourseNameMethod = result.getClass().getMethod("getCourseName");
+                                    courseName = (String) getCourseNameMethod.invoke(result);
+                                } catch (Exception e1) {
+                                    try {
+                                        java.lang.reflect.Method getcNameMethod = result.getClass().getMethod("getcName");
+                                        courseName = (String) getcNameMethod.invoke(result);
+                                    } catch (Exception e2) {
+                                        courseName = "Unknown Course";
+                                    }
+                                }
+                                
+                                // Get exam date
+                                try {
+                                    java.lang.reflect.Method getDateMethod = result.getClass().getMethod("getDate");
+                                    examDate = (String) getDateMethod.invoke(result);
+                                } catch (Exception e) {
+                                    examDate = "N/A";
+                                }
+                                
+                                // Get start time
+                                try {
+                                    java.lang.reflect.Method getStartTimeMethod = result.getClass().getMethod("getStartTime");
+                                    startTime = (String) getStartTimeMethod.invoke(result);
+                                } catch (Exception e1) {
+                                    try {
+                                        java.lang.reflect.Method getStart_timeMethod = result.getClass().getMethod("getStart_time");
+                                        startTime = (String) getStart_timeMethod.invoke(result);
+                                    } catch (Exception e2) {
+                                        startTime = "N/A";
+                                    }
+                                }
+                                
+                                // Get end time
+                                try {
+                                    java.lang.reflect.Method getEndTimeMethod = result.getClass().getMethod("getEndTime");
+                                    endTime = (String) getEndTimeMethod.invoke(result);
+                                } catch (Exception e1) {
+                                    try {
+                                        java.lang.reflect.Method getEnd_timeMethod = result.getClass().getMethod("getEnd_time");
+                                        endTime = (String) getEnd_timeMethod.invoke(result);
+                                    } catch (Exception e2) {
+                                        endTime = "N/A";
+                                    }
+                                }
+                                
+                                // Get obtained marks
+                                try {
+                                    java.lang.reflect.Method getObtMarksMethod = result.getClass().getMethod("getObtMarks");
+                                    obtainedMarks = (Integer) getObtMarksMethod.invoke(result);
+                                } catch (Exception e) {
+                                    obtainedMarks = 0;
+                                }
+                                
+                                // Get total marks
+                                try {
+                                    java.lang.reflect.Method getTotalMarksMethod = result.getClass().getMethod("getTotalMarks");
+                                    totalMarks = (Integer) getTotalMarksMethod.invoke(result);
+                                } catch (Exception e1) {
+                                    try {
+                                        java.lang.reflect.Method gettMarksMethod = result.getClass().getMethod("gettMarks");
+                                        totalMarks = (Integer) gettMarksMethod.invoke(result);
+                                    } catch (Exception e2) {
+                                        totalMarks = 0;
+                                    }
+                                }
+                                
+                                // Get result status
+                                try {
+                                    java.lang.reflect.Method getStatusMethod = result.getClass().getMethod("getStatus");
+                                    resultStatus = (String) getStatusMethod.invoke(result);
+                                    if (resultStatus == null || resultStatus.isEmpty()) {
+                                        // Calculate status based on marks if not set
+                                        double percentage = 0;
+                                        if (totalMarks > 0) {
+                                            percentage = (double) obtainedMarks / totalMarks * 100;
+                                        }
+                                        resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
+                                    }
+                                } catch (Exception e) {
+                                    // Calculate status based on marks
+                                    double percentage = 0;
+                                    if (totalMarks > 0) {
+                                        percentage = (double) obtainedMarks / totalMarks * 100;
+                                    }
+                                    resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
+                                }
+                                
+                            } catch (Exception e) {
+                                // If reflection fails, use defaults
+                                studentFullName = "Student";
+                                courseName = "Unknown Course";
+                                examDate = "N/A";
+                                startTime = "N/A";
+                                endTime = "N/A";
+                                obtainedMarks = 0;
+                                totalMarks = 0;
+                                resultStatus = "Unknown";
+                            }
                         }
                     %>
             <!-- RESULTS -->
@@ -2415,7 +2563,7 @@
                        class="btn-primary"
                        style="padding: 12px 30px; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">
                         <h3 style="margin-bottom: 0; color: #fffff;">
-                            <i class="fas fa-redo"></i> Start New Exam
+                            <i class="fas fa-redo"></i> Daily Register
                         </h3>
                     </a>
                 </div>
@@ -2444,8 +2592,8 @@
         %>
         <!-- COURSE PICKER -->
         <div class="page-header">
-            <div class="page-title"><i class="fas fa-pencil-alt"></i> Start New Exam</div>
-            <div class="stats-badge"><i class="fas fa-play-circle"></i> Ready to Start</div>
+            <div class="page-title"><i class="fas fa-pencil-alt"></i> Daily Register</div>
+            <div class="stats-badge"><i class="fas fa-clipboard-check"></i> Today's Register</div>
         </div>
 
         <div class="course-card">
@@ -2453,7 +2601,7 @@
                 <input type="hidden" name="page" value="exams">
                 <input type="hidden" name="operation" value="startexam">
                 <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") != null ? session.getAttribute("csrf_token") : "" %>">
-                <label class="form-label"><i class="fas fa-book"></i> Select Course</label>
+<!--                <label class="form-label"><i class="fas fa-book"></i> Select Course</label>-->
                 <select name="coursename" class="form-select" required id="courseSelect">
                     <option value="">Choose a course...</option>
         
@@ -2464,17 +2612,16 @@
                     for(String courseName : activeCourseNames){ 
                         if (courseName != null && !courseName.trim().isEmpty()) {
                             int duration = pDAO.getExamDuration(courseName);
-                            boolean hasQuestions = pDAO.hasQuestions(courseName);
             %>
-            <option value="<%= courseName %>" data-duration="<%= duration %>" <%= !hasQuestions ? "disabled" : "" %>>
-                <%= courseName %> (<%= formatDuration(duration) %>) <%= !hasQuestions ? "- No Questions" : "" %>
+            <option value="<%= courseName %>" data-duration="<%= duration %>">
+                <%= courseName %> (<%= formatDuration(duration) %>)
             </option>
             <% 
                         }
                     }
                 } else {
             %>
-            <option value="" disabled>No active exams available</option>
+            <option value="" disabled>Today's register is not available</option>
             <% } %>
                 </select>
 
@@ -2494,7 +2641,7 @@
 
                 <button type="submit" class="start-exam-btn" id="startExamBtn" 
                         <% if (activeCourseNames == null || activeCourseNames.isEmpty()) { %>disabled<% } %>>
-                    <i class="fas fa-play"></i> Start Exam
+                    <i class="fas fa-check"></i> Mark Register
                 </button>
             </form>
         </div>

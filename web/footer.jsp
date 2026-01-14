@@ -1,4 +1,4 @@
-<footer class="footer bg-dark text-white py-3">
+<footer class="footer text-white py-3" style="background-color:#09294d;">
     <div class="container">
         <div class="row align-items-center">
             
@@ -49,8 +49,8 @@
                             <span style="font-size: 0.9rem; color: #FFFFFF;">Tel: <strong>068 676 4623</strong></span>
                         </li>
                         <li class="footer-item mb-1 d-flex align-items-center">
-                            <i class="fas fa-fax me-2" style="color: #FFFFFF; font-size: 0.9rem;"></i>
-                            <span style="font-size: 0.9rem; color: #FFFFFF;">Fax: <strong>031 907 7655</strong></span>
+                            <!--    <i class="fas fa-fax me-2" style="color: #FFFFFF; font-size: 0.9rem;"></i>
+                        <span style="font-size: 0.9rem; color: #FFFFFF;">Fax: <strong>031 907 7655</strong></span>-->
                         </li>
                         <li class="footer-item mb-1 d-flex align-items-center">
                             <i class="fas fa-envelope me-2" style="color: #FFFFFF; font-size: 0.9rem;"></i>
@@ -82,9 +82,16 @@
 </footer>
 
 <style>
+    
+    :root {
+    --primary-blue: #09294d;
+    --secondary-blue: #1a3d6d;
+    --text-white: #ffffff;
+    --text-light: #e0e9ff;
+    --transition-speed: 0.2s;
+}
     /* Professional Compact Footer Styling */
     .footer {
-        background: #09294D;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 

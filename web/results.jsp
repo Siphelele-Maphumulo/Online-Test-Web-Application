@@ -150,89 +150,88 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
     }
     
     /* Sidebar - Modern Design */
+    .sidebar {
+        width: 200px;
+        background: linear-gradient(180deg, var(--primary-blue) 0%, #0d3060 100%);
+        color: var(--white);
+        flex-shrink: 0;
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: var(--z-sticky);
+        box-shadow: var(--shadow-lg);
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+    }
+
+    /* Main Content Area - Add margin to account for fixed sidebar */
+    .content-area,
+    .main-content {
+        flex: 1;
+        padding: var(--spacing-xl);
+        overflow-y: auto;
+        background: transparent;
+        margin-left: 180px;
+        min-height: 100vh;
+    }
+    .results-panel {
+        margin-left: -30px;
+    }
+
+    /* Responsive Design - Adjust for mobile */
+    @media (max-width: 768px) {
         .sidebar {
-            width: 200px;
-            background: linear-gradient(180deg, var(--primary-blue) 0%, #0d3060 100%);
-            color: var(--white);
-            flex-shrink: 0;
-            position: fixed; /* Changed from sticky to fixed */
-            top: 0;
-            left: 0;
-            height: 100vh;
-            z-index: var(--z-sticky);
-            box-shadow: var(--shadow-lg);
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
-            overflow-y: auto;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+            width: 100%;
+            height: auto;
+            position: static;
         }
 
-        /* Main Content Area - Add margin to account for fixed sidebar */
         .content-area,
         .main-content {
-            flex: 1;
-            padding: var(--spacing-xl);
-            overflow-y: auto;
-            background: transparent;
-            margin-left: 180px; /* Add this to push content right */
-            min-height: 100vh;
+            margin-left: 0;
+            padding: var(--spacing-lg);
         }
-        .results-panel{
-            margin-left: -30px; /* Add this to push content right */
-        }
-
-        /* Responsive Design - Adjust for mobile */
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 100%;
-                height: auto;
-                position: static; /* Back to static on mobile */
-            }
-
-            .content-area,
-            .main-content {
-                margin-left: 0; /* Remove margin on mobile */
-                padding: var(--spacing-lg);
-            }
-        }
+    }
     
-        .sidebar::-webkit-scrollbar {
-            width: 6px;
-        }
+    .sidebar::-webkit-scrollbar {
+        width: 6px;
+    }
 
-        .sidebar::-webkit-scrollbar-track {
-            background: transparent;
-        }
+    .sidebar::-webkit-scrollbar-track {
+        background: transparent;
+    }
 
-        .sidebar::-webkit-scrollbar-thumb {
-            background-color: rgba(255, 255, 255, 0.3);
-            border-radius: var(--radius-full);
-        }
+    .sidebar::-webkit-scrollbar-thumb {
+        background-color: rgba(255, 255, 255, 0.3);
+        border-radius: var(--radius-full);
+    }
 
-        .sidebar-header {
-            padding-top: 35%;
-            text-align: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-        }
+    .sidebar-header {
+        padding-top: 35%;
+        text-align: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+    }
 
-        
-        .mut-logo {
-            max-height: 150px;
-            width: auto;
-            filter: brightness(0) invert(1);
-        }
-        
-        .mut-logo:hover {
-            transform: scale(1.05);
-        }
-        
-        .sidebar-nav {
-            padding: var(--spacing-lg) 0;
-        }
-        
     
+    .mut-logo {
+        max-height: 150px;
+        width: auto;
+        filter: brightness(0) invert(1);
+    }
+    
+    .mut-logo:hover {
+        transform: scale(1.05);
+    }
+    
+    .sidebar-nav {
+        padding: var(--spacing-lg) 0;
+    }
+        
     .nav-item {
         display: flex;
         align-items: center;
@@ -975,6 +974,122 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
+
+    /* Code Snippet Styling for Results */
+    .code-question-indicator {
+        background: linear-gradient(135deg, var(--accent-blue), #3b82f6);
+        color: var(--white);
+        padding: var(--spacing-sm) var(--spacing-md);
+        border-radius: var(--radius-sm);
+        margin-bottom: var(--spacing-md);
+        border-left: 3px solid var(--primary-blue);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        font-weight: 500;
+        font-size: 13px;
+    }
+
+    .code-snippet {
+        background: var(--primary-blue);
+        color: var(--light-gray);
+        border: 1px solid var(--secondary-blue);
+        border-radius: var(--radius-sm);
+        padding: var(--spacing-md);
+        margin: var(--spacing-md) 0;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        overflow-x: auto;
+        position: relative;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+
+    .code-header {
+        color: var(--dark-gray);
+        font-size: 12px;
+        margin-bottom: var(--spacing-sm);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        border-bottom: 1px solid var(--secondary-blue);
+        padding-bottom: var(--spacing-sm);
+    }
+
+    /* Question Analysis Styling */
+    .question-analysis {
+        border: 1px solid var(--medium-gray);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--spacing-md);
+        overflow: hidden;
+    }
+
+    .question-text {
+        margin-bottom: var(--spacing-md);
+        color: var(--text-dark);
+        font-weight: 500;
+        line-height: 1.5;
+    }
+
+    .answer-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md);
+    }
+
+    @media (max-width: 768px) {
+        .answer-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Question Analysis Header */
+    .question-analysis-header {
+        background: linear-gradient(135deg, var(--success-light), var(--error-light));
+        padding: var(--spacing-md);
+        display: flex;
+        align-items: flex-start;
+        gap: var(--spacing-md);
+    }
+
+    .question-number {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, var(--success), var(--error));
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .question-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .question-status {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    /* Ensure question text displays properly */
+    .question-text {
+        margin-bottom: var(--spacing-sm);
+        padding-right: var(--spacing-md);
+    }
+
+    .question-analysis .code-snippet {
+        margin: var(--spacing-sm) 0;
+    }
     
     /* Responsive Design */
     @media (max-width: 768px) {
@@ -1084,6 +1199,15 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
             padding: 10px 16px;
             font-size: 13px;
         }
+
+        .question-analysis-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .question-status {
+            align-self: flex-end;
+        }
     }
     
     @media (max-width: 480px) {
@@ -1111,6 +1235,11 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
             flex-direction: column;
             text-align: center;
             gap: var(--spacing-md);
+        }
+
+        .answer-grid {
+            padding: var(--spacing-sm);
+            gap: var(--spacing-sm);
         }
     }
     
@@ -1348,24 +1477,63 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
               for (int i = 0; i < answersList.size(); i++) {
                 Answers a = answersList.get(i);
                 boolean isCorrect = a.getStatus().equals("correct");
+                
+                // Extract and format question text with code snippets
+                String fullQuestion = a.getQuestion();
+                String questionPart = "";
+                String codePart = "";
+                boolean hasCode = false;
+
+                if(fullQuestion.contains("```")){
+                    String[] parts = fullQuestion.split("```");
+                    if(parts.length >= 2) {
+                        questionPart = parts[0].trim();
+                        codePart = parts[1].trim();
+                        hasCode = true;
+                    } else {
+                        questionPart = fullQuestion.replace("```", "").trim();
+                    }
+                } else {
+                    // Check if it's a code question by looking for code indicators
+                    boolean isCodeQuestion = fullQuestion.contains("def ") || fullQuestion.contains("function ") || 
+                                            fullQuestion.contains("public ") || fullQuestion.contains("class ") ||
+                                            fullQuestion.contains("print(") || fullQuestion.contains("console.") || 
+                                            fullQuestion.contains("<?php") || fullQuestion.contains("import ") ||
+                                            fullQuestion.contains("int ") || fullQuestion.contains("String ") || 
+                                            fullQuestion.contains("printf(") || fullQuestion.contains("cout ");
+                    if(isCodeQuestion) {
+                        codePart = fullQuestion;
+                        questionPart = "What is the output/result of this code?";
+                        hasCode = true;
+                    } else {
+                        questionPart = fullQuestion;
+                    }
+                }
             %>
-            <div class="question-analysis" style="border: 1px solid var(--medium-gray); border-radius: var(--radius-md); margin-bottom: var(--spacing-md); overflow: hidden;">
-              <div style="background: <%= isCorrect ? "var(--success-light)" : "var(--error-light)" %>; padding: var(--spacing-md); display: flex; align-items: center;">
-                <div style="width: 32px; height: 32px; background: <%= isCorrect ? "var(--success)" : "var(--error)" %>; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; margin-right: var(--spacing-md);">
+            <div class="question-analysis">
+              <div class="question-analysis-header" style="background: <%= isCorrect ? "var(--success-light)" : "var(--error-light)" %>;">
+                <div class="question-number" style="background: <%= isCorrect ? "var(--success)" : "var(--error)" %>;">
                   <%= i + 1 %>
                 </div>
-                <div style="flex: 1;">
-                  <div style="font-weight: 600; color: var(--text-dark);"><%= a.getQuestion() %></div>
+                <div class="question-content">
+                  <% if(!questionPart.isEmpty() && !questionPart.equals("What is the output/result of this code?")){ %>
+                    <p class="question-text"><%= questionPart %></p>
+                  <% } %>
+                  <% if(hasCode){ %>
+                    <div class="code-question-indicator"><i class="fas fa-code"></i><strong>Code Analysis Question</strong></div>
+                    <div class="code-snippet">
+                      <div class="code-header"><i class="fas fa-code"></i><span>Code to Analyze</span></div>
+                      <pre><%= codePart %></pre>
+                    </div>
+                  <% } %>
                 </div>
-                <div style="display: flex; align-items: center;">
-                  <span style="color: <%= isCorrect ? "var(--success)" : "var(--error)" %>; font-weight: 600; display: flex; align-items: center; gap: 4px;">
-                    <i class="fas <%= isCorrect ? "fa-check" : "fa-times" %>"></i>
-                    <%= isCorrect ? "Correct" : "Incorrect" %>
-                  </span>
+                <div class="question-status" style="color: <%= isCorrect ? "var(--success)" : "var(--error)" %>;">
+                  <i class="fas <%= isCorrect ? "fa-check" : "fa-times" %>"></i>
+                  <%= isCorrect ? "Correct" : "Incorrect" %>
                 </div>
               </div>
               
-              <div style="padding: var(--spacing-md); display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+              <div class="answer-grid">
                 <div>
                   <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 4px; font-size: 13px;">
                     <i class="fas fa-user-edit"></i> Your Answer
@@ -1516,7 +1684,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                           statusText = "Terminated";
                           statusClass = "status-terminated";
                       } else {
-                          statusText = "In Progress";
+                          statusText = "Incomplete";
                           statusClass = "status-terminated";
                       }
                       

@@ -697,6 +697,62 @@
         transform: translateX(-50%);
         z-index: 999;
     }
+    
+        /* Add to your existing CSS */
+    .register-checkbox {
+        cursor: pointer;
+        transform: scale(1.1);
+    }
+    
+    .register-checkbox:checked {
+        accent-color: #dc3545;
+    }
+    
+    .btn-danger:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    
+    .modal-content {
+        background: white;
+        border-radius: 8px;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .modal-header {
+        padding: 20px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .modal-body {
+        padding: 20px;
+    }
+    
+    .modal-footer {
+        padding: 20px;
+        border-top: 1px solid #eee;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
 </style>
 
 <%@ include file="header-messages.jsp" %>
@@ -808,18 +864,23 @@
             <%
                 ResultSet rs = null;
                 try {
-                    // UPDATED: Call with all filter parameters
                     rs = pDAO.getFilteredExamRegister(examId, studentId, firstNameFilter, 
                                                      lastNameFilter, courseNameFilter, dateFilter);
                     if (rs != null && rs.next()) {
             %>
+            <!-- Move the form START here -->
             <form id="bulkDeleteForm" action="controller.jsp" method="post">
                 <input type="hidden" name="page" value="exam-register">
                 <input type="hidden" name="operation" value="bulk_delete">
                 <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
-                <button type="submit" class="btn btn-danger floating-delete-btn" style="margin: 10px;">
-                    <i class="fas fa-trash"></i> Delete Selected
-                </button>
+
+                <!-- Move the delete button inside the form but before table -->
+                <div style="margin-bottom: 15px; margin-top: 15px; text-align: center;">
+                    <button type="button" id="deleteSelectedBtn" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Delete Selected
+                    </button>
+                </div>
+
                 <table class="results-table">
                     <thead>
                         <tr>
@@ -837,13 +898,13 @@
                         </tr>
                     </thead>
                     <tbody>
-                    <%
-                        int i = 0;
-                        rs.beforeFirst();
-                        while (rs.next()) {
-                            i++;
-                            boolean completed = rs.getTime("end_time") != null;
-                    %>
+            <%
+                    int i = 0;
+                    rs.beforeFirst();
+                    while (rs.next()) {
+                        i++;
+                        boolean completed = rs.getTime("end_time") != null;
+            %>
                         <tr>
                             <td><input type="checkbox" name="registerIds" value="<%= rs.getInt("register_id") %>"></td>
                             <td><%= i %></td>
@@ -857,37 +918,38 @@
                             <td><%= rs.getDate("exam_date") %></td>
                             <td><%= rs.getTime("start_time") %></td>
                             <td><%= rs.getTime("end_time") != null ? rs.getTime("end_time") : "—" %></td>
-                        <td>
-                            <%
-                                java.sql.Time endTime = rs.getTime("end_time");
-                                java.sql.Time startTime = rs.getTime("start_time");
+                            <td>
+                                <%
+                                    java.sql.Time endTime = rs.getTime("end_time");
+                                    java.sql.Time startTime = rs.getTime("start_time");
 
-                                if (endTime != null && startTime != null) {
-                                    long startMillis = startTime.getTime();
-                                    long endMillis = endTime.getTime();
-                                    long durationMillis = endMillis - startMillis;
+                                    if (endTime != null && startTime != null) {
+                                        long startMillis = startTime.getTime();
+                                        long endMillis = endTime.getTime();
+                                        long durationMillis = endMillis - startMillis;
 
-                                    long seconds = durationMillis / 1000;
-                                    long hours = seconds / 3600;
-                                    long minutes = (seconds % 3600) / 60;
-                                    long secs = seconds % 60;
+                                        long seconds = durationMillis / 1000;
+                                        long hours = seconds / 3600;
+                                        long minutes = (seconds % 3600) / 60;
+                                        long secs = seconds % 60;
 
-                                    out.print(String.format("%02d:%02d:%02d", hours, minutes, secs));
-                                } else {
-                                    out.print("—");
-                                }
-                            %>
-                        </td>
-                        <td>
-                            <span class="badge <%= completed ? "badge-success" : "badge-warning" %>">
-                                <%= completed ? "Completed" : "In Progress" %>
-                            </span>
-                        </td>
-                    </tr>
-                <% } %>
-                </tbody>
-            </table>
+                                        out.print(String.format("%02d:%02d:%02d", hours, minutes, secs));
+                                    } else {
+                                        out.print("—");
+                                    }
+                                %>
+                            </td>
+                            <td>
+                                <span class="badge <%= completed ? "badge-success" : "badge-warning" %>">
+                                    <%= completed ? "Completed" : "Incomplete" %>
+                                </span>
+                            </td>
+                        </tr>
+                    <% } %>
+                    </tbody>
+                </table>
             </form>
+            <!-- Form END here -->
             <div class="results-count">
                 Total Records: <%= i %>
                             <!-- Standalone Export Form -->
@@ -898,8 +960,7 @@
     justify-content: center;
     align-items: center;
     text-align: center;
-">
-
+">  
                 <form method="get" action="export-register.jsp" target="_blank" style="display: inline;">
                     <!-- Hidden inputs with current filter values are crucial -->
                     <input type="hidden" name="exam_id" value="<%= examId %>">
@@ -948,26 +1009,101 @@
 </div>
 
 <script>
-    document.getElementById('selectAll').addEventListener('change', function(e) {
+    // Wait for DOM to be fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Select All functionality
+        const selectAllCheckbox = document.getElementById('selectAll');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function(e) {
+                const checkboxes = document.querySelectorAll('input[name="registerIds"]');
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = e.target.checked;
+                });
+                updateDeleteButtonState();
+            });
+        }
+
+        // Update delete button state when checkboxes change
         const checkboxes = document.querySelectorAll('input[name="registerIds"]');
         checkboxes.forEach(checkbox => {
-            checkbox.checked = e.target.checked;
+            checkbox.addEventListener('change', updateDeleteButtonState);
         });
-    });
 
-    document.getElementById('bulkDeleteForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const selected = document.querySelectorAll('input[name="registerIds"]:checked').length;
-        if (selected === 0) {
-            showAlert('Please select at least one record to delete.');
-            return;
+        function updateDeleteButtonState() {
+            const selectedCount = document.querySelectorAll('input[name="registerIds"]:checked').length;
+            const deleteBtn = document.getElementById('deleteSelectedBtn');
+            if (deleteBtn) {
+                deleteBtn.disabled = selectedCount === 0;
+                deleteBtn.title = selectedCount > 0 ? 
+                    `Delete ${selectedCount} selected record(s)` : 
+                    'Select records to delete';
+            }
         }
-        
-        document.getElementById('deleteModalMessage').innerText = 'Are you sure you want to delete ' + selected + ' record(s)?';
-        showModal();
 
-        document.getElementById('confirmDeleteBtn').onclick = function() {
-            e.target.submit();
-        };
+        // Initialize button state
+        updateDeleteButtonState();
+
+        // Delete button click handler
+        const deleteBtn = document.getElementById('deleteSelectedBtn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const selectedCheckboxes = document.querySelectorAll('input[name="registerIds"]:checked');
+                
+                if (selectedCheckboxes.length === 0) {
+                    showAlert('Please select at least one record to delete.', 'warning');
+                    return;
+                }
+                
+                // Show confirmation modal
+                document.getElementById('deleteModalMessage').innerHTML = 
+                    '<i class="fas fa-exclamation-circle" style="color: #dc3545; margin-right: 10px;"></i>' +
+                    'Are you sure you want to delete <strong>' + selectedCheckboxes.length + '</strong> selected record(s)?<br><br>' +
+                    '<small style="color: #666;">This action cannot be undone.</small>';
+                
+                showModal();
+
+                // Set up confirmation handler
+                document.getElementById('confirmDeleteBtn').onclick = function() {
+                    // Submit the form
+                    document.getElementById('bulkDeleteForm').submit();
+                };
+            });
+        }
     });
+
+    // Modal functions
+    function showModal() {
+        document.getElementById('deleteConfirmationModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        document.getElementById('deleteConfirmationModal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
+    // Close modal when clicking outside or pressing ESC
+    document.getElementById('deleteConfirmationModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && document.getElementById('deleteConfirmationModal').style.display === 'flex') {
+            closeModal();
+        }
+    });
+
+    // Helper function to show alerts (make sure this exists)
+    function showAlert(message, type = 'warning') {
+        // If you have a toast/notification system
+        if (typeof toastMessage === 'function') {
+            toastMessage(message, type);
+        } else {
+            alert(message);
+        }
+    }
 </script>
