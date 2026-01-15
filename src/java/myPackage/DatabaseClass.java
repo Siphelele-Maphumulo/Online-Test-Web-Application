@@ -3829,7 +3829,287 @@ public boolean checkStaffEmailExists(String email) {
         }
         return false;
     }
+
+    // ==================== FORGOT PASSWORD METHODS ====================
+    
+    /**
+     * Stores a verification code for password reset in the verification_codes table.
+     * @param email The user's email address
+     * @param code The 8-character verification code
+     * @param userType The type of user (student, lecture, admin)
+     * @return true if code was stored successfully, false otherwise
+     */
+    public boolean storeVerificationCode(String email, String code, String userType) {
+        Connection conn = null;
+        PreparedStatement ps = null;
+        
+        try {
+            conn = getConnection();
+            
+            // First, delete any existing codes for this email
+            String deleteSql = "DELETE FROM verification_codes WHERE email = ?";
+            try (PreparedStatement deletePs = conn.prepareStatement(deleteSql)) {
+                deletePs.setString(1, email);
+                deletePs.executeUpdate();
+            }
+            
+            // Insert new verification code
+            String sql = "INSERT INTO verification_codes (email, code, user_type) VALUES (?, ?, ?)";
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, email);
+            ps.setString(2, code);
+            ps.setString(3, userType);
+            
+            int rowsAffected = ps.executeUpdate();
+            return rowsAffected > 0;
+            
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error storing verification code for: " + email, e);
+            return false;
+        } finally {
+            try {
+                if (ps != null) ps.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+    }
+    
+    /**
+     * Verifies if the provided code matches the stored code for the email.
+     * Also checks if the code has not expired (within 1 hour).
+     * @param email The user's email address
+     * @param code The verification code to verify
+     * @return true if code is valid and not expired, false otherwise
+     */
+    public boolean verifyResetCode(String email, String code) {
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = getConnection();
+            
+            // Check if code exists and is not expired (within 1 hour)
+            String sql = "SELECT code, created_at FROM verification_codes " +
+                        "WHERE email = ? AND code = ? " +
+                        "AND created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)";
+            
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, email);
+            ps.setString(2, code.toUpperCase());
+            
+            rs = ps.executeQuery();
+            return rs.next(); // Returns true if a valid, non-expired code was found
+            
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error verifying reset code for: " + email, e);
+            return false;
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (ps != null) ps.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+    }
+    
+    /**
+     * Updates the user's password after successful verification.
+     * @param email The user's email address
+     * @param newPassword The new hashed password
+     * @param code The verification code (for additional security check)
+     * @return true if password was updated successfully, false otherwise
+     */
+    public boolean updatePasswordByEmail(String email, String newPassword, String code) {
+        Connection conn = null;
+        PreparedStatement psVerify = null;
+        PreparedStatement psUpdate = null;
+        PreparedStatement psDelete = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = getConnection();
+            conn.setAutoCommit(false); // Start transaction
+            
+            // 1. Verify the code one more time
+            String verifySql = "SELECT id FROM verification_codes " +
+                              "WHERE email = ? AND code = ? " +
+                              "AND created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)";
+            psVerify = conn.prepareStatement(verifySql);
+            psVerify.setString(1, email);
+            psVerify.setString(2, code.toUpperCase());
+            rs = psVerify.executeQuery();
+            
+            if (!rs.next()) {
+                conn.rollback();
+                LOGGER.warning("Invalid or expired code for password reset: " + email);
+                return false;
+            }
+            
+            // 2. Update the password in users table
+            String updateSql = "UPDATE users SET password = ? WHERE email = ?";
+            psUpdate = conn.prepareStatement(updateSql);
+            psUpdate.setString(1, newPassword);
+            psUpdate.setString(2, email);
+            
+            int rowsUpdated = psUpdate.executeUpdate();
+            
+            if (rowsUpdated == 0) {
+                conn.rollback();
+                LOGGER.warning("No user found with email: " + email);
+                return false;
+            }
+            
+            // 3. Delete the used verification code
+            String deleteSql = "DELETE FROM verification_codes WHERE email = ?";
+            psDelete = conn.prepareStatement(deleteSql);
+            psDelete.setString(1, email);
+            psDelete.executeUpdate();
+            
+            // 4. Commit transaction
+            conn.commit();
+            LOGGER.info("Password reset successful for: " + email);
+            return true;
+            
+        } catch (SQLException e) {
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                LOGGER.log(Level.SEVERE, "Error rolling back transaction", ex);
+            }
+            LOGGER.log(Level.SEVERE, "Error updating password for: " + email, e);
+            return false;
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (psVerify != null) psVerify.close();
+                if (psUpdate != null) psUpdate.close();
+                if (psDelete != null) psDelete.close();
+                if (conn != null) {
+                    conn.setAutoCommit(true); // Reset auto-commit
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+    }
+    
+    /**
+     * Gets the user type for a given email address.
+     * Used to determine user type when sending verification codes.
+     * @param email The user's email address
+     * @return The user type (student, lecture, admin) or null if not found
+     */
+    public String getUserTypeByEmail(String email) {
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = getConnection();
+            String sql = "SELECT user_type FROM users WHERE email = ?";
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, email);
+            rs = ps.executeQuery();
+            
+            if (rs.next()) {
+                return rs.getString("user_type");
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting user type for email: " + email, e);
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (ps != null) ps.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Gets the first name of a user by email for personalized emails.
+     * @param email The user's email address
+     * @return The user's first name or "User" if not found
+     */
+    public String getFirstNameByEmail(String email) {
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = getConnection();
+            String sql = "SELECT first_name FROM users WHERE email = ?";
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, email);
+            rs = ps.executeQuery();
+            
+            if (rs.next()) {
+                String firstName = rs.getString("first_name");
+                return (firstName != null && !firstName.isEmpty()) ? firstName : "User";
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting first name for email: " + email, e);
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (ps != null) ps.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+        return "User";
+    }
+    
+    /**
+     * Deletes a verification code from the database after it has been successfully used.
+     * This prevents code reuse and maintains database cleanliness.
+     * @param email The email address associated with the code
+     * @param code The verification code to delete
+     * @return true if deletion was successful, false otherwise
+     */
+    public boolean deleteVerificationCode(String email, String code) {
+        Connection conn = null;
+        PreparedStatement ps = null;
+        
+        try {
+            conn = getConnection();
+            String sql = "DELETE FROM verification_codes WHERE email = ? AND code = ?";
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, email);
+            ps.setString(2, code);
+            
+            int rowsAffected = ps.executeUpdate();
+            
+            if (rowsAffected > 0) {
+                LOGGER.info("Verification code deleted for email: " + email);
+                return true;
+            } else {
+                LOGGER.warning("No verification code found to delete for email: " + email);
+                return false;
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error deleting verification code for: " + email, e);
+            return false;
+        } finally {
+            try {
+                if (ps != null) ps.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+    }
  
+
 public boolean addNewUser(String fName, String lName, String uName, String email, String pass,
                        String contact, String city, String address, String userTypeParam) {
     try {

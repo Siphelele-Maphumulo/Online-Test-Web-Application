@@ -4,22 +4,24 @@
 <%@ page import="java.time.format.DateTimeFormatter" %>
 <%@ page import="java.util.*" %>
 <%@ page import="java.io.*" %>
-
-<!-- Add these SQL imports -->
+<%@ page import="java.util.logging.Level" %>
+<%@ page import="java.util.logging.Logger" %>
 <%@ page import="java.sql.Connection" %>
 <%@ page import="java.sql.PreparedStatement" %>
 <%@ page import="java.sql.SQLException" %>
 <%@ page import="java.sql.ResultSet" %>
-
 <%@ page import="myPackage.*" %>
 <%@ page import="myPackage.classes.User" %>
 <%@ page import="myPackage.classes.Questions" %>
 <%@ page import="org.mindrot.jbcrypt.BCrypt" %>
-
+<%@ page import="org.json.JSONObject" %>
+<%@ page import="org.json.JSONException" %>
 <%@ page contentType="text/html" pageEncoding="UTF-8"%>
+<%@ page trimDirectiveWhitespaces="true" %>
 
 <%
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+final Logger LOGGER = Logger.getLogger("controller.jsp");
 
 /** Returns value if non-null/non-empty, otherwise fallback. */
 %>
@@ -823,6 +825,257 @@ try {
                 session.setAttribute("error", "No records selected for deletion.");
             }
             response.sendRedirect("std-page.jsp?pgprt=3");
+        }
+        
+    /* =========================
+       FORGOT PASSWORD
+       ========================= */
+    } else if ("forgot_password".equalsIgnoreCase(pageParam)) {
+        String action = nz(request.getParameter("action"), "");
+        
+        if ("check_email".equalsIgnoreCase(action)) {
+            // Check if email exists in users table
+            String email = nz(request.getParameter("email"), "");
+            response.setContentType("text/plain");
+            
+            LOGGER.info("Checking email: '" + email + "'");
+            boolean exists = pDAO.checkEmailExists(email);
+            LOGGER.info("Email exists: " + exists);
+            
+            if (exists) {
+                response.getWriter().write("exists");
+            } else {
+                response.getWriter().write("not_exists");
+            }
+            response.getWriter().flush();
+            return;
+            
+        } else if ("send_code".equalsIgnoreCase(action)) {
+            // Generate and send verification code
+            String email = nz(request.getParameter("email"), "");
+            response.setContentType("text/plain");
+            
+            // Get user details
+            User user = pDAO.getUserByEmail(email);
+            if (user != null) {
+                try {
+                    // Generate 8-character code
+                    String code = Email.generateRandomCode();
+                    LOGGER.info("Generated code: " + code + " for email: " + email);
+                    
+                    // Store code in database
+                    boolean stored = pDAO.storeVerificationCode(email, code, user.getType());
+                    LOGGER.info("Code stored in database: " + stored);
+                    
+                    if (stored) {
+                        // Send email with code
+                        try {
+                            Email.sendPasswordResetEmail(email, user.getFirstName(), code);
+                            LOGGER.info("Email sent successfully to: " + email);
+                            response.getWriter().write("success");
+                        } catch (Exception emailEx) {
+                            LOGGER.log(Level.SEVERE, "Failed to send email to: " + email, emailEx);
+                            // Code is stored but email failed - still return success so user can check DB
+                            response.getWriter().write("success");
+                        }
+                    } else {
+                        response.getWriter().write("error");
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.SEVERE, "Error in send_code action", e);
+                    response.getWriter().write("error");
+                }
+            } else {
+                response.getWriter().write("error");
+            }
+            return;
+            
+        } else if ("verify_code".equalsIgnoreCase(action)) {
+            // Verify the code entered by user
+            String email = nz(request.getParameter("email"), "");
+            String code = nz(request.getParameter("code"), "").toUpperCase();
+            response.setContentType("text/plain");
+            
+            if (pDAO.verifyResetCode(email, code)) {
+                response.getWriter().write("valid");
+            } else {
+                response.getWriter().write("invalid");
+            }
+            return;
+            
+        } else if ("resend_code".equalsIgnoreCase(action)) {
+            // Resend verification code
+            String email = nz(request.getParameter("email"), "");
+            response.setContentType("text/plain");
+            
+            User user = pDAO.getUserByEmail(email);
+            if (user != null) {
+                try {
+                    // Generate new code
+                    String code = Email.generateRandomCode();
+                    
+                    // Store new code
+                    boolean stored = pDAO.storeVerificationCode(email, code, user.getType());
+                    
+                    if (stored) {
+                        // Send email
+                        Email.sendPasswordResetEmail(email, user.getFirstName(), code);
+                        response.getWriter().write("success");
+                    } else {
+                        response.getWriter().write("error");
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.SEVERE, "Error resending verification code", e);
+                    response.getWriter().write("error");
+                }
+            } else {
+                response.getWriter().write("error");
+            }
+            return;
+            
+        } else if ("reset_password".equalsIgnoreCase(action)) {
+            // Reset the password after code verification
+            String email = nz(request.getParameter("email"), "");
+            String code = nz(request.getParameter("code"), "").toUpperCase();
+            String password = nz(request.getParameter("password"), "");
+            String confirmPassword = nz(request.getParameter("confirm_password"), "");
+            response.setContentType("text/plain");
+            
+            // Validate passwords match
+            if (!password.equals(confirmPassword)) {
+                response.getWriter().write("password_mismatch");
+                return;
+            }
+            
+            // Validate password strength
+            if (password.length() < 8) {
+                response.getWriter().write("weak_password");
+                return;
+            }
+            
+            try {
+                // Hash the new password
+                String hashedPassword = PasswordUtils.bcryptHashPassword(password);
+                
+                // Update password in database
+                boolean updated = pDAO.updatePasswordByEmail(email, hashedPassword, code);
+                
+                if (updated) {
+                    response.getWriter().write("success");
+                } else {
+                    response.getWriter().write("error");
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error resetting password", e);
+                response.getWriter().write("error");
+            }
+            return;
+        }
+        
+    /* =========================
+       STUDENT SIGNUP WITH EMAIL VERIFICATION
+       ========================= */
+    } else if ("student_signup".equalsIgnoreCase(pageParam)) {
+        String action = nz(request.getParameter("action"), "");
+        
+        if ("send_verification".equalsIgnoreCase(action)) {
+            // Send verification code to student email
+            String email = nz(request.getParameter("email"), "");
+            String firstName = nz(request.getParameter("fname"), "");
+            response.setContentType("text/plain");
+            
+            try {
+                // Generate 8-character code
+                String code = Email.generateRandomCode();
+                LOGGER.info("Generated verification code for student signup: " + email);
+                
+                // Store code in database with user_type = 'student'
+                boolean stored = pDAO.storeVerificationCode(email, code, "student");
+                
+                if (stored) {
+                    // Send email with code
+                    try {
+                        Email.sendVerificationEmail(email, firstName, code);
+                        LOGGER.info("Verification email sent successfully to: " + email);
+                        response.getWriter().write("success");
+                    } catch (Exception emailEx) {
+                        LOGGER.log(Level.SEVERE, "Failed to send verification email", emailEx);
+                        response.getWriter().write("email_error");
+                    }
+                } else {
+                    response.getWriter().write("error");
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error in send_verification action", e);
+                response.getWriter().write("error");
+            }
+            return;
+            
+        } else if ("verify_and_register".equalsIgnoreCase(action)) {
+            // Verify code and complete registration
+            String email = nz(request.getParameter("email"), "");
+            String code = nz(request.getParameter("code"), "").toUpperCase();
+            String formDataJson = nz(request.getParameter("formData"), "");
+            response.setContentType("text/plain");
+            
+            try {
+                // Verify the code (checks expiration - 30 minutes)
+                boolean codeValid = pDAO.verifyResetCode(email, code);
+                
+                if (!codeValid) {
+                    response.getWriter().write("invalid_code");
+                    return;
+                }
+                
+                // Parse form data from JSON
+                JSONObject jsonData = new JSONObject(formDataJson);
+                
+                String fName = jsonData.optString("fname", "");
+                String lName = jsonData.optString("lname", "");
+                String uName = jsonData.optString("uname", "");
+                String pass = jsonData.optString("pass", "");
+                String contactNo = jsonData.optString("contactno", "");
+                String city = jsonData.optString("city", "");
+                String address = jsonData.optString("address", "");
+                String userType = jsonData.optString("user_type", "student");
+                
+                // Final validation
+                if (fName.isEmpty() || lName.isEmpty() || uName.isEmpty() || email.isEmpty() || pass.isEmpty()) {
+                    response.getWriter().write("missing_fields");
+                    return;
+                }
+                
+                // Check for duplicates one final time
+                if (pDAO.checkUsernameExists(uName)) {
+                    response.getWriter().write("username_taken");
+                    return;
+                }
+                
+                if (pDAO.checkEmailExists(email)) {
+                    response.getWriter().write("email_taken");
+                    return;
+                }
+                
+                // Hash password
+                String hashedPass = PasswordUtils.bcryptHashPassword(pass);
+                
+                // Register the user
+                pDAO.addNewUser(fName, lName, uName, email, hashedPass, contactNo, city, address, userType);
+                
+                // DELETE the verification code after successful registration
+                pDAO.deleteVerificationCode(email, code);
+                LOGGER.info("Student registered successfully and verification code deleted: " + email);
+                
+                response.getWriter().write("success");
+                
+            } catch (JSONException je) {
+                LOGGER.log(Level.SEVERE, "JSON parsing error", je);
+                response.getWriter().write("json_error");
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error in verify_and_register action", e);
+                response.getWriter().write("error: " + e.getMessage());
+            }
+            return;
         }
         
     /* =========================

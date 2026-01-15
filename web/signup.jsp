@@ -278,7 +278,7 @@ $(document).ready(function () {
                 page: 'check_username',
                 username: value
             }).done(res => {
-                error.text(res.exists ? 'This ID number is already registered.' : '');
+                error.text(res.exists ? 'ID already registered.' : '');
             });
         }, 3000);
     });
@@ -302,7 +302,7 @@ $(document).ready(function () {
                 page: 'check_email',
                 email: value
             }).done(res => {
-                error.text(res.exists ? 'This email is already registered.' : '');
+                error.text(res.exists ? 'Email already registered.' : '');
             });
         }, 3000);
     });
@@ -326,7 +326,7 @@ $(document).ready(function () {
                 page: 'check_contact',
                 contactno: value
             }).done(res => {
-                error.text(res.exists ? 'This contact number is already registered.' : '');
+                error.text(res.exists ? 'Contact already registered.' : '');
             });
         }, 3000);
     });

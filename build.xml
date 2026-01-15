@@ -68,4 +68,12 @@
     nbproject/build-impl.xml file. 
 
     -->
+    
+    <!-- Custom target to copy resources to classpath -->
+    <target name="-post-compile">
+        <echo message="Copying mail.properties to classpath..."/>
+        <copy todir="${build.classes.dir}" failonerror="false">
+            <fileset dir="${src.dir}/../resources" includes="**/*.properties"/>
+        </copy>
+    </target>
 </project>
