@@ -409,6 +409,79 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         }
     }
 
+    /* Page Loader Styles */
+    .page-loader-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(5px);
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
+    }
+
+    .page-loader-overlay.hidden {
+        opacity: 0;
+        visibility: hidden;
+    }
+
+    .page-loader-content {
+        text-align: center;
+    }
+
+    .page-loader-spinner {
+        width: 60px;
+        height: 60px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #09294d;
+        border-radius: 50%;
+        animation: pageLoaderSpin 1s linear infinite;
+        margin: 0 auto 20px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .page-loader-img {
+        width: 32px;
+        height: 32px;
+        position: absolute;
+        filter: brightness(0) invert(1); /* Makes image white */
+        animation: pageLoaderImgSpin 1s linear infinite;
+        object-fit: contain;
+    }
+
+    @keyframes pageLoaderSpin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    @keyframes pageLoaderImgSpin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .page-loader-text {
+        font-size: 16px;
+        font-weight: 500;
+        color: #09294d;
+        font-family: 'Segoe UI', 'Roboto', sans-serif;
+        animation: pageLoaderPulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pageLoaderPulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
     @media (max-width: 399.98px) {
         .dashboard-header {
             height: 40px;
@@ -547,6 +620,16 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         return;
     }
 %>
+
+  <!-- Page Loader - Shows for 2 seconds -->
+  <div id="pageLoader" class="page-loader-overlay">
+    <div class="page-loader-content">
+      <div class="page-loader-spinner">
+        <img src="./IMG/Design.png" class="page-loader-img" alt="Loading" aria-hidden="true">
+      </div>
+      <div class="page-loader-text">Loading...</div>
+    </div>
+  </div>
 
 <!-- Professional Dashboard Header - 3 Column Layout -->
 <header class="dashboard-header">
@@ -727,4 +810,21 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             statusModal.style.display = 'none';
         }
     };
+
+    // Page Loader - Show for exactly 2 seconds
+    (function() {
+        var loader = document.getElementById('pageLoader');
+        if (loader) {
+            // Ensure loader is visible immediately
+            loader.style.display = 'flex';
+            
+            // Hide loader after 2 seconds
+            setTimeout(function() {
+                loader.classList.add('hidden');
+                setTimeout(function() {
+                    loader.style.display = 'none';
+                }, 300); // Wait for fade-out transition
+            }, 2000); // 2 seconds
+        }
+    })();
 </script>

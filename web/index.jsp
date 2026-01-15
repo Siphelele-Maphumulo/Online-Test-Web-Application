@@ -87,6 +87,8 @@
       }
     }
   </style>
+  
+
 </head>
 
 <body>
@@ -115,6 +117,23 @@
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
   <script>
+    // Page Loader - Show for exactly 2 seconds
+    (function() {
+      var loader = document.getElementById('pageLoader');
+      if (loader) {
+        // Ensure loader is visible immediately
+        loader.style.display = 'flex';
+        
+        // Hide loader after 2 seconds
+        setTimeout(function() {
+          loader.classList.add('hidden');
+          setTimeout(function() {
+            loader.style.display = 'none';
+          }, 300); // Wait for fade-out transition
+        }, 2000); // 2 seconds
+      }
+    })();
+
     document.addEventListener("DOMContentLoaded", function () {
       function updateScale() {
         const body = document.body;
