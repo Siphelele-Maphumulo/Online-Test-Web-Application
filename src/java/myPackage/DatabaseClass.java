@@ -3730,29 +3730,67 @@ public boolean checkUsernameExists(String username) {
 }
 
 public boolean checkEmailExists(String email) {
-    Connection conn = null;
-    PreparedStatement ps = null;
-    ResultSet rs = null;
-    
     try {
-        conn = getConnection();
+        ensureConnection();
         String sql = "SELECT COUNT(*) FROM users WHERE email = ?";
-        ps = conn.prepareStatement(sql);
-        ps.setString(1, email);
-        rs = ps.executeQuery();
-        if (rs.next()) {
-            return rs.getInt(1) > 0;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, email);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
         }
     } catch (SQLException e) {
         LOGGER.log(Level.SEVERE, "Error checking email existence", e);
-    } finally {
-        try {
-            if (rs != null) rs.close();
-            if (ps != null) ps.close();
-            if (conn != null) conn.close();
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error closing resources", e);
+    }
+    return false;
+}
+
+public void saveVerificationCode(String email, String code, String userType) {
+    try {
+        ensureConnection();
+        String sql = "INSERT INTO verification_codes (email, code, user_type) VALUES (?, ?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, email);
+            ps.setString(2, code);
+            ps.setString(3, userType);
+            ps.executeUpdate();
         }
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Error saving verification code", e);
+    }
+}
+
+public boolean verifyResetCode(String email, String code) {
+    try {
+        ensureConnection();
+        String sql = "SELECT COUNT(*) FROM verification_codes WHERE email = ? AND code = ? AND created_at >= NOW() - INTERVAL 1 HOUR";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, email);
+            ps.setString(2, code);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+        }
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Error verifying reset code", e);
+    }
+    return false;
+}
+
+public boolean updatePassword(String email, String password) {
+    try {
+        ensureConnection();
+        String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+        String sql = "UPDATE users SET password = ? WHERE email = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, hashedPassword);
+            ps.setString(2, email);
+            return ps.executeUpdate() > 0;
+        }
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Error updating password", e);
     }
     return false;
 }

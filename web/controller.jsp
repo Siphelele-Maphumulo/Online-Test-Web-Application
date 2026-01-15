@@ -828,6 +828,44 @@ try {
     /* =========================
        LOGOUT
        ========================= */
+    } else if ("forgot_password".equalsIgnoreCase(pageParam)) {
+        String action = nz(request.getParameter("action"), "");
+        if ("check_email".equalsIgnoreCase(action)) {
+            String email = nz(request.getParameter("email"), "");
+            if (pDAO.checkEmailExists(email)) {
+                response.getWriter().write("exists");
+            } else {
+                response.getWriter().write("not_exists");
+            }
+        } else if ("send_code".equalsIgnoreCase(action)) {
+            String email = nz(request.getParameter("email"), "");
+            User user = pDAO.getUserByEmail(email);
+            if (user != null) {
+                String code = Email.generateRandomCode();
+                pDAO.saveVerificationCode(email, code, user.getType());
+                Email.sendPasswordResetEmail(email, user.getFirstName(), code);
+                response.sendRedirect("Forgot_Password.jsp?email=" + email + "&success=1");
+            } else {
+                response.sendRedirect("Forgot_Password.jsp?error=1");
+            }
+        } else if ("reset_password".equalsIgnoreCase(action)) {
+            String email = nz(request.getParameter("email"), "");
+            String code = nz(request.getParameter("code"), "");
+            String password = nz(request.getParameter("password"), "");
+            String confirmPassword = nz(request.getParameter("confirm_password"), "");
+
+            if (!password.equals(confirmPassword)) {
+                response.sendRedirect("Forgot_Password.jsp?email=" + email + "&error=2");
+                return;
+            }
+
+            if (pDAO.verifyResetCode(email, code)) {
+                pDAO.updatePassword(email, password);
+                response.sendRedirect("login.jsp?success=2");
+            } else {
+                response.sendRedirect("Forgot_Password.jsp?email=" + email + "&error=3");
+            }
+        }
     } else if ("logout".equalsIgnoreCase(pageParam)) {
         // Invalidate session immediately then forward to a transition page so the client loader can be visible
         session.invalidate();
