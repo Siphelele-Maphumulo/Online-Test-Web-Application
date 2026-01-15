@@ -10,12 +10,12 @@
     session.setAttribute("csrf_token", csrf_token);
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
-// Get ALL exam results (for admin view)
-ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
+    // Get ALL exam results (for admin view)
+    ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
 %>
 
+<!-- Add CSS Styles -->
 
-<!--Style-->
 <style>
     /* Use the same CSS Variables as the profile page */
     :root {
@@ -652,11 +652,10 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                 <i class="fas fa-users"></i>
                 <h2>Accounts</h2>
             </a>
-            
             <a href="adm-page.jsp?pgprt=7" class="nav-item">
-               <i class="fas fa-users"></i>
-               <h2>Registers</h2>
-           </a>
+                <i class="fas fa-users"></i>
+                <h2>Registers</h2>
+            </a>
         </nav>
     </aside>
     
@@ -749,9 +748,18 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
             </div>
         </div>
         
-        <button type="submit" form="bulkDeleteForm" class="btn btn-danger" style="margin-bottom: 20px;">
-            <i class="fas fa-trash"></i> Delete Selected
+        <!-- Bulk Delete Button (outside form) -->
+        <button type="button" class="btn btn-danger" id="bulkDeleteBtn" onclick="handleBulkDelete()">
+            <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
         </button>
+        
+        <!-- Hidden Form for Bulk Delete -->
+        <form id="bulkDeleteForm" action="controller.jsp" method="post" style="display: none;">
+            <input type="hidden" name="page" value="admin-results">
+            <input type="hidden" name="operation" value="bulk_delete">
+            <input type="hidden" name="csrf_token" value="<%= csrf_token %>">
+        </form>
+        
         <!-- Search Box -->
         <div class="search-container">
             <input
@@ -773,24 +781,20 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
             </div>
             
             <% if (request.getParameter("eid") == null) { %>
-                <form id="bulkDeleteForm" action="controller.jsp" method="post">
-                    <input type="hidden" name="page" value="admin-results">
-                    <input type="hidden" name="operation" value="bulk_delete">
-                    <input type="hidden" name="csrf_token" value="<%= csrf_token %>">
                 <div style="overflow-x:auto;">
                     <table class="results-table" id="resultsTable">
                         <thead>
                             <tr>
-                                <th><input type="checkbox" id="selectAll"></th>
-                                <th onclick="sortTable(0)">Name <span class="sort-indicator"></span></th>
-                                <th onclick="sortTable(1)">Student ID <span class="sort-indicator"></span></th>
-                                <th onclick="sortTable(2)">Email <span class="sort-indicator"></span></th>
-                                <th onclick="sortTable(3)">Date <span class="sort-indicator"></span></th>
-                                <th onclick="sortTable(4)">Course <span class="sort-indicator"></span></th>
-                                <th onclick="sortTable(5)">Time <span class="sort-indicator"></span></th>
-                                <th onclick="sortTable(6)">Marks <span class="sort-indicator"></span></th>
-                                <th onclick="sortTable(7)">Status <span class="sort-indicator"></span></th>
-                                <th onclick="sortTable(8)">% <span class="sort-indicator"></span></th>
+                                <th><input type="checkbox" id="selectAll" class="select-all-checkbox"></th>
+                                <th onclick="sortTable(1)">Name <span class="sort-indicator"></span></th>
+                                <th onclick="sortTable(2)">Student ID <span class="sort-indicator"></span></th>
+                                <th onclick="sortTable(3)">Email <span class="sort-indicator"></span></th>
+                                <th onclick="sortTable(4)">Date <span class="sort-indicator"></span></th>
+                                <th onclick="sortTable(5)">Course <span class="sort-indicator"></span></th>
+                                <th onclick="sortTable(6)">Time <span class="sort-indicator"></span></th>
+                                <th onclick="sortTable(7)">Marks <span class="sort-indicator"></span></th>
+                                <th onclick="sortTable(8)">Status <span class="sort-indicator"></span></th>
+                                <th onclick="sortTable(9)">% <span class="sort-indicator"></span></th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -800,7 +804,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                                 if (allExamResults.isEmpty()) { 
                             %>
                             <tr>
-                                <td colspan="10" class="no-results">
+                                <td colspan="11" class="no-results">
                                     <i class="fas fa-info-circle"></i> No results found
                                 </td>
                             </tr>
@@ -809,29 +813,36 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                                     for (Exams e : allExamResults) {
                                         double percentage = (e.gettMarks() > 0) ? (double)e.getObtMarks() / e.gettMarks() * 100 : 0;
                                         String status = (e.getStatus() != null) ? e.getStatus() : "Terminated";
-                                        // Use getFullName() method as per Exams class, with a fallback for safety
                                         String fullName = (e.getFullName() != null && !e.getFullName().trim().isEmpty()) ? e.getFullName() : "N/A";
                                         int examId = e.getExamId();
+                                        String studentId = e.getUserName() != null ? e.getUserName() : "N/A";
+                                        String studentEmail = e.getEmail() != null ? e.getEmail() : "N/A";
+                                        String courseName = e.getcName() != null ? e.getcName() : "N/A";
+                                        String examDate = e.getDate() != null ? e.getDate() : "N/A";
                             %>
                             <tr class="result-row" 
+                                data-exam-id="<%= examId %>"
                                 data-index="<%= examId %>"
                                 data-name="<%= fullName.toLowerCase() %>"
-                                data-id="<%= e.getUserName().toLowerCase() %>"
-                                data-email="<%= e.getEmail().toLowerCase() %>"
-                                data-date="<%= e.getDate() %>"
-                                data-course="<%= e.getcName().toLowerCase() %>"
+                                data-id="<%= studentId.toLowerCase() %>"
+                                data-email="<%= studentEmail.toLowerCase() %>"
+                                data-date="<%= examDate %>"
+                                data-course="<%= courseName.toLowerCase() %>"
                                 data-time="<%= e.getStartTime() + " - " + e.getEndTime() %>"
                                 data-obt-marks="<%= e.getObtMarks() %>"
                                 data-total-marks="<%= e.gettMarks() %>"
                                 data-marks="<%= e.getObtMarks() + "/" + e.gettMarks() %>"
                                 data-percentage="<%= percentage %>"
                                 data-status="<%= status.toLowerCase() %>">
-                                <td><input type="checkbox" name="examIds" value="<%= examId %>"></td>
+                                <td>
+                                    <input type="checkbox" name="examIds" value="<%= examId %>" 
+                                           class="record-checkbox" onchange="updateBulkDeleteButton()">
+                                </td>
                                 <td><%= fullName %></td>
-                                <td><%= e.getUserName() %></td>
-                                <td><%= e.getEmail() %></td>
-                                <td><%= e.getDate() %></td>
-                                <td><%= e.getcName() %></td>
+                                <td><%= studentId %></td>
+                                <td><%= studentEmail %></td>
+                                <td><%= examDate %></td>
+                                <td><%= courseName %></td>
                                 <td><%= e.getStartTime() %> - <%= e.getEndTime() %></td>
                                 <td>
                                     <span class="marks-display">
@@ -846,11 +857,11 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                                     </div>
                                 </td>
                                 <td>
-                                    <% if (status.equals("Pass")) { %>
+                                    <% if ("Pass".equals(status)) { %>
                                         <span class="badge badge-success status-display">
                                             <i class="fas fa-check-circle"></i> <%= status %>
                                         </span>
-                                    <% } else if (status.equals("Fail")) { %>
+                                    <% } else if ("Fail".equals(status)) { %>
                                         <span class="badge badge-error status-display">
                                             <i class="fas fa-times-circle"></i> <%= status %>
                                         </span>
@@ -861,9 +872,9 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                                     <% } %>
                                     <div class="status-edit" style="display: none;">
                                         <select class="form-control" style="width: 120px; display: inline-block;">
-                                            <option value="Pass" <%= status.equals("Pass") ? "selected" : "" %>>Pass</option>
-                                            <option value="Fail" <%= status.equals("Fail") ? "selected" : "" %>>Fail</option>
-                                            <option value="Terminated" <%= status.equals("Terminated") ? "selected" : "" %>>Terminated</option>
+                                            <option value="Pass" <%= "Pass".equals(status) ? "selected" : "" %>>Pass</option>
+                                            <option value="Fail" <%= "Fail".equals(status) ? "selected" : "" %>>Fail</option>
+                                            <option value="Terminated" <%= "Terminated".equals(status) ? "selected" : "" %>>Terminated</option>
                                         </select>
                                     </div>
                                 </td>
@@ -877,11 +888,17 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                                                 style="font-size: 13px; padding: 8px 16px; margin: 2px;">
                                             <i class="fas fa-edit"></i> Edit
                                         </button>
-                                        <button class="btn btn-danger delete-btn" 
+                                        <button class="btn btn-danger delete-btn single-delete-btn" 
                                                 type="button"
                                                 data-exam-id="<%= examId %>"
                                                 data-student-name="<%= fullName %>"
-                                                data-course-name="<%= e.getcName() %>"
+                                                data-course-name="<%= courseName %>"
+                                                data-student-email="<%= studentEmail %>"
+                                                data-student-id="<%= studentId %>"
+                                                data-marks="<%= e.getObtMarks() %>/<%= e.gettMarks() %>"
+                                                data-percentage="<%= String.format("%.2f", percentage) %>%"
+                                                data-status="<%= status %>"
+                                                data-date="<%= examDate %>"
                                                 style="font-size: 13px; padding: 8px 16px; margin: 2px;">
                                             <i class="fas fa-trash"></i> Delete
                                         </button>
@@ -912,7 +929,6 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                         <span id="totalCount"><%= allExamResults.size() %></span> results
                     </div>
                 </div>
-                </form>
             <% } else { %>
                 <!-- Details View -->
                 <div style="padding: var(--spacing-lg);">
@@ -950,7 +966,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                                         <td><%= a.getAnswer() != null ? a.getAnswer() : "No Answer" %></td>
                                         <td><%= a.getCorrectAnswer() != null ? a.getCorrectAnswer() : "N/A" %></td>
                                         <td>
-                                            <% if (a.getStatus().equals("correct")) { %>
+                                            <% if ("correct".equals(a.getStatus())) { %>
                                                 <span class="badge badge-success">
                                                     <i class="fas fa-check"></i> Correct
                                                 </span>
@@ -972,8 +988,6 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     </main>
 </div>
 
-<%@ include file="modal_assets.jspf" %>
-
 <!-- Font Awesome for Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
@@ -982,9 +996,6 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
     // Global variables
     let currentSortColumn = -1;
     let sortDirection = 1;
-    let deleteExamId = null;
-    let deleteStudentName = null;
-    let deleteCourseName = null;
     const csrf_token = '<%= session.getAttribute("csrf_token") %>';
 
     // Initialize when page loads
@@ -1000,19 +1011,49 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         document.getElementById('filterDateFrom').value = thirtyDaysAgo.toISOString().split('T')[0];
         
-        // Initialize edit/delete functionality
-        initializeEditDeleteHandlers();
+        // Initialize functionality
+        initializeCheckboxHandlers();
+        initializeButtonHandlers();
         
-        // Debug: Check if all delete buttons have proper data attributes
-        debugDataAttributes();
-        
-        // Debug: Log to check if modal exists
-        console.log('Modal element exists:', document.getElementById('deleteModal') !== null);
+        // Apply initial filters
+        applyFilters();
     });
-    
-    function initializeEditDeleteHandlers() {
+
+    function initializeCheckboxHandlers() {
+        // Select All functionality
+        const selectAll = document.getElementById('selectAll');
+        if (selectAll) {
+            selectAll.addEventListener('change', function() {
+                const checkboxes = document.querySelectorAll('.record-checkbox');
+                const isChecked = this.checked;
+                checkboxes.forEach(function(checkbox) {
+                    checkbox.checked = isChecked;
+                });
+                updateBulkDeleteButton();
+            });
+        }
+        
+        // Individual checkbox handling
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('record-checkbox')) {
+                updateBulkDeleteButton();
+                
+                // Update select all state
+                const selectAll = document.getElementById('selectAll');
+                if (selectAll) {
+                    const totalCheckboxes = document.querySelectorAll('.record-checkbox').length;
+                    const checkedCheckboxes = document.querySelectorAll('.record-checkbox:checked').length;
+                    
+                    selectAll.checked = checkedCheckboxes === totalCheckboxes;
+                    selectAll.indeterminate = checkedCheckboxes > 0 && checkedCheckboxes < totalCheckboxes;
+                }
+            }
+        });
+    }
+
+    function initializeButtonHandlers() {
         // Edit button click handler
-        document.querySelectorAll('.edit-btn').forEach(button => {
+        document.querySelectorAll('.edit-btn').forEach(function(button) {
             button.addEventListener('click', function() {
                 const examId = this.getAttribute('data-exam-id');
                 const row = this.closest('tr');
@@ -1021,7 +1062,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         });
         
         // Save button click handler
-        document.querySelectorAll('.save-btn').forEach(button => {
+        document.querySelectorAll('.save-btn').forEach(function(button) {
             button.addEventListener('click', function() {
                 const examId = this.getAttribute('data-exam-id');
                 const row = this.closest('tr');
@@ -1030,90 +1071,381 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         });
         
         // Cancel button click handler
-        document.querySelectorAll('.cancel-btn').forEach(button => {
+        document.querySelectorAll('.cancel-btn').forEach(function(button) {
             button.addEventListener('click', function() {
                 const row = this.closest('tr');
                 cancelEdit(row);
             });
         });
         
-        // Delete button click handler - UPDATED with better error handling
-        document.querySelectorAll('.delete-btn').forEach(button => {
+        // Single delete button handler - FIXED
+        document.querySelectorAll('.single-delete-btn').forEach(function(button) {
             button.addEventListener('click', function(e) {
-                e.preventDefault(); // Prevent form submission
-                e.stopPropagation(); // Prevent event bubbling
+                e.preventDefault();
+                e.stopPropagation();
 
-                // Try multiple ways to get the data
                 const examId = this.getAttribute('data-exam-id');
-                const studentName = this.getAttribute('data-student-name');
-                const courseName = this.getAttribute('data-course-name');
-                
-                // If data attributes are missing, try to get from the table row
-                if (!examId || !studentName || !courseName) {
-                    const row = this.closest('tr.result-row');
-                    if (row) {
-                        const fallbackExamId = examId || row.getAttribute('data-index');
-                        const fallbackStudentName = studentName || row.cells[1]?.textContent?.trim();
-                        const fallbackCourseName = courseName || row.cells[5]?.textContent?.trim();
-                        
-                        console.log('Using fallback data from row:', {
-                            examId: fallbackExamId,
-                            studentName: fallbackStudentName,
-                            courseName: fallbackCourseName
-                        });
-                        
-                        showDeleteModal(fallbackExamId, fallbackStudentName, fallbackCourseName);
-                        return;
-                    }
+                const studentName = this.getAttribute('data-student-name') || 'N/A';
+                const courseName = this.getAttribute('data-course-name') || 'N/A';
+                const studentEmail = this.getAttribute('data-student-email') || 'N/A';
+                const studentId = this.getAttribute('data-student-id') || 'N/A';
+                const marks = this.getAttribute('data-marks') || 'N/A';
+                const percentage = this.getAttribute('data-percentage') || 'N/A';
+                const status = this.getAttribute('data-status') || 'N/A';
+                const date = this.getAttribute('data-date') || 'N/A';
+
+                // Validate data
+                if (!examId || examId === 'undefined' || examId === 'null') {
+                    showAlert('Error: Could not retrieve exam ID. Please try again.', 'error');
+                    return;
                 }
 
-                showDeleteModal(examId, studentName, courseName);
+                // Create message using string concatenation
+                const message = '<div style="text-align: left; max-width: 500px;">' +
+                               '<h4 style="color: #dc3545; margin-bottom: 15px;">' +
+                               '<i class="fas fa-exclamation-triangle"></i> Delete Exam Result' +
+                               '</h4>' +
+                               '<p style="margin-bottom: 15px; font-weight: 500;">Are you sure you want to delete this exam result?</p>' +
+                               '<div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;">' +
+                               '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">' +
+                               '<div><strong>Student:</strong></div>' +
+                               '<div>' + studentName + '</div>' +
+                               '<div><strong>Student ID:</strong></div>' +
+                               '<div>' + studentId + '</div>' +
+                               '<div><strong>Email:</strong></div>' +
+                               '<div>' + studentEmail + '</div>' +
+                               '<div><strong>Course:</strong></div>' +
+                               '<div>' + courseName + '</div>' +
+                               '<div><strong>Date:</strong></div>' +
+                               '<div>' + date + '</div>' +
+                               '<div><strong>Marks:</strong></div>' +
+                               '<div>' + marks + '</div>' +
+                               '<div><strong>Percentage:</strong></div>' +
+                               '<div>' + percentage + '</div>' +
+                               '<div><strong>Status:</strong></div>' +
+                               '<div>' + status + '</div>' +
+                               '<div><strong>Exam ID:</strong></div>' +
+                               '<div>' + examId + '</div>' +
+                               '</div>' +
+                               '</div>' +
+                               '<p style="color: #dc3545; font-weight: bold;">' +
+                               '<i class="fas fa-exclamation-circle"></i> This action cannot be undone!' +
+                               '</p>' +
+                               '</div>';
+
+                showConfirmModal(message, 'Delete Exam Result', function() {
+                    // Callback function when confirmed
+                    performSingleDelete(examId);
+                });
             });
         });
     }
-    
-    // Debug function to check data attributes
-    function debugDataAttributes() {
-        console.log('=== DEBUG: Checking data attributes ===');
+
+    // Bulk delete handling
+    function handleBulkDelete() {
+        const selectedCheckboxes = document.querySelectorAll('.record-checkbox:checked');
+        const selectedCount = selectedCheckboxes.length;
         
-        // Check delete button data
-        document.querySelectorAll('.delete-btn').forEach((button, index) => {
-            const examId = button.getAttribute('data-exam-id');
-            const studentName = button.getAttribute('data-student-name');
-            const courseName = button.getAttribute('data-course-name');
-            
-            console.log(`Delete button ${index + 1}:`, {
-                examId: examId,
-                studentName: studentName,
-                courseName: courseName,
-                hasExamId: !!examId,
-                hasStudentName: !!studentName,
-                hasCourseName: !!courseName
-            });
-            
-            // Check if attributes are properly set
-            if (!examId || examId === 'undefined' || examId === 'null') {
-                console.warn(`Button ${index + 1}: Invalid examId: "${examId}"`);
-            }
-            if (!studentName || studentName === 'undefined' || studentName === 'null') {
-                console.warn(`Button ${index + 1}: Invalid studentName: "${studentName}"`);
-            }
-            if (!courseName || courseName === 'undefined' || courseName === 'null') {
-                console.warn(`Button ${index + 1}: Invalid courseName: "${courseName}"`);
-            }
+        if (selectedCount === 0) {
+            showAlert('Please select at least one exam result to delete.', 'warning');
+            return;
+        }
+        
+        // Get selected records details
+        const selectedDetails = [];
+        selectedCheckboxes.forEach(function(checkbox) {
+            const row = checkbox.closest('tr');
+            const studentName = row.cells[1].textContent;
+            const courseName = row.cells[5].textContent;
+            const examId = checkbox.value;
+            selectedDetails.push(studentName + ' - ' + courseName + ' (ID: ' + examId + ')');
         });
         
-        // Check row data attributes
-        document.querySelectorAll('tr.result-row').forEach((row, index) => {
-            console.log(`Row ${index + 1} data:`, {
-                index: row.getAttribute('data-index'),
-                name: row.getAttribute('data-name'),
-                course: row.getAttribute('data-course'),
-                examId: row.cells[0]?.querySelector('input[name="examIds"]')?.value
-            });
+        // Build list items manually
+        let detailsList = '';
+        for (let i = 0; i < selectedDetails.length; i++) {
+            detailsList += '<li>' + selectedDetails[i] + '</li>';
+        }
+        
+        // Create message using string concatenation
+        const message = '<div style="text-align: left; max-width: 500px;">' +
+                       '<h4 style="color: #dc3545; margin-bottom: 15px;">' +
+                       '<i class="fas fa-exclamation-triangle"></i> Delete Multiple Exam Results' +
+                       '</h4>' +
+                       '<p style="margin-bottom: 15px; font-weight: 500;">' +
+                       'Are you sure you want to delete <strong>' + selectedCount + '</strong> selected exam result(s)?' +
+                       '</p>' +
+                       '<div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px; max-height: 200px; overflow-y: auto;">' +
+                       '<strong>Selected Records:</strong>' +
+                       '<ul style="margin-top: 10px; padding-left: 20px;">' +
+                       detailsList +
+                       '</ul>' +
+                       '</div>' +
+                       '<p style="color: #dc3545; font-weight: bold;">' +
+                       '<i class="fas fa-exclamation-circle"></i> This action cannot be undone!' +
+                       '</p>' +
+                       '</div>';
+        
+        showConfirmModal(message, 'Delete Multiple Records', function() {
+            // Callback function when confirmed
+            performBulkDelete();
         });
     }
-    
+
+    // Single delete function
+    function performSingleDelete(examId) {
+        // Show loading indicator
+        showAlert('Deleting exam result...', 'info');
+        
+        // Create hidden form and submit it
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'controller.jsp';
+        form.style.display = 'none';
+        
+        // Add page parameter
+        const pageInput = document.createElement('input');
+        pageInput.type = 'hidden';
+        pageInput.name = 'page';
+        pageInput.value = 'admin-results';
+        form.appendChild(pageInput);
+        
+        // Add CSRF token
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrf_token;
+        form.appendChild(csrfInput);
+        
+        // Add operation
+        const operationInput = document.createElement('input');
+        operationInput.type = 'hidden';
+        operationInput.name = 'operation';
+        operationInput.value = 'delete_result';
+        form.appendChild(operationInput);
+        
+        // Add exam ID
+        const examIdInput = document.createElement('input');
+        examIdInput.type = 'hidden';
+        examIdInput.name = 'eid';
+        examIdInput.value = examId;
+        form.appendChild(examIdInput);
+        
+        // Add to document and submit
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    // Bulk delete function
+    function performBulkDelete() {
+        const selectedCheckboxes = document.querySelectorAll('.record-checkbox:checked');
+        
+        if (selectedCheckboxes.length === 0) {
+            showAlert('No records selected for deletion.', 'warning');
+            return;
+        }
+        
+        // Show loading indicator
+        showAlert('Deleting ' + selectedCheckboxes.length + ' exam result(s)...', 'info');
+        
+        // Use the existing hidden form
+        const form = document.getElementById('bulkDeleteForm');
+        
+        // Add page parameter if not already present
+        const existingPageInput = form.querySelector('input[name="page"]');
+        if (!existingPageInput) {
+            const pageInput = document.createElement('input');
+            pageInput.type = 'hidden';
+            pageInput.name = 'page';
+            pageInput.value = 'admin-results';
+            form.appendChild(pageInput);
+        }
+        
+        // Clear existing examIds inputs (keep CSRF token and page parameter)
+        const existingInputs = form.querySelectorAll('input[name="examIds"]');
+        existingInputs.forEach(function(input) {
+            form.removeChild(input);
+        });
+        
+        // Add selected exam IDs
+        selectedCheckboxes.forEach(function(checkbox) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'examIds';
+            input.value = checkbox.value;
+            form.appendChild(input);
+        });
+        
+        // Submit form
+        form.submit();
+    }
+
+    function updateBulkDeleteButton() {
+        const selectedCheckboxes = document.querySelectorAll('.record-checkbox:checked');
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+        const selectedCount = document.getElementById('selectedCount');
+        
+        const selectedCountNum = selectedCheckboxes.length;
+        selectedCount.textContent = selectedCountNum;
+        
+        // Show/hide bulk delete button based on selection
+        if (selectedCountNum > 0) {
+            bulkDeleteBtn.style.display = 'inline-block';
+            bulkDeleteBtn.disabled = false;
+        } else {
+            bulkDeleteBtn.style.display = 'none';
+            bulkDeleteBtn.disabled = true;
+        }
+        
+        // Update select all checkbox state
+        const selectAll = document.getElementById('selectAll');
+        if (selectAll) {
+            const totalCheckboxes = document.querySelectorAll('.record-checkbox').length;
+            selectAll.checked = selectedCountNum === totalCheckboxes && totalCheckboxes > 0;
+            selectAll.indeterminate = selectedCountNum > 0 && selectedCountNum < totalCheckboxes;
+        }
+    }
+
+    // Helper functions
+    function showAlert(message, type) {
+        if (!type) type = 'error';
+        
+        // Create alert element
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'custom-alert ' + type;
+        
+        // Build icon HTML based on type
+        let iconClass = 'fa-exclamation-triangle';
+        if (type === 'error') {
+            iconClass = 'fa-exclamation-circle';
+        } else if (type === 'info') {
+            iconClass = 'fa-info-circle';
+        } else if (type === 'success') {
+            iconClass = 'fa-check-circle';
+        } else if (type === 'warning') {
+            iconClass = 'fa-exclamation-triangle';
+        }
+        
+        // Create alert content
+        const iconHtml = '<i class="fas ' + iconClass + '"></i>';
+        const contentHtml = '<div style="display: flex; align-items: center; gap: 10px;">' + 
+                           iconHtml + 
+                           '<span>' + message + '</span>' +
+                           '</div>' +
+                           '<button onclick="this.parentElement.remove()" style="background: none; border: none; color: inherit; cursor: pointer;">' +
+                           '<i class="fas fa-times"></i>' +
+                           '</button>';
+        
+        alertDiv.innerHTML = contentHtml;
+        
+        // Style the alert
+        let bgColor = '#fff3cd';
+        let textColor = '#856404';
+        let borderColor = '#ffeaa7';
+        
+        if (type === 'error') {
+            bgColor = '#f8d7da';
+            textColor = '#721c24';
+            borderColor = '#f5c6cb';
+        } else if (type === 'info') {
+            bgColor = '#d1ecf1';
+            textColor = '#0c5460';
+            borderColor = '#bee5eb';
+        } else if (type === 'success') {
+            bgColor = '#d4edda';
+            textColor = '#155724';
+            borderColor = '#c3e6cb';
+        }
+        
+        alertDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; padding: 15px 20px; ' +
+                               'background: ' + bgColor + '; color: ' + textColor + '; ' +
+                               'border: 1px solid ' + borderColor + '; border-radius: 5px; ' +
+                               'display: flex; align-items: center; justify-content: space-between; ' +
+                               'min-width: 300px; max-width: 400px; z-index: 9999; ' +
+                               'animation: slideInRight 0.3s ease-out;';
+        
+        document.body.appendChild(alertDiv);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(function() {
+            if (alertDiv.parentNode) {
+                alertDiv.style.animation = 'slideOutRight 0.3s ease-out';
+                setTimeout(function() {
+                    if (alertDiv.parentNode) {
+                        alertDiv.parentNode.removeChild(alertDiv);
+                    }
+                }, 300);
+            }
+        }, 5000);
+    }
+
+    // Confirmation modal function
+    function showConfirmModal(message, title, onConfirm) {
+        const modalId = 'confirmModal_' + Date.now();
+        
+        // Create modal HTML using string concatenation
+        const modalDiv = document.createElement('div');
+        modalDiv.id = modalId;
+        modalDiv.className = 'modal-overlay';
+        modalDiv.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9998; display: flex; align-items: center; justify-content: center;';
+        
+        modalDiv.innerHTML = '<div class="modal-content" style="background: white; border-radius: 8px; max-width: 550px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: modalFadeIn 0.3s ease-out;">' +
+                            '<div class="modal-header" style="padding: 20px 20px 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">' +
+                            '<h3 class="modal-title" style="margin: 0; color: #333; font-size: 1.3rem;">' + title + '</h3>' +
+                            '<button class="close-button" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666; line-height: 1;">&times;</button>' +
+                            '</div>' +
+                            '<div class="modal-body" style="padding: 20px;">' +
+                            message +
+                            '</div>' +
+                            '<div class="modal-footer" style="padding: 15px 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px;">' +
+                            '<button class="btn btn-secondary cancel-btn" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Cancel</button>' +
+                            '<button class="btn btn-danger confirm-btn" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">' +
+                            '<i class="fas fa-check"></i> Confirm Delete' +
+                            '</button>' +
+                            '</div>' +
+                            '</div>';
+        
+        document.body.appendChild(modalDiv);
+        
+        // Setup event handlers
+        const modalElement = document.getElementById(modalId);
+        
+        // Close button handler
+        modalElement.querySelector('.close-button').addEventListener('click', function() {
+            modalElement.remove();
+        });
+        
+        // Cancel button handler
+        modalElement.querySelector('.cancel-btn').addEventListener('click', function() {
+            modalElement.remove();
+        });
+        
+        // Confirm button handler
+        modalElement.querySelector('.confirm-btn').addEventListener('click', function() {
+            modalElement.remove();
+            if (onConfirm && typeof onConfirm === 'function') {
+                onConfirm();
+            }
+        });
+        
+        // Close on outside click
+        modalElement.addEventListener('click', function(e) {
+            if (e.target === modalElement) {
+                modalElement.remove();
+            }
+        });
+        
+        // Close on escape key
+        const escHandler = function(e) {
+            if (e.key === 'Escape') {
+                modalElement.remove();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    }
+
+    // Edit mode functions
     function enableEditMode(row, examId) {
         // Show edit fields
         row.querySelector('.marks-display').style.display = 'none';
@@ -1154,7 +1486,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         
         // Validate marks
         if (isNaN(obtMarks) || obtMarks < 0 || obtMarks > totalMarks) {
-            alert('Please enter valid marks between 0 and ' + totalMarks);
+            showAlert('Please enter valid marks between 0 and ' + totalMarks, 'warning');
             obtMarksInput.focus();
             return;
         }
@@ -1170,184 +1502,29 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         form.method = 'POST';
         form.action = 'controller.jsp';
         
-        const fields = {
-            'page': 'results',
-            'operation': 'edit',
-            'eid': examId,
-            'obtMarks': obtMarks,
-            'totalMarks': totalMarks,
-            'status': status
-        };
+        // Create hidden inputs
+        const fields = [
+            {name: 'page', value: 'results'},
+            {name: 'operation', value: 'edit'},
+            {name: 'eid', value: examId},
+            {name: 'obtMarks', value: obtMarks},
+            {name: 'totalMarks', value: totalMarks},
+            {name: 'status', value: status}
+        ];
         
-        for (const [name, value] of Object.entries(fields)) {
+        fields.forEach(function(field) {
             const input = document.createElement('input');
             input.type = 'hidden';
-            input.name = name;
-            input.value = value;
+            input.name = field.name;
+            input.value = field.value;
             form.appendChild(input);
-        }
-        
-        document.body.appendChild(form);
-        form.submit();
-    }
-    
-    async function showDeleteModal(examId, studentName, courseName) {
-        // First, check if parameters are valid
-        console.log('=== DEBUG: showDeleteModal called ===');
-        console.log('examId:', examId, 'Type:', typeof examId);
-        console.log('studentName:', studentName, 'Type:', typeof studentName);
-        console.log('courseName:', courseName, 'Type:', typeof courseName);
-        
-        // Clean up the data
-        const cleanExamId = String(examId || '').trim();
-        const cleanStudentName = String(studentName || '').trim();
-        const cleanCourseName = String(courseName || '').trim();
-        
-        if (!cleanExamId || cleanExamId === 'undefined' || cleanExamId === 'null') {
-            console.error('Invalid exam ID:', examId);
-            showAlert('Error: Could not retrieve exam ID. Please try again.');
-            return;
-        }
-        
-        if (!cleanStudentName || cleanStudentName === 'undefined' || cleanStudentName === 'null' || cleanStudentName === 'N/A') {
-            console.error('Invalid student name:', studentName);
-            showAlert('Error: Could not retrieve student name. Please try again.');
-            return;
-        }
-        
-        if (!cleanCourseName || cleanCourseName === 'undefined' || cleanCourseName === 'null') {
-            console.error('Invalid course name:', courseName);
-            showAlert('Error: Could not retrieve course name. Please try again.');
-            return;
-        }
-        
-        // Create the confirmation message with the actual data
-        const message = `Are you sure you want to delete the exam result for ${cleanStudentName} in the course ${cleanCourseName} (Exam ID: ${cleanExamId})? This action cannot be undone.`;
-        
-        // Use showConfirm function (make sure it's implemented)
-        const confirmed = await showConfirm(message, 'Delete Exam Result');
-        if (confirmed) {
-            confirmDelete(cleanExamId);
-        }
-    }
-
-    // If showConfirm is not implemented, here's a simple implementation
-    function showConfirm(message, title = 'Confirm') {
-        return new Promise((resolve) => {
-            // Create modal HTML
-            const modalId = 'confirmModal_' + Date.now();
-            const modalHtml = `
-                <div id="${modalId}" class="modal-overlay" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
-                    <div class="modal-content" style="background: white; padding: 20px; border-radius: 8px; max-width: 500px; width: 90%;">
-                        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                            <h2 class="modal-title" style="margin: 0; color: #333;"><i class="fas fa-question-circle"></i> ${title}</h2>
-                            <button class="close-button" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
-                        </div>
-                        <div class="modal-body" style="margin-bottom: 20px;">
-                            <p style="margin: 0; line-height: 1.5;">${message}</p>
-                        </div>
-                        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px;">
-                            <button class="btn btn-secondary" style="padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
-                            <button class="btn btn-danger" style="padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                                <i class="fas fa-check"></i> Confirm
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Add to document
-            const modalDiv = document.createElement('div');
-            modalDiv.innerHTML = modalHtml;
-            document.body.appendChild(modalDiv);
-            
-            const modalElement = document.getElementById(modalId);
-            
-            // Setup event handlers
-            modalElement.querySelector('.close-button').addEventListener('click', function() {
-                modalElement.remove();
-                resolve(false);
-            });
-            
-            modalElement.querySelector('.btn-secondary').addEventListener('click', function() {
-                modalElement.remove();
-                resolve(false);
-            });
-            
-            modalElement.querySelector('.btn-danger').addEventListener('click', function() {
-                modalElement.remove();
-                resolve(true);
-            });
-            
-            // Close on outside click
-            modalElement.addEventListener('click', function(e) {
-                if (e.target === modalElement) {
-                    modalElement.remove();
-                    resolve(false);
-                }
-            });
-            
-            // Close on escape key
-            const escHandler = function(e) {
-                if (e.key === 'Escape') {
-                    modalElement.remove();
-                    document.removeEventListener('keydown', escHandler);
-                    resolve(false);
-                }
-            };
-            document.addEventListener('keydown', escHandler);
         });
-    }
-
-    // Simple alert function if not already defined
-    function showAlert(message) {
-        alert(message); // You can replace with a better modal if needed
-    }
-
-    function confirmDelete(examId) {
-        if (!examId) {
-            showAlert('No exam selected for deletion.');
-            return;
-        }
-
-        console.log('Confirming delete for exam ID:', examId);
-
-        // Create a separate form for single delete to avoid interfering with bulk delete
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = 'controller.jsp';
-
-        // Add CSRF token
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = 'csrf_token';
-        csrfInput.value = csrf_token;
-        form.appendChild(csrfInput);
-
-        const pageInput = document.createElement('input');
-        pageInput.type = 'hidden';
-        pageInput.name = 'page';
-        pageInput.value = 'admin-results';
-        form.appendChild(pageInput);
-
-        const operationInput = document.createElement('input');
-        operationInput.type = 'hidden';
-        operationInput.name = 'operation';
-        operationInput.value = 'delete_result';
-        form.appendChild(operationInput);
-
-        const examIdInput = document.createElement('input');
-        examIdInput.type = 'hidden';
-        examIdInput.name = 'eid';
-        examIdInput.value = examId;
-        form.appendChild(examIdInput);
-
-        console.log('Submitting delete form for exam ID:', examId);
+        
         document.body.appendChild(form);
         form.submit();
     }
 
-    // Apply all filters
+    // Filter functions
     function applyFilters() {
         const nameFilter = document.getElementById('filterName').value.toLowerCase();
         const courseFilter = document.getElementById('filterCourse').value.toLowerCase();
@@ -1359,7 +1536,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         const rows = document.querySelectorAll('#resultsTableBody tr.result-row');
         let visibleCount = 0;
         
-        rows.forEach(row => {
+        rows.forEach(function(row) {
             let showRow = true;
             
             // Name filter
@@ -1396,7 +1573,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
                 }
             }
             
-            // Global search (search across all visible text)
+            // Global search
             if (globalSearch) {
                 const rowText = row.textContent.toLowerCase();
                 if (!rowText.includes(globalSearch)) {
@@ -1410,6 +1587,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         });
         
         updateResultsCount(visibleCount);
+        updateBulkDeleteButton();
     }
     
     function setQuickFilter(filterType) {
@@ -1418,40 +1596,45 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         switch(filterType) {
             case 'pass':
                 document.getElementById('filterStatus').value = 'Pass';
-                applyFilters();
                 break;
             case 'fail':
                 document.getElementById('filterStatus').value = 'Fail';
-                applyFilters();
                 break;
             case 'high':
+                // Filter rows with percentage > 80
                 const rowsHigh = document.querySelectorAll('#resultsTableBody tr.result-row');
-                rowsHigh.forEach(row => {
+                rowsHigh.forEach(function(row) {
                     const percentage = parseFloat(row.getAttribute('data-percentage'));
-                    if (percentage < 80) {
-                        row.style.display = 'none';
-                    }
+                    row.style.display = percentage >= 80 ? '' : 'none';
                 });
-                updateResultsCount();
                 break;
             case 'low':
+                // Filter rows with percentage < 50
                 const rowsLow = document.querySelectorAll('#resultsTableBody tr.result-row');
-                rowsLow.forEach(row => {
+                rowsLow.forEach(function(row) {
                     const percentage = parseFloat(row.getAttribute('data-percentage'));
-                    if (percentage > 50) {
-                        row.style.display = 'none';
-                    }
+                    row.style.display = percentage < 50 ? '' : 'none';
                 });
-                updateResultsCount();
                 break;
+        }
+        
+        if (filterType === 'pass' || filterType === 'fail') {
+            applyFilters();
+        } else {
+            updateResultsCount();
         }
         
         // Add active class to the clicked button
         const buttons = document.querySelectorAll('.quick-filter-btn');
-        buttons.forEach(btn => {
-            if (btn.textContent.includes(filterType === 'pass' ? 'Pass Only' : 
-                                        filterType === 'fail' ? 'Fail Only' :
-                                        filterType === 'high' ? 'High Scores' : 'Low Scores')) {
+        buttons.forEach(function(btn) {
+            var btnText = btn.textContent || btn.innerText;
+            if (filterType === 'pass' && btnText.includes('Pass Only')) {
+                btn.classList.add('active');
+            } else if (filterType === 'fail' && btnText.includes('Fail Only')) {
+                btn.classList.add('active');
+            } else if (filterType === 'high' && btnText.includes('High Scores')) {
+                btn.classList.add('active');
+            } else if (filterType === 'low' && btnText.includes('Low Scores')) {
                 btn.classList.add('active');
             } else {
                 btn.classList.remove('active');
@@ -1466,7 +1649,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         document.getElementById('filterStatus').value = '';
         document.getElementById('searchBox').value = '';
         
-        // Reset date filters to default (last 30 days to today)
+        // Reset date filters to default
         const today = new Date().toISOString().split('T')[0];
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -1475,17 +1658,21 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         document.getElementById('filterDateFrom').value = thirtyDaysAgo.toISOString().split('T')[0];
         
         // Show all rows
-        document.querySelectorAll('#resultsTableBody tr.result-row').forEach(row => {
+        document.querySelectorAll('#resultsTableBody tr.result-row').forEach(function(row) {
             row.style.display = '';
         });
         
         updateResultsCount();
+        
+        // Remove active class from quick filter buttons
+        document.querySelectorAll('.quick-filter-btn').forEach(function(btn) {
+            btn.classList.remove('active');
+        });
     }
     
-    // Update results count
-    function updateResultsCount(visibleCount = null) {
+    function updateResultsCount(visibleCount) {
         const totalRows = document.querySelectorAll('#resultsTableBody tr.result-row').length;
-        if (visibleCount === null) {
+        if (visibleCount === undefined || visibleCount === null) {
             visibleCount = document.querySelectorAll('#resultsTableBody tr.result-row:not([style*="display: none"])').length;
         }
         
@@ -1501,7 +1688,7 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         
         // Update sort indicators
         const headers = document.querySelectorAll('#resultsTable thead th');
-        headers.forEach((header, index) => {
+        headers.forEach(function(header, index) {
             const indicator = header.querySelector('.sort-indicator');
             indicator.innerHTML = '';
             if (index === columnIndex) {
@@ -1516,41 +1703,49 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         });
         
         // Sort rows
-        rows.sort((a, b) => {
+        rows.sort(function(a, b) {
             let aValue, bValue;
-            const aCell = a.cells[columnIndex];
-            const bCell = b.cells[columnIndex];
             
             switch(columnIndex) {
-                case 0: // Name
-                case 1: // Student ID
-                case 2: // Email
-                case 4: // Course
-                    aValue = aCell.textContent.toLowerCase();
-                    bValue = bCell.textContent.toLowerCase();
+                case 1: // Name
+                    aValue = a.cells[1].textContent.toLowerCase();
+                    bValue = b.cells[1].textContent.toLowerCase();
                     break;
-                case 3: // Date
+                case 2: // Student ID
+                    aValue = a.cells[2].textContent.toLowerCase();
+                    bValue = b.cells[2].textContent.toLowerCase();
+                    break;
+                case 3: // Email
+                    aValue = a.cells[3].textContent.toLowerCase();
+                    bValue = b.cells[3].textContent.toLowerCase();
+                    break;
+                case 4: // Date
                     aValue = new Date(a.getAttribute('data-date'));
                     bValue = new Date(b.getAttribute('data-date'));
                     break;
-                case 6: // Marks
+                case 5: // Course
+                    aValue = a.cells[5].textContent.toLowerCase();
+                    bValue = b.cells[5].textContent.toLowerCase();
+                    break;
+                case 6: // Time
+                    return 0;
+                case 7: // Marks
                     const aMarks = a.getAttribute('data-obt-marks');
                     const bMarks = b.getAttribute('data-obt-marks');
                     aValue = parseInt(aMarks);
                     bValue = parseInt(bMarks);
                     break;
-                case 7: // Status
+                case 8: // Status
                     const statusOrder = { 'pass': 1, 'fail': 2, 'terminated': 3 };
                     aValue = statusOrder[a.getAttribute('data-status')] || 4;
                     bValue = statusOrder[b.getAttribute('data-status')] || 4;
                     break;
-                case 8: // Percentage
+                case 9: // Percentage
                     aValue = parseFloat(a.getAttribute('data-percentage'));
                     bValue = parseFloat(b.getAttribute('data-percentage'));
                     break;
                 default:
-                    aValue = aCell.textContent;
-                    bValue = bCell.textContent;
+                    return 0;
             }
             
             // Compare values
@@ -1560,119 +1755,8 @@ ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
         });
         
         // Reorder rows in DOM
-        rows.forEach(row => tbody.appendChild(row));
-    }
-    
-    // Close modal when clicking outside
-    window.addEventListener('click', function(event) {
-        const modal = document.getElementById('deleteModal');
-        if (event.target === modal) {
-            closeDeleteModal();
-        }
-    });
-    
-    // Add keyboard support for modal
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            closeDeleteModal();
-        }
-    });
-
-    // Event delegation for single-record actions - UPDATED with better error handling
-    document.getElementById('resultsTableBody').addEventListener('click', function(e) {
-        const target = e.target.closest('a.btn-primary, button.delete-btn, button.edit-btn');
-        if (!target) return;
-
-        if (target.classList.contains('delete-btn') || target.classList.contains('edit-btn') || target.classList.contains('btn-primary')) {
-            e.preventDefault();
-            
-            if (target.classList.contains('delete-btn')) {
-                // Get data from multiple sources for redundancy
-                const examId = target.getAttribute('data-exam-id');
-                const studentName = target.getAttribute('data-student-name');
-                const courseName = target.getAttribute('data-course-name');
-                
-                // Try to get from row if button attributes are missing
-                let finalExamId = examId;
-                let finalStudentName = studentName;
-                let finalCourseName = courseName;
-                
-                if (!examId || !studentName || !courseName) {
-                    const row = target.closest('tr.result-row');
-                    if (row) {
-                        finalExamId = examId || row.getAttribute('data-index') || row.cells[0]?.querySelector('input[name="examIds"]')?.value;
-                        finalStudentName = studentName || row.cells[1]?.textContent?.trim();
-                        finalCourseName = courseName || row.cells[5]?.textContent?.trim();
-                        
-                        console.log('Using fallback data from row:', {
-                            examId: finalExamId,
-                            studentName: finalStudentName,
-                            courseName: finalCourseName
-                        });
-                    }
-                }
-                
-                // Validate the data
-                if (!finalExamId || finalExamId === 'undefined' || finalExamId === 'null') {
-                    console.error('Invalid exam ID after fallback:', finalExamId);
-                    showAlert('Error: Could not retrieve exam ID. Please try again.');
-                    return;
-                }
-                
-                if (!finalStudentName || finalStudentName === 'undefined' || finalStudentName === 'null' || finalStudentName === 'N/A') {
-                    console.error('Invalid student name after fallback:', finalStudentName);
-                    showAlert('Error: Could not retrieve student name. Please try again.');
-                    return;
-                }
-                
-                if (!finalCourseName || finalCourseName === 'undefined' || finalCourseName === 'null') {
-                    console.error('Invalid course name after fallback:', finalCourseName);
-                    showAlert('Error: Could not retrieve course name. Please try again.');
-                    return;
-                }
-                
-                showDeleteModal(finalExamId, finalStudentName, finalCourseName);
-                
-            } else if (target.classList.contains('edit-btn')) {
-                const examId = target.getAttribute('data-exam-id');
-                const row = target.closest('tr');
-                enableEditMode(row, examId);
-            } else if (target.href) {
-                window.location.href = target.href;
-            }
-        }
-    });
-
-    // Select All functionality
-    document.getElementById('selectAll').addEventListener('change', function(e) {
-        const checkboxes = document.querySelectorAll('input[name="examIds"]');
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = e.target.checked;
+        rows.forEach(function(row) {
+            tbody.appendChild(row);
         });
-    });
-
-    // Bulk Delete Form Submit Handler - UPDATED
-    document.getElementById('bulkDeleteForm').addEventListener('submit', async function(e) {
-        // Check if this is a bulk delete operation (from the Delete Selected button)
-        const deleteBtn = e.submitter || e.originalEvent?.submitter;
-        if (deleteBtn && deleteBtn.closest('.btn-danger') && deleteBtn.textContent.includes('Delete Selected')) {
-            e.preventDefault();
-            const selected = document.querySelectorAll('input[name="examIds"]:checked').length;
-            if (selected === 0) {
-                showAlert('Please select at least one exam result to delete.');
-                return;
-            }
-            const confirmed = await showConfirm('Are you sure you want to delete ' + selected + ' exam result(s)?');
-            if (confirmed) {
-                // Ensure the operation is set to bulk_delete
-                const operationInput = document.createElement('input');
-                operationInput.type = 'hidden';
-                operationInput.name = 'operation';
-                operationInput.value = 'bulk_delete';
-                this.appendChild(operationInput);
-
-                this.submit();
-            }
-        }
-    });
+    }
 </script>

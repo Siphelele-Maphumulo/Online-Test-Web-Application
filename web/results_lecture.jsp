@@ -508,14 +508,14 @@
                 <input type="hidden" name="operation" id="bulkOperation" value="">
                 <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
 
-                <!-- Results Header -->
+                <!-- Results Header with Delete Selected Button at Top -->
                 <div class="results-header">
                     <div>
                         <div class="results-title">All Results</div>
                         <div class="results-count" id="resultsCount">Loading...</div>
                     </div>
                     <div class="search-container">
-                        <button type="button" class="btn btn-danger" id="bulkDeleteBtn" style="background: #dc3545;">
+                        <button type="button" class="btn btn-danger" id="bulkDeleteBtn" disabled style="background: #dc3545; margin-right: 10px;">
                             <i class="fas fa-trash-alt"></i> Delete Selected
                         </button>
                         <input type="text" id="globalSearch" class="search-input" placeholder="Search in all columns...">
@@ -564,7 +564,7 @@
                             data-course="<%= e.getcName() %>"
                             data-status="<%= statusText %>"
                             data-date="<%= e.getDate() %>">
-                            <td><input type="checkbox" name="eids" value="<%= e.getExamId() %>" class="record-checkbox"></td>
+                            <td><input type="checkbox" name="eids" value="<%= e.getExamId() %>" class="record-checkbox" onchange="updateBulkDeleteButton()"></td>
                             <td><%= e.getFullName() %><br><small><%= e.getEmail() %></small></td>
                             <td><%= e.getDate() %></td>
                             <td><%= e.getcName() %></td>
@@ -577,6 +577,8 @@
                                         data-exam-id="<%= e.getExamId() %>"
                                         data-student-name="<%= e.getFullName() %>"
                                         data-course-name="<%= e.getcName() %>"
+                                        data-student-email="<%= e.getEmail() %>"
+                                        data-marks="<%= e.getObtMarks() %>/<%= e.gettMarks() %>"
                                         style="border: none; background: none; cursor: pointer; color: #dc3545; text-decoration: underline;">Delete</button>
                             </td>
                         </tr>
@@ -666,6 +668,13 @@ let currentSortColumn = -1;
 let sortDirection = 1; // 1 for ascending, -1 for descending
 const csrfToken = '<%= csrfToken %>';
 
+// Update bulk delete button state based on selected checkboxes
+function updateBulkDeleteButton() {
+    const selectedCheckboxes = document.querySelectorAll('.record-checkbox:checked');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    bulkDeleteBtn.disabled = selectedCheckboxes.length === 0;
+}
+
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('resultsBody')) {
@@ -690,6 +699,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('selectAll').addEventListener('change', function(e) {
             document.querySelectorAll('.record-checkbox').forEach(checkbox => {
                 checkbox.checked = e.target.checked;
+                // Trigger onchange event to update bulk delete button
+                checkbox.dispatchEvent(new Event('change'));
             });
         });
 
@@ -699,8 +710,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 const examId = this.dataset.examId;
                 const studentName = this.dataset.studentName;
                 const courseName = this.dataset.courseName;
+                const studentEmail = this.dataset.studentEmail;
+                const marks = this.dataset.marks;
+                
                 openDeleteModal(
-                    'Are you sure you want to delete the result for <strong>' + studentName + '</strong> in <strong>' + courseName + '</strong>?',
+                    `Are you sure you want to delete the result for <strong>${studentName}</strong> in <strong>${courseName}</strong>?<br><br>` +
+                    `<strong>Student:</strong> ${studentName}<br>` +
+                    `<strong>Email:</strong> ${studentEmail}<br>` +
+                    `<strong>Course:</strong> ${courseName}<br>` +
+                    `<strong>Marks:</strong> ${marks}<br>` +
+                    `<br>This action cannot be undone.`,
                     () => submitSingleDelete(examId)
                 );
             });
@@ -714,7 +733,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             openDeleteModal(
-                'Are you sure you want to delete the <strong>' + selectedIds.length + '</strong> selected record(s)? This action cannot be undone.',
+                `Are you sure you want to delete the <strong>${selectedIds.length}</strong> selected record(s)?<br><br>` +
+                `This action cannot be undone.`,
                 () => submitBulkDelete()
             );
         });
@@ -726,22 +746,61 @@ function getSelectedIds() {
 }
 
 function submitSingleDelete(examId) {
+    // Create a form to submit the delete request
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = 'controller.jsp';
-    form.innerHTML = `
-        <input type="hidden" name="page" value="results">
-        <input type="hidden" name="operation" value="del">
-        <input type="hidden" name="eid" value="${examId}">
-        <input type="hidden" name="csrfToken" value="${csrfToken}">
-    `;
+    form.style.display = 'none'; // Hide the form
+    
+    // Add hidden inputs
+    const pageInput = document.createElement('input');
+    pageInput.type = 'hidden';
+    pageInput.name = 'page';
+    pageInput.value = 'results';
+    
+    const operationInput = document.createElement('input');
+    operationInput.type = 'hidden';
+    operationInput.name = 'operation';
+    operationInput.value = 'delete';
+    
+    const examIdInput = document.createElement('input');
+    examIdInput.type = 'hidden';
+    examIdInput.name = 'eid';
+    examIdInput.value = examId;
+    
+    const csrfTokenInput = document.createElement('input');
+    csrfTokenInput.type = 'hidden';
+    csrfTokenInput.name = 'csrfToken';
+    csrfTokenInput.value = csrfToken;
+    
+    // Append inputs to form
+    form.appendChild(pageInput);
+    form.appendChild(operationInput);
+    form.appendChild(examIdInput);
+    form.appendChild(csrfTokenInput);
+    
+    // Append form to body and submit
     document.body.appendChild(form);
     form.submit();
 }
 
 function submitBulkDelete() {
     const form = document.getElementById('resultsForm');
-    document.getElementById('bulkOperation').value = 'bulk_delete';
+    const selectedIds = getSelectedIds();
+    
+    if (selectedIds.length === 0) {
+        alert('No items selected for deletion.');
+        return;
+    }
+    
+    // Add a hidden input for the operation
+    const operationInput = document.createElement('input');
+    operationInput.type = 'hidden';
+    operationInput.name = 'operation';
+    operationInput.value = 'delete';
+    form.appendChild(operationInput);
+    
+    // Submit the form
     form.submit();
 }
 

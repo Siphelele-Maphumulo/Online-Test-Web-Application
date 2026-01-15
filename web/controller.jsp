@@ -554,38 +554,29 @@ try {
         response.sendRedirect("adm-page.jsp?pgprt=5");
         
     } else if ("delete".equalsIgnoreCase(operation)) {
-        // Validate CSRF token
-        String csrfToken = request.getParameter("csrf_token");
-        String sessionToken = (String) session.getAttribute("csrf_token");
-
-        if (csrfToken == null || !csrfToken.equals(sessionToken)) {
-            session.setAttribute("error", "Security token mismatch. Please try again.");
-            response.sendRedirect("adm-page.jsp?pgprt=5");
-            return;
-        }
-        int examId = Integer.parseInt(nz(request.getParameter("eid"), "0"));
+        // Handle both single and bulk delete operations
+        String[] examIds = request.getParameterValues("eids"); // For bulk delete
+        String singleExamId = request.getParameter("eid");  // For single delete
         
-        try {
-            Connection conn = pDAO.getConnection();
-            
-            // First delete answers for this exam
-            String deleteAnswersSql = "DELETE FROM answers WHERE exam_id=?";
-            PreparedStatement pstm1 = conn.prepareStatement(deleteAnswersSql);
-            pstm1.setInt(1, examId);
-            pstm1.executeUpdate();
-            pstm1.close();
-            
-            // Then delete the exam
-            String deleteExamSql = "DELETE FROM exams WHERE exam_id=?";
-            PreparedStatement pstm2 = conn.prepareStatement(deleteExamSql);
-            pstm2.setInt(1, examId);
-            pstm2.executeUpdate();
-            pstm2.close();
-            
-            session.setAttribute("message", "Exam result deleted successfully!");
-        } catch (SQLException ex) {
-            session.setAttribute("error", "Error deleting result: " + ex.getMessage());
-            ex.printStackTrace();
+        if (examIds != null && examIds.length > 0) {
+            // Bulk delete
+            pDAO.deleteExamResults(examIds);
+            session.setAttribute("message", "Selected exam results deleted successfully!");
+        } else if (singleExamId != null && !singleExamId.isEmpty()) {
+            // Single delete
+            try {
+                int examId = Integer.parseInt(singleExamId);
+                boolean success = pDAO.deleteExamResult(examId);
+                if (success) {
+                    session.setAttribute("message", "Exam result deleted successfully!");
+                } else {
+                    session.setAttribute("error", "Failed to delete exam result.");
+                }
+            } catch (NumberFormatException e) {
+                session.setAttribute("error", "Invalid Exam ID format.");
+            }
+        } else {
+            session.setAttribute("error", "No exam result selected for deletion.");
         }
         response.sendRedirect("adm-page.jsp?pgprt=5");
     } else {
