@@ -9,230 +9,148 @@
 <%@page import="myPackage.DatabaseClass" %>
 <%@page import="myPackage.classes.User" %>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
-<%
-    // ============ OPTIMIZATION 1: Early return for redirects ============
-    if (session.getAttribute("userId") == null) {
-        response.sendRedirect("login.jsp");
-        return;
-    }
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>Daily Attendance Register</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <!-- Add this BEFORE your script -->
+        <link rel="stylesheet" href="https://unpkg.com/@easepick/bundle@1.2.1/dist/index.css">
+        <script src="https://unpkg.com/@easepick/bundle@1.2.1/dist/index.umd.min.js"></script>
+    </head>
+    <body>
+        <%
+            // Authentication check
+            if (session.getAttribute("userId") == null) {
+                response.sendRedirect("login.jsp");
+                return;
+            }
 
-    int userId = (Integer) session.getAttribute("userId"); // Avoid parseInt if already integer
-    
-    // ============ OPTIMIZATION 2: Parallel database operations ============
-    // Initialize variables upfront to avoid null checks later
-    String todayDate = "";
-    boolean attendanceMarkedToday = false;
-    int presentDays = 0, absentDays = 0, lateDays = 0, attendanceRate = 0;
-    String studentName = "Student";
-    String studentEmail = "";
-    String userType = (String) session.getAttribute("userType");
-    ArrayList<Map<String, String>> attendanceHistory = null;
-    List<String> studentCourses = new ArrayList<>(5); // Pre-size to reduce allocations
-    
-    DatabaseClass pDAO = DatabaseClass.getInstance();
-    
-    // ============ OPTIMIZATION 3: Single database connection ============
-    Connection conn = null;
-    PreparedStatement pstmt = null;
-    ResultSet rs = null;
-    
-    try {
-        conn = pDAO.getConnection();
-        
-        // ============ OPTIMIZATION 4: Get today's date efficiently ============
-        java.time.LocalDate today = java.time.LocalDate.now();
-        todayDate = today.toString(); // "yyyy-MM-dd" format
-        
-        // ============ OPTIMIZATION 5: Batch database operations ============
-        // Check attendance and get user details in parallel if possible
-        // For now, we'll optimize the queries
-        
-        // Get user type efficiently
-        if (userType == null) {
-            String userQuery = "SELECT type, first_name, last_name, email FROM users WHERE id = ?";
-            try (PreparedStatement userStmt = conn.prepareStatement(userQuery)) {
-                userStmt.setInt(1, userId);
-                try (ResultSet userRs = userStmt.executeQuery()) {
-                    if (userRs.next()) {
-                        userType = userRs.getString("type");
-                        session.setAttribute("userType", userType);
-                        studentName = userRs.getString("first_name") + " " + userRs.getString("last_name");
-                        studentEmail = userRs.getString("email") != null ? userRs.getString("email") : "";
-                    }
+            int userId = Integer.parseInt(session.getAttribute("userId").toString());
+            DatabaseClass pDAO = DatabaseClass.getInstance();
+            Connection conn = null;
+            PreparedStatement pstmt = null;
+            ResultSet rs = null;
+            
+            // Determine user type
+            String userType = (String) session.getAttribute("userType");
+            if (userType == null) {
+                User user = pDAO.getUserDetails(String.valueOf(userId));
+                if (user != null) {
+                    userType = user.getType();
+                    session.setAttribute("userType", userType);
                 }
             }
-        } else {
-            // Still need student name if not fetched before
-            String nameQuery = "SELECT first_name, last_name, email FROM users WHERE id = ?";
-            try (PreparedStatement nameStmt = conn.prepareStatement(nameQuery)) {
-                nameStmt.setInt(1, userId);
-                try (ResultSet nameRs = nameStmt.executeQuery()) {
-                    if (nameRs.next()) {
-                        studentName = nameRs.getString("first_name") + " " + nameRs.getString("last_name");
-                        studentEmail = nameRs.getString("email") != null ? nameRs.getString("email") : "";
-                    }
-                }
+
+            // Redirect non-students to appropriate pages
+            if ("admin".equals(userType)) {
+                response.sendRedirect("adm-page.jsp?pgprt=7");
+                return;
+            } else if ("lecture".equals(userType)) {
+                response.sendRedirect("lec-page.jsp");
+                return;
             }
-        }
-        
-        // ============ OPTIMIZATION 6: Redirect non-students early ============
-        if ("admin".equals(userType)) {
-            response.sendRedirect("adm-page.jsp?pgprt=7");
-            return;
-        } else if ("lecture".equals(userType)) {
-            response.sendRedirect("lec-page.jsp");
-            return;
-        }
-        
-        // ============ OPTIMIZATION 7: Check attendance with optimized query ============
-        String checkQuery = "SELECT 1 FROM daily_register WHERE student_id = ? AND registration_date >= ?";
-        pstmt = conn.prepareStatement(checkQuery);
-        pstmt.setInt(1, userId);
-        pstmt.setDate(2, java.sql.Date.valueOf(today)); // Use Date.valueOf for efficiency
-        rs = pstmt.executeQuery();
-        attendanceMarkedToday = rs.next();
-        
-        // ============ OPTIMIZATION 8: Handle form submission ============
-        String operation = request.getParameter("operation");
-        if ("mark_attendance".equals(operation) && !attendanceMarkedToday) {
-            // Use batch insert for efficiency
-            String insertQuery = "INSERT INTO daily_register (student_id, student_name, registration_date) VALUES (?, ?, NOW())";
-            try (PreparedStatement insertStmt = conn.prepareStatement(insertQuery)) {
-                insertStmt.setInt(1, userId);
-                insertStmt.setString(2, studentName);
-                int rows = insertStmt.executeUpdate();
-                if (rows > 0) {
+
+            // Get student details
+            User student = pDAO.getUserDetails(String.valueOf(userId));
+            String studentName = "Student";
+            String studentEmail = "";
+            
+            if (student != null) {
+                studentName = student.getFirstName() + " " + student.getLastName();
+                studentEmail = student.getEmail();
+            }
+            
+            // Get today's date
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+            String todayDate = sdf.format(new java.util.Date());
+            
+            // Check if attendance already marked today
+            boolean attendanceMarkedToday = false;
+            try {
+                conn = pDAO.getConnection();
+                String checkQuery = "SELECT COUNT(*) as count FROM daily_register WHERE student_id = ? AND DATE(registration_date) = ?";
+                pstmt = conn.prepareStatement(checkQuery);
+                pstmt.setInt(1, userId);
+                pstmt.setString(2, todayDate);
+                rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    attendanceMarkedToday = rs.getInt("count") > 0;
+                }
+            } catch (Exception e) {
+                attendanceMarkedToday = false;
+            } finally {
+                // Close resources
+                if (rs != null) try { rs.close(); } catch (SQLException e) {}
+                if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
+            }
+            
+            // Handle attendance marking if form was submitted
+            String operation = request.getParameter("operation");
+            if ("mark_attendance".equals(operation) && !attendanceMarkedToday) {
+                boolean marked = pDAO.markAttendance(userId, studentName);
+                if (marked) {
                     session.setAttribute("message", "Attendance marked successfully!");
                     attendanceMarkedToday = true;
                 } else {
-                    session.setAttribute("error", "Failed to mark attendance.");
+                    session.setAttribute("error", "Failed to mark attendance. Please try again.");
                 }
             }
-        }
-        
-        // ============ OPTIMIZATION 9: Get attendance history with LIMIT ============
-        String historyQuery = "SELECT register_id, DATE(registration_date) as reg_date, TIME(registration_date) as reg_time " +
-                             "FROM daily_register WHERE student_id = ? ORDER BY registration_date DESC LIMIT 100";
-        try (PreparedStatement historyStmt = conn.prepareStatement(historyQuery)) {
-            historyStmt.setInt(1, userId);
-            try (ResultSet historyRs = historyStmt.executeQuery()) {
-                attendanceHistory = new ArrayList<>(100);
-                while (historyRs.next()) {
-                    Map<String, String> record = new HashMap<>(3);
-                    record.put("register_id", String.valueOf(historyRs.getInt("register_id")));
-                    record.put("registration_date", historyRs.getString("reg_date"));
-                    record.put("registration_time", historyRs.getString("reg_time"));
-                    attendanceHistory.add(record);
-                }
+            
+            // Get attendance history
+            ArrayList<Map<String, String>> attendanceHistory = null;
+            try {
+                attendanceHistory = pDAO.getAttendanceByStudentId(userId);
+            } catch (Exception e) {
+                // Handle error - table might not exist yet
             }
-        }
-        
-        // ============ OPTIMIZATION 10: Get courses with EXISTS for efficiency ============
-        String coursesQuery = "SELECT DISTINCT course_name FROM exam_register WHERE student_id = ? AND course_name IS NOT NULL";
-        try (PreparedStatement coursesStmt = conn.prepareStatement(coursesQuery)) {
-            coursesStmt.setInt(1, userId);
-            try (ResultSet coursesRs = coursesStmt.executeQuery()) {
-                while (coursesRs.next()) {
-                    String course = coursesRs.getString("course_name").trim();
-                    if (!course.isEmpty()) {
-                        studentCourses.add(course);
+            
+            // Get filter parameters
+            String filterDate = request.getParameter("filter_date");
+            if (filterDate == null || filterDate.isEmpty()) {
+                filterDate = todayDate;
+            }
+            
+            String filterCourse = request.getParameter("filter_course");
+            if (filterCourse == null) filterCourse = "";
+            
+            // Get student courses for dropdown
+            List<String> studentCourses = new ArrayList<>();
+            try {
+                conn = pDAO.getConnection();
+                String coursesQuery = "SELECT DISTINCT course_name FROM exam_register WHERE student_id = ?";
+                pstmt = conn.prepareStatement(coursesQuery);
+                pstmt.setInt(1, userId);
+                rs = pstmt.executeQuery();
+                while (rs.next()) {
+                    String course = rs.getString("course_name");
+                    if (course != null && !course.trim().isEmpty()) {
+                        studentCourses.add(course.trim());
                     }
                 }
+            } catch (Exception e) {
+                // Add default courses if query fails
+                studentCourses.add("Computer Science");
+                studentCourses.add("Mathematics");
+                studentCourses.add("Physics");
+            } finally {
+                // Close resources
+                if (rs != null) try { rs.close(); } catch (SQLException e) {}
+                if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
+                if (conn != null) try { conn.close(); } catch (SQLException e) {}
             }
-        }
-        
-        // ============ OPTIMIZATION 11: Get statistics in single query ============
-        String statsQuery = "SELECT " +
-                           "SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present, " +
-                           "SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent, " +
-                           "SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late " +
-                           "FROM daily_register WHERE student_id = ?";
-        try (PreparedStatement statsStmt = conn.prepareStatement(statsQuery)) {
-            statsStmt.setInt(1, userId);
-            try (ResultSet statsRs = statsStmt.executeQuery()) {
-                if (statsRs.next()) {
-                    presentDays = statsRs.getInt("present");
-                    absentDays = statsRs.getInt("absent");
-                    lateDays = statsRs.getInt("late");
-                    int totalDays = presentDays + absentDays;
-                    attendanceRate = totalDays > 0 ? (presentDays * 100 / totalDays) : 0;
-                }
-            }
-        }
-        
-    } catch (Exception e) {
-        // Log error but don't break the page
-        // In production, use a proper logging framework
-        System.err.println("Error in daily_register.jsp: " + e.getMessage());
-    } finally {
-        // ============ OPTIMIZATION 12: Ensure resources are closed ============
-        if (rs != null) try { rs.close(); } catch (SQLException e) {}
-        if (pstmt != null) try { pstmt.close(); } catch (SQLException e) {}
-        if (conn != null) try { conn.close(); } catch (SQLException e) {}
-    }
-    
-    // ============ OPTIMIZATION 13: Remove session messages after display ============
-    // We'll do this in the HTML section
-%>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Daily Attendance Register</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <!-- ============ OPTIMIZATION 14: Defer non-critical CSS ============ -->
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
-    
-    <!-- ============ OPTIMIZATION 15: Load CSS asynchronously ============ -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" 
-          media="print" onload="this.media='all'">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" 
-          rel="stylesheet" media="print" onload="this.media='all'">
-    
-    <!-- ============ OPTIMIZATION 16: Critical CSS inlined ============ -->
-   
-    <style>
-        /* Minimal critical CSS for above-the-fold content */
-        body { margin: 0; font-family: sans-serif; background: #f5f5f5; }
-        .alert { padding: 12px; margin: 10px; border-radius: 4px; }
-        .alert-success { background: #d4edda; color: #155724; }
-        .alert-error { background: #f8d7da; color: #721c24; }
-        .student-info-card, .course-card { 
-            background: white; 
-            padding: 20px; 
-            margin: 10px; 
-            border-radius: 8px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .start-exam-btn {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .start-exam-btn:disabled {
-            background: #6c757d;
-            cursor: not-allowed;
-        }
-        /* Loading skeleton */
-        .skeleton { 
-            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-            background-size: 200% 100%;
-            animation: loading 1.5s infinite;
-        }
-        @keyframes loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-    </style>
-    
-            <!--Style-->
+            
+            
+            int presentDays = pDAO.getDaysPresentCount(userId);
+            int absentDays = pDAO.getDaysAbsentCount(userId);
+            int lateDays = pDAO.getDaysLateCount(userId);
+            int totalDays = presentDays + absentDays;
+            int attendanceRate = totalDays > 0 ? (presentDays * 100 / totalDays) : 0;
+        %>
+
+        <!--Style-->
         <style>
             /* CSS Variables for Maintainability - PROFESSIONAL THEME */
             :root {
@@ -1292,48 +1210,15 @@
 
 
         </style>
-    
-    <!-- ============ OPTIMIZATION 17: Defer non-critical JavaScript ============ -->
-    <script>
-        // Store messages for JavaScript access before they're removed
-        var pageMessages = {
-            success: '<%= session.getAttribute("message") != null ? session.getAttribute("message") : "" %>',
-            error: '<%= session.getAttribute("error") != null ? session.getAttribute("error") : "" %>'
-        };
-        
-        // Remove session messages immediately to prevent double display
-        <%
-            if (session.getAttribute("message") != null) {
-                session.removeAttribute("message");
-            }
-            if (session.getAttribute("error") != null) {
-                session.removeAttribute("error");
-            }
-        %>
-    </script>
-    
-    
-</head>
-<body>
-    <!-- ============ OPTIMIZATION 18: Progressive rendering ============ -->
-    <!-- Show skeleton loader while content loads -->
-    <div id="skeleton-loader">
-        <div class="student-info-card skeleton" style="height: 150px; margin-bottom: 20px;"></div>
-        <div class="course-card skeleton" style="height: 200px; margin-bottom: 20px;"></div>
-        <div class="course-card skeleton" style="height: 300px; margin-bottom: 20px;"></div>
-    </div>
-    
-    <!-- Actual content (hidden initially) -->
-    <div id="main-content" style="display: none;">
+
         <%@ include file="header-messages.jsp" %>
         <%@ include file="modal_assets.jspf" %>
 
         <div class="results-wrapper">
-            <!-- Sidebar Navigation - Consider loading via AJAX if not critical -->
+            <!-- Sidebar Navigation -->
             <aside class="sidebar">
-                <!-- Sidebar content (kept minimal) -->
                 <div class="sidebar-header">
-                    <img src="IMG/mut.png" alt="MUT Logo" class="mut-logo" loading="lazy">
+                    <img src="IMG/mut.png" alt="MUT Logo" class="mut-logo">
                 </div>
                 <nav class="sidebar-nav">
                     <div class="left-menu">
@@ -1372,8 +1257,22 @@
                     </div>
                 </div>
 
-                <!-- Alert Messages - Now handled by JavaScript -->
-                <div id="alert-container"></div>
+                <!-- Alert Messages -->
+                <% if (session.getAttribute("message") != null) { %>
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i>
+                        <%= session.getAttribute("message") %>
+                    </div>
+                    <% session.removeAttribute("message"); %>
+                <% } %>
+                
+                <% if (session.getAttribute("error") != null) { %>
+                    <div class="alert alert-error">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <%= session.getAttribute("error") %>
+                    </div>
+                    <% session.removeAttribute("error"); %>
+                <% } %>
 
                 <!-- Student Information -->
                 <div class="student-info-card">
@@ -1409,74 +1308,69 @@
                         <p style="color: var(--dark-gray); margin-bottom: var(--spacing-lg); font-size: 15px;">
                             Please mark your attendance for <strong><%= todayDate %></strong> by clicking the button below.
                         </p>
-                        <form method="post" id="attendanceForm" onsubmit="return handleAttendanceSubmit(event);">
+                        <form method="post" onsubmit="return confirm('Are you sure you want to mark attendance for today?');">
                             <input type="hidden" name="operation" value="mark_attendance">
-                            <button type="submit" class="start-exam-btn" id="markAttendanceBtn">
+                            <button type="submit" class="start-exam-btn">
                                 <i class="fas fa-check"></i> Mark Today's Attendance
                             </button>
                         </form>
                     <% } %>
                 </div>
 
-                <!-- Attendance History - Load via AJAX if large -->
-                <% if (attendanceHistory != null && !attendanceHistory.isEmpty()) { %>
+                <!-- Attendance History -->
                 <div class="course-card">
                     <h3 style="margin-bottom: var(--spacing-md); color: var(--text-dark); font-size: 18px;">
                         <i class="fas fa-history"></i> Attendance History
                     </h3>
-                    <form id="bulkDeleteForm" action="controller.jsp" method="post">
-                        <input type="hidden" name="page" value="daily-register">
-                        <input type="hidden" name="operation" value="bulk_delete">
-                        <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
-                        <% if (!"student".equals(userType)) { %>
-                        <button type="submit" class="btn btn-error" style="margin-bottom: 20px;">
-                            <i class="fas fa-trash"></i> Delete Selected
-                        </button>
-                        <% } %>
-                        <div class="results-table-container">
-                            <table class="results-table">
-                                <thead>
-                                    <tr>
-                                        <% if (!"student".equals(userType)) { %>
-                                        <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)"></th>
+                    <% if (attendanceHistory != null && !attendanceHistory.isEmpty()) { %>
+                        <form id="bulkDeleteForm" action="controller.jsp" method="post">
+                            <input type="hidden" name="page" value="daily-register">
+                            <input type="hidden" name="operation" value="bulk_delete">
+                            <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
+                             <% if (!"student".equals(userType)) { %>
+                            <button type="submit" class="btn btn-error" style="margin-bottom: 20px;">
+                                <i class="fas fa-trash"></i> Delete Selected
+                            </button>
+                             <% } %>
+                            <div class="results-table-container">
+                                <table class="results-table">
+                                    <thead>
+                                        <tr>
+                                            <% if (!"student".equals(userType)) { %>
+                                            <th><input type="checkbox" id="selectAll"></th>
+                                            <% } %>
+                                            <th>#</th>
+                                            <th>Date</th>
+                                            <th>Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% 
+                                            int i = 0;
+                                            for (Map<String, String> record : attendanceHistory) {
+                                                i++;
+                                        %>
+                                        <tr>
+                                            <% if (!"student".equals(userType)) { %>
+                                            <td><input type="checkbox" name="registerIds" value="<%= record.get("register_id") %>"></td>
+                                            <% } %>
+                                            <td><%= i %></td>
+                                            <td><%= record.get("registration_date") %></td>
+                                            <td><%= record.get("registration_time") %></td>
+                                        </tr>
                                         <% } %>
-                                        <th>#</th>
-                                        <th>Date</th>
-                                        <th>Time</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <% 
-                                        int i = 0;
-                                        for (Map<String, String> record : attendanceHistory) {
-                                            i++;
-                                    %>
-                                    <tr>
-                                        <% if (!"student".equals(userType)) { %>
-                                        <td><input type="checkbox" name="registerIds" value="<%= record.get("register_id") %>"></td>
-                                        <% } %>
-                                        <td><%= i %></td>
-                                        <td><%= record.get("registration_date") %></td>
-                                        <td><%= record.get("registration_time") %></td>
-                                    </tr>
-                                    <% } %>
-                                </tbody>
-                            </table>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </form>
+                    <% } else { %>
+                        <div class="no-results">
+                            No attendance history found.
                         </div>
-                    </form>
+                    <% } %>
                 </div>
-                <% } else { %>
-                <div class="course-card">
-                    <h3 style="margin-bottom: var(--spacing-md); color: var(--text-dark); font-size: 18px;">
-                        <i class="fas fa-history"></i> Attendance History
-                    </h3>
-                    <div class="no-results">
-                        No attendance history found.
-                    </div>
-                </div>
-                <% } %>
 
-                <!-- Attendance Statistics -->
+                <!-- Attendance Statistics with Calendar -->
                 <div class="course-card">
                     <h3 style="margin-bottom: var(--spacing-md); color: var(--text-dark); font-size: 18px;">
                         <i class="fas fa-chart-pie"></i> Attendance Statistics
@@ -1506,109 +1400,25 @@
                                 <i class="fas fa-clock"></i> Days Late
                             </div>
                         </div>
-                    </div>
                 </div>
             </div>
         </div>
+<div id="deleteConfirmationModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h2>
+      <button class="close-button" onclick="closeModal()">&times;</button>
     </div>
+    <div class="modal-body">
+      <p id="deleteModalMessage">Are you sure you want to delete the selected records?</p>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+      <button id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+    </div>
+  </div>
+</div>
 
-    <!-- ============ OPTIMIZATION 19: JavaScript optimizations ============ -->
-    <script>
-        // Show content when page is loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            // Hide skeleton, show content
-            document.getElementById('skeleton-loader').style.display = 'none';
-            document.getElementById('main-content').style.display = 'block';
-            
-            // Show alerts if any
-            if (pageMessages.success) {
-                showAlert(pageMessages.success, 'success');
-            }
-            if (pageMessages.error) {
-                showAlert(pageMessages.error, 'error');
-            }
-            
-            // Preload next likely page
-            if (window.requestIdleCallback) {
-                requestIdleCallback(function() {
-                    var links = document.querySelectorAll('a[href*="std-page.jsp"]');
-                    for (var i = 0; i < Math.min(2, links.length); i++) {
-                        var link = links[i];
-                        var prefetchLink = document.createElement('link');
-                        prefetchLink.rel = 'prefetch';
-                        prefetchLink.href = link.href;
-                        document.head.appendChild(prefetchLink);
-                    }
-                });
-            }
-        });
-        
-        function handleAttendanceSubmit(event) {
-            event.preventDefault();
-            var form = event.target;
-            var button = document.getElementById('markAttendanceBtn');
-            
-            if (button.disabled) return false;
-            
-            if (confirm('Are you sure you want to mark attendance for today?')) {
-                button.disabled = true;
-                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Marking...';
-                
-                // Submit via AJAX for better UX
-                fetch('', {
-                    method: 'POST',
-                    body: new FormData(form),
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                .then(response => response.text())
-                .then(data => {
-                    // Reload only the attendance section
-                    location.reload();
-                })
-                .catch(error => {
-                    showAlert('Error marking attendance. Please try again.', 'error');
-                    button.disabled = false;
-                    button.innerHTML = '<i class="fas fa-check"></i> Mark Today\'s Attendance';
-                });
-            }
-            return false;
-        }
-        
-        function showAlert(message, type) {
-            var container = document.getElementById('alert-container');
-            var alert = document.createElement('div');
-            alert.className = 'alert alert-' + type;
-            alert.innerHTML = '<i class="fas ' + (type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle') + '"></i> ' + message;
-            container.appendChild(alert);
-            
-            // Auto-remove after 5 seconds
-            setTimeout(function() {
-                alert.style.opacity = '0';
-                setTimeout(function() {
-                    container.removeChild(alert);
-                }, 300);
-            }, 5000);
-        }
-        
-        function toggleSelectAll(source) {
-            var checkboxes = document.querySelectorAll('input[name="registerIds"]');
-            for (var i = 0; i < checkboxes.length; i++) {
-                checkboxes[i].checked = source.checked;
-            }
-        }
-        
-        // Load non-critical CSS asynchronously
-        window.addEventListener('load', function() {
-            var nonCriticalCSS = document.createElement('link');
-            nonCriticalCSS.rel = 'stylesheet';
-            nonCriticalCSS.href = 'https://unpkg.com/@easepick/bundle@1.2.1/dist/index.css';
-            document.head.appendChild(nonCriticalCSS);
-        });
-    </script>
-    
-    <!-- ============ OPTIMIZATION 20: Defer external JS ============ -->
-    <script src="https://unpkg.com/@easepick/bundle@1.2.1/dist/index.umd.min.js" defer></script>
-</body>
+
+    </body>
 </html>
