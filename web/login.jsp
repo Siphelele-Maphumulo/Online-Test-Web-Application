@@ -155,7 +155,7 @@
                     <i class="fas fa-sign-in-alt me-2"></i>Login
                 </button>
 
-                <a href="#" class="forgot-password">
+                <a href="Forgot_Password.jsp" class="forgot-password">
                     <i class="fas fa-question-circle me-2"></i>Forgot Password?
                 </a>
             </form>
