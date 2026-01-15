@@ -48,6 +48,10 @@ public class Email {
         sendEmail(to, firstName, code, "Verify Your Email - Code SA Institute");
     }
     
+    public static void sendPasswordResetEmail(String to, String firstName, String code) throws MessagingException {
+        sendEmail(to, firstName, code, "Password Reset Request - Code SA Institute");
+    }
+
     private static void sendEmail(String to, String firstName, String code, String subject) throws MessagingException {
         final String username = mailProperties.getProperty("EMAIL_USER");
         final String password = mailProperties.getProperty("EMAIL_PASS");
@@ -74,6 +78,8 @@ public class Email {
         String emailContent = "";
         if (subject.contains("Verify Your Email")) {
             emailContent = getVerificationEmailHtml(firstName, code);
+        } else if (subject.contains("Password Reset")) {
+            emailContent = getPasswordResetEmailHtml(firstName, code);
         } else {
             emailContent = getAcceptanceEmailHtml(firstName, code);
         }
@@ -209,6 +215,76 @@ public class Email {
             "                </ul>" +
             "            </div>" +
             "            <p>We look forward to supporting you in your learning journey.</p>" +
+            "        </div>" +
+            "        <div class='footer'>" +
+            "            <p><strong>Code SA Institute Pty Ltd</strong><br>" +
+            "            New Germany, South Africa<br>" +
+            "            Unit 8E trio Industrial Park, 8 Shepstone Road, The Wolds | Tel: +27 633137391<br>" +
+            "            Email: info@codingmadeeasy.org | Website: https://codingmadeeasy.org/</p>" +
+            "            <p><em>This is an automated email. Please do not reply.</em></p>" +
+            "        </div>" +
+            "    </div>" +
+            "</body>" +
+            "</html>";
+    }
+
+    private static String getPasswordResetEmailHtml(String firstName, String code) {
+        return "<!DOCTYPE html>" +
+            "<html lang='en'>" +
+            "<head>" +
+            "    <meta charset='UTF-8'>" +
+            "    <meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+            "    <title>Password Reset</title>" +
+            "    <style>" +
+            "        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }" +
+            "        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }" +
+            "        .header { text-align: center; border-bottom: 2px solid #09294D; padding-bottom: 20px; margin-bottom: 20px; }" +
+            "        .header h1 { color: #09294D; margin: 0; font-size: 24px; }" +
+            "        .header p { color: #555; font-size: 16px; margin-top: 5px; }" +
+            "        .content { color: #333; line-height: 1.6; font-size: 16px; }" +
+            "        .content h2 { color: #09294D; font-size: 20px; margin-bottom: 15px; }" +
+            "        .code-container { text-align: center; margin: 25px 0; }" +
+            "        .code { font-size: 32px; font-weight: bold; color: #ffffff; background-color: #09294D; padding: 15px 25px; border-radius: 8px; display: inline-block; letter-spacing: 4px; font-family: monospace; }" +
+            "        .instructions { margin: 20px 0; }" +
+            "        .instructions ol { padding-left: 20px; }" +
+            "        .instructions li { margin-bottom: 10px; font-size: 15px; }" +
+            "        .important { background-color: #FFF3CD; border-left: 5px solid #FFC107; padding: 15px; margin-top: 20px; border-radius: 5px; }" +
+            "        .important p, .important ul { margin: 0; }" +
+            "        .important ul { padding-left: 20px; }" +
+            "        .important li { margin-bottom: 5px; font-size: 14px; }" +
+            "        .expiry { color: #dc3545; font-weight: bold; }" +
+            "        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 14px; color: #777; }" +
+            "        a { color: #09294D; text-decoration: none; font-weight: bold; }" +
+            "        a:hover { text-decoration: underline; }" +
+            "    </style>" +
+            "</head>" +
+            "<body>" +
+            "    <div class='container'>" +
+            "        <div class='header'>" +
+            "            <h1>Password Reset</h1>" +
+            "            <p>Code SA Institute Online System</p>" +
+            "        </div>" +
+            "        <div class='content'>" +
+            "            <h2>Hello " + firstName + ",</h2>" +
+            "            <p>We received a request to reset your password. Use the code below to reset it:</p>" +
+            "            <div class='code-container'>" +
+            "                <div class='code'>" + code + "</div>" +
+            "            </div>" +
+            "            <div class='instructions'>" +
+            "                <h3>How to use this code:</h3>" +
+            "                <ol>" +
+            "                    <li>Return to the password reset page.</li>" +
+            "                    <li>Enter the code shown above.</li>" +
+            "                    <li>Choose a new password.</li>" +
+            "                </ol>" +
+            "            </div>" +
+            "            <div class='important'>" +
+            "                <p><strong>Important Information:</strong></p>" +
+            "                <ul>" +
+            "                    <li>This code will expire in <span class='expiry'>1 hour</span>.</li>" +
+            "                    <li>If you didn't request a password reset, please ignore this email.</li>" +
+            "                </ul>" +
+            "            </div>" +
             "        </div>" +
             "        <div class='footer'>" +
             "            <p><strong>Code SA Institute Pty Ltd</strong><br>" +

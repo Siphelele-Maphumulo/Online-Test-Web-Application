@@ -1,147 +1,94 @@
 
-<!--This main page-->
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Forgot Password</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .container {
+            display: flex;
+            min-height: 80vh;
+        }
+        .sidebar {
+            width: 20%;
+            background-color: #f0f0f0;
+        }
+        .content {
+            width: 80%;
+            padding: 20px;
+        }
+    </style>
+    <script>
+        function checkEmail() {
+            var email = document.getElementById("email").value;
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200) {
+                    if (this.responseText.trim() === "exists") {
+                        document.getElementById("resetBtn").disabled = false;
+                    } else {
+                        document.getElementById("resetBtn").disabled = true;
+                    }
+                }
+            };
+            xhttp.open("POST", "controller.jsp", true);
+            xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            xhttp.send("page=forgot_password&action=check_email&email=" + email);
+        }
 
-<%@page import="myPackage.classes.User"%>
-<%@page import="java.util.ArrayList"%>
-<%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
- 
-<% 
-myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
-%>
+        function sendResetLink(event) {
+            event.preventDefault();
+            var email = document.getElementById("email").value;
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200) {
+                    showResetForm();
+                }
+            };
+            xhttp.open("POST", "controller.jsp", true);
+            xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            xhttp.send("page=forgot_password&action=send_code&email=" + email);
+        }
 
-<%
-    User user = pDAO.getUserDetails(session.getAttribute("userId").toString());
-
-    // Check if the user is either an admin or a lecturer
-    if (user.getType().equalsIgnoreCase("admin") || user.getType().equalsIgnoreCase("lecture")) {
-%>
-<!-- SIDEBAR -->
-<div class="sidebar">
-    <div class="sidebar-background" style="background-color:#F3F3F3; color:black">
-        <!-- Logo Section -->
-        <div style="text-align: center; margin: 20px 0;">
-            <img src="IMG/mut.png" alt="MUT Logo" style="max-height: 120px;">
-        </div>
-        <!-- Navigation Menu -->
-        <div class="left-menu">
-            <!-- Profile Section -->
-            <a class="active"  href="adm-page.jsp?pgprt=0"><h2 style="color:black">Profile</h2></a>
-            <!-- Academic Management -->
-            <a href="adm-page.jsp?pgprt=2"><h2 style="color:black">Courses</h2></a>
-            <a href="adm-page.jsp?pgprt=3"><h2 style="color:black">Questions</h2></a>
-            <a href="adm-page.jsp?pgprt=5"><h2 style="color:black">Students Results</h2></a>
-            <!-- Administrative Tasks -->
-            <a href="adm-page.jsp?pgprt=1"><h2 style="color:black">Accounts</h2></a>
-        </div>
-    </div>
-</div>
-
-    <!-- CONTENT AREA -->
-    <div class="content-area">
-        <div class="panel" style="float: left;max-width: 600px">
-
-<%
-    } else {
-%>
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-        <div class="sidebar-background" style="background-color:#F3F3F3; color:black">
-            <div style="flex: 1;">
-                <img src="IMG/mut.png" alt="MUT Logo" style="max-height: 120px;">
+        function showResetForm() {
+            document.getElementById("emailForm").style.display = "none";
+            document.getElementById("resetForm").style.display = "block";
+            document.querySelector("#resetForm input[name='email']").value = document.getElementById("email").value;
+        }
+    </script>
+</head>
+<body>
+    <jsp:include page="header.jsp" />
+    <div class="container">
+        <div class="sidebar">
             </div>
-            <div class="left-menu">
-                <a class="active" href="std-page.jsp?pgprt=0"><h2 style="color:black">Profile</h2></a>
-                <a href="std-page.jsp?pgprt=1"><h2 style="color:black">Exams</h2></a>
-                <a href="std-page.jsp?pgprt=2"><h2 style="color:black">Results</h2></a>
+        <div class="content">
+            <h1>Forgot Password</h1>
+            <div id="emailForm">
+                <p>Please enter your email address to reset your password.</p>
+                <form action="controller.jsp" method="post" onsubmit="sendResetLink(event)">
+                    <input type="hidden" name="page" value="forgot_password">
+                    <input type="hidden" name="action" value="send_code">
+                    <input type="email" name="email" id="email" placeholder="Enter your email" onkeyup="checkEmail()" required>
+                    <input type="submit" id="resetBtn" value="Reset Password" disabled>
+                </form>
+            </div>
+            <div id="resetForm" style="display:none;">
+                <p>A verification code has been sent to your email. Please enter the code and your new password.</p>
+                <form action="controller.jsp" method="post">
+                    <input type="hidden" name="page" value="forgot_password">
+                    <input type="hidden" name="action" value="reset_password">
+                    <input type="hidden" name="email" value="<%= request.getParameter("email") %>">
+                    <input type="text" name="code" placeholder="Enter verification code" required>
+                    <input type="password" name="password" placeholder="Enter new password" required>
+                    <input type="password" name="confirm_password" placeholder="Confirm new password" required>
+                    <input type="submit" value="Change Password">
+                </form>
             </div>
         </div>
     </div>
-    <!-- CONTENT AREA -->
-    <div class="content-area">
-        <div class="panel" style="float: left;max-width: 600px">
-<%
-    }
-
-    if (request.getParameter("pedt") == null) {
-%>
-    <div class="title" style="background-color: #e3e3e3">Profile</div>
-    <div class="profile">
-        <h2>
-            <span class="tag" style="background-color: rgba(74, 23, 30, 0.8);">Your Name</span><span class="val"><%= user.getFirstName() + " " %><%= user.getLastName() %></span><br/>
-            <span class="tag" style="background-color: rgba(74, 23, 30, 0.8);">Email</span><span class="val"><%= user.getEmail() %></span><br/>
-            <span class="tag" style="background-color: rgba(74, 23, 30, 0.8);">Contact No</span><span class="val"><%= user.getContact() %></span><br/>
-            <span class="tag" style="background-color: rgba(74, 23, 30, 0.8);">City</span><span class="val"><%= user.getCity() %></span><br/>
-            <span class="tag" style="background-color: rgba(74, 23, 30, 0.8);">Address</span><span class="val"><%= user.getAddress() %></span>
-        </h2>
-    </div>
-    <br/>
-    <a href="<%= user.getType().equals("admin") || user.getType().equals("lecture") ? "adm-page.jsp" : "std-page.jsp" %>?pgprt=0&pedt=1">
-        <span class="form-button" style="background-color: #d3d3d3; border: none; border-radius: 12px; padding: 10px 20px; font-size: 16px; color: #000; cursor: pointer;">
-            Edit Profile
-        </span>
-    </a>
-<%
-    } else {
-%>
-<!-- Start of Edit Form -->
-<div class="title">Edit Profile</div>
-<div class="central-div form-style-6" style="position:inherit;margin-top: 70px;">
-    <form action="controller.jsp">
-        <input type="hidden" name="page" value="profile">
-        <input type="hidden" name="utype" value="<%= user.getType() %>">
-        <table>
-            <tr>
-                <td><label>First Name</label></td>
-                <td><input type="text" name="fname" value="<%= user.getFirstName() %>" class="text" 
-                         placeholder="First Name" readonly></td>
-            </tr>
-            <tr>
-                <td><label>Last Name</label></td>
-                <td><input type="text" name="lname" value="<%= user.getLastName() %>" class="text" 
-                         placeholder="Last Name" readonly></td>
-            </tr>
-            <tr>
-                <td><label>User Name</label></td>
-                <td><input type="text" name="uname" value="<%= user.getUserName() %>" class="text" 
-                         placeholder="User Name" readonly></td>
-            </tr>
-            <tr>
-                <td><label>Email</label></td>
-                <td><input type="email" name="email" value="<%= user.getEmail() %>" class="text" 
-                         placeholder="Email" readonly></td>
-            </tr>
-            <tr>
-                <td><label>Password</label></td>
-                <td><input type="password" name="pass" class="text" 
-                         placeholder="New Password (leave blank to keep current)"></td>
-            </tr>
-            <tr>
-                <td><label>Contact No</label></td>
-                <td><input type="text" name="contactno" value="<%= user.getContact() %>" class="text" 
-                         placeholder="Contact No" readonly></td>
-            </tr>
-            <tr>
-                <td><label>City</label></td>
-                <td><input type="text" name="city" value="<%= user.getCity() %>" class="text" 
-                         placeholder="City" readonly></td>
-            </tr>
-            <tr>
-                <td><label>Address</label></td>
-                <td><input type="text" name="address" value="<%= user.getAddress() %>" class="text" 
-                         placeholder="Address" readonly></td>
-            </tr>
-            <tr>
-                <td></td>
-                <td>
-                    <center>
-                        <input type="submit" class="form-button" value="Done" 
-                            style="background-color: #d3d3d3; border: none; border-radius: 12px; padding: 10px 20px; font-size: 16px; color: #000; cursor: pointer;">
-                    </center>
-                </td>
-            </tr>
-        </table>
-    </form>
-</div>
-<%
-    }
-%>
+    <jsp:include page="footer.jsp" />
+</body>
+</html>
