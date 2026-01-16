@@ -703,7 +703,7 @@
 
                     <div class="form-group">
                         <label class="form-label"><i class="fas fa-pencil-alt" style="color: var(--success);"></i>Your Question</label>
-                        <textarea name="question" class="question-input" rows="3" required><%= questionToEdit.getQuestion() %></textarea>
+                        <textarea name="question" id="editQuestionTextarea" class="question-input" rows="3" required oninput="checkForCodeSnippetEdit()"><%= questionToEdit.getQuestion() %></textarea>
                     </div>
 
                     <div id="editMcqOptions">
@@ -769,15 +769,15 @@
         const correct = document.getElementById("editCorrectAnswer");
         
         document.getElementById("questionTypeHidden").value = qType;
-
+    
         mcq.style.display = "none";
         single.style.display = "none";
         multiple.style.display = "none";
         correct.required = false;
-
+    
         if (qType === "TrueFalse") {
             single.style.display = "block";
-            correct.placeholder = "Enter 'True' or 'False'";
+            correct.placeholder = "Enter 'True' or 'False";
             correct.required = true;
         } else {
             mcq.style.display = "block";
@@ -792,6 +792,24 @@
             }
         }
     }
+
+// Function to check if question suggests code snippet type
+function checkForCodeSnippetEdit() {
+    const questionText = document.getElementById("editQuestionTextarea").value;
+    const questionType = document.getElementById("questionTypeSelect").value;
+    
+    // Count lines and check for code indicators
+    const lines = questionText.split('\n').filter(line => line.trim() !== '');
+    const hasCodeIndicators = /(?:def |function |public |class |print\(|console\.|<[^>]*>|\{|\}|import |int |String |printf\(|cout )/.test(questionText);
+    
+    // If question is longer than 3 lines or contains code indicators and is not already Code type
+    if ((lines.length > 3 || hasCodeIndicators) && questionType !== 'Code') {
+        if (confirm("This question appears to contain code or multiple lines. Would you like to change the question type to 'Code Snippet'?")) {
+            document.getElementById("questionTypeSelect").value = "Code";
+            toggleEditOptions();
+        }
+    }
+}
 
     function initializeMultipleSelectCheckboxes() {
         const correctAnswers = document.getElementById('editCorrectAnswer').value.split('|');

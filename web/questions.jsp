@@ -886,7 +886,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             <i class="fas fa-pencil-alt" style="color: var(--success);"></i>
                             Your Question
                         </label>
-                        <textarea name="question" id="questionText" class="question-input" placeholder="Type your question here" required rows="3"></textarea>
+                        <textarea name="question" id="questionText" class="question-input" placeholder="Type your question here" required rows="3" oninput="checkForCodeSnippet()"></textarea>
                         <div class="error-message" id="questionError">Question is required</div>
                     </div>
                     
@@ -1217,8 +1217,8 @@ function toggleOptions() {
 
     if (type === "TrueFalse") {
         singleAnswer.style.display = "block";
-        correctAnswer.placeholder = "Enter 'True' or 'False'";
-        hint.textContent = "Enter 'True' or 'False'";
+        correctAnswer.placeholder = "Enter 'True' or 'False";
+        hint.textContent = "Enter 'True' or 'False";
         correctAnswer.required = true;
     } else {
         mcqOptions.style.display = "block";
@@ -1237,6 +1237,24 @@ function toggleOptions() {
             if (type === 'Code') {
                 hint.textContent = "Enter expected output, must match an option.";
             }
+        }
+    }
+}
+
+// Function to check if question suggests code snippet type
+function checkForCodeSnippet() {
+    const questionText = document.getElementById("questionText").value;
+    const questionType = document.getElementById("questionType").value;
+    
+    // Count lines and check for code indicators
+    const lines = questionText.split('\n').filter(line => line.trim() !== '');
+    const hasCodeIndicators = /(?:def |function |public |class |print\(|console\.|<[^>]*>|\{|\}|import |int |String |printf\(|cout )/.test(questionText);
+    
+    // If question is longer than 3 lines or contains code indicators and is not already Code type
+    if ((lines.length > 3 || hasCodeIndicators) && questionType !== 'Code') {
+        if (confirm("This question appears to contain code or multiple lines. Would you like to change the question type to 'Code Snippet'?")) {
+            document.getElementById("questionType").value = "Code";
+            toggleOptions();
         }
     }
 }

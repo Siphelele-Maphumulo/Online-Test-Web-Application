@@ -306,17 +306,16 @@
 
 .header-nav { display: flex; justify-content: flex-end; }
 .nav-links { display: flex; gap: 8px; align-items: center; }
-.nav-link { color: var(--text-white); text-decoration: none; font-weight: 500; font-size: 0.8125rem; padding: 8px 16px; border-radius: 4px; transition: all var(--transition-speed) ease; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; gap: 6px; cursor: pointer; min-width: 100px; text-align: center; justify-content: center; }
+.nav-link { color: var(--text-white); text-decoration: none; font-weight: 500; font-size: 0.8125rem; padding: 6px 12px; border-radius: 4px; transition: all var(--transition-speed) ease; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; gap: 6px; cursor: pointer; }
 button.nav-link { border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.08); }
 button.nav-link:hover { background: rgba(255,255,255,0.18); transform: translateY(-2px); border-color: rgba(255,255,255,0.3); }
 .nav-link i { font-size: 0.6875rem; }
 
-.login-link:hover { background: rgba(74,144,226,0.2); }
-.signup-link { background: linear-gradient(135deg, #2ecc71, #27ae60) !important; font-weight: 600; }
-.signup-link:hover { background: linear-gradient(135deg, #27ae60, #219653) !important; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(46, 204, 113, 0.3); }
+.login-link:hover { background: rgba(74,144,226,0.2);  }
+.signup-link:hover { background: rgba(46,204,113,0.2);  }
 .logout-link:hover { background: rgba(231,76,60,0.2); }
 
-@media (max-width: 767.98px) { .header-logo { max-height: 36px; } .header-title { font-size: 0.875rem; } .header-subtitle { font-size: 0.625rem; } .nav-link { padding: 6px 10px; font-size: 0.75rem; min-width: 80px; } .signup-link { padding: 7px 12px !important; font-weight: 600; } }
+@media (max-width: 767.98px) { .header-logo { max-height: 36px; } .header-title { font-size: 0.875rem; } .header-subtitle { font-size: 0.625rem; } .nav-link { padding: 5px 8px; font-size: 0.75rem; } }
 
 /* Loading state for submit/logout buttons */
 button.nav-link.loading,

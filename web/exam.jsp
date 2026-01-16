@@ -1736,7 +1736,7 @@
                 <a class="nav-item" href="std-page.jsp?pgprt=0"><i class="fas fa-user"></i><span>Profile</span></a>
                 <a class="nav-item active" href="std-page.jsp?pgprt=1"><i class="fas fa-file-alt"></i><span>Exams</span></a>
                 <a class="nav-item" href="std-page.jsp?pgprt=2"><i class="fas fa-chart-line"></i><span>Results</span></a>
-                <a class="nav-item" href="std-page.jsp?pgprt=3"><i class="fas fa-chart-line"></i><span>Daily Register</span></a>
+                <a class="nav-item" href="std-page.jsp?pgprt=3"><i class="fas fa-chart-line"></i><span>Exam Results</span></a>
             </div>
         </nav>
     </aside>
@@ -2563,7 +2563,7 @@
                        class="btn-primary"
                        style="padding: 12px 30px; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">
                         <h3 style="margin-bottom: 0; color: #fffff;">
-                            <i class="fas fa-redo"></i> Daily Register
+                            <i class="fas fa-redo"></i> Take Another Exam
                         </h3>
                     </a>
                 </div>
@@ -2590,10 +2590,10 @@
             session.removeAttribute("remainingTime");
             session.removeAttribute("courseName");
         %>
-        <!-- COURSE PICKER -->
+        <!-- EXAM SELECTION -->
         <div class="page-header">
-            <div class="page-title"><i class="fas fa-pencil-alt"></i> Daily Register</div>
-            <div class="stats-badge"><i class="fas fa-clipboard-check"></i> Today's Register</div>
+            <div class="page-title"><i class="fas fa-file-alt"></i> Take Exam</div>
+            <div class="stats-badge"><i class="fas fa-clipboard-check"></i> Available Exams</div>
         </div>
 
         <div class="course-card">
@@ -2621,7 +2621,7 @@
                     }
                 } else {
             %>
-            <option value="" disabled>Today's register is not available</option>
+            <option value="" disabled>No exams available</option>
             <% } %>
                 </select>
 
@@ -2641,7 +2641,7 @@
 
                 <button type="submit" class="start-exam-btn" id="startExamBtn" 
                         <% if (activeCourseNames == null || activeCourseNames.isEmpty()) { %>disabled<% } %>>
-                    <i class="fas fa-check"></i> Mark Register
+                    <i class="fas fa-play"></i> Start Exam
                 </button>
             </form>
         </div>
