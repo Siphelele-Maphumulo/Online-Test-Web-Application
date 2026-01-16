@@ -6,6 +6,18 @@
 <%@page import="java.util.UUID"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
 
+<%! 
+// Function to escape HTML characters for safe display
+public String escapeHtml(String input) {
+    if (input == null) return "";
+    return input.replace("&", "&amp;")
+               .replace("<", "&lt;")
+               .replace(">", "&gt;")
+               .replace("\"", "&quot;")
+               .replace("'", "&#x27;");
+}
+%>
+
 <%
     // The main adm-page.jsp will handle user session checks.
     // We just need the DAO and a fresh CSRF token.
@@ -515,9 +527,6 @@
                         <div class="results-count" id="resultsCount">Loading...</div>
                     </div>
                     <div class="search-container">
-                        <button type="button" class="btn btn-danger" id="bulkDeleteBtn" disabled style="background: #dc3545; margin-right: 10px;">
-                            <i class="fas fa-trash-alt"></i> Delete Selected
-                        </button>
                         <input type="text" id="globalSearch" class="search-input" placeholder="Search in all columns...">
                         <button type="button" onclick="performGlobalSearch()" class="filter-button">Search</button>
                     </div>
@@ -645,8 +654,8 @@
                     <tr>
                         <td><%= i + 1 %></td>
                         <td><%= a.getQuestion() %></td>
-                        <td><%= a.getAnswer() != null ? a.getAnswer() : "No Answer" %></td>
-                        <td><%= a.getCorrectAnswer() != null ? a.getCorrectAnswer() : "N/A" %></td>
+                        <td><%= escapeHtml(a.getAnswer() != null ? a.getAnswer() : "No Answer") %></td>
+                        <td><%= escapeHtml(a.getCorrectAnswer() != null ? a.getCorrectAnswer() : "N/A") %></td>
                         <td style="color: <%= statusColor %>; font-weight: 600;">
                             <%= a.getStatus().toUpperCase() %>
                         </td>

@@ -969,12 +969,12 @@
         }
 
         // Single delete buttons
-        document.querySelectorAll('.single-delete-btn').forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-                showModal('Are you sure you want to delete this question? This action cannot be undone.', this.href);
-            });
-        });
+        // document.querySelectorAll('.single-delete-btn').forEach(button => {
+        //     button.addEventListener('click', function(e) {
+        //         e.preventDefault();
+        //         showModal('Are you sure you want to delete this question? This action cannot be undone.', this.href);
+        //     });
+        // });
 
         // Bulk delete button
         const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');

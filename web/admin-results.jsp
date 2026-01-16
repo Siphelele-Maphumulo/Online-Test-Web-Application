@@ -5,7 +5,19 @@
 <%@page import="java.util.UUID"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
 
-<% 
+<%! 
+// Function to escape HTML characters for safe display
+public String escapeHtml(String input) {
+    if (input == null) return "";
+    return input.replace("&", "&amp;")
+               .replace("<", "&lt;")
+               .replace(">", "&gt;")
+               .replace("\"", "&quot;")
+               .replace("'", "&#x27;");
+}
+%>
+
+<%
     String csrf_token = UUID.randomUUID().toString();
     session.setAttribute("csrf_token", csrf_token);
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
@@ -748,17 +760,7 @@
             </div>
         </div>
         
-        <!-- Bulk Delete Button (outside form) -->
-        <button type="button" class="btn btn-danger" id="bulkDeleteBtn" onclick="handleBulkDelete()">
-            <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
-        </button>
-        
-        <!-- Hidden Form for Bulk Delete -->
-        <form id="bulkDeleteForm" action="controller.jsp" method="post" style="display: none;">
-            <input type="hidden" name="page" value="admin-results">
-            <input type="hidden" name="operation" value="bulk_delete">
-            <input type="hidden" name="csrf_token" value="<%= csrf_token %>">
-        </form>
+
         
         <!-- Search Box -->
         <div class="search-container">
@@ -775,11 +777,31 @@
         <div class="results-card">
             <div class="card-header">
                 <span><i class="fas fa-list"></i> All Student Results</span>
+
                 <div class="stats-badge">
                     <span id="resultsCount"><%= allExamResults.size() %></span> Results
                 </div>
             </div>
-            
+         
+            <!-- Bulk Delete Button (outside form) -->
+        <!-- <div style="display:flex; justify-content:center;">
+        <button type="button" class="btn btn-danger" id="bulkDeleteBtn" onclick="handleBulkDelete()">
+            <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
+        </button>
+        </div> -->
+
+
+        <!-- Hidden Form for Bulk Delete -->
+        <form id="bulkDeleteForm" action="controller.jsp" method="post" style="display: none;">
+            <input type="hidden" name="page" value="admin-results">
+            <input type="hidden" name="operation" value="bulk_delete">
+            <input type="hidden" name="csrf_token" value="<%= csrf_token %>">
+        </form>
+
+         <button type="button" class="btn btn-danger floating-delete-btn" id="bulkDeleteBtn" onclick="handleBulkDelete()">
+            <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
+        </button>
+                        
             <% if (request.getParameter("eid") == null) { %>
                 <div style="overflow-x:auto;">
                     <table class="results-table" id="resultsTable">
@@ -963,8 +985,8 @@
                                     <tr>
                                         <td><strong><%= i + 1 %></strong></td>
                                         <td><%= a.getQuestion() %></td>
-                                        <td><%= a.getAnswer() != null ? a.getAnswer() : "No Answer" %></td>
-                                        <td><%= a.getCorrectAnswer() != null ? a.getCorrectAnswer() : "N/A" %></td>
+                                        <td><%= escapeHtml(a.getAnswer() != null ? a.getAnswer() : "No Answer") %></td>
+                                        <td><%= escapeHtml(a.getCorrectAnswer() != null ? a.getCorrectAnswer() : "N/A") %></td>
                                         <td>
                                             <% if ("correct".equals(a.getStatus())) { %>
                                                 <span class="badge badge-success">
@@ -987,6 +1009,117 @@
         </div>
     </main>
 </div>
+
+<!-- Professional Modal for Delete Confirmation -->
+<div id="confirmationModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle"><i class="fas fa-exclamation-triangle"></i> Confirmation</h3>
+            <span class="close-modal" onclick="hideModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p id="modalMessage"></p>
+        </div>
+        <div class="modal-footer">
+            <button id="cancelButton" class="btn btn-outline" onclick="hideModal()">Cancel</button>
+            <button id="confirmButton" class="btn btn-danger" onclick="confirmAction()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 0;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    animation: slideDown 0.3s;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    padding: 16px 20px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 18px;
+}
+
+.close-modal {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 20px;
+}
+
+.close-modal:hover {
+    color: #000;
+}
+
+.modal-body {
+    padding: 20px;
+    color: #333;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.modal-footer {
+    padding: 16px 20px;
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    border-radius: 0 0 8px 8px;
+    text-align: right;
+}
+
+/* Floating delete button */
+.floating-delete-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 999;
+    display: none;
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+</style>
 
 <!-- Font Awesome for Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -1758,5 +1891,79 @@
         rows.forEach(function(row) {
             tbody.appendChild(row);
         });
+    }
+    
+    // Floating delete button functionality
+    function updateFloatingDeleteButton() {
+        const selectedCheckboxes = document.querySelectorAll('.record-checkbox:checked');
+        const floatingDeleteBtn = document.getElementById('floatingDeleteBtn');
+        const floatingSelectedCount = document.getElementById('floatingSelectedCount');
+        
+        const selectedCountNum = selectedCheckboxes.length;
+        floatingSelectedCount.textContent = selectedCountNum;
+        
+        // Show/hide floating delete button based on selection
+        if (selectedCountNum > 0) {
+            floatingDeleteBtn.style.display = 'block';
+        } else {
+            floatingDeleteBtn.style.display = 'none';
+        }
+    }
+    
+    function handleFloatingBulkDelete() {
+        handleBulkDelete();
+    }
+    
+    // Update the updateBulkDeleteButton function to also update floating button
+    function updateBulkDeleteButton() {
+        const selectedCheckboxes = document.querySelectorAll('.record-checkbox:checked');
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+        const selectedCount = document.getElementById('selectedCount');
+        
+        const selectedCountNum = selectedCheckboxes.length;
+        selectedCount.textContent = selectedCountNum;
+        
+        // Show/hide bulk delete button based on selection
+        if (selectedCountNum > 0) {
+            bulkDeleteBtn.style.display = 'inline-block';
+            bulkDeleteBtn.disabled = false;
+        } else {
+            bulkDeleteBtn.style.display = 'none';
+            bulkDeleteBtn.disabled = true;
+        }
+        
+        // Also update floating delete button
+        updateFloatingDeleteButton();
+        
+        // Update select all checkbox state
+        const selectAll = document.getElementById('selectAll');
+        if (selectAll) {
+            const totalCheckboxes = document.querySelectorAll('.record-checkbox').length;
+            selectAll.checked = selectedCountNum === totalCheckboxes && totalCheckboxes > 0;
+            selectAll.indeterminate = selectedCountNum > 0 && selectedCountNum < totalCheckboxes;
+        }
+    }
+    
+    // Add event listeners to checkboxes to update floating button
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add event listeners to all checkboxes
+        document.querySelectorAll('.record-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', updateFloatingDeleteButton);
+        });
+    });
+    
+    // Modal functions
+    function hideModal() {
+        document.getElementById('confirmationModal').style.display = 'none';
+    }
+    
+    function confirmAction() {
+        // If we have a stored delete URL (single delete), redirect to it
+        if (window.currentDeleteUrl) {
+            window.location.href = window.currentDeleteUrl;
+        } else {
+            // Otherwise, submit the form for bulk delete
+            document.getElementById('bulkDeleteForm').submit();
+        }
     }
 </script>

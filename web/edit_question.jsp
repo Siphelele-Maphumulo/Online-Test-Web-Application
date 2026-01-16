@@ -749,7 +749,7 @@
                     </div>
 
                     <div class="form-actions">
-                        <a href="adm-page.jsp?pgprt=3" class="btn btn-outline"><i class="fas fa-times"></i> Cancel</a>
+                        <a href="adm-page.jsp?coursename=<%= currentCourseName %>&pgprt=4" class="btn btn-outline"><i class="fas fa-times"></i> Cancel</a>
                         <button type="submit" class="btn btn-primary" id="editSubmitBtn"><i class="fas fa-save"></i> Update Question</button>
                     </div>
                 </form>

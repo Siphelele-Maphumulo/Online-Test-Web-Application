@@ -470,8 +470,35 @@ try {
             String qid = nz(request.getParameter("qid"), "");
             if (!qid.isEmpty()) pDAO.deleteQuestion(Integer.parseInt(qid));
             session.setAttribute("message","Question deleted successfully");
-            response.sendRedirect("adm-page.jsp?pgprt=3");
-
+            String courseName = nz(request.getParameter("coursename"), "");
+            if (!courseName.isEmpty()) {
+                response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
+            } else {
+                response.sendRedirect("adm-page.jsp?pgprt=3");
+            }
+        } else if ("bulk_delete".equalsIgnoreCase(operation)) {
+            String[] questionIds = request.getParameterValues("questionIds");
+            String courseName = nz(request.getParameter("coursename"), "");
+            
+            if (questionIds != null && questionIds.length > 0) {
+                for (String qid : questionIds) {
+                    try {
+                        int id = Integer.parseInt(qid);
+                        pDAO.deleteQuestion(id);
+                    } catch (NumberFormatException e) {
+                        // Skip invalid IDs
+                    }
+                }
+                session.setAttribute("message", questionIds.length + " question(s) deleted successfully!");
+            } else {
+                session.setAttribute("error", "No questions selected for deletion.");
+            }
+            
+            if (!courseName.isEmpty()) {
+                response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
+            } else {
+                response.sendRedirect("adm-page.jsp?pgprt=3");
+            }
         } else if ("edit".equalsIgnoreCase(operation)) {
             String qid = nz(request.getParameter("qid"), "");
             if (!qid.isEmpty()) {
@@ -483,12 +510,26 @@ try {
                     question.setOpt3(nz(request.getParameter("opt3"), ""));
                     question.setOpt4(nz(request.getParameter("opt4"), ""));
                     question.setCorrect(nz(request.getParameter("correct"), ""));
-                    question.setCourseName(nz(request.getParameter("coursename"), ""));
+                    String courseName = nz(request.getParameter("coursename"), "");
+                    question.setCourseName(courseName);
                     pDAO.updateQuestion(question);
                     session.setAttribute("message","Question updated successfully");
+                    
+                    // Redirect to the same page with the course selected
+                    if (!courseName.isEmpty()) {
+                        response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
+                    } else {
+                        response.sendRedirect("adm-page.jsp?pgprt=3");
+                    }
+                    return;
                 }
             }
-            response.sendRedirect("adm-page.jsp?pgprt=3");
+            String courseName = nz(request.getParameter("coursename"), "");
+            if (!courseName.isEmpty()) {
+                response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
+            } else {
+                response.sendRedirect("adm-page.jsp?pgprt=3");
+            }
 
         } else if ("addnew".equalsIgnoreCase(operation)) {
             String questionText  = nz(request.getParameter("question"), "");
@@ -507,10 +548,20 @@ try {
 
             pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType);
             session.setAttribute("message","Question added successfully");
-            response.sendRedirect("adm-page.jsp?pgprt=3");
+            courseName = nz(request.getParameter("coursename"), "");
+            if (!courseName.isEmpty()) {
+                response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
+            } else {
+                response.sendRedirect("adm-page.jsp?pgprt=3");
+            }
         } else {
             session.setAttribute("error", "Invalid operation for questions");
-            response.sendRedirect("adm-page.jsp?pgprt=3");
+            String courseName = nz(request.getParameter("coursename"), "");
+            if (!courseName.isEmpty()) {
+                response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
+            } else {
+                response.sendRedirect("adm-page.jsp?pgprt=3");
+            }
         }
 
 /* =========================
@@ -633,8 +684,7 @@ try {
         if (examId > 0) {
             // REGISTER EXAM START
             try {
-                String deviceIdentifier = pDAO.getDeviceIdentifier(request);
-                boolean registered = pDAO.registerExamStart(userId, examId, coursename, deviceIdentifier);
+                boolean registered = pDAO.registerExamStart(userId, examId, coursename);
                 
                 // Optional: You can log to application log if needed
                 // application.log("Exam register entry created for student " + userId + " for exam " + examId);

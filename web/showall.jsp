@@ -643,8 +643,8 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             <%
                     } else {
             %>
-                <button type="button" id="bulkDeleteBtn" class="btn btn-error">Delete Selected</button>
-                <br><br>
+                <!-- <button type="button" id="bulkDeleteBtn" class="btn btn-error">Delete Selected</button>
+                <br><br> -->
             <%
                         for (int i = 0; i < list.size(); i++) {
                             Questions question = (Questions) list.get(i);
@@ -778,6 +778,117 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     </main>
 </div>
 
+<!-- Professional Modal for Delete Confirmation -->
+<div id="confirmationModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle"><i class="fas fa-exclamation-triangle"></i> Confirmation</h3>
+            <span class="close-modal" onclick="hideModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p id="modalMessage"></p>
+        </div>
+        <div class="modal-footer">
+            <button id="cancelButton" class="btn btn-outline" onclick="hideModal()">Cancel</button>
+            <button id="confirmButton" class="btn btn-error" onclick="confirmAction()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 0;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    animation: slideDown 0.3s;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    padding: 16px 20px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 18px;
+}
+
+.close-modal {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 20px;
+}
+
+.close-modal:hover {
+    color: #000;
+}
+
+.modal-body {
+    padding: 20px;
+    color: #333;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.modal-footer {
+    padding: 16px 20px;
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    border-radius: 0 0 8px 8px;
+    text-align: right;
+}
+
+/* Floating delete button */
+.floating-delete-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 999;
+    display: none;
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+</style>
+
 <!-- Font Awesome for Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
@@ -807,7 +918,106 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             }
         `;
         document.head.appendChild(style);
+        
+        // Add floating delete button
+        const floatingDeleteBtn = document.createElement('button');
+        floatingDeleteBtn.id = 'floatingDeleteBtn';
+        floatingDeleteBtn.className = 'btn btn-error floating-delete-btn';
+        floatingDeleteBtn.innerHTML = '<i class="fas fa-trash"></i> Delete Selected';
+        floatingDeleteBtn.onclick = function() {
+            const form = document.querySelector('form');
+            const selectedQuestions = form.querySelectorAll('input[name="questionIds"]:checked').length;
+            
+            if (selectedQuestions === 0) {
+                alert('Please select at least one question to delete.');
+                return;
+            }
+            
+            document.getElementById('modalMessage').textContent = 
+                `Are you sure you want to delete the ${selectedQuestions} selected question(s)? This action cannot be undone.`;
+            document.getElementById('confirmationModal').style.display = 'block';
+        };
+        document.body.appendChild(floatingDeleteBtn);
+        
+        // Update floating delete button state based on selections
+        function updateFloatingDeleteButton() {
+            const form = document.querySelector('form');
+            const selectedQuestions = form.querySelectorAll('input[name="questionIds"]:checked').length;
+            const floatingBtn = document.getElementById('floatingDeleteBtn');
+            
+            if (selectedQuestions > 0) {
+                floatingBtn.style.display = 'block';
+            } else {
+                floatingBtn.style.display = 'none';
+            }
+        }
+        
+        // Add event listeners to all checkboxes
+        document.querySelectorAll('input[name="questionIds"]').forEach(checkbox => {
+            checkbox.addEventListener('change', updateFloatingDeleteButton);
+        });
+        
+        // Add event listener to bulk delete button
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const form = this.closest('form');
+                const selectedQuestions = form.querySelectorAll('input[name="questionIds"]:checked').length;
+                
+                if (selectedQuestions === 0) {
+                    alert('Please select at least one question to delete.');
+                    return;
+                }
+                
+                document.getElementById('modalMessage').textContent = 
+                    `Are you sure you want to delete the ${selectedQuestions} selected question(s)? This action cannot be undone.`;
+                document.getElementById('confirmationModal').style.display = 'block';
+            });
+        }
+        
+        // Add event listener to single delete buttons
+        document.querySelectorAll('.single-delete-btn').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const questionId = this.href.split('qid=')[1].split('&')[0];
+                
+                document.getElementById('modalMessage').textContent = 
+                    'Are you sure you want to delete this question? This action cannot be undone.';
+                document.getElementById('confirmationModal').style.display = 'block';
+                
+                // Store the URL for later use
+                window.currentDeleteUrl = this.href;
+            });
+        });
     });
+    
+    function showModal(message) {
+        document.getElementById('modalMessage').textContent = message;
+        document.getElementById('confirmationModal').style.display = 'block';
+    }
+    
+    function hideModal() {
+        document.getElementById('confirmationModal').style.display = 'none';
+    }
+    
+    function confirmAction() {
+        // If we have a stored delete URL (single delete), redirect to it
+        if (window.currentDeleteUrl) {
+            window.location.href = window.currentDeleteUrl;
+        } else {
+            // Otherwise, submit the form for bulk delete
+            document.querySelector('form').submit();
+        }
+    }
+    
+    // Close modal when clicking outside of it
+    window.onclick = function(event) {
+        const modal = document.getElementById('confirmationModal');
+        if (event.target === modal) {
+            hideModal();
+        }
+    }
 </script>
 
 <%!

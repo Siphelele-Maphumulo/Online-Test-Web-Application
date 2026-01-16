@@ -4,7 +4,19 @@
 <%@page import="java.util.ArrayList"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
  
-<% 
+<%! 
+// Function to escape HTML characters for safe display
+public String escapeHtml(String input) {
+    if (input == null) return "";
+    return input.replace("&", "&amp;")
+               .replace("<", "&lt;")
+               .replace(">", "&gt;")
+               .replace("\"", "&quot;")
+               .replace("'", "&#x27;");
+}
+%>
+
+<%
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
 // Get user ID from session
@@ -1539,7 +1551,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                     <i class="fas fa-user-edit"></i> Your Answer
                   </div>
                   <div style="color: <%= isCorrect ? "var(--success)" : "var(--error)" %>; font-weight: 600; background: var(--white); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid <%= isCorrect ? "var(--success)" : "var(--error)" %>;">
-                    <%= a.getAnswer() %>
+                    <%= escapeHtml(a.getAnswer() != null ? a.getAnswer() : "No Answer") %>
                   </div>
                 </div>
                 
@@ -1548,7 +1560,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                     <i class="fas fa-check-circle"></i> Correct Answer
                   </div>
                   <div style="color: var(--success); font-weight: 600; background: var(--white); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--success);">
-                    <%= a.getCorrectAnswer() %>
+                    <%= escapeHtml(a.getCorrectAnswer() != null ? a.getCorrectAnswer() : "N/A") %>
                   </div>
                 </div>
               </div>

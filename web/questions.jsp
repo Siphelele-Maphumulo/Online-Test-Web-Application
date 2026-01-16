@@ -604,9 +604,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     z-index:1000;
     box-shadow:0 6px 20px rgba(0,0,0,.3);
 }
-</style>
 
-<style>
 /* Modal Styles */
 .modal {
     display: none;
@@ -824,55 +822,6 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             </div>
         </header>
         
-        <!-- Show Questions Panel -->
-        <div class="question-card" id="showQuestionsPanel">
-            <div class="card-header">
-                <span><i class="fas fa-list"></i> Show All Questions</span>
-                <i class="fas fa-search" style="opacity: 0.8;"></i>
-            </div>
-            <div class="question-form">
-                <form action="adm-page.jsp">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-book" style="color: var(--accent-blue);"></i>
-                                Select Course
-                            </label>
-                            <select name="coursename" class="form-select" id="courseSelectShowAll" required>
-                                <% 
-                                ArrayList<String> courseNames = pDAO.getAllCourseNames(); 
-                                String lastCourseName = pDAO.getLastCourseName();
-                                
-                                if (courseNames.isEmpty()) {
-                                %>
-                                    <option value="">No courses available</option>
-                                <%
-                                } else {
-                                    for (String course : courseNames) {
-                                        boolean isSelected = (lastCourseName != null && lastCourseName.equals(course)) || 
-                                                           (lastCourseName == null && course.equals(courseNames.get(0)));
-                                %>
-                                <option value="<%=course%>" <%=isSelected ? "selected" : ""%>><%=course%></option>
-                                <% 
-                                    }
-                                } 
-                                %>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <input type="hidden" name="pgprt" value="4">
-                    
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-success" <%=courseNames.isEmpty() ? "disabled" : ""%>>
-                            <i class="fas fa-eye"></i>
-                            Show Questions
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
         <!-- Add New Question Panel -->
         <div class="question-card" id="addQuestionPanel">
             <div class="card-header">
@@ -890,6 +839,8 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             <select name="coursename" class="form-select" id="courseSelectAddNew" required>
                                 <% 
                                 ArrayList<String> allCourseNames = pDAO.getAllCourseNames();
+                                String lastCourseNameAdd = pDAO.getLastCourseName();
+                                
                                 if (allCourseNames.isEmpty()) {
                                 %>
                                     <option value="">No courses available. Please add courses first.</option>
@@ -899,8 +850,8 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                                     <option value="">Select Course</option>
                                 <%
                                     for (String course : allCourseNames) {
-                                        boolean isSelected = (lastCourseName != null && lastCourseName.equals(course)) || 
-                                                           (lastCourseName == null && course.equals(allCourseNames.get(0)));
+                                        boolean isSelected = (lastCourseNameAdd != null && lastCourseNameAdd.equals(course)) || 
+                                                           (lastCourseNameAdd == null && course.equals(allCourseNames.get(0)));
                                 %>
                                 <option value="<%=course%>" <%=isSelected ? "selected" : ""%>><%=course%></option>
                                 <% 
@@ -1015,6 +966,55 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         <button type="button" class="btn btn-primary" id="submitBtn" onclick="validateAndSubmit()">
                             <i class="fas fa-plus"></i>
                             Add Question
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Show Questions Panel -->
+        <div class="question-card" id="showQuestionsPanel">
+            <div class="card-header">
+                <span><i class="fas fa-list"></i> Show All Questions</span>
+                <i class="fas fa-search" style="opacity: 0.8;"></i>
+            </div>
+            <div class="question-form">
+                <form action="adm-page.jsp">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-book" style="color: var(--accent-blue);"></i>
+                                Select Course
+                            </label>
+                            <select name="coursename" class="form-select" id="courseSelectShowAll" required>
+                                <% 
+                                ArrayList<String> courseNames = pDAO.getAllCourseNames(); 
+                                String lastCourseName = pDAO.getLastCourseName();
+                                
+                                if (courseNames.isEmpty()) {
+                                %>
+                                    <option value="">No courses available</option>
+                                <%
+                                } else {
+                                    for (String course : courseNames) {
+                                        boolean isSelected = (lastCourseName != null && lastCourseName.equals(course)) || 
+                                                           (lastCourseName == null && course.equals(courseNames.get(0)));
+                                %>
+                                <option value="<%=course%>" <%=isSelected ? "selected" : ""%>><%=course%></option>
+                                <% 
+                                    }
+                                } 
+                                %>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="pgprt" value="4">
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-success" <%=courseNames.isEmpty() ? "disabled" : ""%>>
+                            <i class="fas fa-eye"></i>
+                            Show Questions
                         </button>
                     </div>
                 </form>
@@ -1260,17 +1260,42 @@ function syncCourseDropdowns() {
 }
 
 // Scroll Indicator
-function scrollToShowQuestions(){document.getElementById("showQuestionsPanel").scrollIntoView({behavior:"smooth"});}
-function scrollToAddQuestion(){document.getElementById("addQuestionPanel").scrollIntoView({behavior:"smooth"});}
+function scrollToShowQuestions(){
+    document.getElementById("showQuestionsPanel").scrollIntoView({behavior:"smooth"});
+}
+function scrollToAddQuestion(){
+    document.getElementById("addQuestionPanel").scrollIntoView({behavior:"smooth"});
+}
 function updateScrollIndicator(){
+    // Check if elements exist before accessing them
     const indicator = document.getElementById("scrollIndicator");
     const add = document.getElementById("addQuestionPanel");
     const show = document.getElementById("showQuestionsPanel");
+    
     if(!indicator || !add || !show) return;
-    const addTop = Math.abs(add.getBoundingClientRect().top);
-    const showTop = Math.abs(show.getBoundingClientRect().top);
-    if(addTop < showTop){indicator.innerHTML='<i class="fas fa-arrow-down"></i>'; indicator.onclick = scrollToShowQuestions;}
-    else{indicator.innerHTML='<i class="fas fa-arrow-up"></i>'; indicator.onclick = scrollToAddQuestion;}
+    
+    // Get positions relative to viewport
+    const addRect = add.getBoundingClientRect();
+    const showRect = show.getBoundingClientRect();
+    
+    // Calculate how far each panel is from the top of the viewport
+    const addDistanceFromTop = Math.abs(addRect.top);
+    const showDistanceFromTop = Math.abs(showRect.top);
+    
+    // Determine which panel is closer to the current viewport center
+    const viewportCenter = window.innerHeight / 2;
+    const addDistanceFromCenter = Math.abs(addRect.top - viewportCenter);
+    const showDistanceFromCenter = Math.abs(showRect.top - viewportCenter);
+    
+    if (addDistanceFromCenter < showDistanceFromCenter) {
+        // User is near the Add New Question panel, show downward arrow to go to Show All Questions
+        indicator.innerHTML='<i class="fas fa-arrow-down"></i>';
+        indicator.onclick = scrollToShowQuestions;
+    } else {
+        // User is near the Show All Questions panel, show upward arrow to go to Add New Question
+        indicator.innerHTML='<i class="fas fa-arrow-up"></i>';
+        indicator.onclick = scrollToAddQuestion;
+    }
 }
 
 // Initialize on page load
@@ -1313,8 +1338,20 @@ document.addEventListener("DOMContentLoaded", () => {
         if (event.target == modal) closeModal();
     };
 
+    // Re-enable scroll indicator with debounce to prevent performance issues
     updateScrollIndicator();
-    window.addEventListener("scroll", updateScrollIndicator);
-    window.addEventListener("resize", updateScrollIndicator);
+    
+    // Debounce function to limit how often the scroll event fires
+    let scrollTimeout;
+    window.addEventListener("scroll", () => {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(updateScrollIndicator, 100);
+    });
+    
+    let resizeTimeout;
+    window.addEventListener("resize", () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(updateScrollIndicator, 100);
+    });
 });
 </script>

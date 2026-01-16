@@ -2901,7 +2901,7 @@ public void logExamCompletion(int examId) {
 
 // Add these methods to your DatabaseClass
 
-public boolean registerExamStart(int studentId, int examId, String courseName, String deviceIdentifier) 
+public boolean registerExamStart(int studentId, int examId, String courseName) 
     throws SQLException {
     
     try {
@@ -2911,25 +2911,20 @@ public boolean registerExamStart(int studentId, int examId, String courseName, S
         return false;
     }
     
-    if (studentId <= 0 || examId <= 0 || courseName == null || courseName.trim().isEmpty() || 
-        deviceIdentifier == null || deviceIdentifier.trim().isEmpty()) {
+    if (studentId <= 0 || examId <= 0 || courseName == null || courseName.trim().isEmpty()) {
         return false;
     }
     
     String sql = "INSERT INTO exam_register " +
-                 "(student_id, exam_id, course_name, exam_date, start_time, device_identifier) " +
-                 "VALUES (?, ?, ?, CURDATE(), CURTIME(), ?) " +
+                 "(student_id, exam_id, course_name, exam_date, start_time) " +
+                 "VALUES (?, ?, ?, CURDATE(), CURTIME()) " +
                  "ON DUPLICATE KEY UPDATE " +
-                 "    start_time = CURTIME(), " +
-                 "    device_identifier = ?, " +
-                 "    updated_at = CURRENT_TIMESTAMP";
+                 "    start_time = CURTIME()";
     
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
         ps.setInt(1, studentId);
         ps.setInt(2, examId);
         ps.setString(3, courseName.trim());
-        ps.setString(4, deviceIdentifier.trim());
-        ps.setString(5, deviceIdentifier.trim());
         
         return ps.executeUpdate() > 0;
     }
