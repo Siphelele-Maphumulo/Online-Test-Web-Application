@@ -633,6 +633,34 @@ public String escapeHtml(String input) {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
+
+    .action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+
+    font-size: 9px;
+    height: 24px;
+    min-width: 50px;
+
+    padding: 0 9px;
+    border-radius: 6px;
+
+    white-space: nowrap;
+}
+
+.action-btn i {
+    font-size: 9px;
+}
+
 </style>
 
 <%@ include file="header-messages.jsp" %>
@@ -904,40 +932,39 @@ public String escapeHtml(String input) {
                                     <span class="badge badge-info"><%= String.format("%.0f", percentage) %>%</span>
                                 </td>
                                 <td>
-                                    <div class="action-buttons">
-                                        <button class="btn btn-secondary edit-btn" 
-                                                data-exam-id="<%= examId %>"
-                                                style="font-size: 13px; padding: 8px 16px; margin: 2px;">
-                                            <i class="fas fa-edit"></i> Edit
-                                        </button>
-                                        <button class="btn btn-danger delete-btn single-delete-btn" 
-                                                type="button"
-                                                data-exam-id="<%= examId %>"
-                                                data-student-name="<%= fullName %>"
-                                                data-course-name="<%= courseName %>"
-                                                data-student-email="<%= studentEmail %>"
-                                                data-student-id="<%= studentId %>"
-                                                data-marks="<%= e.getObtMarks() %>/<%= e.gettMarks() %>"
-                                                data-percentage="<%= String.format("%.2f", percentage) %>%"
-                                                data-status="<%= status %>"
-                                                data-date="<%= examDate %>"
-                                                style="font-size: 13px; padding: 8px 16px; margin: 2px;">
-                                            <i class="fas fa-trash"></i> Delete
-                                        </button>
-                                        <button class="btn btn-success save-btn" 
-                                                data-exam-id="<%= examId %>"
-                                                style="display:none; font-size: 13px; padding: 8px 16px; margin: 2px;">
-                                            <i class="fas fa-save"></i> Save
-                                        </button>
-                                        <button class="btn btn-warning cancel-btn" 
-                                                style="display:none; font-size: 13px; padding: 8px 16px; margin: 2px;">
-                                            <i class="fas fa-times"></i> Cancel
-                                        </button>
-                                        <a class="btn btn-primary" href="adm-page.jsp?pgprt=5&eid=<%= examId %>" 
-                                           style="font-size: 13px; padding: 8px 16px; margin: 2px;">
-                                            <i class="fas fa-eye"></i> Details
-                                        </a>
-                                    </div>
+                                <div class="action-buttons">
+                                    <button class="btn btn-secondary action-btn edit-btn" data-exam-id="<%= examId %>">
+                                        <i class="fas fa-edit"></i><span>Edit</span>
+                                    </button>
+
+
+                                    <button class="btn btn-success action-btn save-btn" data-exam-id="<%= examId %>" style="display:none;">
+                                        <i class="fas fa-save"></i><span>Save</span>
+                                    </button>
+
+                                    <button class="btn btn-warning action-btn cancel-btn" style="display:none;">
+                                        <i class="fas fa-times"></i><span>Cancel</span>
+                                    </button>
+
+                                    <a class="btn btn-primary action-btn" href="adm-page.jsp?pgprt=5&eid=<%= examId %>">
+                                        <i class="fas fa-eye"></i><span>Details</span>
+                                    </a>
+
+                                     <button class="btn btn-danger action-btn delete-btn single-delete-btn"
+                                            type="button"
+                                            data-exam-id="<%= examId %>"
+                                            data-student-name="<%= fullName %>"
+                                            data-course-name="<%= courseName %>"
+                                            data-student-email="<%= studentEmail %>"
+                                            data-student-id="<%= studentId %>"
+                                            data-marks="<%= e.getObtMarks() %>/<%= e.gettMarks() %>"
+                                            data-percentage="<%= String.format("%.2f", percentage) %>%"
+                                            data-status="<%= status %>"
+                                            data-date="<%= examDate %>">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+
                                 </td>
                             </tr>
                             <% 
