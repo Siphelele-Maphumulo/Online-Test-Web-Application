@@ -29,6 +29,8 @@
     .btn-auth:hover{ background:#1e4580; }
     
     @media (max-width:575.98px){ .auth-card{ border-radius:.75rem; } .auth-title{ font-size:1.25rem; } }
+
+  
   </style>
 </head>
 <%

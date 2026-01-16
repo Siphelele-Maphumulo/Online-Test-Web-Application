@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
+        
         :root {
             --primary-color: #09294D;
             --secondary-color: #0056b3;
@@ -86,11 +87,14 @@
         }
 
         .btn-login {
-            height: var(--input-height);
+            height: calc(var(--input-height) + 10px);
             background: var(--primary-color);
             color: #fff;
             font-weight: 500;
             border-radius: 8px;
+            width: 100%;
+            max-width: 300px;
+            margin: 10px auto 0;
         }
 
         .btn-login:hover {

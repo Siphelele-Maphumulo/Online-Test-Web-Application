@@ -506,9 +506,9 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         align-items: center;
         justify-content: center;
         gap: var(--spacing-sm);
-        padding: 14px 24px;
+        padding: 16px 24px;
         border-radius: var(--radius-md);
-        font-size: 15px;
+        font-size: 16px;
         font-weight: 600;
         text-decoration: none;
         cursor: pointer;
@@ -516,6 +516,8 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         transition: all var(--transition-normal);
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        min-width: 220px;
+        box-sizing: border-box;
     }
     
     .btn-primary {
@@ -578,37 +580,38 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         gap: var(--spacing-md);
     }
     
-    /* Loading State */
-    .loading {
-        position: relative;
-        color: transparent !important;
-    }
-    
-    .loading::after {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 20px;
-        height: 20px;
-        margin: -10px 0 0 -10px;
-        border: 2px solid rgba(255, 255, 255, 0.3);
-        border-top: 2px solid var(--white);
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-    }
-    
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
+
     
     /* Responsive Design */
-    @media (max-width: 768px) {
+    @media (max-width: 992px) {
         .sidebar {
             width: 100%;
             height: auto;
             position: static;
+            padding: var(--spacing-md);
+            border-right: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .sidebar-header {
+            padding-top: var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-md);
+        }
+        
+        .mut-logo {
+            max-height: 60px;
+        }
+        
+        .sidebar-nav {
+            padding: var(--spacing-md) 0;
+        }
+        
+        .nav-item {
+            justify-content: center;
+            margin: 0 var(--spacing-md);
         }
         
         .main-content {
@@ -616,8 +619,70 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             padding: var(--spacing-md);
         }
         
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: var(--spacing-md);
+            text-align: left;
+        }
+        
+        .stats-badge {
+            width: 100%;
+            text-align: center;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .sidebar {
+            width: 100%;
+            height: auto;
+            position: static;
+            padding: var(--spacing-md);
+            border-right: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .sidebar-header {
+            padding-top: var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-md);
+        }
+        
+        .mut-logo {
+            max-height: 60px;
+        }
+        
+        .sidebar-nav {
+            padding: var(--spacing-md) 0;
+        }
+        
+        .nav-item {
+            justify-content: center;
+            margin: 0 var(--spacing-md);
+        }
+        
+        .main-content {
+            margin-left: 0;
+            padding: var(--spacing-md);
+        }
+        
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: var(--spacing-md);
+            text-align: left;
+        }
+        
+        .stats-badge {
+            width: 100%;
+            text-align: center;
+        }
+        
         .forgot-password-card {
             max-width: 100%;
+            margin: 0;
         }
         
         .card-content {
@@ -626,37 +691,212 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         
         .form-actions {
             flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+        
+        .form-button {
+            width: 100%;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .btn-secondary:last-child {
+            margin-bottom: 0;
         }
         
         .step-indicators {
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
-            gap: var(--spacing-lg);
+            gap: var(--spacing-sm);
+            overflow-x: auto;
+            padding: var(--spacing-sm 0);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .step-indicator {
+            flex-shrink: 0;
+        }
+        
+        .step-circle {
+            width: 32px;
+            height: 32px;
+            font-size: 14px;
+        }
+        
+        .step-label {
+            font-size: 10px;
+            white-space: nowrap;
         }
         
         .step-line {
-            display: none;
+            max-width: 30px;
+        }
+        
+        .back-to-login {
+            margin-top: var(--spacing-lg);
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .forgot-password-container {
+            flex-direction: column;
+        }
+        
+        .main-content {
+            margin-left: 0;
+            padding: var(--spacing-sm);
+        }
+        
+        .page-header {
+            padding: var(--spacing-md);
+        }
+        
+        .forgot-password-card {
+            margin: 0 var(--spacing-sm);
+            border-radius: var(--radius-md);
+        }
+        
+        .card-content {
+            padding: var(--spacing-md);
+        }
+        
+        .card-header h2 {
+            font-size: 18px;
+        }
+        
+        .form-group {
+            gap: var(--spacing-xs);
+        }
+        
+        .form-label {
+            font-size: 13px;
+        }
+        
+        .form-input {
+            padding: 10px 12px;
+            font-size: 14px;
+        }
+        
+        .form-button {
+            padding: 12px 16px;
+            font-size: 14px;
+        }
+        
+        .step-indicators {
+            gap: var(--spacing-xs);
+        }
+        
+        .step-circle {
+            width: 28px;
+            height: 28px;
+            font-size: 12px;
+        }
+        
+        .step-label {
+            font-size: 8px;
+            max-width: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .step-line {
+            max-width: 20px;
+        }
+        
+        .info-message {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: var(--spacing-sm);
+            font-size: 13px;
+        }
+        
+        .info-message i {
+            font-size: 16px;
         }
     }
     
     @media (max-width: 480px) {
         .card-content {
-            padding: var(--spacing-md);
+            padding: var(--spacing-sm);
         }
         
         .page-header {
-            padding: var(--spacing-md);
+            padding: var(--spacing-sm);
             flex-direction: column;
-            gap: var(--spacing-md);
+            gap: var(--spacing-sm);
             text-align: center;
         }
         
+        .page-title {
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+        
         .form-input {
-            padding: 10px 14px;
+            padding: 8px 10px;
         }
         
         .form-button {
+            padding: 10px 12px;
+            font-size: 13px;
+        }
+        
+        .password-requirements {
+            padding: var(--spacing-sm);
+        }
+        
+        .password-requirements ul {
+            padding-left: var(--spacing-xs);
+        }
+        
+        .password-requirements li {
+            font-size: 11px;
+        }
+    }
+    
+    /* Extra small devices (phones, 320px and up) */
+    @media (max-width: 320px) {
+        .main-content {
+            padding: var(--spacing-xs);
+        }
+        
+        .card-content {
+            padding: var(--spacing-xs);
+        }
+        
+        .page-header {
+            padding: var(--spacing-xs);
+        }
+        
+        .form-actions {
+            gap: var(--spacing-xs);
+        }
+        
+        .form-button {
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+    }
+    
+    /* Mobile Touch Targets for Better UX */
+    @media (hover: none) and (pointer: coarse) {
+        .form-input {
+            min-height: 44px; /* Minimum touch target size */
+        }
+        
+        .form-button {
+            min-height: 44px;
+            min-width: 120px;
             padding: 12px 16px;
+        }
+        
+        .nav-item {
+            min-height: 44px;
+            padding: var(--spacing-md) var(--spacing-lg);
+        }
+        
+        .step-circle {
+            min-width: 44px;
+            min-height: 44px;
         }
     }
 </style>
@@ -903,7 +1143,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                     </div>
                     
                     <div class="form-actions" style="justify-content: center;">
-                        <button type="button" class="form-button btn-primary" onclick="window.location.href='login.jsp'" style="max-width: 200px;">
+                        <button type="button" class="form-button btn-primary" onclick="window.location.href='login.jsp'">
                             <i class="fas fa-sign-in-alt"></i>
                             Go to Login
                         </button>
@@ -1001,18 +1241,13 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         
         if (!emailVerified) return;
         
-        // Show loading state
-        const originalText = sendCodeBtn.innerHTML;
-        sendCodeBtn.innerHTML = '<span>Sending...</span>';
-        sendCodeBtn.classList.add('loading');
+        // Disable button during request
         sendCodeBtn.disabled = true;
         
         const xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function() {
             if (this.readyState === 4 && this.status === 200) {
-                // Reset button state
-                sendCodeBtn.innerHTML = originalText;
-                sendCodeBtn.classList.remove('loading');
+                // Re-enable button
                 sendCodeBtn.disabled = false;
                 
                 if (this.responseText.trim() === 'success') {
@@ -1049,18 +1284,13 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         
         if (!code || code.length !== 8) return;
         
-        // Show loading state
-        const originalText = verifyCodeBtn.innerHTML;
-        verifyCodeBtn.innerHTML = '<span>Verifying...</span>';
-        verifyCodeBtn.classList.add('loading');
+        // Disable button during request
         verifyCodeBtn.disabled = true;
         
         const xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function() {
             if (this.readyState === 4 && this.status === 200) {
-                // Reset button state
-                verifyCodeBtn.innerHTML = originalText;
-                verifyCodeBtn.classList.remove('loading');
+                // Re-enable button
                 verifyCodeBtn.disabled = false;
                 
                 if (this.responseText.trim() === 'valid') {
@@ -1099,18 +1329,13 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         
         if (!validatePasswordStrength(newPassword)) return;
         
-        // Show loading state
-        const originalText = resetPasswordBtn.innerHTML;
-        resetPasswordBtn.innerHTML = '<span>Resetting...</span>';
-        resetPasswordBtn.classList.add('loading');
+        // Disable button during request
         resetPasswordBtn.disabled = true;
         
         const xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function() {
             if (this.readyState === 4 && this.status === 200) {
-                // Reset button state
-                resetPasswordBtn.innerHTML = originalText;
-                resetPasswordBtn.classList.remove('loading');
+                // Re-enable button
                 resetPasswordBtn.disabled = false;
                 
                 if (this.responseText.trim() === 'success') {
