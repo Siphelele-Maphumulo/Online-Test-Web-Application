@@ -432,6 +432,24 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         color: var(--info);
         border-color: var(--info);
     }
+
+    .floating-back-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+
+    z-index: 10000;
+
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 10px 16px;
+    border-radius: 8px;
+
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
     
     /* Responsive Design - Consistent with profile page */
     @media (max-width: 768px) {
@@ -522,6 +540,16 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             gap: var(--spacing-xs);
         }
     }
+
+    @media (max-width: 576px) {
+    .floating-back-btn {
+        bottom: 15px;
+        right: 15px;
+        font-size: 13px;
+        padding: 8px 12px;
+    }
+}
+
     
     /* Loading State */
     .loading {
@@ -600,10 +628,11 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             </header>
             
             <!-- Back Button -->
-            <a href="adm-page.jsp?pgprt=3" class="btn btn-secondary">
+            <a href="adm-page.jsp?pgprt=3" class="btn btn-secondary floating-back-btn">
                 <i class="fas fa-arrow-left"></i>
                 Back to Questions Management
             </a>
+
             
             <%
                 if (request.getParameter("coursename") != null) {

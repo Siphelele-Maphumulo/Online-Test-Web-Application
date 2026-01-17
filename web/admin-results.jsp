@@ -482,7 +482,7 @@ public String escapeHtml(String input) {
         font-size: 12px;
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: 2px;
         white-space: nowrap;
     }
     
@@ -637,7 +637,7 @@ public String escapeHtml(String input) {
     .action-buttons {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 2px;
     flex-wrap: nowrap;
 }
 
