@@ -724,8 +724,6 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             String opt3 = question.getOpt3();
                             String opt4 = question.getOpt4();
                             String correct = question.getCorrect();
-                            String questionType = question.getQuestionType();
-                            String imagePath = question.getImagePath();
                             
                             // Check if this is a multiple select question (contains pipe separator)
                             boolean isMultipleSelect = correct != null && correct.contains("|");
@@ -765,28 +763,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             <%= questionNumber %>
                         </div>
                         <div class="question-text">
-                            <% if(isCodeQuestion) { %>
-                                <% if(!questionPart.isEmpty() && !questionPart.equals("What is the output/result of this code?")){ %>
-                                    <p><%= questionPart %></p>
-                                <% } %>
-                                <% if(!codePart.isEmpty()){ %>
-                                    <div class="code-question-indicator"><i class="fas fa-code"></i><strong>Code Analysis Question</strong></div>
-                                    <div class="code-snippet">
-                                        <div class="code-header"><i class="fas fa-code"></i><span>Code to Analyze</span></div>
-                                        <pre><%= codePart %></pre>
-                                    </div>
-                                <% } %>
-                            <% } else { %>
-                                <%= questionText %>
-                            <% } %>
-                            
-                            <!-- Display question image if exists -->
-                            <% if (imagePath != null && !imagePath.isEmpty()) { %>
-                            <div style="margin-top: 10px; text-align: center;">
-                                <img src="<%= imagePath %>" alt="Question Image" style="max-width: 400px; max-height: 300px; border-radius: var(--radius-sm); border: 1px solid var(--medium-gray);">
-                            </div>
-                            <% } %>
-                            
+                            <%= questionText %>
                             <% if (isMultipleSelect) { %>
                                 <div style="margin-top: var(--spacing-xs);">
                                     <span class="question-type-badge info">

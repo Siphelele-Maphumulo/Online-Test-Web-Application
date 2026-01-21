@@ -964,90 +964,12 @@ if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
                                     <option value="">No courses available</option>
                                 <%
                                 } else {
-                                    for (String course : courseNames) {
-                                        boolean isSelected = (lastCourseName != null && lastCourseName.equals(course)) || 
-                                                           (lastCourseName == null && course.equals(courseNames.get(0)));
                                 %>
-                                <option value="<%=course%>" <%=isSelected ? "selected" : ""%>><%=course%></option>
-                                <% 
-                                    }
-                                } 
-                                %>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-file-upload" style="color: var(--info);"></i>
-                                Upload PDF File
-                            </label>
-                            <div class="drop-zone" id="dropZone">
-                                <div class="drop-zone-content">
-                                    <i class="fas fa-cloud-upload-alt drop-icon"></i>
-                                    <p class="drop-text">Drag & drop your PDF file here or click to browse</p>
-                                    <p class="drop-hint">Maximum file size: 5MB</p>
-                                    <input type="file" name="pdfFile" class="form-control" id="pdfFile" accept=".pdf" required style="display: none;">
-                                </div>
-                            </div>
-                            <div id="fileNameDisplay" class="file-name-display" style="display: none;">
-                                <i class="fas fa-file-pdf"></i>
-                                <span id="fileName"></span>
-                                <button type="button" class="remove-file-btn" onclick="removeFile()">�</button>
-                            </div>
-                            <small class="form-hint">Upload a PDF with exam questions to auto-generate. Maximum file size: 5MB.</small>
-                        </div>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-outline" onclick="resetPdfForm()">
-                            <i class="fas fa-redo"></i>
-                            Reset
-                        </button>
-                        <button type="button" class="btn btn-primary" id="uploadPdfBtn">
-                            <i class="fas fa-bolt"></i>
-                            Generate Questions
-                        </button>
-                    </div>
-                </form>
-                
-                <!-- Progress bar for upload -->
-                <div id="uploadProgress" class="progress" style="display: none; margin-top: 15px;">
-                    <div class="progress-bar" role="progressbar" style="width: 0%;"></div>
-                </div>
-                
-                <!-- Status message -->
-                <div id="uploadStatus" style="margin-top: 10px; display: none;"></div>
-            </div>
-        </div>
-        
-        <!-- Add New Question Card - REMOVED sticky-add-form class -->
-        <div class="question-card" id="addQuestionCard">
-            <div class="card-header">
-                <span><i class="fas fa-plus-circle"></i> Add New Question</span>
-                <i class="fas fa-question-circle" style="opacity: 0.8;"></i>
-            </div>
-            <div class="question-form">
-                <form action="controller.jsp" method="post" id="addQuestionForm" enctype="multipart/form-data">
-                    <input type="hidden" name="page" value="questions">
-                    <input type="hidden" name="operation" value="addnew">
-                    <input type="hidden" id="questionTypeHidden" name="questionType" value="MCQ">
-                    
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-book" style="color: var(--accent-blue);"></i>
-                                Select Course
-                            </label>
-                            <select name="coursename" class="form-select" id="courseSelectAddNew" required>
-                                <% 
-                                if (courseNames.isEmpty()) {
-                                %>
-                                    <option value="">No courses available</option>
+                                    <option value="">Select Course</option>
                                 <%
-                                } else {
-                                    for (String course : courseNames) {
-                                        boolean isSelected = (lastCourseName != null && lastCourseName.equals(course)) || 
-                                                           (lastCourseName == null && course.equals(courseNames.get(0)));
+                                    for (String course : allCourseNames) {
+                                        boolean isSelected = (lastCourseNameAdd != null && lastCourseNameAdd.equals(course)) || 
+                                                           (lastCourseNameAdd == null && course.equals(allCourseNames.get(0)));
                                 %>
                                 <option value="<%=course%>" <%=isSelected ? "selected" : ""%>><%=course%></option>
                                 <% 
@@ -1076,33 +998,29 @@ if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
                         <textarea name="question" id="questionTextarea" class="question-input" rows="3" required oninput="checkForCodeSnippet()"></textarea>
                     </div>
                     
-                    <!-- Image Upload Section -->
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-image" style="color: var(--info);"></i> Upload Question Image (Optional)</label>
-                        <div class="drop-zone" id="imageDropZone">
-                            <div class="drop-zone-content">
-                                <i class="fas fa-cloud-upload-alt drop-icon"></i>
-                                <p class="drop-text">Drag & drop an image here or click to browse</p>
-                                <p class="drop-hint">Supports JPG, PNG, GIF (Max 3MB)</p>
-                                <input type="file" name="imageFile" class="form-control" id="imageFile" accept=".jpg,.jpeg,.png,.gif" style="display: none;">
-                            </div>
-                        </div>
-                        <div id="imageFileNameDisplay" class="file-name-display" style="display: none; margin-top: 10px;">
-                            <i class="fas fa-image"></i>
-                            <span id="imageFileName"></span>
-                            <button type="button" class="remove-file-btn" onclick="removeImageFile()">×</button>
-                        </div>
-                        <small class="form-hint">Upload an image to accompany your question (optional)</small>
-                    </div>
-                    
                     <div id="mcqOptions">
                         <div class="form-group">
-                            <label class="form-label"><i class="fas fa-list-ol"></i> Options</label>
+                            <label class="form-label">
+                                <i class="fas fa-list-ol" style="color: var(--dark-gray);"></i>
+                                Options
+                            </label>
                             <div class="options-grid">
-                                <textarea name="opt1" id="opt1" class="option-input" required rows="2" placeholder="Option 1"></textarea>
-                                <textarea name="opt2" id="opt2" class="option-input" required rows="2" placeholder="Option 2"></textarea>
-                                <textarea name="opt3" id="opt3" class="option-input" rows="2" placeholder="Option 3 (optional)"></textarea>
-                                <textarea name="opt4" id="opt4" class="option-input" rows="2" placeholder="Option 4 (optional)"></textarea>
+                                <div class="option-container">
+                                    <textarea name="opt1" class="option-input" placeholder="First Option" id="opt1" required rows="2"></textarea>
+                                    <div class="error-message" id="opt1Error">First option is required</div>
+                                </div>
+                                <div class="option-container">
+                                    <textarea name="opt2" class="option-input" placeholder="Second Option" id="opt2" required rows="2"></textarea>
+                                    <div class="error-message" id="opt2Error">Second option is required</div>
+                                </div>
+                                <div class="option-container">
+                                    <textarea name="opt3" class="option-input" placeholder="Third Option" id="opt3" rows="2"></textarea>
+                                    <div class="error-message" id="opt3Error">Third option is required</div>
+                                </div>
+                                <div class="option-container">
+                                    <textarea name="opt4" class="option-input" placeholder="Fourth Option" id="opt4" rows="2"></textarea>
+                                    <div class="error-message" id="opt4Error">Fourth option is required</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1752,97 +1670,21 @@ document.addEventListener('DOMContentLoaded', function() {
         const modal = document.getElementById('validationModal');
         if (event.target == modal) closeModal();
     };
+
+    // Re-enable scroll indicator with debounce to prevent performance issues
+    updateScrollIndicator();
     
-    // Initialize image upload functionality
-    initImageUpload();
+    // Debounce function to limit how often the scroll event fires
+    let scrollTimeout;
+    window.addEventListener("scroll", () => {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(updateScrollIndicator, 100);
+    });
+    
+    let resizeTimeout;
+    window.addEventListener("resize", () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(updateScrollIndicator, 100);
+    });
 });
-
-// Image upload functions
-function initImageUpload() {
-    const imageFileInput = document.getElementById('imageFile');
-    const imageDropZone = document.getElementById('imageDropZone');
-    
-    if (imageFileInput && imageDropZone) {
-        // Click to browse
-        imageDropZone.addEventListener('click', () => {
-            imageFileInput.click();
-        });
-        
-        // File input change
-        imageFileInput.addEventListener('change', function() {
-            if (this.files && this.files[0]) {
-                displayImageFileName(this.files[0]);
-            }
-        });
-        
-        // Drag and drop events
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            imageDropZone.addEventListener(eventName, preventImageDefaults, false);
-        });
-        
-        function preventImageDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-        
-        ['dragenter', 'dragover'].forEach(eventName => {
-            imageDropZone.addEventListener(eventName, highlightImage, false);
-        });
-        
-        ['dragleave', 'drop'].forEach(eventName => {
-            imageDropZone.addEventListener(eventName, unhighlightImage, false);
-        });
-        
-        function highlightImage() {
-            imageDropZone.classList.add('drag-over');
-        }
-        
-        function unhighlightImage() {
-            imageDropZone.classList.remove('drag-over');
-        }
-        
-        imageDropZone.addEventListener('drop', handleImageDrop, false);
-        
-        function handleImageDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            
-            if (files.length > 0) {
-                const file = files[0];
-                // Check if it's an image file
-                if (file.type.match('image.*')) {
-                    // Set the file to the hidden input
-                    const dataTransfer = new DataTransfer();
-                    dataTransfer.items.add(file);
-                    imageFileInput.files = dataTransfer.files;
-                    displayImageFileName(file);
-                } else {
-                    showToast('error', 'Invalid File Type', 'Please select an image file (JPG, PNG, GIF).');
-                }
-            }
-        }
-        
-        function displayImageFileName(file) {
-            const imageFileNameDisplay = document.getElementById('imageFileNameDisplay');
-            const imageFileNameSpan = document.getElementById('imageFileName');
-            
-            imageFileNameSpan.textContent = file.name;
-            imageFileNameDisplay.style.display = 'flex';
-            imageDropZone.style.display = 'none';
-        }
-    }
-}
-
-function removeImageFile() {
-    const imageFileInput = document.getElementById('imageFile');
-    const imageFileNameDisplay = document.getElementById('imageFileNameDisplay');
-    const imageDropZone = document.getElementById('imageDropZone');
-    
-    // Reset file input
-    imageFileInput.value = '';
-    
-    // Hide file name display and show drop zone
-    imageFileNameDisplay.style.display = 'none';
-    imageDropZone.style.display = 'block';
-}
 </script>

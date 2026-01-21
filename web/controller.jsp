@@ -15,14 +15,6 @@
 <%@ page import="org.mindrot.jbcrypt.BCrypt" %>
 <%@ page import="org.json.JSONObject" %>
 <%@ page import="org.json.JSONException" %>
-<%@ page import="org.apache.commons.fileupload.FileItem" %>
-<%@ page import="org.apache.commons.fileupload.disk.DiskFileItemFactory" %>
-<%@ page import="org.apache.commons.fileupload.servlet.ServletFileUpload" %>
-<%@ page import="java.util.Map" %>
-<%@ page import="java.util.HashMap" %>
-<%@ page import="java.io.File" %>
-<%@ page import="java.util.List" %>
-<%@ page import="java.util.ArrayList" %>
 <%@ page contentType="text/html" pageEncoding="UTF-8"%>
 <%@ page trimDirectiveWhitespaces="true" %>
 
@@ -473,9 +465,6 @@ try {
        ========================= */
     } else if ("questions".equalsIgnoreCase(pageParam)) {
         String operation = nz(request.getParameter("operation"), "");
-        
-
-        
         if ("del".equalsIgnoreCase(operation)) {
             String qid = nz(request.getParameter("qid"), "");
             if (!qid.isEmpty()) pDAO.deleteQuestion(Integer.parseInt(qid));
@@ -514,198 +503,24 @@ try {
             if (!qid.isEmpty()) {
                 Questions question = pDAO.getQuestionById(Integer.parseInt(qid));
                 if (question != null) {
-                    // Check if request is multipart (has file upload)
-                    if (ServletFileUpload.isMultipartContent(request)) {
-                        // Create a factory for disk-based file items
-                        DiskFileItemFactory factory = new DiskFileItemFactory();
-                        
-                        // Set factory constraints
-                        factory.setSizeThreshold(1024 * 1024 * 3); // 3 MB
-                        // Use alternative approach for temp directory
-                        factory.setRepository(new File(request.getServletContext().getAttribute("javax.servlet.context.tempdir") != null 
-                            ? request.getServletContext().getAttribute("javax.servlet.context.tempdir").toString() 
-                            : "/tmp"));
-                        
-                        // Create a new file upload handler
-                        ServletFileUpload upload = new ServletFileUpload(factory);
-                        
-                        // Set overall request size constraint
-                        upload.setSizeMax(1024 * 1024 * 10); // 10 MB
-                        
-                        try {
-                            // Parse the request
-                            List<FileItem> items = upload.parseRequest(request);
-                            
-                            String questionText = "";
-                            String opt1 = "";
-                            String opt2 = "";
-                            String opt3 = "";
-                            String opt4 = "";
-                            String correctAnswer = "";
-                            String courseName = "";
-                            String questionType = "";
-                            String correctMultiple = "";
-                            String currentImagePath = "";
-                            String removeImage = "";
-                            String imagePath = question.getImagePath(); // Preserve existing image path by default
-                            
-                            for (FileItem item : items) {
-                                if (item.isFormField()) {
-                                    // Process regular form field
-                                    String fieldName = item.getFieldName();
-                                    String fieldValue = item.getString("UTF-8");
-                                    
-                                    if ("question".equals(fieldName)) {
-                                        questionText = nz(fieldValue, "");
-                                    } else if ("opt1".equals(fieldName)) {
-                                        opt1 = nz(fieldValue, "");
-                                    } else if ("opt2".equals(fieldName)) {
-                                        opt2 = nz(fieldValue, "");
-                                    } else if ("opt3".equals(fieldName)) {
-                                        opt3 = nz(fieldValue, "");
-                                    } else if ("opt4".equals(fieldName)) {
-                                        opt4 = nz(fieldValue, "");
-                                    } else if ("correct".equals(fieldName)) {
-                                        correctAnswer = nz(fieldValue, "");
-                                    } else if ("coursename".equals(fieldName)) {
-                                        courseName = nz(fieldValue, "");
-                                    } else if ("questionType".equals(fieldName)) {
-                                        questionType = nz(fieldValue, "");
-                                    } else if ("correctMultiple".equals(fieldName)) {
-                                        correctMultiple = nz(fieldValue, "");
-                                    } else if ("currentImagePath".equals(fieldName)) {
-                                        currentImagePath = nz(fieldValue, "");
-                                    } else if ("removeImage".equals(fieldName)) {
-                                        removeImage = nz(fieldValue, "");
-                                    }
-                                } else {
-                                    // Process file upload field - ONLY ACCEPT IMAGES
-                                    String fieldName = item.getFieldName();
-                                    String fileName = item.getName();
-                                    
-                                    if (fieldName.equals("imageFile") && fileName != null && !fileName.isEmpty()) {
-                                        // Check file extension
-                                        String fileExtension = "";
-                                        int dotIndex = fileName.lastIndexOf('.');
-                                        if (dotIndex > 0) {
-                                            fileExtension = fileName.substring(dotIndex).toLowerCase();
-                                        }
-                                        
-                                        // List of allowed image extensions
-                                        String[] allowedExtensions = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"};
-                                        boolean isImage = false;
-                                        for (String ext : allowedExtensions) {
-                                            if (fileExtension.equals(ext)) {
-                                                isImage = true;
-                                                break;
-                                            }
-                                        }
-                                        
-                                        if (!isImage) {
-                                            session.setAttribute("error", "Only image files are allowed (JPG, JPEG, PNG, GIF, WEBP, BMP).");
-                                            if (!courseName.isEmpty()) {
-                                                response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
-                                            } else {
-                                                response.sendRedirect("adm-page.jsp?pgprt=3");
-                                            }
-                                            return;
-                                        }
-                                        
-                                        // Create uploads directory if it doesn't exist
-                                        String uploadPath = getServletContext().getRealPath("/uploads/images");
-                                        File uploadDir = new File(uploadPath);
-                                        if (!uploadDir.exists()) {
-                                            uploadDir.mkdirs();
-                                        }
-                                        
-                                        // Delete old image file if exists
-                                        if (question.getImagePath() != null && !question.getImagePath().isEmpty()) {
-                                            File oldImageFile = new File(getServletContext().getRealPath("/" + question.getImagePath()));
-                                            if (oldImageFile.exists()) {
-                                                oldImageFile.delete();
-                                            }
-                                        }
-                                        
-                                        // Generate unique filename using current time
-                                        long timestamp = new java.util.Date().getTime();
-                                        String uniqueFileName = timestamp + "_" + new File(fileName).getName();
-                                        File uploadedFile = new File(uploadDir, uniqueFileName);
-                                        
-                                        // Save the file
-                                        item.write(uploadedFile);
-                                        
-                                        // Set the image path to be saved in database
-                                        imagePath = "uploads/images/" + uniqueFileName;
-                                    }
-                                }
-                            }
-                            
-                            if ("MultipleSelect".equalsIgnoreCase(questionType)) {
-                                if (!correctMultiple.isEmpty()) correctAnswer = correctMultiple;
-                            }
-                            
-                            // If removeImage is true, delete the current image and set path to null
-                            if ("true".equals(removeImage)) {
-                                if (question.getImagePath() != null && !question.getImagePath().isEmpty()) {
-                                    File oldImageFile = new File(getServletContext().getRealPath("/" + question.getImagePath()));
-                                    if (oldImageFile.exists()) {
-                                        oldImageFile.delete();
-                                    }
-                                }
-                                imagePath = null;
-                            }
-                            
-                            // Update question object with new values
-                            question.setQuestion(questionText);
-                            question.setOpt1(opt1);
-                            question.setOpt2(opt2);
-                            question.setOpt3(opt3);
-                            question.setOpt4(opt4);
-                            question.setCorrect(correctAnswer);
-                            question.setCourseName(courseName);
-                            question.setQuestionType(questionType);
-                            question.setImagePath(imagePath); // Update image path
-                            
-                            pDAO.updateQuestion(question);
-                            session.setAttribute("message","Question updated successfully");
-                            
-                            // Redirect to the same page with the course selected
-                            if (!courseName.isEmpty()) {
-                                response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
-                            } else {
-                                response.sendRedirect("adm-page.jsp?pgprt=3");
-                            }
-                            return;
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            session.setAttribute("error", "Error uploading image: " + e.getMessage());
-                            response.sendRedirect("adm-page.jsp?pgprt=3");
-                            return;
-                        }
+                    question.setQuestion(nz(request.getParameter("question"), ""));
+                    question.setOpt1(nz(request.getParameter("opt1"), ""));
+                    question.setOpt2(nz(request.getParameter("opt2"), ""));
+                    question.setOpt3(nz(request.getParameter("opt3"), ""));
+                    question.setOpt4(nz(request.getParameter("opt4"), ""));
+                    question.setCorrect(nz(request.getParameter("correct"), ""));
+                    String courseName = nz(request.getParameter("coursename"), "");
+                    question.setCourseName(courseName);
+                    pDAO.updateQuestion(question);
+                    session.setAttribute("message","Question updated successfully");
+                    
+                    // Redirect to the same page with the course selected
+                    if (!courseName.isEmpty()) {
+                        response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
                     } else {
-                        // Handle regular form submission (without file upload)
-                        question.setQuestion(nz(request.getParameter("question"), ""));
-                        question.setOpt1(nz(request.getParameter("opt1"), ""));
-                        question.setOpt2(nz(request.getParameter("opt2"), ""));
-                        question.setOpt3(nz(request.getParameter("opt3"), ""));
-                        question.setOpt4(nz(request.getParameter("opt4"), ""));
-                        question.setCorrect(nz(request.getParameter("correct"), ""));
-                        String courseName = nz(request.getParameter("coursename"), "");
-                        question.setCourseName(courseName);
-                        String questionType = nz(request.getParameter("questionType"), "MCQ");
-                        question.setQuestionType(questionType);
-                        // Preserve existing image path when not uploading a new image
-                        pDAO.updateQuestion(question);
-                        session.setAttribute("message","Question updated successfully");
-                        
-                        // Redirect to the same page with the course selected
-                        if (!courseName.isEmpty()) {
-                            response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
-                        } else {
-                            response.sendRedirect("adm-page.jsp?pgprt=3");
-                        }
-                        return;
+                        response.sendRedirect("adm-page.jsp?pgprt=3");
                     }
+                    return;
                 }
             }
             String courseName = nz(request.getParameter("coursename"), "");
