@@ -141,8 +141,11 @@
 </div>
 
 <script>
-    let confirmResolver = null;
-
+    // Initialize confirmResolver only if it doesn't exist
+    if (typeof window.confirmResolver === 'undefined') {
+        window.confirmResolver = null;
+    }
+    
     /* ================= ALERT ================= */
     function showAlert(message, title = 'Alert', icon = 'fa-info-circle') {
         document.getElementById('alertModalTitle').innerHTML =
@@ -163,13 +166,13 @@
         document.getElementById('confirmModal').style.display = 'flex';
 
         return new Promise((resolve) => {
-            confirmResolver = resolve;
+            window.confirmResolver = resolve;
         });
     }
 
     function resolveConfirm(result) {
         document.getElementById('confirmModal').style.display = 'none';
-        if (confirmResolver) confirmResolver(result);
-        confirmResolver = null;
+        if (window.confirmResolver) window.confirmResolver(result);
+        window.confirmResolver = null;
     }
 </script>

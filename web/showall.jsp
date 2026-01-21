@@ -724,6 +724,8 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             String opt3 = question.getOpt3();
                             String opt4 = question.getOpt4();
                             String correct = question.getCorrect();
+                            String questionType = question.getQuestionType();
+                            String imagePath = question.getImagePath();
                             
                             // Check if this is a multiple select question (contains pipe separator)
                             boolean isMultipleSelect = correct != null && correct.contains("|");
@@ -764,6 +766,20 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         </div>
                         <div class="question-text">
                             <%= questionText %>
+                            
+                            <!-- Display question image if exists -->
+                            <% if (imagePath != null && !imagePath.isEmpty()) { %>
+                            <div style="margin-top: 15px; text-align: center;">
+                                <div style="display: inline-block; border: 1px solid #ddd; border-radius: 8px; padding: 10px; background: #f9f9f9;">
+                                    <img src="<%= imagePath %>" alt="Question Image" 
+                                         style="max-width: 100%; max-height: 300px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                    <div style="margin-top: 8px; font-size: 12px; color: #666;">
+                                        <i class="fas fa-image"></i> Question Image
+                                    </div>
+                                </div>
+                            </div>
+                            <% } %>
+                            
                             <% if (isMultipleSelect) { %>
                                 <div style="margin-top: var(--spacing-xs);">
                                     <span class="question-type-badge info">

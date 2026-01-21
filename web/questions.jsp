@@ -957,7 +957,7 @@ if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
                                 <i class="fas fa-book" style="color: var(--accent-blue);"></i>
                                 Select Course
                             </label>
-                            <select name="courseName" class="form-select" id="courseSelectPdf" required>
+                            <select name="coursename" class="form-select" id="courseSelectPdf" required>
                                 <% 
                                 if (courseNames.isEmpty()) {
                                 %>
@@ -967,9 +967,98 @@ if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
                                 %>
                                     <option value="">Select Course</option>
                                 <%
-                                    for (String course : allCourseNames) {
-                                        boolean isSelected = (lastCourseNameAdd != null && lastCourseNameAdd.equals(course)) || 
-                                                           (lastCourseNameAdd == null && course.equals(allCourseNames.get(0)));
+                                    for (String course : courseNames) {
+                                        boolean isSelected = (lastCourseName != null && lastCourseName.equals(course));
+                                %>
+                                <option value="<%=course%>" <%=isSelected ? "selected" : ""%>><%=course%></option>
+                                <% 
+                                    }
+                                } 
+                                %>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-list" style="color: var(--info);"></i>
+                                Question Type
+                            </label>
+                            <select id="questionTypeSelectPdf" class="form-select">
+                                <option value="MCQ">Multiple Choice</option>
+                                <option value="TrueFalse">True/False</option>
+                                <option value="MultipleSelect">Multiple Select (2 correct)</option>
+                                <option value="Code">Code Snippet</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-file-upload" style="color: var(--primary-blue);"></i>
+                            Upload PDF File
+                        </label>
+                        <div class="drop-zone" id="dropZone">
+                            <div class="drop-zone-content">
+                                <i class="fas fa-cloud-upload-alt drop-icon"></i>
+                                <p class="drop-text">Drag & drop your PDF here or click to browse</p>
+                                <p class="drop-hint">Supports PDF (Max 5MB)</p>
+                                <input type="file" name="pdfFile" class="form-control" id="pdfFile" accept=".pdf" style="display: none;">
+                            </div>
+                        </div>
+                        <div id="fileNameDisplay" class="file-name-display" style="display: none; margin-top: 10px;">
+                            <i class="fas fa-file-pdf"></i>
+                            <span id="fileName"></span>
+                            <button type="button" class="remove-file-btn" onclick="removeFile()">×</button>
+                        </div>
+                        <small class="form-hint">Upload a PDF file to extract questions automatically</small>
+                    </div>
+                    
+                    <!-- Progress and Status Elements for PDF Upload -->
+                    <div id="uploadProgress" class="progress" style="display: none; margin: 15px 0;">
+                        <div class="progress-bar" style="width: 0%;">0%</div>
+                    </div>
+                    <div id="uploadStatus" style="display: none;"></div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" onclick="resetPdfForm()">
+                            <i class="fas fa-redo"></i>
+                            Reset
+                        </button>
+                        <button type="button" class="btn btn-primary" id="uploadPdfBtn">
+                            <i class="fas fa-bolt"></i>
+                            Generate Questions
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Add Question Panel -->
+        <div class="question-card" id="addQuestionPanel">
+            <div class="card-header">
+                <span><i class="fas fa-plus-circle"></i> Add New Question</span>
+                <i class="fas fa-question" style="opacity: 0.8;"></i>
+            </div>
+            <div class="question-form">
+                <form id="addQuestionForm" method="post" action="controller.jsp?page=questions&operation=addnew" enctype="multipart/form-data">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-book" style="color: var(--accent-blue);"></i>
+                                Select Course
+                            </label>
+                            <select name="coursename" class="form-select" id="courseSelectAddNew" required>
+                                <% 
+                                if (courseNames.isEmpty()) {
+                                %>
+                                    <option value="">No courses available</option>
+                                <%
+                                } else {
+                                %>
+                                    <option value="">Select Course</option>
+                                <%
+                                    for (String course : courseNames) {
+                                        boolean isSelected = (lastCourseName != null && lastCourseName.equals(course));
                                 %>
                                 <option value="<%=course%>" <%=isSelected ? "selected" : ""%>><%=course%></option>
                                 <% 
@@ -995,7 +1084,36 @@ if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
                     
                     <div class="form-group">
                         <label class="form-label"><i class="fas fa-question-circle" style="color: var(--primary-blue);"></i> Your Question</label>
-                        <textarea name="question" id="questionTextarea" class="question-input" rows="3" required oninput="checkForCodeSnippet()"></textarea>
+                        <textarea name="question" id="questionTextarea" class="question-input" rows="3" oninput="checkForCodeSnippet()"></textarea>
+                        <small class="form-hint">Enter your question text (optional if uploading an image)</small>
+                    </div>
+                    
+                    <!-- Image Upload Section -->
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-image" style="color: var(--info);"></i> Upload Question Image (Optional)</label>
+                        <div class="drop-zone" id="imageDropZone">
+                            <div class="drop-zone-content">
+                                <i class="fas fa-cloud-upload-alt drop-icon"></i>
+                                <p class="drop-text">Drag & drop your image here or click to browse</p>
+                                <p class="drop-hint">Supports JPG, PNG, GIF, WebP (Max 3MB)</p>
+                                <input type="file" name="imageFile" class="form-control" id="imageFile" accept=".jpg,.jpeg,.png,.gif,.webp" style="display: none;">
+                            </div>
+                        </div>
+                        <div id="imageFileNameDisplay" class="file-name-display" style="display: none; margin-top: 10px;">
+                            <i class="fas fa-image"></i>
+                            <span id="imageFileName"></span>
+                            <button type="button" class="remove-file-btn" onclick="removeImageFile()">×</button>
+                        </div>
+                        <small class="form-hint">Upload an image to accompany your question (optional)</small>
+                    </div>
+                    
+                    <!-- Image Preview Section -->
+                    <div id="imagePreviewSection" class="form-group" style="display: none;">
+                        <label class="form-label"><i class="fas fa-eye" style="color: var(--success);"></i> Image Preview</label>
+                        <div style="text-align: center; padding: 10px; border: 1px solid var(--medium-gray); border-radius: var(--radius-sm);">
+                            <img id="imagePreview" src="#" alt="Image Preview" style="max-width: 100%; max-height: 200px; display: none; border-radius: var(--radius-sm);">
+                            <p id="previewPlaceholder" style="color: var(--dark-gray); margin: 0;">Uploaded image will appear here</p>
+                        </div>
                     </div>
                     
                     <div id="mcqOptions">
@@ -1513,6 +1631,119 @@ function removeFile() {
     dropZone.style.display = 'block';
 }
 
+function removeImageFile() {
+    const imageFileInput = document.getElementById('imageFile');
+    const imageFileNameDisplay = document.getElementById('imageFileNameDisplay');
+    const imageDropZone = document.getElementById('imageDropZone');
+    const imagePreviewSection = document.getElementById('imagePreviewSection');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewPlaceholder = document.getElementById('previewPlaceholder');
+    
+    // Reset file input
+    imageFileInput.value = '';
+    
+    // Hide file name display and show drop zone
+    imageFileNameDisplay.style.display = 'none';
+    imageDropZone.style.display = 'block';
+    
+    // Hide preview section
+    imagePreviewSection.style.display = 'none';
+    imagePreview.style.display = 'none';
+    previewPlaceholder.style.display = 'block';
+}
+
+// Drag and drop functionality for image upload
+const imageFileInput = document.getElementById('imageFile');
+const imageDropZone = document.getElementById('imageDropZone');
+const imagePreview = document.getElementById('imagePreview');
+const imagePreviewSection = document.getElementById('imagePreviewSection');
+const previewPlaceholder = document.getElementById('previewPlaceholder');
+
+if (imageFileInput && imageDropZone) {
+    // Click to browse
+    imageDropZone.addEventListener('click', () => {
+        imageFileInput.click();
+    });
+    
+    // File input change
+    imageFileInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            displayImageFileName(this.files[0]);
+            previewImage(this.files[0]);
+        }
+    });
+    
+    // Drag and drop events
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        imageDropZone.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+        imageDropZone.addEventListener(eventName, highlight, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        imageDropZone.addEventListener(eventName, unhighlight, false);
+    });
+    
+    function highlight() {
+        imageDropZone.classList.add('drag-over');
+    }
+    
+    function unhighlight() {
+        imageDropZone.classList.remove('drag-over');
+    }
+    
+    imageDropZone.addEventListener('drop', handleImageDrop, false);
+    
+    function handleImageDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        if (files.length > 0) {
+            const file = files[0];
+            // Check if it's an image file
+            if (file.type.startsWith('image/') || ['.jpg', '.jpeg', '.png', '.gif', '.webp'].some(ext => file.name.toLowerCase().endsWith(ext))) {
+                // Set the file to the hidden input
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                imageFileInput.files = dataTransfer.files;
+                displayImageFileName(file);
+                previewImage(file);
+            } else {
+                showToast('error', 'Invalid File Type', 'Only image files (JPG, PNG, GIF, WebP) are allowed.');
+            }
+        }
+    }
+    
+    function displayImageFileName(file) {
+        const imageFileNameDisplay = document.getElementById('imageFileNameDisplay');
+        const imageFileNameSpan = document.getElementById('imageFileName');
+        
+        imageFileNameSpan.textContent = file.name;
+        imageFileNameDisplay.style.display = 'flex';
+        imageDropZone.style.display = 'none';
+    }
+    
+    function previewImage(file) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            imagePreview.src = e.target.result;
+            imagePreview.style.display = 'block';
+            previewPlaceholder.style.display = 'none';
+            imagePreviewSection.style.display = 'block';
+        };
+        
+        reader.readAsDataURL(file);
+    }
+}
+
 // Add event listener to the PDF upload button
 const uploadPdfBtn = document.getElementById('uploadPdfBtn');
 if (uploadPdfBtn) {
@@ -1627,8 +1858,16 @@ document.addEventListener('DOMContentLoaded', function() {
     if (addQuestionForm) {
         addQuestionForm.addEventListener('submit', function(e) {
             const qType = document.getElementById("questionTypeSelect").value;
+            const questionText = document.getElementById('questionTextarea').value.trim();
+            const imageFile = document.getElementById('imageFile').files[0];
             let isValid = true;
             let errorMsg = '';
+            
+            // Check if either question text or image is provided
+            if (!questionText && !imageFile) {
+                errorMsg = "Either question text or an image must be provided.";
+                isValid = false;
+            }
             
             if (qType === "TrueFalse") {
                 const correctValue = document.getElementById('correctAnswer').value.trim().toLowerCase();
