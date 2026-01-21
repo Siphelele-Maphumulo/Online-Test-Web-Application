@@ -26,7 +26,8 @@
             rs.getString("opt4"),
             rs.getString("correct"),
             rs.getString("course_name"),
-            rs.getString("question_type")  // ADD THIS LINE - 9th parameter
+            rs.getString("question_type"),  // 9th parameter
+            rs.getString("image_path")      // 10th parameter
         );
             questionType = rs.getString("question_type") != null ? rs.getString("question_type") : "MCQ";
         }
@@ -319,7 +320,7 @@
     
     .question-input {
         width: 100%;
-        min-height: 100px;
+        min-height: 150px;
         resize: vertical;
     }
     
@@ -428,6 +429,45 @@
         font-size: 12px;
         color: var(--dark-gray);
         margin-top: var(--spacing-xs);
+    }
+    
+    .code-question-indicator {
+        background: linear-gradient(135deg, var(--accent-blue), #3b82f6);
+        color: var(--white);
+        padding: var(--spacing-sm) var(--spacing-md);
+        border-radius: var(--radius-sm);
+        margin-bottom: var(--spacing-md);
+        border-left: 3px solid var(--primary-blue);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        font-weight: 500;
+        font-size: 13px;
+    }
+    
+    .code-snippet {
+        background: var(--primary-blue);
+        color: var(--light-gray);
+        border: 1px solid var(--secondary-blue);
+        border-radius: var(--radius-sm);
+        padding: var(--spacing-md);
+        margin: var(--spacing-md) 0;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        overflow-x: auto;
+        position: relative;
+    }
+    
+    .code-header {
+        color: var(--dark-gray);
+        font-size: 12px;
+        margin-bottom: var(--spacing-sm);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        border-bottom: 1px solid var(--secondary-blue);
+        padding-bottom: var(--spacing-sm);
     }
     
     /* Utility Classes */
@@ -657,10 +697,11 @@
         <div class="question-card" id="editQuestionPanel">
             <div class="card-header"><span><i class="fas fa-edit"></i> Edit Question</span><i class="fas fa-question-circle" style="opacity: 0.8;"></i></div>
             <div class="question-form">
-                <form action="controller.jsp" method="POST" id="editQuestionForm">
+                <form action="controller.jsp" method="POST" id="editQuestionForm" enctype="multipart/form-data">
                     <input type="hidden" name="page" value="questions">
                     <input type="hidden" name="operation" value="edit">
                     <input type="hidden" name="qid" value="<%= questionToEdit.getQuestionId() %>">
+                    <input type="hidden" name="currentImagePath" value="<%= questionToEdit.getImagePath() != null ? questionToEdit.getImagePath() : "" %>">
                     <!-- Store question type for form submission -->
                     <input type="hidden" id="questionTypeHidden" name="questionType" value="<%= questionType %>">
 
@@ -704,6 +745,14 @@
                     <div class="form-group">
                         <label class="form-label"><i class="fas fa-pencil-alt" style="color: var(--success);"></i>Your Question</label>
                         <textarea name="question" id="editQuestionTextarea" class="question-input" rows="3" required oninput="checkForCodeSnippetEdit()"><%= questionToEdit.getQuestion() %></textarea>
+                        <!-- Preview for Code Snippets -->
+                        <div id="codePreview" style="display: none; margin-top: 10px;">
+                            <div class="code-question-indicator"><i class="fas fa-code"></i><strong>Code Analysis Question Preview</strong></div>
+                            <div class="code-snippet">
+                                <div class="code-header"><i class="fas fa-code"></i><span>Code to Analyze</span></div>
+                                <pre id="previewCode"></pre>
+                            </div>
+                        </div>
                     </div>
 
                     <div id="editMcqOptions">
@@ -746,6 +795,39 @@
                             </div>
                             <small class="form-hint">Select exactly 2 correct answers</small>
                         </div>
+                    </div>
+                    
+                    <!-- Image Upload Section -->
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-image" style="color: var(--info);"></i> Upload Question Image (Optional)</label>
+                        <div id="currentImageDisplay" style="margin-bottom: 15px;">
+                            <% if (questionToEdit.getImagePath() != null && !questionToEdit.getImagePath().isEmpty()) { %>
+                                <div class="file-name-display" style="display: flex; align-items: center; gap: 10px; padding: 10px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: var(--radius-sm);">
+                                    <i class="fas fa-image"></i>
+                                    <span>Current Image: <%= new File(questionToEdit.getImagePath()).getName() %></span>
+                                    <button type="button" class="remove-file-btn" onclick="removeCurrentImage()">×</button>
+                                </div>
+                                <div style="margin-top: 10px; text-align: center;">
+                                    <img src="<%= questionToEdit.getImagePath() %>" alt="Current Question Image" style="max-width: 200px; max-height: 200px; border-radius: var(--radius-sm); border: 1px solid var(--medium-gray);">
+                                </div>
+                            <% } else { %>
+                                <div class="form-hint">No image currently uploaded</div>
+                            <% } %>
+                        </div>
+                        <div class="drop-zone" id="editImageDropZone">
+                            <div class="drop-zone-content">
+                                <i class="fas fa-cloud-upload-alt drop-icon"></i>
+                                <p class="drop-text">Drag & drop a new image here or click to browse</p>
+                                <p class="drop-hint">Supports JPG, PNG, GIF (Max 3MB)</p>
+                                <input type="file" name="imageFile" class="form-control" id="editImageFile" accept=".jpg,.jpeg,.png,.gif" style="display: none;">
+                            </div>
+                        </div>
+                        <div id="editImageFileNameDisplay" class="file-name-display" style="display: none; margin-top: 10px;">
+                            <i class="fas fa-image"></i>
+                            <span id="editImageFileName"></span>
+                            <button type="button" class="remove-file-btn" onclick="removeEditImageFile()">×</button>
+                        </div>
+                        <small class="form-hint">Upload a new image to replace the current one (optional)</small>
                     </div>
 
                     <div class="form-actions">
@@ -800,7 +882,7 @@ function checkForCodeSnippetEdit() {
     
     // Count lines and check for code indicators
     const lines = questionText.split('\n').filter(line => line.trim() !== '');
-    const hasCodeIndicators = /(?:def |function |public |class |print\(|console\.|<[^>]*>|\{|\}|import |int |String |printf\(|cout )/.test(questionText);
+    const hasCodeIndicators = /(?:def |function |public |class |print\(|console\.\|<[^>]*>\|\{|\}|import |int |String |printf\(|cout )/.test(questionText);
     
     // If question is longer than 3 lines or contains code indicators and is not already Code type
     if ((lines.length > 3 || hasCodeIndicators) && questionType !== 'Code') {
@@ -809,7 +891,46 @@ function checkForCodeSnippetEdit() {
             toggleEditOptions();
         }
     }
+    
+    // Update preview if it's a code question
+    updateCodePreview(questionText, questionType);
 }
+
+// Function to update code snippet preview
+function updateCodePreview(questionText, questionType) {
+    const previewDiv = document.getElementById('codePreview');
+    const previewCode = document.getElementById('previewCode');
+    
+    if (questionType === 'Code') {
+        let questionPart = "";
+        let codePart = "";
+        
+        if(questionText.includes('```')){
+            const parts = questionText.split('```', 3);
+            if(parts.length >= 2) {
+                questionPart = parts[0].trim();
+                codePart = parts[1].trim();
+            } else {
+                questionPart = questionText.replace(/```/g, "").trim();
+            }
+        } else {
+            codePart = questionText;
+            questionPart = "What is the output/result of this code?";
+        }
+        
+        previewCode.textContent = codePart;
+        previewDiv.style.display = 'block';
+    } else {
+        previewDiv.style.display = 'none';
+    }
+}
+
+// Initialize preview on page load
+window.addEventListener('DOMContentLoaded', function() {
+    const initialQuestionText = document.getElementById("editQuestionTextarea").value;
+    const initialQuestionType = document.getElementById("questionTypeSelect").value;
+    updateCodePreview(initialQuestionText, initialQuestionType);
+});
 
     function initializeMultipleSelectCheckboxes() {
         const correctAnswers = document.getElementById('editCorrectAnswer').value.split('|');
@@ -868,6 +989,110 @@ function checkForCodeSnippetEdit() {
         }
     }
 
+    // Image upload functions for edit
+    function initEditImageUpload() {
+        const editImageFileInput = document.getElementById('editImageFile');
+        const editImageDropZone = document.getElementById('editImageDropZone');
+        
+        if (editImageFileInput && editImageDropZone) {
+            // Click to browse
+            editImageDropZone.addEventListener('click', () => {
+                editImageFileInput.click();
+            });
+            
+            // File input change
+            editImageFileInput.addEventListener('change', function() {
+                if (this.files && this.files[0]) {
+                    displayEditImageFileName(this.files[0]);
+                }
+            });
+            
+            // Drag and drop events
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                editImageDropZone.addEventListener(eventName, preventEditImageDefaults, false);
+            });
+            
+            function preventEditImageDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                editImageDropZone.addEventListener(eventName, highlightEditImage, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                editImageDropZone.addEventListener(eventName, unhighlightEditImage, false);
+            });
+            
+            function highlightEditImage() {
+                editImageDropZone.classList.add('drag-over');
+            }
+            
+            function unhighlightEditImage() {
+                editImageDropZone.classList.remove('drag-over');
+            }
+            
+            editImageDropZone.addEventListener('drop', handleEditImageDrop, false);
+            
+            function handleEditImageDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                if (files.length > 0) {
+                    const file = files[0];
+                    // Check if it's an image file
+                    if (file.type.match('image.*')) {
+                        // Set the file to the hidden input
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        editImageFileInput.files = dataTransfer.files;
+                        displayEditImageFileName(file);
+                    } else {
+                        alert('Please select an image file (JPG, PNG, GIF).');
+                    }
+                }
+            }
+            
+            function displayEditImageFileName(file) {
+                const editImageFileNameDisplay = document.getElementById('editImageFileNameDisplay');
+                const editImageFileNameSpan = document.getElementById('editImageFileName');
+                
+                editImageFileNameSpan.textContent = file.name;
+                editImageFileNameDisplay.style.display = 'flex';
+                editImageDropZone.style.display = 'none';
+            }
+        }
+    }
+    
+    function removeEditImageFile() {
+        const editImageFileInput = document.getElementById('editImageFile');
+        const editImageFileNameDisplay = document.getElementById('editImageFileNameDisplay');
+        const editImageDropZone = document.getElementById('editImageDropZone');
+        
+        // Reset file input
+        editImageFileInput.value = '';
+        
+        // Hide file name display and show drop zone
+        editImageFileNameDisplay.style.display = 'none';
+        editImageDropZone.style.display = 'block';
+    }
+    
+    function removeCurrentImage() {
+        // Show confirmation dialog
+        if (confirm('Are you sure you want to remove the current image?')) {
+            // Add a hidden input field to indicate the image should be removed
+            const removeImageInput = document.createElement('input');
+            removeImageInput.type = 'hidden';
+            removeImageInput.name = 'removeImage';
+            removeImageInput.value = 'true';
+            document.getElementById('editQuestionForm').appendChild(removeImageInput);
+            
+            // Hide the current image display
+            document.getElementById('currentImageDisplay').innerHTML = '<div class="form-hint">Image will be removed on update</div>';
+        }
+    }
+    
     document.addEventListener('DOMContentLoaded', function() {
         toggleEditOptions();
 
@@ -901,5 +1126,8 @@ function checkForCodeSnippetEdit() {
 
         document.getElementById('questionTypeSelect').addEventListener('change', toggleEditOptions);
         document.getElementById('editQuestionForm').addEventListener('submit', validateAndSubmit);
+        
+        // Initialize image upload functionality
+        initEditImageUpload();
     });
 </script>

@@ -26,8 +26,6 @@ import java.sql.Types;
 import java.util.Map;
 import java.util.HashMap;
 // Add these imports at the top of your DatabaseClass.java
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
 import myPackage.classes.Result;
 
 
@@ -1161,6 +1159,10 @@ public boolean addNewCourse(String courseName, int tMarks, String time, String e
     
     
 public void addNewQuestion(String questionText, String opt1, String opt2, String opt3, String opt4, String correctAnswer, String courseName, String questionType) {
+    addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null);
+}
+
+public void addNewQuestion(String questionText, String opt1, String opt2, String opt3, String opt4, String correctAnswer, String courseName, String questionType, String imagePath) {
     try {
         ensureConnection();
     } catch (SQLException e) {
@@ -1174,7 +1176,7 @@ public void addNewQuestion(String questionText, String opt1, String opt2, String
 
         // If it's a True/False question, only use two options.
         if ("TrueFalse".equalsIgnoreCase(questionType)) {
-            sql = "INSERT INTO questions (question, opt1, opt2, correct, course_name, question_type) VALUES (?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO questions (question, opt1, opt2, correct, course_name, question_type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql);
             pstm.setString(1, questionText);
             pstm.setString(2, "True");  // Hardcoded options for True/False
@@ -1182,9 +1184,10 @@ public void addNewQuestion(String questionText, String opt1, String opt2, String
             pstm.setString(4, correctAnswer);
             pstm.setString(5, courseName);
             pstm.setString(6, questionType);
+            pstm.setString(7, imagePath);
         } else {
             // Otherwise, handle multiple-choice questions
-            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql);
             pstm.setString(1, questionText);
             pstm.setString(2, opt1);
@@ -1194,6 +1197,7 @@ public void addNewQuestion(String questionText, String opt1, String opt2, String
             pstm.setString(6, correctAnswer);
             pstm.setString(7, courseName);
             pstm.setString(8, questionType);
+            pstm.setString(9, imagePath);
         }
 
         // Execute the update
@@ -1240,6 +1244,7 @@ public Questions getQuestionById(int questionId) {
             question.setCorrect(rs.getString("correct"));
             question.setCourseName(rs.getString("course_name"));
             question.setQuestionType(rs.getString("question_type"));
+            question.setImagePath(rs.getString("image_path"));
         }
     } catch (SQLException e) {
         e.printStackTrace();
@@ -1267,7 +1272,7 @@ public boolean updateQuestion(Questions question) {
         return false;
     }
     
-    String sql = "UPDATE questions SET question=?, opt1=?, opt2=?, opt3=?, opt4=?, correct=?, course_name=?, question_type=? WHERE question_id=?";
+    String sql = "UPDATE questions SET question=?, opt1=?, opt2=?, opt3=?, opt4=?, correct=?, course_name=?, question_type=?, image_path=? WHERE question_id=?";
     try (PreparedStatement pstm = conn.prepareStatement(sql)) {
         pstm.setString(1, question.getQuestion());
         pstm.setString(2, question.getOpt1());
@@ -1277,7 +1282,8 @@ public boolean updateQuestion(Questions question) {
         pstm.setString(6, question.getCorrect());
         pstm.setString(7, question.getCourseName());
         pstm.setString(8, question.getQuestionType());
-        pstm.setInt(9, question.getQuestionId());
+        pstm.setString(9, question.getImagePath());
+        pstm.setInt(10, question.getQuestionId());
 
         int rowsAffected = pstm.executeUpdate();
         return rowsAffected > 0;
@@ -1717,7 +1723,8 @@ public ArrayList getQuestions(String courseName, int questions) {
                 rs.getString("opt4"),
                 rs.getString("correct"),
                 rs.getString("course_name"),
-                rs.getString("question_type")
+                rs.getString("question_type"),
+                rs.getString("image_path")
             );
             list.add(question);
         }
@@ -1934,7 +1941,8 @@ public ArrayList getAllQuestions(String courseName) {
                 rs.getString("opt4"),
                 rs.getString("correct"),
                 rs.getString("course_name"),
-                rs.getString("question_type")
+                rs.getString("question_type"),
+                rs.getString("image_path")
             );
             list.add(question);
         }
@@ -2966,17 +2974,8 @@ public boolean registerExamCompletion(int studentId, int examId, String endTime)
     }
 }
 
-// Add a method to get device identifier (you can enhance this based on your needs)
-public String getDeviceIdentifier(HttpServletRequest request) {
-    String userAgent = request.getHeader("User-Agent");
-    String ipAddress = request.getRemoteAddr();
-    
-    // Create a simple device identifier
-    String deviceIdentifier = ipAddress + "_" + 
-                             (userAgent != null ? userAgent.hashCode() : "unknown");
-    
-    return deviceIdentifier.substring(0, Math.min(deviceIdentifier.length(), 100));
-}
+// Removed getDeviceIdentifier method due to HttpServletRequest dependency
+// This method was causing compilation errors
 
 // Add a method to get the register for a specific exam
 public ResultSet getExamRegister(int examId) throws SQLException {
@@ -4118,6 +4117,38 @@ public boolean addNewUser(String fName, String lName, String uName, String email
     }
 }
 
+
+    /**
+     * Get the total count of questions in the system
+     * @return total number of questions
+     **/
+    public int getTotalQuestionsCount() {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getTotalQuestionsCount", e);
+            return 0;
+        }
+        
+        int totalQuestions = 0;
+        try {
+            String sql = "SELECT COUNT(*) as total FROM questions";
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            ResultSet rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                totalQuestions = rs.getInt("total");
+            }
+            
+            rs.close();
+            pstmt.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        
+        return totalQuestions;
+    }
+
 // Keep your original method but rename it
 public void addNewUserVoid(String fName, String lName, String uName, String email, String pass,
                        String contact, String city, String address, String userTypeParam) {
@@ -4292,6 +4323,8 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error closing resources", e);
         }
     }
+    }
 }
- 
-}
+    
+
+

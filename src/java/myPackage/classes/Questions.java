@@ -4,7 +4,7 @@ package myPackage.classes;
 
 public class Questions {
     private int questionId;
-    private String question,opt1,opt2,opt3,opt4,correct,courseName, questionType;
+    private String question,opt1,opt2,opt3,opt4,correct,courseName, questionType, imagePath;
 
     public Questions() {
     }
@@ -19,6 +19,19 @@ public class Questions {
         this.correct = correct;
         this.courseName = courseName;
         this.questionType = questionType;
+    }
+    
+    public Questions(int questionId, String question, String opt1, String opt2, String opt3, String opt4, String correct, String courseName, String questionType, String imagePath) {
+        this.questionId = questionId;
+        this.question = question;
+        this.opt1 = opt1;
+        this.opt2 = opt2;
+        this.opt3 = opt3;
+        this.opt4 = opt4;
+        this.correct = correct;
+        this.courseName = courseName;
+        this.questionType = questionType;
+        this.imagePath = imagePath;
     }
 
     public String getQuestionType() {
@@ -91,6 +104,14 @@ public class Questions {
 
     public void setCourseName(String courseName) {
         this.courseName = courseName;
+    }
+    
+    public String getImagePath() {
+        return imagePath;
+    }
+    
+    public void setImagePath(String imagePath) {
+        this.imagePath = imagePath;
     }
     
     

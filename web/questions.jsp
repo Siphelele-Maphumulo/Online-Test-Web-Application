@@ -1,11 +1,33 @@
 <%@page import="java.util.ArrayList"%>
-
-
 <%@page import="myPackage.DatabaseClass"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
+<%@ page isELIgnored="true" %>
 
-<% 
+<%
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+
+// Get course names for dropdown
+ArrayList<String> courseNames = pDAO.getAllCourseNames();
+if (courseNames == null) {
+    courseNames = new ArrayList<>();
+}
+
+// Get total questions count
+int totalQuestions = 0;
+try {
+    totalQuestions = pDAO.getTotalQuestionsCount();
+} catch (Exception e) {
+    totalQuestions = 0; // Default to 0 if there's an error
+}
+
+// Get the last selected course name from request parameter
+String lastCourseName = request.getParameter("coursename");
+if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
+    // If no course is selected, use the first course if available
+    if (!courseNames.isEmpty()) {
+        lastCourseName = courseNames.get(0);
+    }
+}
 %>
 
 <!-- Modal for validation messages -->
@@ -166,6 +188,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         flex: 1;
         padding: var(--spacing-lg);
         overflow-y: auto;
+        height: 100vh;
     }
     
     /* Page Header */
@@ -520,7 +543,6 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     /* Add these styles to eliminate scrolling */
     .main-content {
         position: relative;
-        max-height: calc(100vh - 100px);
         overflow-y: auto;
         padding-right: 10px;
     }
@@ -543,15 +565,14 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         margin-bottom: 30px;
     }
     
-    .sticky-add-form {
-        position: sticky;
-        top: 20px;
+    /* REMOVED sticky-add-form class - All panels will scroll normally */
+    .question-card {
+        position: static;
         background: var(--white);
-        box-shadow: var(--shadow-lg);
-        border: 2px solid var(--primary-blue);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--medium-gray);
         border-radius: var(--radius-md);
-        z-index: 100;
-        margin-top: 20px;
+        margin-bottom: var(--spacing-lg);
     }
     
     .quick-add-indicator {
@@ -771,10 +792,110 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 .form-group.has-error .error-message {
     display: block;
 }
+
+/* Progress Bar Styles */
+.progress {
+    height: 20px;
+    background-color: var(--medium-gray);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
+    transition: width 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--white);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Drag and Drop Styles */
+.drop-zone {
+    border: 2px dashed var(--medium-gray);
+    border-radius: var(--radius-md);
+    padding: 30px;
+    text-align: center;
+    background-color: var(--light-gray);
+    transition: all var(--transition-normal);
+    cursor: pointer;
+    position: relative;
+}
+
+.drop-zone:hover {
+    border-color: var(--accent-blue);
+    background-color: rgba(74, 144, 226, 0.05);
+}
+
+.drop-zone.drag-over {
+    border-color: var(--accent-blue);
+    background-color: rgba(74, 144, 226, 0.1);
+    transform: scale(1.02);
+}
+
+.drop-zone-content {
+    pointer-events: none;
+}
+
+.drop-icon {
+    font-size: 48px;
+    color: var(--dark-gray);
+    margin-bottom: 15px;
+    display: block;
+}
+
+.drop-text {
+    font-size: 16px;
+    color: var(--text-dark);
+    margin: 0 0 5px 0;
+    font-weight: 500;
+}
+
+.drop-hint {
+    font-size: 13px;
+    color: var(--dark-gray);
+    margin: 0;
+}
+
+.file-name-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    border-radius: var(--radius-sm);
+    margin-top: 10px;
+}
+
+.file-name-display i {
+    color: var(--success);
+}
+
+.remove-file-btn {
+    background: none;
+    border: none;
+    color: #dc3545;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+    margin-left: auto;
+    line-height: 1;
+}
+
+.remove-file-btn:hover {
+    color: #a71d2a;
+}
+
 </style>
 
+<!-- Dashboard Layout -->
 <div class="dashboard-container">
-    <!-- Sidebar Navigation - Same as profile page -->
+    <!-- Sidebar -->
     <aside class="sidebar">
         <div class="sidebar-header">
             <img src="IMG/mut.png" alt="CodeSA Institute Pty LTD Logo" class="mut-logo">
@@ -809,27 +930,108 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     </aside>
     
     <!-- Main Content -->
-    <main class="main-content">
+    <div class="main-content">
         <!-- Page Header -->
-        <header class="page-header">
+        <div class="page-header">
             <div class="page-title">
                 <i class="fas fa-question-circle"></i>
-                Question Management
+                Questions Management
             </div>
             <div class="stats-badge">
-                <i class="fas fa-database"></i>
-                Manage Questions
+                <i class="fas fa-layer-group"></i>
+                <%= totalQuestions %> Total Questions
             </div>
-        </header>
+        </div>
         
-        <!-- Add New Question Panel -->
-        <div class="question-card" id="addQuestionPanel">
+        <!-- Upload PDF to Generate Questions Panel -->
+        <div class="question-card" id="uploadPdfPanel">
             <div class="card-header">
-                <span><i class="fas fa-plus-circle"></i> Add New Question</span>
-                <i class="fas fa-edit" style="opacity: 0.8;"></i>
+                <span><i class="fas fa-file-pdf"></i> Upload Exam Paper (PDF)</span>
+                <i class="fas fa-upload" style="opacity: 0.8;"></i>
             </div>
             <div class="question-form">
-                <form action="controller.jsp" method="POST" id="questionForm">
+                <form id="pdfUploadForm" enctype="multipart/form-data">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-book" style="color: var(--accent-blue);"></i>
+                                Select Course
+                            </label>
+                            <select name="courseName" class="form-select" id="courseSelectPdf" required>
+                                <% 
+                                if (courseNames.isEmpty()) {
+                                %>
+                                    <option value="">No courses available</option>
+                                <%
+                                } else {
+                                    for (String course : courseNames) {
+                                        boolean isSelected = (lastCourseName != null && lastCourseName.equals(course)) || 
+                                                           (lastCourseName == null && course.equals(courseNames.get(0)));
+                                %>
+                                <option value="<%=course%>" <%=isSelected ? "selected" : ""%>><%=course%></option>
+                                <% 
+                                    }
+                                } 
+                                %>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-file-upload" style="color: var(--info);"></i>
+                                Upload PDF File
+                            </label>
+                            <div class="drop-zone" id="dropZone">
+                                <div class="drop-zone-content">
+                                    <i class="fas fa-cloud-upload-alt drop-icon"></i>
+                                    <p class="drop-text">Drag & drop your PDF file here or click to browse</p>
+                                    <p class="drop-hint">Maximum file size: 5MB</p>
+                                    <input type="file" name="pdfFile" class="form-control" id="pdfFile" accept=".pdf" required style="display: none;">
+                                </div>
+                            </div>
+                            <div id="fileNameDisplay" class="file-name-display" style="display: none;">
+                                <i class="fas fa-file-pdf"></i>
+                                <span id="fileName"></span>
+                                <button type="button" class="remove-file-btn" onclick="removeFile()">�</button>
+                            </div>
+                            <small class="form-hint">Upload a PDF with exam questions to auto-generate. Maximum file size: 5MB.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" onclick="resetPdfForm()">
+                            <i class="fas fa-redo"></i>
+                            Reset
+                        </button>
+                        <button type="button" class="btn btn-primary" id="uploadPdfBtn">
+                            <i class="fas fa-bolt"></i>
+                            Generate Questions
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Progress bar for upload -->
+                <div id="uploadProgress" class="progress" style="display: none; margin-top: 15px;">
+                    <div class="progress-bar" role="progressbar" style="width: 0%;"></div>
+                </div>
+                
+                <!-- Status message -->
+                <div id="uploadStatus" style="margin-top: 10px; display: none;"></div>
+            </div>
+        </div>
+        
+        <!-- Add New Question Card - REMOVED sticky-add-form class -->
+        <div class="question-card" id="addQuestionCard">
+            <div class="card-header">
+                <span><i class="fas fa-plus-circle"></i> Add New Question</span>
+                <i class="fas fa-question-circle" style="opacity: 0.8;"></i>
+            </div>
+            <div class="question-form">
+                <form action="controller.jsp" method="post" id="addQuestionForm" enctype="multipart/form-data">
+                    <input type="hidden" name="page" value="questions">
+                    <input type="hidden" name="operation" value="addnew">
+                    <input type="hidden" id="questionTypeHidden" name="questionType" value="MCQ">
+                    
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label">
@@ -838,20 +1040,14 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             </label>
                             <select name="coursename" class="form-select" id="courseSelectAddNew" required>
                                 <% 
-                                ArrayList<String> allCourseNames = pDAO.getAllCourseNames();
-                                String lastCourseNameAdd = pDAO.getLastCourseName();
-                                
-                                if (allCourseNames.isEmpty()) {
+                                if (courseNames.isEmpty()) {
                                 %>
-                                    <option value="">No courses available. Please add courses first.</option>
+                                    <option value="">No courses available</option>
                                 <%
                                 } else {
-                                %>
-                                    <option value="">Select Course</option>
-                                <%
-                                    for (String course : allCourseNames) {
-                                        boolean isSelected = (lastCourseNameAdd != null && lastCourseNameAdd.equals(course)) || 
-                                                           (lastCourseNameAdd == null && course.equals(allCourseNames.get(0)));
+                                    for (String course : courseNames) {
+                                        boolean isSelected = (lastCourseName != null && lastCourseName.equals(course)) || 
+                                                           (lastCourseName == null && course.equals(courseNames.get(0)));
                                 %>
                                 <option value="<%=course%>" <%=isSelected ? "selected" : ""%>><%=course%></option>
                                 <% 
@@ -859,79 +1055,66 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                                 } 
                                 %>
                             </select>
-                            <% if (allCourseNames.isEmpty()) { %>
-                            <small style="color: var(--error); font-size: 12px;">
-                                <i class="fas fa-exclamation-triangle"></i> 
-                                You need to add courses first before adding questions.
-                            </small>
-                            <% } %>
                         </div>
                         
                         <div class="form-group">
                             <label class="form-label">
-                                <i class="fas fa-question" style="color: var(--info);"></i>
+                                <i class="fas fa-list" style="color: var(--info);"></i>
                                 Question Type
                             </label>
-                            <select name="questionType" id="questionType" class="form-select" onchange="toggleOptions()">
-                                <option value="MCQ">Multiple Choice (Single Answer)</option>
-                                <option value="MultipleSelect">Multiple Select (Choose Two)</option>
+                            <select id="questionTypeSelect" class="form-select" onchange="toggleOptions()">
+                                <option value="MCQ">Multiple Choice</option>
                                 <option value="TrueFalse">True/False</option>
+                                <option value="MultipleSelect">Multiple Select (2 correct)</option>
                                 <option value="Code">Code Snippet</option>
                             </select>
                         </div>
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-pencil-alt" style="color: var(--success);"></i>
-                            Your Question
-                        </label>
-                        <textarea name="question" id="questionText" class="question-input" placeholder="Type your question here" required rows="3" oninput="checkForCodeSnippet()"></textarea>
-                        <div class="error-message" id="questionError">Question is required</div>
+                        <label class="form-label"><i class="fas fa-question-circle" style="color: var(--primary-blue);"></i> Your Question</label>
+                        <textarea name="question" id="questionTextarea" class="question-input" rows="3" required oninput="checkForCodeSnippet()"></textarea>
+                    </div>
+                    
+                    <!-- Image Upload Section -->
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-image" style="color: var(--info);"></i> Upload Question Image (Optional)</label>
+                        <div class="drop-zone" id="imageDropZone">
+                            <div class="drop-zone-content">
+                                <i class="fas fa-cloud-upload-alt drop-icon"></i>
+                                <p class="drop-text">Drag & drop an image here or click to browse</p>
+                                <p class="drop-hint">Supports JPG, PNG, GIF (Max 3MB)</p>
+                                <input type="file" name="imageFile" class="form-control" id="imageFile" accept=".jpg,.jpeg,.png,.gif" style="display: none;">
+                            </div>
+                        </div>
+                        <div id="imageFileNameDisplay" class="file-name-display" style="display: none; margin-top: 10px;">
+                            <i class="fas fa-image"></i>
+                            <span id="imageFileName"></span>
+                            <button type="button" class="remove-file-btn" onclick="removeImageFile()">×</button>
+                        </div>
+                        <small class="form-hint">Upload an image to accompany your question (optional)</small>
                     </div>
                     
                     <div id="mcqOptions">
                         <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-list-ol" style="color: var(--dark-gray);"></i>
-                                Options
-                            </label>
+                            <label class="form-label"><i class="fas fa-list-ol"></i> Options</label>
                             <div class="options-grid">
-                                <div class="option-container">
-                                    <textarea name="opt1" class="option-input" placeholder="First Option" id="opt1" required rows="2"></textarea>
-                                    <div class="error-message" id="opt1Error">First option is required</div>
-                                </div>
-                                <div class="option-container">
-                                    <textarea name="opt2" class="option-input" placeholder="Second Option" id="opt2" required rows="2"></textarea>
-                                    <div class="error-message" id="opt2Error">Second option is required</div>
-                                </div>
-                                <div class="option-container">
-                                    <textarea name="opt3" class="option-input" placeholder="Third Option" id="opt3" rows="2"></textarea>
-                                    <div class="error-message" id="opt3Error">Third option is required</div>
-                                </div>
-                                <div class="option-container">
-                                    <textarea name="opt4" class="option-input" placeholder="Fourth Option" id="opt4" rows="2"></textarea>
-                                    <div class="error-message" id="opt4Error">Fourth option is required</div>
-                                </div>
+                                <textarea name="opt1" id="opt1" class="option-input" required rows="2" placeholder="Option 1"></textarea>
+                                <textarea name="opt2" id="opt2" class="option-input" required rows="2" placeholder="Option 2"></textarea>
+                                <textarea name="opt3" id="opt3" class="option-input" rows="2" placeholder="Option 3 (optional)"></textarea>
+                                <textarea name="opt4" id="opt4" class="option-input" rows="2" placeholder="Option 4 (optional)"></textarea>
                             </div>
                         </div>
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                            Correct Answer
-                        </label>
-                        
-                        <!-- Single Answer Input (for MCQ and True/False) -->
+                        <label class="form-label"><i class="fas fa-check-circle" style="color: var(--success);"></i> Correct Answer</label>
                         <div id="correctAnswerContainer">
-                            <textarea id="correctAnswer" name="correct" class="form-control" placeholder="Enter correct answer" required rows="2"></textarea>
-                            <div class="error-message" id="correctAnswerError">Correct answer is required</div>
-                            <small id="correctAnswerHint" class="form-hint">Enter the correct answer (must match one of the options exactly)</small>
+                            <textarea id="correctAnswer" name="correct" class="form-control" required rows="2" placeholder="Enter the correct answer"></textarea>
+                            <small class="form-hint">Must match one of the options exactly</small>
                         </div>
                         
-                        <!-- Multiple Answer Selection (for MultipleSelect) -->
-                        <div id="multipleCorrectContainer" style="display: none;">
+                        <div id="multipleCorrectContainer" style="display:none;">
                             <div class="options-grid">
                                 <div class="form-check">
                                     <input type="checkbox" id="correctOpt1" class="form-check-input correct-checkbox">
@@ -950,20 +1133,16 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                                     <label for="correctOpt4" class="form-check-label">Option 4</label>
                                 </div>
                             </div>
-                            <div class="error-message" id="multipleCorrectError">Select exactly 2 correct answers</div>
-                            <small id="multipleCorrectHint" class="form-hint">Select exactly 2 correct answers</small>
+                            <small class="form-hint">Select exactly 2 correct answers</small>
                         </div>
                     </div>
                     
-                    <input type="hidden" name="page" value="questions">
-                    <input type="hidden" name="operation" value="addnew">
-                    
                     <div class="form-actions">
-                        <button type="reset" class="btn btn-outline" onclick="resetQuestionForm()">
+                        <button type="reset" class="btn btn-outline" onclick="resetForm()">
                             <i class="fas fa-redo"></i>
-                            Reset Form
+                            Reset
                         </button>
-                        <button type="button" class="btn btn-primary" id="submitBtn" onclick="validateAndSubmit()">
+                        <button type="submit" class="btn btn-success" id="submitBtn">
                             <i class="fas fa-plus"></i>
                             Add Question
                         </button>
@@ -972,33 +1151,28 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             </div>
         </div>
         
-        <!-- Show Questions Panel -->
-        <div class="question-card" id="showQuestionsPanel">
+        <!-- View Questions Section - Updated with Show All Questions Button -->
+        <div class="question-card" id="viewQuestionsCard">
             <div class="card-header">
-                <span><i class="fas fa-list"></i> Show All Questions</span>
+                <span><i class="fas fa-eye"></i> View Questions</span>
                 <i class="fas fa-search" style="opacity: 0.8;"></i>
             </div>
             <div class="question-form">
-                <form action="adm-page.jsp">
+                <form action="" method="get" id="viewQuestionsForm">
+                    <input type="hidden" name="pgprt" value="4">
+                    
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label">
-                                <i class="fas fa-book" style="color: var(--accent-blue);"></i>
-                                Select Course
+                                <i class="fas fa-filter" style="color: var(--warning);"></i>
+                                Filter by Course
                             </label>
-                            <select name="coursename" class="form-select" id="courseSelectShowAll" required>
+                            <select name="coursename" class="form-select" id="courseSelectView" onchange="updateShowAllButton()">
+                                <option value="">All Courses</option>
                                 <% 
-                                ArrayList<String> courseNames = pDAO.getAllCourseNames(); 
-                                String lastCourseName = pDAO.getLastCourseName();
-                                
-                                if (courseNames.isEmpty()) {
-                                %>
-                                    <option value="">No courses available</option>
-                                <%
-                                } else {
+                                if (courseNames != null) {
                                     for (String course : courseNames) {
-                                        boolean isSelected = (lastCourseName != null && lastCourseName.equals(course)) || 
-                                                           (lastCourseName == null && course.equals(courseNames.get(0)));
+                                        boolean isSelected = (lastCourseName != null && lastCourseName.equals(course));
                                 %>
                                 <option value="<%=course%>" <%=isSelected ? "selected" : ""%>><%=course%></option>
                                 <% 
@@ -1009,42 +1183,287 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         </div>
                     </div>
                     
-                    <input type="hidden" name="pgprt" value="4">
-                    
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-success" <%=courseNames.isEmpty() ? "disabled" : ""%>>
+                        <button type="button" class="btn btn-success" id="showAllQuestionsBtn" onclick="showAllQuestions()" <%=courseNames.isEmpty() ? "disabled" : ""%>>
                             <i class="fas fa-eye"></i>
-                            Show Questions
+                            Show All Questions
                         </button>
                     </div>
                 </form>
             </div>
         </div>
-    </main>
+    </div>
 </div>
 
-<!-- Scroll Indicator Button -->
-<div class="scroll-indicator" id="scrollIndicator">
-    <i class="fas fa-arrow-down"></i>
-</div>
-
-<!-- Font Awesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
-<!-- JavaScript for enhanced functionality -->
 <script>
-// Modal functions
-function showModal(title, message) {
-    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + title;
-    document.getElementById('modalMessage').textContent = message;
-    document.getElementById('validationModal').style.display = 'block';
+// Function to update the Show All Questions button state
+function updateShowAllButton() {
+    const courseSelect = document.getElementById('courseSelectView');
+    const showAllBtn = document.getElementById('showAllQuestionsBtn');
+    
+    if (courseSelect.value) {
+        showAllBtn.disabled = false;
+        showAllBtn.innerHTML = '<i class="fas fa-eye"></i> Show Questions in ' + courseSelect.value;
+    } else {
+        showAllBtn.disabled = true;
+        showAllBtn.innerHTML = '<i class="fas fa-eye"></i> Select a Course First';
+    }
 }
 
-function closeModal() {
-    document.getElementById('validationModal').style.display = 'none';
+// Function to show all questions for selected course
+function showAllQuestions() {
+    const courseSelect = document.getElementById('courseSelectView');
+    const courseName = courseSelect.value;
+    
+    if (!courseName) {
+        showToast('error', 'Validation Error', 'Please select a course first.');
+        return;
+    }
+    
+    // Navigate to the showall.jsp page with the selected course
+    window.location.href = 'showall.jsp?coursename=' + encodeURIComponent(courseName);
 }
 
-// Toast functions
+// Function to sync all course dropdowns
+function syncCourseDropdowns() {
+    const pdfCourseSelect = document.getElementById('courseSelectPdf');
+    const addQuestionCourseSelect = document.getElementById('courseSelectAddNew');
+    const viewCourseSelect = document.getElementById('courseSelectView');
+    
+    // Function to sync all dropdowns
+    function syncAllDropdowns(changedSelect) {
+        const value = changedSelect.value;
+        
+        if (pdfCourseSelect && pdfCourseSelect !== changedSelect) {
+            pdfCourseSelect.value = value;
+        }
+        if (addQuestionCourseSelect && addQuestionCourseSelect !== changedSelect) {
+            addQuestionCourseSelect.value = value;
+        }
+        if (viewCourseSelect && viewCourseSelect !== changedSelect) {
+            viewCourseSelect.value = value;
+            updateShowAllButton();
+        }
+    }
+    
+    // Add event listeners to all dropdowns
+    if (pdfCourseSelect) {
+        pdfCourseSelect.addEventListener('change', function() {
+            syncAllDropdowns(this);
+        });
+    }
+    
+    if (addQuestionCourseSelect) {
+        addQuestionCourseSelect.addEventListener('change', function() {
+            syncAllDropdowns(this);
+        });
+    }
+    
+    if (viewCourseSelect) {
+        viewCourseSelect.addEventListener('change', function() {
+            syncAllDropdowns(this);
+            updateShowAllButton();
+        });
+    }
+    
+    // Initialize button state
+    updateShowAllButton();
+}
+
+// PDF Upload Functions
+function uploadAndGenerateQuestions() {
+    const form = document.getElementById('pdfUploadForm');
+    const fileInput = document.getElementById('pdfFile');
+    const courseSelect = document.getElementById('courseSelectPdf');
+    const uploadBtn = document.getElementById('uploadPdfBtn');
+    const progressDiv = document.getElementById('uploadProgress');
+    const progressBar = progressDiv.querySelector('.progress-bar');
+    const statusDiv = document.getElementById('uploadStatus');
+    
+    // Validate inputs
+    if (!fileInput.files[0]) {
+        showToast('error', 'Validation Error', 'Please select a PDF file to upload.');
+        return;
+    }
+    
+    if (!courseSelect.value) {
+        showToast('error', 'Validation Error', 'Please select a course.');
+        return;
+    }
+    
+    // Check file size (5MB = 5242880 bytes)
+    if (fileInput.files[0].size > 5242880) {
+        showToast('error', 'File Too Large', 'File size exceeds 5MB limit. Please select a smaller file.');
+        return;
+    }
+    
+    // Check file type
+    if (fileInput.files[0].type !== 'application/pdf' && !fileInput.files[0].name.toLowerCase().endsWith('.pdf')) {
+        showToast('error', 'Invalid File Type', 'Only PDF files are allowed.');
+        return;
+    }
+    
+    // Prepare form data
+    const formData = new FormData(form);
+    
+    // Show progress bar
+    progressDiv.style.display = 'block';
+    statusDiv.style.display = 'block';
+    statusDiv.innerHTML = '<div class="alert"><i class="fas fa-spinner fa-spin"></i> Processing PDF and extracting questions...</div>';
+    
+    // Disable button during upload
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    
+    // Send request
+    fetch('controller.jsp?action=pdf_upload&page=questions', {
+        method: 'POST',
+        body: formData
+    })
+    .then(async response => {
+        // Check if response is OK before parsing JSON
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Try to parse JSON response
+        let data;
+        try {
+            data = await response.json();
+        } catch (parseError) {
+            console.error('JSON Parse Error:', parseError);
+            console.error('Response text:', await response.text());
+            throw new Error('Invalid JSON response from server');
+        }
+        
+        if (data.success) {
+            // Update progress to 100%
+            progressBar.style.width = '100%';
+            progressBar.textContent = '100%';
+            
+            statusDiv.innerHTML = `<div class="alert" style="background: #d4edda; color: #155724;"><i class="fas fa-check-circle"></i> Successfully extracted ${data.count} questions. Adding to database...</div>`;
+            
+            // Add questions to database
+            addExtractedQuestionsToDB(data.questions, courseSelect.value);
+        } else {
+            // Check if this is the library not installed message
+            if (data.message && data.message.includes('libraries not installed')) {
+                statusDiv.innerHTML = `<div class="alert" style="background: #fff3cd; color: #856404;"><i class="fas fa-exclamation-triangle"></i> PDF processing is not available. Required libraries need to be installed on the server.</div>`;
+                progressBar.style.backgroundColor = '#ffc107';
+                showToast('warning', 'Libraries Required', 'PDF processing requires additional libraries to be installed on the server.');
+            } else {
+                throw new Error(data.message || 'Unknown error occurred');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        statusDiv.innerHTML = `<div class="alert" style="background: #f8d7da; color: #721c24;"><i class="fas fa-exclamation-triangle"></i> Error: ${error.message || error}</div>`;
+        progressBar.style.backgroundColor = '#dc3545';
+    })
+    .finally(() => {
+        // Re-enable button
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = '<i class="fas fa-bolt"></i> Generate Questions';
+    });
+}
+
+function addExtractedQuestionsToDB(questions, courseName) {
+    let addedCount = 0;
+    let errorCount = 0;
+    
+    const statusDiv = document.getElementById('uploadStatus');
+    
+    // Process each question
+    questions.forEach((question, index) => {
+        // Prepare form data for adding question
+        const formData = new FormData();
+        formData.append('page', 'questions');
+        formData.append('operation', 'addnew');
+        formData.append('coursename', courseName);
+        formData.append('questionType', question.type);
+        formData.append('question', question.question);
+        
+        // Add options
+        for (let i = 0; i < question.options.length && i < 4; i++) {
+            formData.append(`opt${i+1}`, question.options[i]);
+        }
+        
+        // Add correct answer
+        formData.append('correct', question.correct);
+        
+        // Send request to add question
+        fetch('controller.jsp', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())
+        .then(result => {
+            addedCount++;
+            
+            // Update status
+            statusDiv.innerHTML = `<div class="alert" style="background: #d4edda; color: #155724;"><i class="fas fa-check-circle"></i> Added ${addedCount} of ${questions.length} questions to ${courseName}</div>`;
+            
+            // When all questions are added
+            if (addedCount + errorCount === questions.length) {
+                finishPDFUploadProcess(addedCount, errorCount, courseName);
+            }
+        })
+        .catch(error => {
+            console.error('Error adding question:', error);
+            errorCount++;
+            
+            // Continue processing other questions
+            if (addedCount + errorCount === questions.length) {
+                finishPDFUploadProcess(addedCount, errorCount, courseName);
+            }
+        });
+    });
+    
+    // Handle case where no questions were processed
+    if (questions.length === 0) {
+        finishPDFUploadProcess(0, 0, courseName);
+    }
+}
+
+function finishPDFUploadProcess(successCount, errorCount, courseName) {
+    const statusDiv = document.getElementById('uploadStatus');
+    const progressDiv = document.getElementById('uploadProgress');
+    
+    if (successCount > 0) {
+        statusDiv.innerHTML = `<div class="alert" style="background: #d4edda; color: #155724;"><i class="fas fa-check-circle"></i> Successfully added ${successCount} questions to ${courseName}. ${errorCount > 0 ? errorCount + ' failed.' : ''}</div>`;
+        
+        // Show success toast
+        showToast('success', 'Success', `Added ${successCount} questions to ${courseName}`);
+    } else {
+        statusDiv.innerHTML = `<div class="alert" style="background: #f8d7da; color: #721c24;"><i class="fas fa-exclamation-triangle"></i> No questions were added. ${errorCount > 0 ? errorCount + ' errors occurred.' : ''}</div>`;
+        
+        // Show error toast
+        showToast('error', 'Processing Error', 'No questions were added to the database');
+    }
+    
+    // Hide progress bar after delay
+    setTimeout(() => {
+        progressDiv.style.display = 'none';
+    }, 3000);
+}
+
+function resetPdfForm() {
+    document.getElementById('pdfUploadForm').reset();
+    document.getElementById('uploadProgress').style.display = 'none';
+    document.getElementById('uploadStatus').style.display = 'none';
+    
+    // Reset drag and drop UI
+    const pdfFileInput = document.getElementById('pdfFile');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    const dropZone = document.getElementById('dropZone');
+    
+    if (pdfFileInput) pdfFileInput.value = '';
+    if (fileNameDisplay) fileNameDisplay.style.display = 'none';
+    if (dropZone) dropZone.style.display = 'block';
+}
+
+// Toast notification function
 function showToast(type, title, message) {
     const toast = document.getElementById('toast');
     const toastIcon = document.getElementById('toastIcon');
@@ -1058,19 +1477,15 @@ function showToast(type, title, message) {
     switch(type) {
         case 'success':
             toastIcon.className = 'fas fa-check-circle';
-            toastIcon.style.color = '#28a745';
             break;
         case 'error':
             toastIcon.className = 'fas fa-times-circle';
-            toastIcon.style.color = '#dc3545';
             break;
         case 'warning':
             toastIcon.className = 'fas fa-exclamation-triangle';
-            toastIcon.style.color = '#ffc107';
             break;
         case 'info':
             toastIcon.className = 'fas fa-info-circle';
-            toastIcon.style.color = '#17a2b8';
             break;
     }
     
@@ -1082,169 +1497,147 @@ function hideToast() {
     document.getElementById('toast').style.display = 'none';
 }
 
-// Form validation functions
-function validateQuestionForm() {
-    let isValid = true;
-    const type = document.getElementById("questionType").value;
-    const question = document.getElementById("questionText").value.trim();
-    const course = document.getElementById("courseSelectAddNew").value;
-    
-    // Clear previous errors
-    clearErrors();
-    
-    // Basic validations
-    if (!question) {
-        showError('questionText', 'questionError', 'Question is required');
-        isValid = false;
-    }
-    
-    if (!course) {
-        showError('courseSelectAddNew', null, 'Please select a course');
-        isValid = false;
-    }
-    
-    // Type-specific validations
-    if (type === "TrueFalse") {
-        const correctAnswer = document.getElementById("correctAnswer").value.trim();
-        if (!correctAnswer) {
-            showError('correctAnswer', 'correctAnswerError', 'Correct answer is required');
-            isValid = false;
-        } else if (correctAnswer.toLowerCase() !== "true" && correctAnswer.toLowerCase() !== "false") {
-            showError('correctAnswer', 'correctAnswerError', 'Correct answer must be "True" or "False"');
-            isValid = false;
-        }
-        
-    } else if (type === "MultipleSelect") {
-        const opts = ['opt1', 'opt2', 'opt3', 'opt4'].map(id => document.getElementById(id).value.trim());
-        if (!opts[0]) { showError('opt1', 'opt1Error', 'First option is required'); isValid = false; }
-        if (!opts[1]) { showError('opt2', 'opt2Error', 'Second option is required'); isValid = false; }
-        
-        const filledOpts = opts.filter(Boolean);
-        if (new Set(filledOpts).size !== filledOpts.length) {
-            showModal('Duplicate Options', 'Options must be unique.');
-            return false;
-        }
-        
-        const selectedCount = document.querySelectorAll('.correct-checkbox:checked').length;
-        if (selectedCount !== 2) {
-            showError('multipleCorrectContainer', 'multipleCorrectError', 'Select exactly 2 correct answers');
-            isValid = false;
-        }
-        
-    } else { // MCQ or Code
-        const opts = ['opt1', 'opt2', 'opt3', 'opt4'].map(id => document.getElementById(id).value.trim());
-        if (!opts[0]) { showError('opt1', 'opt1Error', 'First option is required'); isValid = false; }
-        if (!opts[1]) { showError('opt2', 'opt2Error', 'Second option is required'); isValid = false; }
-        
-        const filledOpts = opts.filter(Boolean);
-        if (new Set(filledOpts).size !== filledOpts.length) {
-            showModal('Duplicate Options', 'Options must be unique.');
-            return false;
-        }
-        
-        const correctAnswer = document.getElementById("correctAnswer").value.trim();
-        if (!correctAnswer) {
-            showError('correctAnswer', 'correctAnswerError', 'Correct answer is required');
-            isValid = false;
-        } else if (!filledOpts.includes(correctAnswer)) {
-            showModal('Invalid Correct Answer', 'Correct answer must match one of the provided options.');
-            isValid = false;
-        }
-    }
-    
-    return isValid;
+// Modal functions
+function showModal(title, message) {
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + title;
+    document.getElementById('modalMessage').textContent = message;
+    document.getElementById('validationModal').style.display = 'block';
 }
 
-function showError(elementId, errorId, message) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        element.classList.add('input-error');
-        const container = element.closest('.option-container') || element.parentElement;
-        container.classList.add('has-error');
-    }
-    
-    const errorElement = document.getElementById(errorId);
-    if (errorElement) {
-        errorElement.textContent = message;
-        errorElement.style.display = 'block';
-    }
+function closeModal() {
+    document.getElementById('validationModal').style.display = 'none';
 }
 
-function clearErrors() {
-    document.querySelectorAll('.input-error, .has-error').forEach(el => el.classList.remove('input-error', 'has-error'));
-    document.querySelectorAll('.error-message').forEach(el => el.style.display = 'none');
-}
+// Drag and drop functionality for PDF upload
+const pdfFileInput = document.getElementById('pdfFile');
+const dropZone = document.getElementById('dropZone');
 
-function validateAndSubmit() {
-    if (validateQuestionForm()) {
-        const type = document.getElementById("questionType").value;
-        if (type === "MultipleSelect") {
-            const selectedAnswers = Array.from(document.querySelectorAll('.correct-checkbox:checked'))
-                .map(cb => cb.value)
-                .join('|');
-            document.getElementById('correctAnswer').value = selectedAnswers;
-        }
-        
-        const submitBtn = document.getElementById('submitBtn');
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding Question...';
-        submitBtn.disabled = true;
-        document.getElementById('questionForm').submit();
-    } else {
-        const firstError = document.querySelector('.input-error');
-        if (firstError) firstError.focus();
-    }
-}
-
-function toggleOptions() {
-    const type = document.getElementById("questionType").value;
-    const mcqOptions = document.getElementById("mcqOptions");
-    const singleAnswer = document.getElementById("correctAnswerContainer");
-    const multiAnswer = document.getElementById("multipleCorrectContainer");
-    const correctAnswer = document.getElementById("correctAnswer");
-    const hint = document.getElementById("correctAnswerHint");
-
-    mcqOptions.style.display = "none";
-    singleAnswer.style.display = "none";
-    multiAnswer.style.display = "none";
-
-    ['opt1', 'opt2', 'opt3', 'opt4'].forEach((id, i) => {
-        const opt = document.getElementById(id);
-        opt.required = false;
-        opt.placeholder = i < 2 ? `Option ${i+1}` : `Option ${i+1} (Optional)`;
+if (pdfFileInput && dropZone) {
+    // Click to browse
+    dropZone.addEventListener('click', () => {
+        pdfFileInput.click();
     });
-
-    clearErrors();
-
-    if (type === "TrueFalse") {
-        singleAnswer.style.display = "block";
-        correctAnswer.placeholder = "Enter 'True' or 'False";
-        hint.textContent = "Enter 'True' or 'False";
-        correctAnswer.required = true;
-    } else {
-        mcqOptions.style.display = "block";
-        document.getElementById('opt1').required = true;
-        document.getElementById('opt2').required = true;
-
-        if (type === "MultipleSelect") {
-            multiAnswer.style.display = "block";
-            correctAnswer.required = false;
-            updateCorrectOptionLabels();
-        } else {
-            singleAnswer.style.display = "block";
-            correctAnswer.placeholder = "Correct Answer";
-            hint.textContent = "Correct answer must match an option exactly.";
-            correctAnswer.required = true;
-            if (type === 'Code') {
-                hint.textContent = "Enter expected output, must match an option.";
+    
+    // File input change
+    pdfFileInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            displayFileName(this.files[0]);
+        }
+    });
+    
+    // Drag and drop events
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+    });
+    
+    function highlight() {
+        dropZone.classList.add('drag-over');
+    }
+    
+    function unhighlight() {
+        dropZone.classList.remove('drag-over');
+    }
+    
+    dropZone.addEventListener('drop', handleDrop, false);
+    
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        if (files.length > 0) {
+            const file = files[0];
+            // Check if it's a PDF file
+            if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                // Set the file to the hidden input
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                pdfFileInput.files = dataTransfer.files;
+                displayFileName(file);
+            } else {
+                showToast('error', 'Invalid File Type', 'Only PDF files are allowed.');
             }
+        }
+    }
+    
+    function displayFileName(file) {
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const fileNameSpan = document.getElementById('fileName');
+        
+        fileNameSpan.textContent = file.name;
+        fileNameDisplay.style.display = 'flex';
+        dropZone.style.display = 'none';
+    }
+}
+
+function removeFile() {
+    const pdfFileInput = document.getElementById('pdfFile');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    const dropZone = document.getElementById('dropZone');
+    
+    // Reset file input
+    pdfFileInput.value = '';
+    
+    // Hide file name display and show drop zone
+    fileNameDisplay.style.display = 'none';
+    dropZone.style.display = 'block';
+}
+
+// Add event listener to the PDF upload button
+const uploadPdfBtn = document.getElementById('uploadPdfBtn');
+if (uploadPdfBtn) {
+    uploadPdfBtn.addEventListener('click', uploadAndGenerateQuestions);
+}
+
+// Question form functions
+function toggleOptions() {
+    const qType = document.getElementById("questionTypeSelect").value;
+    const mcq = document.getElementById("mcqOptions");
+    const single = document.getElementById("correctAnswerContainer");
+    const multiple = document.getElementById("multipleCorrectContainer");
+    const correct = document.getElementById("correctAnswer");
+    
+    document.getElementById("questionTypeHidden").value = qType;
+
+    mcq.style.display = "none";
+    single.style.display = "none";
+    multiple.style.display = "none";
+    correct.required = false;
+
+    if (qType === "TrueFalse") {
+        single.style.display = "block";
+        correct.placeholder = "Enter 'True' or 'False'";
+        correct.required = true;
+    } else {
+        mcq.style.display = "block";
+        if (qType === "MultipleSelect") {
+            multiple.style.display = "block";
+            updateCorrectOptionLabels();
+            initializeMultipleSelectCheckboxes();
+        } else {
+            single.style.display = "block";
+            correct.placeholder = qType === 'Code' ? "Expected output" : "Correct Answer";
+            correct.required = true;
         }
     }
 }
 
 // Function to check if question suggests code snippet type
 function checkForCodeSnippet() {
-    const questionText = document.getElementById("questionText").value;
-    const questionType = document.getElementById("questionType").value;
+    const questionText = document.getElementById("questionTextarea").value;
+    const questionType = document.getElementById("questionTypeSelect").value;
     
     // Count lines and check for code indicators
     const lines = questionText.split('\n').filter(line => line.trim() !== '');
@@ -1253,75 +1646,26 @@ function checkForCodeSnippet() {
     // If question is longer than 3 lines or contains code indicators and is not already Code type
     if ((lines.length > 3 || hasCodeIndicators) && questionType !== 'Code') {
         if (confirm("This question appears to contain code or multiple lines. Would you like to change the question type to 'Code Snippet'?")) {
-            document.getElementById("questionType").value = "Code";
+            document.getElementById("questionTypeSelect").value = "Code";
             toggleOptions();
         }
     }
 }
 
-function updateSubmitButton() {
-    const form = document.getElementById('questionForm');
-    document.getElementById('submitBtn').disabled = !form.checkValidity();
+function initializeMultipleSelectCheckboxes() {
+    document.querySelectorAll('.correct-checkbox').forEach(cb => {
+        cb.addEventListener('change', function() {
+            if (document.querySelectorAll('.correct-checkbox:checked').length > 2) {
+                this.checked = false;
+                showModal('Too Many Selections', 'You can only select 2 correct answers.');
+            } else {
+                updateCorrectAnswerField();
+            }
+        });
+    });
 }
 
-function resetQuestionForm() {
-    document.getElementById('questionForm').reset();
-    clearErrors();
-    toggleOptions();
-}
-
-function syncCourseDropdowns() {
-    const addNew = document.getElementById('courseSelectAddNew');
-    const showAll = document.getElementById('courseSelectShowAll');
-    addNew.addEventListener('change', () => showAll.value = addNew.value);
-    showAll.addEventListener('change', () => addNew.value = showAll.value);
-}
-
-// Scroll Indicator
-function scrollToShowQuestions(){
-    document.getElementById("showQuestionsPanel").scrollIntoView({behavior:"smooth"});
-}
-function scrollToAddQuestion(){
-    document.getElementById("addQuestionPanel").scrollIntoView({behavior:"smooth"});
-}
-function updateScrollIndicator(){
-    // Check if elements exist before accessing them
-    const indicator = document.getElementById("scrollIndicator");
-    const add = document.getElementById("addQuestionPanel");
-    const show = document.getElementById("showQuestionsPanel");
-    
-    if(!indicator || !add || !show) return;
-    
-    // Get positions relative to viewport
-    const addRect = add.getBoundingClientRect();
-    const showRect = show.getBoundingClientRect();
-    
-    // Calculate how far each panel is from the top of the viewport
-    const addDistanceFromTop = Math.abs(addRect.top);
-    const showDistanceFromTop = Math.abs(showRect.top);
-    
-    // Determine which panel is closer to the current viewport center
-    const viewportCenter = window.innerHeight / 2;
-    const addDistanceFromCenter = Math.abs(addRect.top - viewportCenter);
-    const showDistanceFromCenter = Math.abs(showRect.top - viewportCenter);
-    
-    if (addDistanceFromCenter < showDistanceFromCenter) {
-        // User is near the Add New Question panel, show downward arrow to go to Show All Questions
-        indicator.innerHTML='<i class="fas fa-arrow-down"></i>';
-        indicator.onclick = scrollToShowQuestions;
-    } else {
-        // User is near the Show All Questions panel, show upward arrow to go to Add New Question
-        indicator.innerHTML='<i class="fas fa-arrow-up"></i>';
-        indicator.onclick = scrollToAddQuestion;
-    }
-}
-
-// Initialize on page load
-document.addEventListener("DOMContentLoaded", () => {
-    toggleOptions();
-    syncCourseDropdowns();
-
-    // Attach event listeners to each option textarea
+function updateCorrectOptionLabels() {
     for (let i = 1; i <= 4; i++) {
         const optInput = document.getElementById(`opt${i}`);
         const checkbox = document.getElementById(`correctOpt${i}`);
@@ -1339,37 +1683,166 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
     }
+}
 
+function updateCorrectAnswerField() {
+    const selectedAnswers = Array.from(document.querySelectorAll('.correct-checkbox:checked'))
+        .map(cb => cb.value)
+        .join('|');
+    document.getElementById('correctAnswer').value = selectedAnswers;
+}
 
-    document.querySelectorAll('.correct-checkbox').forEach(cb => {
-        cb.addEventListener('change', function() {
-            const selectedCount = document.querySelectorAll('.correct-checkbox:checked').length;
-            if (selectedCount > 2) {
-                this.checked = false;
-                showModal('Too Many Selections', 'You can only select 2 correct answers.');
+function resetForm() {
+    document.getElementById('addQuestionForm').reset();
+    document.getElementById('questionTypeSelect').value = 'MCQ';
+    toggleOptions();
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    toggleOptions();
+    updateCorrectOptionLabels();
+    syncCourseDropdowns();
+    
+    // Add form submission handler
+    const addQuestionForm = document.getElementById('addQuestionForm');
+    if (addQuestionForm) {
+        addQuestionForm.addEventListener('submit', function(e) {
+            const qType = document.getElementById("questionTypeSelect").value;
+            let isValid = true;
+            let errorMsg = '';
+            
+            if (qType === "TrueFalse") {
+                const correctValue = document.getElementById('correctAnswer').value.trim().toLowerCase();
+                if (correctValue !== "true" && correctValue !== "false") {
+                    errorMsg = "Answer must be 'True' or 'False'.";
+                    isValid = false;
+                }
+            } else if (qType === "MultipleSelect") {
+                const selectedCount = document.querySelectorAll('.correct-checkbox:checked').length;
+                if (selectedCount !== 2) {
+                    errorMsg = "Select exactly 2 correct answers.";
+                    isValid = false;
+                }
+            } else {
+                const opts = ['opt1', 'opt2', 'opt3', 'opt4']
+                    .map(id => document.getElementById(id).value.trim())
+                    .filter(Boolean);
+                if (new Set(opts).size !== opts.length) {
+                    errorMsg = "Options must be unique.";
+                    isValid = false;
+                } else {
+                    const correctValue = document.getElementById('correctAnswer').value.trim();
+                    if (!opts.includes(correctValue)) {
+                        errorMsg = "Correct answer must match one of the options.";
+                        isValid = false;
+                    }
+                }
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+                showToast('error', 'Validation Error', errorMsg);
             }
         });
-    });
-
+    }
+    
+    // Close modal when clicking outside
     window.onclick = (event) => {
         const modal = document.getElementById('validationModal');
         if (event.target == modal) closeModal();
     };
-
-    // Re-enable scroll indicator with debounce to prevent performance issues
-    updateScrollIndicator();
     
-    // Debounce function to limit how often the scroll event fires
-    let scrollTimeout;
-    window.addEventListener("scroll", () => {
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(updateScrollIndicator, 100);
-    });
-    
-    let resizeTimeout;
-    window.addEventListener("resize", () => {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(updateScrollIndicator, 100);
-    });
+    // Initialize image upload functionality
+    initImageUpload();
 });
+
+// Image upload functions
+function initImageUpload() {
+    const imageFileInput = document.getElementById('imageFile');
+    const imageDropZone = document.getElementById('imageDropZone');
+    
+    if (imageFileInput && imageDropZone) {
+        // Click to browse
+        imageDropZone.addEventListener('click', () => {
+            imageFileInput.click();
+        });
+        
+        // File input change
+        imageFileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                displayImageFileName(this.files[0]);
+            }
+        });
+        
+        // Drag and drop events
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            imageDropZone.addEventListener(eventName, preventImageDefaults, false);
+        });
+        
+        function preventImageDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            imageDropZone.addEventListener(eventName, highlightImage, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            imageDropZone.addEventListener(eventName, unhighlightImage, false);
+        });
+        
+        function highlightImage() {
+            imageDropZone.classList.add('drag-over');
+        }
+        
+        function unhighlightImage() {
+            imageDropZone.classList.remove('drag-over');
+        }
+        
+        imageDropZone.addEventListener('drop', handleImageDrop, false);
+        
+        function handleImageDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                const file = files[0];
+                // Check if it's an image file
+                if (file.type.match('image.*')) {
+                    // Set the file to the hidden input
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    imageFileInput.files = dataTransfer.files;
+                    displayImageFileName(file);
+                } else {
+                    showToast('error', 'Invalid File Type', 'Please select an image file (JPG, PNG, GIF).');
+                }
+            }
+        }
+        
+        function displayImageFileName(file) {
+            const imageFileNameDisplay = document.getElementById('imageFileNameDisplay');
+            const imageFileNameSpan = document.getElementById('imageFileName');
+            
+            imageFileNameSpan.textContent = file.name;
+            imageFileNameDisplay.style.display = 'flex';
+            imageDropZone.style.display = 'none';
+        }
+    }
+}
+
+function removeImageFile() {
+    const imageFileInput = document.getElementById('imageFile');
+    const imageFileNameDisplay = document.getElementById('imageFileNameDisplay');
+    const imageDropZone = document.getElementById('imageDropZone');
+    
+    // Reset file input
+    imageFileInput.value = '';
+    
+    // Hide file name display and show drop zone
+    imageFileNameDisplay.style.display = 'none';
+    imageDropZone.style.display = 'block';
+}
 </script>

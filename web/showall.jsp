@@ -432,6 +432,45 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         color: var(--info);
         border-color: var(--info);
     }
+    
+    .code-question-indicator {
+        background: linear-gradient(135deg, var(--accent-blue), #3b82f6);
+        color: var(--white);
+        padding: var(--spacing-sm) var(--spacing-md);
+        border-radius: var(--radius-sm);
+        margin-bottom: var(--spacing-md);
+        border-left: 3px solid var(--primary-blue);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        font-weight: 500;
+        font-size: 13px;
+    }
+    
+    .code-snippet {
+        background: var(--primary-blue);
+        color: var(--light-gray);
+        border: 1px solid var(--secondary-blue);
+        border-radius: var(--radius-sm);
+        padding: var(--spacing-md);
+        margin: var(--spacing-md) 0;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        overflow-x: auto;
+        position: relative;
+    }
+    
+    .code-header {
+        color: var(--dark-gray);
+        font-size: 12px;
+        margin-bottom: var(--spacing-sm);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        border-bottom: 1px solid var(--secondary-blue);
+        padding-bottom: var(--spacing-sm);
+    }
 
     .floating-back-btn {
     position: fixed;
@@ -630,7 +669,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             <!-- Back Button -->
             <a href="adm-page.jsp?pgprt=3" class="btn btn-secondary floating-back-btn">
                 <i class="fas fa-arrow-left"></i>
-                Back to Questions Management
+                Back
             </a>
 
             
@@ -685,12 +724,35 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             String opt3 = question.getOpt3();
                             String opt4 = question.getOpt4();
                             String correct = question.getCorrect();
+                            String questionType = question.getQuestionType();
+                            String imagePath = question.getImagePath();
                             
                             // Check if this is a multiple select question (contains pipe separator)
                             boolean isMultipleSelect = correct != null && correct.contains("|");
                             String[] correctAnswers = null;
                             if (isMultipleSelect) {
                                 correctAnswers = correct.split("\\|");
+                            }
+                            
+                            // Handle code snippet display
+                            String fullQuestion = questionText, questionPart = "", codePart = "";
+                            boolean isCodeQuestion = false;
+                            if(questionType != null && questionType.equals("Code")) {
+                                isCodeQuestion = true;
+                                if(fullQuestion.contains("```")){
+                                    String[] parts = fullQuestion.split("```", 3);
+                                    if(parts.length >= 2) {
+                                        questionPart = parts[0].trim();
+                                        codePart = parts[1].trim();
+                                    } else {
+                                        questionPart = fullQuestion.replace("```", "").trim();
+                                    }
+                                } else {
+                                    codePart = fullQuestion;
+                                    questionPart = "What is the output/result of this code?";
+                                }
+                            } else {
+                                questionPart = fullQuestion;
                             }
             %>
             
@@ -703,7 +765,28 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             <%= questionNumber %>
                         </div>
                         <div class="question-text">
-                            <%= questionText %>
+                            <% if(isCodeQuestion) { %>
+                                <% if(!questionPart.isEmpty() && !questionPart.equals("What is the output/result of this code?")){ %>
+                                    <p><%= questionPart %></p>
+                                <% } %>
+                                <% if(!codePart.isEmpty()){ %>
+                                    <div class="code-question-indicator"><i class="fas fa-code"></i><strong>Code Analysis Question</strong></div>
+                                    <div class="code-snippet">
+                                        <div class="code-header"><i class="fas fa-code"></i><span>Code to Analyze</span></div>
+                                        <pre><%= codePart %></pre>
+                                    </div>
+                                <% } %>
+                            <% } else { %>
+                                <%= questionText %>
+                            <% } %>
+                            
+                            <!-- Display question image if exists -->
+                            <% if (imagePath != null && !imagePath.isEmpty()) { %>
+                            <div style="margin-top: 10px; text-align: center;">
+                                <img src="<%= imagePath %>" alt="Question Image" style="max-width: 400px; max-height: 300px; border-radius: var(--radius-sm); border: 1px solid var(--medium-gray);">
+                            </div>
+                            <% } %>
+                            
                             <% if (isMultipleSelect) { %>
                                 <div style="margin-top: var(--spacing-xs);">
                                     <span class="question-type-badge info">
@@ -905,7 +988,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 /* Floating delete button */
 .floating-delete-btn {
     position: fixed;
-    bottom: 30px;
+    bottom: 07px;
     right: 30px;
     z-index: 999;
     display: none;
