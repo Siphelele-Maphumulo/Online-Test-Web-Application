@@ -1079,6 +1079,7 @@ if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
                                 <option value="MultipleSelect">Multiple Select (2 correct)</option>
                                 <option value="Code">Code Snippet</option>
                             </select>
+                            <input type="hidden" id="questionTypeHidden" name="questionType" value="MCQ">
                         </div>
                     </div>
                     

@@ -35,7 +35,33 @@ private String nz(String v, String fallback){
 
 <%
 try {
+    // Session validation for multipart forms
+    Object userIdObj = session.getAttribute("userId");
+    String userStatus = (String) session.getAttribute("userStatus");
+    
+    // Debug logging for session state - using out.println instead of System.out.println
+    out.println("<!-- DEBUG: Session validation in controller.jsp -->");
+    out.println("<!-- userId=" + session.getAttribute("userId") + " -->");
+    out.println("<!-- userStatus=" + session.getAttribute("userStatus") + " -->");
+    
+    if (userIdObj == null || userStatus == null || !"1".equals(userStatus)) {
+        response.sendRedirect("login.jsp");
+        return;
+    }
+    
     String pageParam = request.getParameter("page");
+    
+    // Special handling for multipart form submissions
+    // For multipart forms, we can't rely on request.getParameter() initially
+    // So we check if this might be a questions edit operation
+    if (pageParam == null && ServletFileUpload.isMultipartContent(request)) {
+        String operation = request.getParameter("operation");
+        // If operation parameter exists and is 'edit', assume this is questions edit
+        if ("edit".equals(operation)) {
+            pageParam = "questions";
+        }
+    }
+    
     if (pageParam == null) {
         response.sendRedirect("login.jsp");
         return;
@@ -502,27 +528,193 @@ try {
                 response.sendRedirect("adm-page.jsp?pgprt=3");
             }
         } else if ("edit".equalsIgnoreCase(operation)) {
-            String qid = nz(request.getParameter("qid"), "");
-            if (!qid.isEmpty()) {
-                Questions question = pDAO.getQuestionById(Integer.parseInt(qid));
-                if (question != null) {
-                    question.setQuestion(nz(request.getParameter("question"), ""));
-                    question.setOpt1(nz(request.getParameter("opt1"), ""));
-                    question.setOpt2(nz(request.getParameter("opt2"), ""));
-                    question.setOpt3(nz(request.getParameter("opt3"), ""));
-                    question.setOpt4(nz(request.getParameter("opt4"), ""));
-                    question.setCorrect(nz(request.getParameter("correct"), ""));
-                    String courseName = nz(request.getParameter("coursename"), "");
-                    question.setCourseName(courseName);
-                    pDAO.updateQuestion(question);
-                    session.setAttribute("message","Question updated successfully");
-                    
-                    // Redirect to the same page with the course selected
-                    if (!courseName.isEmpty()) {
-                        response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
-                    } else {
-                        response.sendRedirect("adm-page.jsp?pgprt=3");
+            String qid = ""; // Initialize qid here
+            
+            // Check if this is a multipart form (has file upload)
+            if (ServletFileUpload.isMultipartContent(request)) {
+                // Handle multipart form to extract qid first
+                DiskFileItemFactory factory = new DiskFileItemFactory();
+                factory.setSizeThreshold(1024 * 1024 * 3);
+                factory.setRepository(new File(request.getServletContext().getAttribute("javax.servlet.context.tempdir") != null 
+                    ? request.getServletContext().getAttribute("javax.servlet.context.tempdir").toString() 
+                    : "/tmp"));
+                
+                ServletFileUpload upload = new ServletFileUpload(factory);
+                upload.setSizeMax(1024 * 1024 * 10);
+                
+                List<FileItem> items = upload.parseRequest(request);
+                
+                // First pass: extract qid and other parameters
+                for (FileItem item : items) {
+                    if (item.isFormField() && "qid".equals(item.getFieldName())) {
+                        qid = item.getString("UTF-8");
+                        break;
                     }
+                }
+            } else {
+                // Handle regular form (no file upload)
+                qid = nz(request.getParameter("qid"), "");
+            }
+            
+            if (!qid.isEmpty()) {
+                try {
+                    // Initialize variables
+                    String questionText = "";
+                    String opt1 = "";
+                    String opt2 = "";
+                    String opt3 = "";
+                    String opt4 = "";
+                    String correctAnswer = "";
+                    String courseName = "";
+                    String questionType = "";
+                    boolean removeImage = false;
+                    String imagePath = null;
+                    
+                    // Get existing question FIRST
+                    Questions question = pDAO.getQuestionById(Integer.parseInt(qid));
+                    String existingImagePath = question != null ? question.getImagePath() : null;
+                    
+                    // Check if this is a multipart form (has file upload)
+                    if (ServletFileUpload.isMultipartContent(request)) {
+                        // Handle multipart form
+                        DiskFileItemFactory factory = new DiskFileItemFactory();
+                        factory.setSizeThreshold(1024 * 1024 * 3);
+                        factory.setRepository(new File(request.getServletContext().getAttribute("javax.servlet.context.tempdir") != null 
+                            ? request.getServletContext().getAttribute("javax.servlet.context.tempdir").toString() 
+                            : "/tmp"));
+                        
+                        ServletFileUpload upload = new ServletFileUpload(factory);
+                        upload.setSizeMax(1024 * 1024 * 10);
+                        
+                        List<FileItem> items = upload.parseRequest(request);
+                        
+                        for (FileItem item : items) {
+                            if (item.isFormField()) {
+                                String fieldName = item.getFieldName();
+                                String fieldValue = item.getString("UTF-8");
+                                
+                                switch(fieldName) {
+                                    case "question": questionText = fieldValue; break;
+                                    case "opt1": opt1 = fieldValue; break;
+                                    case "opt2": opt2 = fieldValue; break;
+                                    case "opt3": opt3 = fieldValue; break;
+                                    case "opt4": opt4 = fieldValue; break;
+                                    case "correct": correctAnswer = fieldValue; break;
+                                    case "coursename": courseName = fieldValue; break;
+                                    case "questionType": questionType = fieldValue; break;
+                                    case "removeImage": removeImage = "true".equals(fieldValue); break;
+                                    case "currentImagePath": existingImagePath = fieldValue; break;
+                                    case "qid": qid = fieldValue; break; // In case it wasn't extracted earlier
+                                }
+                            } else {
+                                // Handle file upload
+                                if ("imageFile".equals(item.getFieldName()) && item.getSize() > 0) {
+                                    String fileName = item.getName();
+                                    if (fileName != null && !fileName.trim().isEmpty()) {
+                                        // Check file extension
+                                        String fileExtension = "";
+                                        int dotIndex = fileName.lastIndexOf('.');
+                                        if (dotIndex > 0) {
+                                            fileExtension = fileName.substring(dotIndex).toLowerCase();
+                                        }
+                                        
+                                        // List of allowed image extensions
+                                        String[] allowedExtensions = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"};
+                                        boolean isImage = false;
+                                        for (String ext : allowedExtensions) {
+                                            if (fileExtension.equals(ext)) {
+                                                isImage = true;
+                                                break;
+                                            }
+                                        }
+                                        
+                                        if (!isImage) {
+                                            session.setAttribute("error", "Only image files are allowed (JPG, JPEG, PNG, GIF, WEBP, BMP). Update cancelled.");
+                                            if (!courseName.isEmpty()) {
+                                                response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
+                                            } else {
+                                                response.sendRedirect("adm-page.jsp?pgprt=3");
+                                            }
+                                            return;
+                                        }
+                                        
+                                        // Save new image
+                                        String uploadPath = getServletContext().getRealPath("/uploads/images");
+                                        File uploadDir = new File(uploadPath);
+                                        if (!uploadDir.exists()) uploadDir.mkdirs();
+                                        
+                                        long timestamp = new java.util.Date().getTime();
+                                        String uniqueFileName = timestamp + "_" + new File(fileName).getName();
+                                        File uploadedFile = new File(uploadDir, uniqueFileName);
+                                        item.write(uploadedFile);
+                                        imagePath = "uploads/images/" + uniqueFileName;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Handle regular form (no file upload)
+                        questionText = nz(request.getParameter("question"), "");
+                        opt1 = nz(request.getParameter("opt1"), "");
+                        opt2 = nz(request.getParameter("opt2"), "");
+                        opt3 = nz(request.getParameter("opt3"), "");
+                        opt4 = nz(request.getParameter("opt4"), "");
+                        correctAnswer = nz(request.getParameter("correct"), "");
+                        courseName = nz(request.getParameter("coursename"), "");
+                        questionType = nz(request.getParameter("questionType"), "");
+                        
+                        String removeImageParam = nz(request.getParameter("removeImage"), "");
+                        removeImage = "true".equals(removeImageParam);
+                    }
+                    
+                    // Update question object
+                    if (question != null) {
+                        question.setQuestion(questionText);
+                        question.setOpt1(opt1);
+                        question.setOpt2(opt2);
+                        question.setOpt3(opt3);
+                        question.setOpt4(opt4);
+                        question.setCorrect(correctAnswer);
+                        question.setCourseName(courseName);
+                        question.setQuestionType(questionType);
+                        
+                        // Handle image logic
+                        if (removeImage) {
+                            question.setImagePath(null);
+                        } else if (imagePath != null) {
+                            // New image uploaded
+                            question.setImagePath(imagePath);
+                        } else {
+                            // Keep existing image
+                            question.setImagePath(existingImagePath);
+                        }
+                        
+                        // Update in database
+                        boolean updated = pDAO.updateQuestion(question);
+                        // Debug logging for update operation
+                        out.println("<!-- DEBUG: Updating question ID " + question.getQuestionId() + " -->");
+                        out.println("<!-- DEBUG: Update result = " + updated + " -->");
+                        if (updated) {
+                            session.setAttribute("message", "Question updated successfully");
+                        } else {
+                            session.setAttribute("error", "Failed to update question");
+                        }
+                    } else {
+                        session.setAttribute("error", "Question not found");
+                    }
+                    
+                    // Redirect back
+                    String redirectUrl = "adm-page.jsp?pgprt=4";
+                    if (courseName != null && !courseName.trim().isEmpty()) {
+                        redirectUrl += "&coursename=" + java.net.URLEncoder.encode(courseName, "UTF-8");
+                    }
+                    response.sendRedirect(redirectUrl);
+                    return;
+                    
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    session.setAttribute("error", "Error updating question: " + e.getMessage());
+                    response.sendRedirect("adm-page.jsp?pgprt=3");
                     return;
                 }
             }
@@ -798,7 +990,7 @@ try {
         
         // Start new exam and get the exam ID
         int userId = 0;
-        Object userIdObj = session.getAttribute("userId");
+        userIdObj = session.getAttribute("userId");
         if (userIdObj != null) {
             userId = Integer.parseInt(userIdObj.toString());
         } else {
@@ -854,7 +1046,7 @@ try {
                 
                 // Get student ID
                 int userId = 0;
-                Object userIdObj = session.getAttribute("userId");
+                userIdObj = session.getAttribute("userId");
                 if (userIdObj != null) {
                     userId = Integer.parseInt(userIdObj.toString());
                 }

@@ -797,7 +797,8 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         </a>
 
                         <a href="controller.jsp?page=questions&operation=del&qid=<%= question.getQuestionId() %>&coursename=<%= courseName %>"
-                           class="btn btn-error single-delete-btn" style="font-size: 13px; padding: 8px 16px;">
+                           class="btn btn-error" style="font-size: 13px; padding: 8px 16px;"
+                           onclick="return confirm('Are you sure you want to delete this question? This action cannot be undone.');">
                             <i class="fas fa-trash"></i>
                             Delete
                         </a>

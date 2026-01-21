@@ -1,12 +1,31 @@
 <%@page import="java.util.ArrayList"%>
 <%@page import="myPackage.DatabaseClass"%>
 <%@page import="myPackage.classes.Questions"%>
+<%@page import="myPackage.classes.User"%>
 <%@page import="java.sql.*"%>
+<%@page import="java.io.File"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 
 <%
+    // Add session validation at the VERY TOP of the page
+    Object userIdObj = session.getAttribute("userId");
+    String userStatus = (String) session.getAttribute("userStatus");
+    
+    if (userIdObj == null || userStatus == null || !"1".equals(userStatus)) {
+        response.sendRedirect("login.jsp");
+        return;
+    }
+    
     DatabaseClass pDAO = DatabaseClass.getInstance();
-    int questionId = Integer.parseInt(request.getParameter("qid"));
+    String qidParam = request.getParameter("qid");
+    
+    if (qidParam == null || qidParam.trim().isEmpty()) {
+        session.setAttribute("error", "Missing question ID parameter");
+        response.sendRedirect("adm-page.jsp?pgprt=3");
+        return;
+    }
+    
+    int questionId = Integer.parseInt(qidParam);
     Questions questionToEdit = null;
     String questionType = "MCQ";
 
@@ -701,8 +720,7 @@
                     <input type="hidden" name="page" value="questions">
                     <input type="hidden" name="operation" value="edit">
                     <input type="hidden" name="qid" value="<%= questionToEdit.getQuestionId() %>">
-                    <input type="hidden" name="currentImagePath" value="<%= questionToEdit.getImagePath() != null ? questionToEdit.getImagePath() : "" %>">
-                    <!-- Store question type for form submission -->
+                    <input type="hidden" id="currentImagePath" name="currentImagePath" value="<%= questionToEdit.getImagePath() != null ? questionToEdit.getImagePath() : "" %>">
                     <input type="hidden" id="questionTypeHidden" name="questionType" value="<%= questionType %>">
 
                     <div class="form-grid">
@@ -744,7 +762,8 @@
 
                     <div class="form-group">
                         <label class="form-label"><i class="fas fa-pencil-alt" style="color: var(--success);"></i>Your Question</label>
-                        <textarea name="question" id="editQuestionTextarea" class="question-input" rows="3" required oninput="checkForCodeSnippetEdit()"><%= questionToEdit.getQuestion() %></textarea>
+                        <textarea name="question" id="editQuestionTextarea" class="question-input" rows="3" oninput="checkForCodeSnippetEdit()"><%= questionToEdit.getQuestion() %></textarea>
+                        <small class="form-hint">Enter your question text (optional if uploading an image)</small>
                         <!-- Preview for Code Snippets -->
                         <div id="codePreview" style="display: none; margin-top: 10px;">
                             <div class="code-question-indicator"><i class="fas fa-code"></i><strong>Code Analysis Question Preview</strong></div>
@@ -818,8 +837,8 @@
                             <div class="drop-zone-content">
                                 <i class="fas fa-cloud-upload-alt drop-icon"></i>
                                 <p class="drop-text">Drag & drop a new image here or click to browse</p>
-                                <p class="drop-hint">Supports JPG, PNG, GIF (Max 3MB)</p>
-                                <input type="file" name="imageFile" class="form-control" id="editImageFile" accept=".jpg,.jpeg,.png,.gif" style="display: none;">
+                                <p class="drop-hint">Supports JPG, PNG, GIF, WebP (Max 3MB)</p>
+                                <input type="file" name="imageFile" class="form-control" id="editImageFile" accept=".jpg,.jpeg,.png,.gif,.webp" style="display: none;">
                             </div>
                         </div>
                         <div id="editImageFileNameDisplay" class="file-name-display" style="display: none; margin-top: 10px;">
@@ -829,10 +848,19 @@
                         </div>
                         <small class="form-hint">Upload a new image to replace the current one (optional)</small>
                     </div>
+                    
+                    <!-- Image Preview Section -->
+                    <div id="editImagePreviewSection" class="form-group" style="display: none;">
+                        <label class="form-label"><i class="fas fa-eye" style="color: var(--success);"></i> Image Preview</label>
+                        <div style="text-align: center; padding: 10px; border: 1px solid var(--medium-gray); border-radius: var(--radius-sm);">
+                            <img id="editImagePreview" src="#" alt="Image Preview" style="max-width: 100%; max-height: 200px; display: none; border-radius: var(--radius-sm);">
+                            <p id="editPreviewPlaceholder" style="color: var(--dark-gray); margin: 0;">New image will appear here</p>
+                        </div>
+                    </div>
 
                     <div class="form-actions">
                         <a href="adm-page.jsp?coursename=<%= currentCourseName %>&pgprt=4" class="btn btn-outline"><i class="fas fa-times"></i> Cancel</a>
-                        <button type="submit" class="btn btn-primary" id="editSubmitBtn"><i class="fas fa-save"></i> Update Question</button>
+                        <button type="submit" class="btn btn-primary" id="editSubmitBtn" onclick="return validateAndSubmit(event)"><i class="fas fa-save"></i> Update Question</button>
                     </div>
                 </form>
             </div>
@@ -843,6 +871,17 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <script>
+    function updateEditCorrectOptionLabels() {
+        for (let i = 1; i <= 4; i++) {
+            const optInput = document.getElementById(`editOpt${i}`);
+            const label = document.querySelector(`label[for="editCorrectOpt${i}"]`);
+            if (optInput && label) {
+                const value = optInput.value.trim();
+                label.textContent = value || `Option ${i}`;
+            }
+        }
+    }
+    
     function toggleEditOptions() {
         const qType = document.getElementById("questionTypeSelect").value;
         const mcq = document.getElementById("editMcqOptions");
@@ -950,15 +989,46 @@ window.addEventListener('DOMContentLoaded', function() {
         const qType = document.getElementById("questionTypeSelect").value;
         let msg = '';
 
+        // Check if there's an image file uploaded
+        const imageFileInput = document.getElementById('editImageFile');
+        const hasImageFile = imageFileInput && imageFileInput.files.length > 0;
+        
+        // Check if there's a current image (already uploaded previously)
+        const currentImagePathElement = document.getElementById('currentImagePath');
+        const hasCurrentImage = currentImagePathElement && currentImagePathElement.value && currentImagePathElement.value.trim() !== '';
+        
+        // Check if image should be removed
+        const removeImageElement = document.querySelector('input[name="removeImage"][value="true"]');
+        const willRemoveImage = removeImageElement !== null;
+        
+        // Only validate question text if no image is present (either newly uploaded or previously uploaded and not being removed)
+        const hasImage = (hasImageFile || (hasCurrentImage && !willRemoveImage));
+        
+        if (!hasImage) {
+            // Only validate question text if no image is present
+            const questionText = document.getElementById('editQuestionTextarea').value.trim();
+            if (!questionText) {
+                msg = "Question text is required when no image is uploaded.";
+            }
+        }
+
         if (qType === "TrueFalse") {
             const correctValue = document.getElementById('editCorrectAnswer').value.trim().toLowerCase();
             if (correctValue !== "true" && correctValue !== "false") {
                 msg = "Answer must be 'True' or 'False'.";
             }
         } else {
+            const opt1 = document.getElementById('editOpt1').value.trim();
+            const opt2 = document.getElementById('editOpt2').value.trim();
+            
+            if (!opt1 || !opt2) {
+                msg = "At least Option 1 and Option 2 are required.";
+            }
+            
             const opts = ['editOpt1', 'editOpt2', 'editOpt3', 'editOpt4']
                 .map(id => document.getElementById(id).value.trim())
                 .filter(Boolean);
+                
             if (new Set(opts).size !== opts.length) {
                 msg = "Options must be unique.";
             } else if (qType === "MultipleSelect") {
@@ -973,7 +1043,7 @@ window.addEventListener('DOMContentLoaded', function() {
                 }
             } else {
                 const correctValue = document.getElementById('editCorrectAnswer').value.trim();
-                if (!opts.includes(correctValue)) {
+                if (correctValue && !opts.includes(correctValue)) {
                     msg = "Correct answer must match one of the options.";
                 }
             }
@@ -981,12 +1051,18 @@ window.addEventListener('DOMContentLoaded', function() {
 
         if (msg) {
             alert(msg);
-        } else {
-            const submitBtn = document.getElementById('editSubmitBtn');
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
-            submitBtn.disabled = true;
-            document.getElementById('editQuestionForm').submit();
+            return false;
         }
+        
+        // Show loading state
+        const submitBtn = document.getElementById('editSubmitBtn');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+        submitBtn.disabled = true;
+        
+        // Submit the form
+        document.getElementById('editQuestionForm').submit();
+        
+        return true;
     }
 
     // Image upload functions for edit
@@ -1057,10 +1133,27 @@ window.addEventListener('DOMContentLoaded', function() {
             function displayEditImageFileName(file) {
                 const editImageFileNameDisplay = document.getElementById('editImageFileNameDisplay');
                 const editImageFileNameSpan = document.getElementById('editImageFileName');
+                const editImagePreview = document.getElementById('editImagePreview');
+                const editPreviewPlaceholder = document.getElementById('editPreviewPlaceholder');
+                const editImagePreviewSection = document.getElementById('editImagePreviewSection');
                 
                 editImageFileNameSpan.textContent = file.name;
                 editImageFileNameDisplay.style.display = 'flex';
                 editImageDropZone.style.display = 'none';
+                
+                // Show image preview if it's an image file
+                if (file.type.match('image.*')) {
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        editImagePreview.src = e.target.result;
+                        editImagePreview.style.display = 'block';
+                        editPreviewPlaceholder.style.display = 'none';
+                        editImagePreviewSection.style.display = 'block';
+                    };
+                    
+                    reader.readAsDataURL(file);
+                }
             }
         }
     }
@@ -1069,6 +1162,7 @@ window.addEventListener('DOMContentLoaded', function() {
         const editImageFileInput = document.getElementById('editImageFile');
         const editImageFileNameDisplay = document.getElementById('editImageFileNameDisplay');
         const editImageDropZone = document.getElementById('editImageDropZone');
+        const editImagePreviewSection = document.getElementById('editImagePreviewSection');
         
         // Reset file input
         editImageFileInput.value = '';
@@ -1076,6 +1170,9 @@ window.addEventListener('DOMContentLoaded', function() {
         // Hide file name display and show drop zone
         editImageFileNameDisplay.style.display = 'none';
         editImageDropZone.style.display = 'block';
+        
+        // Also hide the preview section
+        editImagePreviewSection.style.display = 'none';
     }
     
     function removeCurrentImage() {
@@ -1090,29 +1187,47 @@ window.addEventListener('DOMContentLoaded', function() {
             
             // Hide the current image display
             document.getElementById('currentImageDisplay').innerHTML = '<div class="form-hint">Image will be removed on update</div>';
+            
+            // Also hide the preview section if it exists
+            const editImagePreviewSection = document.getElementById('editImagePreviewSection');
+            if (editImagePreviewSection) {
+                editImagePreviewSection.style.display = 'none';
+            }
         }
     }
     
     document.addEventListener('DOMContentLoaded', function() {
         toggleEditOptions();
-
-        // Attach event listeners to each option textarea
+        
+        // Initialize option values for checkboxes
         for (let i = 1; i <= 4; i++) {
             const optInput = document.getElementById(`editOpt${i}`);
             const checkbox = document.getElementById(`editCorrectOpt${i}`);
             const label = document.querySelector(`label[for="editCorrectOpt${i}"]`);
 
             if (optInput && checkbox && label) {
+                // Set initial values
+                const value = optInput.value.trim();
+                label.textContent = value || `Option ${i}`;
+                checkbox.value = value;
+                checkbox.disabled = !value;
+                
+                // Add change listener
                 optInput.addEventListener('input', () => {
-                    const value = optInput.value.trim();
-                    label.textContent = value || `Option ${i}`;
-                    checkbox.value = value;
-                    checkbox.disabled = !value;
-                    if (!value) {
+                    const newValue = optInput.value.trim();
+                    label.textContent = newValue || `Option ${i}`;
+                    checkbox.value = newValue;
+                    checkbox.disabled = !newValue;
+                    if (!newValue) {
                         checkbox.checked = false;
                     }
                 });
             }
+        }
+
+        // Initialize multiple select checkboxes if needed
+        if (document.getElementById('questionTypeSelect').value === "MultipleSelect") {
+            initializeMultipleSelectCheckboxes();
         }
 
         document.querySelectorAll('.edit-correct-checkbox').forEach(cb => {
