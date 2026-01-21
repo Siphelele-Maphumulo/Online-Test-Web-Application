@@ -720,6 +720,7 @@
                     <input type="hidden" name="page" value="questions">
                     <input type="hidden" name="operation" value="edit">
                     <input type="hidden" name="qid" value="<%= questionToEdit.getQuestionId() %>">
+                    <input type="hidden" name="coursename" value="<%= currentCourseName %>">
                     <input type="hidden" id="currentImagePath" name="currentImagePath" value="<%= questionToEdit.getImagePath() != null ? questionToEdit.getImagePath() : "" %>">
                     <input type="hidden" id="questionTypeHidden" name="questionType" value="<%= questionType %>">
 

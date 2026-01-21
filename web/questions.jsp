@@ -1848,6 +1848,24 @@ function resetForm() {
     toggleOptions();
 }
 
+// Function to update scroll indicator visibility
+function updateScrollIndicator() {
+    const scrollIndicator = document.querySelector('.scroll-indicator');
+    if (scrollIndicator) {
+        // Show scroll indicator when near bottom of page
+        const scrollTop = window.pageYOffset;
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+        
+        // Show indicator when user scrolls within 100px of bottom
+        if (documentHeight - scrollTop - windowHeight < 100) {
+            scrollIndicator.style.display = 'none';
+        } else {
+            scrollIndicator.style.display = 'flex';
+        }
+    }
+}
+
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     toggleOptions();

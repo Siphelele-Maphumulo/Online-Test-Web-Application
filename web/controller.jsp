@@ -36,10 +36,63 @@ private String nz(String v, String fallback){
 <%
 try {
     String pageParam = request.getParameter("page");
-    if (pageParam == null) {
+    
+    // Special handling for multipart form submissions
+    // For multipart forms, we can't rely on request.getParameter() initially
+    // So we check if this might be a questions edit operation
+    if (pageParam == null && ServletFileUpload.isMultipartContent(request)) {
+        // Parse the multipart request to extract the page parameter
+        DiskFileItemFactory factory = new DiskFileItemFactory();
+        factory.setSizeThreshold(1024 * 1024 * 3); // 3 MB
+        factory.setRepository(new File(request.getServletContext().getAttribute("javax.servlet.context.tempdir") != null 
+            ? request.getServletContext().getAttribute("javax.servlet.context.tempdir").toString() 
+            : "/tmp"));
+        
+        ServletFileUpload upload = new ServletFileUpload(factory);
+        upload.setSizeMax(1024 * 1024 * 10); // 10 MB
+        
+        try {
+            List<FileItem> items = upload.parseRequest(request);
+            
+            // First pass: extract page and operation parameters
+            String operationParam = null;
+            for (FileItem item : items) {
+                if (item.isFormField()) {
+                    String fieldName = item.getFieldName();
+                    if ("page".equals(fieldName)) {
+                        pageParam = item.getString("UTF-8");
+                    } else if ("operation".equals(fieldName)) {
+                        operationParam = item.getString("UTF-8");
+                    }
+                }
+            }
+            
+            // If page parameter was found in multipart data, we continue
+            // Otherwise, we redirect to login
+            if (pageParam == null) {
+                response.sendRedirect("login.jsp");
+                return;
+            }
+            
+            // Store operation parameter in request for later use
+            request.setAttribute("multipartOperation", operationParam);
+            
+            // Store the parsed items in request attributes for later use by the respective handlers
+            request.setAttribute("multipartItems", items);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.sendRedirect("login.jsp");
+            return;
+        }
+    } else if (pageParam == null) {
+        // For non-multipart requests, redirect if no page parameter
         response.sendRedirect("login.jsp");
         return;
     }
+    
+    // For multipart requests, we continue processing after storing the items
+    // The page and operation parameters have been extracted and stored
 
     /* =========================
        DUPLICATE CHECKING ENDPOINTS
@@ -467,7 +520,11 @@ try {
        QUESTIONS
        ========================= */
     } else if ("questions".equalsIgnoreCase(pageParam)) {
-        String operation = nz(request.getParameter("operation"), "");
+        // For multipart requests, operation parameter may be stored as attribute
+        String operation = nz((String) request.getAttribute("multipartOperation"), "");
+        if (operation.isEmpty()) {
+            operation = nz(request.getParameter("operation"), "");
+        }
         if ("del".equalsIgnoreCase(operation)) {
             String qid = nz(request.getParameter("qid"), "");
             if (!qid.isEmpty()) pDAO.deleteQuestion(Integer.parseInt(qid));
@@ -506,27 +563,258 @@ try {
             if (!qid.isEmpty()) {
                 Questions question = pDAO.getQuestionById(Integer.parseInt(qid));
                 if (question != null) {
-                    question.setQuestion(nz(request.getParameter("question"), ""));
-                    question.setOpt1(nz(request.getParameter("opt1"), ""));
-                    question.setOpt2(nz(request.getParameter("opt2"), ""));
-                    question.setOpt3(nz(request.getParameter("opt3"), ""));
-                    question.setOpt4(nz(request.getParameter("opt4"), ""));
-                    question.setCorrect(nz(request.getParameter("correct"), ""));
-                    String courseName = nz(request.getParameter("coursename"), "");
-                    question.setCourseName(courseName);
-                    pDAO.updateQuestion(question);
-                    session.setAttribute("message","Question updated successfully");
-                    
-                    // Redirect to the same page with the course selected
-                    if (!courseName.isEmpty()) {
-                        response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
+                    // Handle multipart form data if present (for image uploads)
+                    if (ServletFileUpload.isMultipartContent(request)) {
+                        // Use the pre-parsed items from the beginning of the controller
+                        List<FileItem> items = (List<FileItem>) request.getAttribute("multipartItems");
+                        
+                        // If items weren't pre-parsed, parse them now
+                        if (items == null) {
+                            DiskFileItemFactory factory = new DiskFileItemFactory();
+                            
+                            // Set factory constraints
+                            factory.setSizeThreshold(1024 * 1024 * 3); // 3 MB
+                            factory.setRepository(new File(request.getServletContext().getAttribute("javax.servlet.context.tempdir") != null 
+                                ? request.getServletContext().getAttribute("javax.servlet.context.tempdir").toString() 
+                                : "/tmp"));
+                            
+                            // Create a new file upload handler
+                            ServletFileUpload upload = new ServletFileUpload(factory);
+                            
+                            // Set overall request size constraint
+                            upload.setSizeMax(1024 * 1024 * 10); // 10 MB
+                            
+                            // Parse the request
+                            items = upload.parseRequest(request);
+                        }
+                        
+                        try {
+                            
+                            String questionText = "";
+                            String opt1 = "";
+                            String opt2 = "";
+                            String opt3 = "";
+                            String opt4 = "";
+                            String correctAnswer = "";
+                            String courseName = "";
+                            String questionType = "";
+                            String currentImagePath = "";
+                            boolean removeImage = false;
+                            String imagePath = null;
+                            
+                            for (FileItem item : items) {
+                                if (item.isFormField()) {
+                                    // Process regular form field
+                                    String fieldName = item.getFieldName();
+                                    String fieldValue = item.getString("UTF-8");
+                                    
+                                    if ("question".equals(fieldName)) {
+                                        questionText = nz(fieldValue, "");
+                                    } else if ("opt1".equals(fieldName)) {
+                                        opt1 = nz(fieldValue, "");
+                                    } else if ("opt2".equals(fieldName)) {
+                                        opt2 = nz(fieldValue, "");
+                                    } else if ("opt3".equals(fieldName)) {
+                                        opt3 = nz(fieldValue, "");
+                                    } else if ("opt4".equals(fieldName)) {
+                                        opt4 = nz(fieldValue, "");
+                                    } else if ("correct".equals(fieldName)) {
+                                        correctAnswer = nz(fieldValue, "");
+                                    } else if ("coursename".equals(fieldName)) {
+                                        courseName = nz(fieldValue, "");
+                                    } else if ("questionType".equals(fieldName)) {
+                                        questionType = nz(fieldValue, "");
+                                    } else if ("currentImagePath".equals(fieldName)) {
+                                        currentImagePath = nz(fieldValue, "");
+                                    } else if ("removeImage".equals(fieldName)) {
+                                        removeImage = "true".equals(fieldValue);
+                                    }
+                                } else {
+                                    // Process file upload field - ONLY ACCEPT IMAGES
+                                    String fieldName = item.getFieldName();
+                                    String fileName = item.getName();
+                                    
+                                    if (fieldName.equals("imageFile") && fileName != null && !fileName.isEmpty()) {
+                                        // Check file extension
+                                        String fileExtension = "";
+                                        int dotIndex = fileName.lastIndexOf('.');
+                                        if (dotIndex > 0) {
+                                            fileExtension = fileName.substring(dotIndex).toLowerCase();
+                                        }
+                                        
+                                        // List of allowed image extensions
+                                        String[] allowedExtensions = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"};
+                                        boolean isImage = false;
+                                        for (String ext : allowedExtensions) {
+                                            if (fileExtension.equals(ext)) {
+                                                isImage = true;
+                                                break;
+                                            }
+                                        }
+                                        
+                                        if (!isImage) {
+                                            session.setAttribute("error", "Only image files are allowed (JPG, JPEG, PNG, GIF, WEBP, BMP).");
+                                            String redirectCourse = nz(request.getParameter("coursename"), "");
+                                            if (!redirectCourse.isEmpty()) {
+                                                response.sendRedirect("adm-page.jsp?coursename=" + redirectCourse + "&pgprt=4");
+                                            } else {
+                                                response.sendRedirect("adm-page.jsp?pgprt=3");
+                                            }
+                                            return;
+                                        }
+                                        
+                                        // Create uploads directory if it doesn't exist
+                                        String uploadPath = getServletContext().getRealPath("/uploads/images");
+                                        File uploadDir = new File(uploadPath);
+                                        if (!uploadDir.exists()) {
+                                            uploadDir.mkdirs();
+                                        }
+                                        
+                                        // Generate unique filename using current time
+                                        long timestamp = new java.util.Date().getTime();
+                                        String uniqueFileName = timestamp + "_" + new File(fileName).getName();
+                                        File uploadedFile = new File(uploadDir, uniqueFileName);
+                                        
+                                        // Save the file
+                                        item.write(uploadedFile);
+                                        
+                                        // Set the image path to be saved in database
+                                        imagePath = "uploads/images/" + uniqueFileName;
+                                    }
+                                }
+                            }
+                            
+                            // Update question object with extracted values
+                            question.setQuestion(questionText);
+                            question.setOpt1(opt1);
+                            question.setOpt2(opt2);
+                            question.setOpt3(opt3);
+                            question.setOpt4(opt4);
+                            question.setCorrect(correctAnswer);
+                            question.setCourseName(courseName);
+                            question.setQuestionType(questionType);
+                            
+                            // Handle image logic
+                            if (removeImage) {
+                                // Remove old image file if it exists
+                                if (question.getImagePath() != null && !question.getImagePath().isEmpty()) {
+                                    try {
+                                        File oldImage = new File(getServletContext().getRealPath("/" + question.getImagePath()));
+                                        if (oldImage.exists()) {
+                                            oldImage.delete();
+                                        }
+                                    } catch (Exception e) {
+                                        // Log error but continue
+                                        application.log("Error deleting old image: " + e.getMessage());
+                                    }
+                                }
+                                question.setImagePath(null);
+                            } else if (imagePath != null) {
+                                // New image uploaded - remove old image file if it exists
+                                if (question.getImagePath() != null && !question.getImagePath().isEmpty()) {
+                                    try {
+                                        File oldImage = new File(getServletContext().getRealPath("/" + question.getImagePath()));
+                                        if (oldImage.exists()) {
+                                            oldImage.delete();
+                                        }
+                                    } catch (Exception e) {
+                                        // Log error but continue
+                                        application.log("Error deleting old image: " + e.getMessage());
+                                    }
+                                }
+                                question.setImagePath(imagePath);
+                            } else {
+                                // Keep existing image path if no new image was uploaded and not removing
+                                if (currentImagePath != null && !currentImagePath.isEmpty() && question.getImagePath() == null) {
+                                    question.setImagePath(currentImagePath);
+                                }
+                            }
+                            
+                            pDAO.updateQuestion(question);
+                            session.setAttribute("message","Question updated successfully");
+                            
+                            // Clean up multipart items attribute to prevent reuse
+                            request.removeAttribute("multipartItems");
+                            
+                            // Redirect to the same page with the course selected
+                            if (!courseName.isEmpty()) {
+                                response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
+                            } else {
+                                response.sendRedirect("adm-page.jsp?pgprt=3");
+                            }
+                            return;
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            session.setAttribute("error", "Error updating question: " + e.getMessage());
+                            String courseName = nz(request.getParameter("coursename"), "");
+                            
+                            // Clean up multipart items attribute to prevent reuse
+                            request.removeAttribute("multipartItems");
+                            
+                            if (!courseName.isEmpty()) {
+                                response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
+                            } else {
+                                response.sendRedirect("adm-page.jsp?pgprt=3");
+                            }
+                            return;
+                        }
                     } else {
-                        response.sendRedirect("adm-page.jsp?pgprt=3");
+                        // Handle regular form submission (without file upload)
+                        question.setQuestion(nz(request.getParameter("question"), ""));
+                        question.setOpt1(nz(request.getParameter("opt1"), ""));
+                        question.setOpt2(nz(request.getParameter("opt2"), ""));
+                        question.setOpt3(nz(request.getParameter("opt3"), ""));
+                        question.setOpt4(nz(request.getParameter("opt4"), ""));
+                        question.setCorrect(nz(request.getParameter("correct"), ""));
+                        String courseName = nz(request.getParameter("coursename"), "");
+                        question.setCourseName(courseName);
+                        // Also get and set question type for regular forms
+                        String questionType = nz(request.getParameter("questionType"), "");
+                        question.setQuestionType(questionType);
+                        
+                        // Handle image removal for regular forms
+                        String removeImageParam = nz(request.getParameter("removeImage"), "");
+                        if ("true".equals(removeImageParam)) {
+                            // Remove old image file if it exists
+                            if (question.getImagePath() != null && !question.getImagePath().isEmpty()) {
+                                try {
+                                    File oldImage = new File(getServletContext().getRealPath("/" + question.getImagePath()));
+                                    if (oldImage.exists()) {
+                                        oldImage.delete();
+                                    }
+                                } catch (Exception e) {
+                                    // Log error but continue
+                                    application.log("Error deleting old image: " + e.getMessage());
+                                }
+                            }
+                            question.setImagePath(null);
+                        }
+                        
+                        pDAO.updateQuestion(question);
+                        session.setAttribute("message","Question updated successfully");
+                        
+                        // Clean up multipart items attribute if it exists (for consistency)
+                        if (request.getAttribute("multipartItems") != null) {
+                            request.removeAttribute("multipartItems");
+                        }
+                        
+                        // Redirect to the same page with the course selected
+                        if (!courseName.isEmpty()) {
+                            response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
+                        } else {
+                            response.sendRedirect("adm-page.jsp?pgprt=3");
+                        }
+                        return;
                     }
-                    return;
                 }
             }
             String courseName = nz(request.getParameter("coursename"), "");
+            
+            // Clean up multipart items attribute if it exists
+            if (request.getAttribute("multipartItems") != null) {
+                request.removeAttribute("multipartItems");
+            }
+            
             if (!courseName.isEmpty()) {
                 response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
             } else {
@@ -536,25 +824,32 @@ try {
         } else if ("addnew".equalsIgnoreCase(operation)) {
             // Check if request is multipart (has file upload)
             if (ServletFileUpload.isMultipartContent(request)) {
-                // Create a factory for disk-based file items
-                DiskFileItemFactory factory = new DiskFileItemFactory();
+                // Use the pre-parsed items from the beginning of the controller
+                List<FileItem> items = (List<FileItem>) request.getAttribute("multipartItems");
                 
-                // Set factory constraints
-                factory.setSizeThreshold(1024 * 1024 * 3); // 3 MB
-                // Use alternative approach for temp directory
-                factory.setRepository(new File(request.getServletContext().getAttribute("javax.servlet.context.tempdir") != null 
-                    ? request.getServletContext().getAttribute("javax.servlet.context.tempdir").toString() 
-                    : "/tmp"));
-                
-                // Create a new file upload handler
-                ServletFileUpload upload = new ServletFileUpload(factory);
-                
-                // Set overall request size constraint
-                upload.setSizeMax(1024 * 1024 * 10); // 10 MB
+                // If items weren't pre-parsed, parse them now
+                if (items == null) {
+                    // Create a factory for disk-based file items
+                    DiskFileItemFactory factory = new DiskFileItemFactory();
+                    
+                    // Set factory constraints
+                    factory.setSizeThreshold(1024 * 1024 * 3); // 3 MB
+                    // Use alternative approach for temp directory
+                    factory.setRepository(new File(request.getServletContext().getAttribute("javax.servlet.context.tempdir") != null 
+                        ? request.getServletContext().getAttribute("javax.servlet.context.tempdir").toString() 
+                        : "/tmp"));
+                    
+                    // Create a new file upload handler
+                    ServletFileUpload upload = new ServletFileUpload(factory);
+                    
+                    // Set overall request size constraint
+                    upload.setSizeMax(1024 * 1024 * 10); // 10 MB
+                    
+                    // Parse the request
+                    items = upload.parseRequest(request);
+                }
                 
                 try {
-                    // Parse the request
-                    List<FileItem> items = upload.parseRequest(request);
                     
                     String questionText = "";
                     String opt1 = "";
@@ -652,6 +947,10 @@ try {
                     
                     pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, imagePath);
                     session.setAttribute("message","Question added successfully");
+                    
+                    // Clean up multipart items attribute to prevent reuse
+                    request.removeAttribute("multipartItems");
+                    
                     if (!courseName.isEmpty()) {
                         response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
                     } else {
@@ -661,6 +960,10 @@ try {
                 } catch (Exception e) {
                     e.printStackTrace();
                     session.setAttribute("error", "Error uploading image: " + e.getMessage());
+                    
+                    // Clean up multipart items attribute to prevent reuse
+                    request.removeAttribute("multipartItems");
+                    
                     response.sendRedirect("adm-page.jsp?pgprt=3");
                     return;
                 }
