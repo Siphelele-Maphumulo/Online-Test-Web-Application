@@ -16,6 +16,16 @@
 <%@ page import="org.mindrot.jbcrypt.BCrypt" %>
 <%@ page import="org.json.JSONObject" %>
 <%@ page import="org.json.JSONException" %>
+<%@ page import="org.apache.pdfbox.pdmodel.PDDocument" %>
+<%@ page import="org.apache.pdfbox.text.PDFTextStripper" %>
+<%@ page import="org.apache.commons.fileupload.FileItem" %>
+<%@ page import="org.apache.commons.fileupload.disk.DiskFileItemFactory" %>
+<%@ page import="org.apache.commons.fileupload.servlet.ServletFileUpload" %>
+<%@ page import="java.util.Map" %>
+<%@ page import="java.util.HashMap" %>
+<%@ page import="java.io.File" %>
+<%@ page import="java.util.List" %>
+<%@ page import="java.util.ArrayList" %>
 <%@ page contentType="text/html" pageEncoding="UTF-8"%>
 <%@ page trimDirectiveWhitespaces="true" %>
 
@@ -466,6 +476,28 @@ try {
        ========================= */
     } else if ("questions".equalsIgnoreCase(pageParam)) {
         String operation = nz(request.getParameter("operation"), "");
+        
+        // Handle PDF upload operation separately
+        if ("pdf_upload".equalsIgnoreCase(request.getParameter("action"))) {
+            // Simulate PDF processing
+            String courseName = request.getParameter("courseName");
+            
+            // In a real implementation, we would extract questions from the PDF file
+            // For simulation, we'll return sample questions
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+            
+            // Sample questions JSON
+            String jsonResponse = "{\"success\": true, \"message\": \"Questions extracted successfully (simulation)\", \"count\": 3, \"questions\":[{" +
+                "{\"question\": \"What is the capital of France?\", \"type\": \"MCQ\", \"options\": [\"Paris\", \"London\", \"Berlin\", \"Madrid\"], \"correct\": \"Paris\", \"courseName\": \"" + courseName + "\"}," +
+                "{\"question\": \"Which planet is known as the Red Planet?\", \"type\": \"MCQ\", \"options\": [\"Earth\", \"Venus\", \"Mars\", \"Jupiter\"], \"correct\": \"Mars\", \"courseName\": \"" + courseName + "\"}," +
+                "{\"question\": \"What is 2 + 2?\", \"type\": \"MCQ\", \"options\": [\"3\", \"4\", \"5\", \"6\"], \"correct\": \"4\", \"courseName\": \"" + courseName + "\"}" +
+            "]}";
+            
+            response.getWriter().write(jsonResponse);
+            return;
+        }
+        
         if ("del".equalsIgnoreCase(operation)) {
             String qid = nz(request.getParameter("qid"), "");
             if (!qid.isEmpty()) pDAO.deleteQuestion(Integer.parseInt(qid));
@@ -512,6 +544,8 @@ try {
                     question.setCorrect(nz(request.getParameter("correct"), ""));
                     String courseName = nz(request.getParameter("coursename"), "");
                     question.setCourseName(courseName);
+                    String questionType = nz(request.getParameter("questionType"), "MCQ");
+                    question.setQuestionType(questionType);
                     pDAO.updateQuestion(question);
                     session.setAttribute("message","Question updated successfully");
                     

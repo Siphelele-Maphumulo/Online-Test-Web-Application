@@ -26,8 +26,6 @@ import java.sql.Types;
 import java.util.Map;
 import java.util.HashMap;
 // Add these imports at the top of your DatabaseClass.java
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
 import myPackage.classes.Result;
 
 
@@ -2966,17 +2964,8 @@ public boolean registerExamCompletion(int studentId, int examId, String endTime)
     }
 }
 
-// Add a method to get device identifier (you can enhance this based on your needs)
-public String getDeviceIdentifier(HttpServletRequest request) {
-    String userAgent = request.getHeader("User-Agent");
-    String ipAddress = request.getRemoteAddr();
-    
-    // Create a simple device identifier
-    String deviceIdentifier = ipAddress + "_" + 
-                             (userAgent != null ? userAgent.hashCode() : "unknown");
-    
-    return deviceIdentifier.substring(0, Math.min(deviceIdentifier.length(), 100));
-}
+// Removed getDeviceIdentifier method due to HttpServletRequest dependency
+// This method was causing compilation errors
 
 // Add a method to get the register for a specific exam
 public ResultSet getExamRegister(int examId) throws SQLException {
@@ -4118,6 +4107,38 @@ public boolean addNewUser(String fName, String lName, String uName, String email
     }
 }
 
+
+    /**
+     * Get the total count of questions in the system
+     * @return total number of questions
+     **/
+    public int getTotalQuestionsCount() {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getTotalQuestionsCount", e);
+            return 0;
+        }
+        
+        int totalQuestions = 0;
+        try {
+            String sql = "SELECT COUNT(*) as total FROM questions";
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            ResultSet rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                totalQuestions = rs.getInt("total");
+            }
+            
+            rs.close();
+            pstmt.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        
+        return totalQuestions;
+    }
+
 // Keep your original method but rename it
 public void addNewUserVoid(String fName, String lName, String uName, String email, String pass,
                        String contact, String city, String address, String userTypeParam) {
@@ -4292,6 +4313,8 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error closing resources", e);
         }
     }
+    }
 }
- 
-}
+    
+
+

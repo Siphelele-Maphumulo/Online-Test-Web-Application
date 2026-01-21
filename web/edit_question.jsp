@@ -319,7 +319,7 @@
     
     .question-input {
         width: 100%;
-        min-height: 100px;
+        min-height: 150px;
         resize: vertical;
     }
     
@@ -428,6 +428,45 @@
         font-size: 12px;
         color: var(--dark-gray);
         margin-top: var(--spacing-xs);
+    }
+    
+    .code-question-indicator {
+        background: linear-gradient(135deg, var(--accent-blue), #3b82f6);
+        color: var(--white);
+        padding: var(--spacing-sm) var(--spacing-md);
+        border-radius: var(--radius-sm);
+        margin-bottom: var(--spacing-md);
+        border-left: 3px solid var(--primary-blue);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        font-weight: 500;
+        font-size: 13px;
+    }
+    
+    .code-snippet {
+        background: var(--primary-blue);
+        color: var(--light-gray);
+        border: 1px solid var(--secondary-blue);
+        border-radius: var(--radius-sm);
+        padding: var(--spacing-md);
+        margin: var(--spacing-md) 0;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        overflow-x: auto;
+        position: relative;
+    }
+    
+    .code-header {
+        color: var(--dark-gray);
+        font-size: 12px;
+        margin-bottom: var(--spacing-sm);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        border-bottom: 1px solid var(--secondary-blue);
+        padding-bottom: var(--spacing-sm);
     }
     
     /* Utility Classes */
@@ -704,6 +743,14 @@
                     <div class="form-group">
                         <label class="form-label"><i class="fas fa-pencil-alt" style="color: var(--success);"></i>Your Question</label>
                         <textarea name="question" id="editQuestionTextarea" class="question-input" rows="3" required oninput="checkForCodeSnippetEdit()"><%= questionToEdit.getQuestion() %></textarea>
+                        <!-- Preview for Code Snippets -->
+                        <div id="codePreview" style="display: none; margin-top: 10px;">
+                            <div class="code-question-indicator"><i class="fas fa-code"></i><strong>Code Analysis Question Preview</strong></div>
+                            <div class="code-snippet">
+                                <div class="code-header"><i class="fas fa-code"></i><span>Code to Analyze</span></div>
+                                <pre id="previewCode"></pre>
+                            </div>
+                        </div>
                     </div>
 
                     <div id="editMcqOptions">
@@ -800,7 +847,7 @@ function checkForCodeSnippetEdit() {
     
     // Count lines and check for code indicators
     const lines = questionText.split('\n').filter(line => line.trim() !== '');
-    const hasCodeIndicators = /(?:def |function |public |class |print\(|console\.|<[^>]*>|\{|\}|import |int |String |printf\(|cout )/.test(questionText);
+    const hasCodeIndicators = /(?:def |function |public |class |print\(|console\.\|<[^>]*>\|\{|\}|import |int |String |printf\(|cout )/.test(questionText);
     
     // If question is longer than 3 lines or contains code indicators and is not already Code type
     if ((lines.length > 3 || hasCodeIndicators) && questionType !== 'Code') {
@@ -809,7 +856,46 @@ function checkForCodeSnippetEdit() {
             toggleEditOptions();
         }
     }
+    
+    // Update preview if it's a code question
+    updateCodePreview(questionText, questionType);
 }
+
+// Function to update code snippet preview
+function updateCodePreview(questionText, questionType) {
+    const previewDiv = document.getElementById('codePreview');
+    const previewCode = document.getElementById('previewCode');
+    
+    if (questionType === 'Code') {
+        let questionPart = "";
+        let codePart = "";
+        
+        if(questionText.includes('```')){
+            const parts = questionText.split('```', 3);
+            if(parts.length >= 2) {
+                questionPart = parts[0].trim();
+                codePart = parts[1].trim();
+            } else {
+                questionPart = questionText.replace(/```/g, "").trim();
+            }
+        } else {
+            codePart = questionText;
+            questionPart = "What is the output/result of this code?";
+        }
+        
+        previewCode.textContent = codePart;
+        previewDiv.style.display = 'block';
+    } else {
+        previewDiv.style.display = 'none';
+    }
+}
+
+// Initialize preview on page load
+window.addEventListener('DOMContentLoaded', function() {
+    const initialQuestionText = document.getElementById("editQuestionTextarea").value;
+    const initialQuestionType = document.getElementById("questionTypeSelect").value;
+    updateCodePreview(initialQuestionText, initialQuestionType);
+});
 
     function initializeMultipleSelectCheckboxes() {
         const correctAnswers = document.getElementById('editCorrectAnswer').value.split('|');
