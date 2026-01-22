@@ -531,6 +531,26 @@ try {
         if (operation.isEmpty()) {
             operation = nz(request.getParameter("operation"), "");
         }
+
+        // --- START CSRF VALIDATION ---
+        if ("del".equalsIgnoreCase(operation) || "bulk_delete".equalsIgnoreCase(operation)) {
+            String submittedToken = request.getParameter("csrf_token");
+            String sessionToken = (String) session.getAttribute("csrf_token");
+
+            if (sessionToken == null || !sessionToken.equals(submittedToken)) {
+                session.setAttribute("error", "Invalid request. Please try again.");
+                String courseName = nz(request.getParameter("coursename"), "");
+                if (!courseName.isEmpty()) {
+                    // Redirect back to the showall page with an error
+                    response.sendRedirect("showall.jsp?coursename=" + java.net.URLEncoder.encode(courseName, "UTF-8") + "&error=csrf");
+                } else {
+                    response.sendRedirect("adm-page.jsp?pgprt=3&error=csrf");
+                }
+                return;
+            }
+        }
+        // --- END CSRF VALIDATION ---
+
         if ("del".equalsIgnoreCase(operation)) {
             // For multipart requests, qid parameter may be stored as attribute
             String qid = nz((String) request.getAttribute("multipartQid"), "");
