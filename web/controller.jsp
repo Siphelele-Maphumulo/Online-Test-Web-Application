@@ -730,8 +730,12 @@ try {
                                 }
                             }
                             
-                            pDAO.updateQuestion(question);
-                            session.setAttribute("message","Question updated successfully");
+                            boolean updateSuccess = pDAO.updateQuestion(question);
+                            if (updateSuccess) {
+                                session.setAttribute("message", "Question updated successfully");
+                            } else {
+                                session.setAttribute("error", "Failed to update question in the database.");
+                            }
                             
                             // Clean up multipart items attribute to prevent reuse
                             request.removeAttribute("multipartItems");
@@ -790,8 +794,12 @@ try {
                             question.setImagePath(null);
                         }
                         
-                        pDAO.updateQuestion(question);
-                        session.setAttribute("message","Question updated successfully");
+                        boolean updateSuccess = pDAO.updateQuestion(question);
+                        if (updateSuccess) {
+                            session.setAttribute("message", "Question updated successfully");
+                        } else {
+                            session.setAttribute("error", "Failed to update question in the database.");
+                        }
                         
                         // Clean up multipart items attribute if it exists (for consistency)
                         if (request.getAttribute("multipartItems") != null) {
