@@ -532,21 +532,6 @@ try {
             operation = nz(request.getParameter("operation"), "");
         }
         if ("del".equalsIgnoreCase(operation)) {
-            // Verify CSRF token
-            String csrfToken = request.getParameter("csrf_token");
-            String sessionToken = (String) session.getAttribute("csrf_token");
-            
-            if (csrfToken == null || !csrfToken.equals(sessionToken)) {
-                session.setAttribute("error", "Invalid request. Please try again.");
-                String courseName = nz(request.getParameter("coursename"), "");
-                if (!courseName.isEmpty()) {
-                    response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
-                } else {
-                    response.sendRedirect("adm-page.jsp?pgprt=3");
-                }
-                return;
-            }
-            
             // For multipart requests, qid parameter may be stored as attribute
             String qid = nz((String) request.getAttribute("multipartQid"), "");
             if (qid.isEmpty()) {
@@ -556,36 +541,29 @@ try {
             if (!qid.isEmpty()) {
                 boolean success = pDAO.deleteQuestion(Integer.parseInt(qid));
                 if (success) {
-                    // REGENERATE CSRF TOKEN after successful deletion
-                    String newCsrfToken = java.util.UUID.randomUUID().toString();
-                    session.setAttribute("csrf_token", newCsrfToken);
                     session.setAttribute("message","Question deleted successfully");
+                    // Force full page refresh with cache busting
+                    String courseName = nz(request.getParameter("coursename"), "");
+                    String timestamp = String.valueOf(new Date().getTime());
+                    if (!courseName.isEmpty()) {
+                        response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4&_=" + timestamp);
+                    } else {
+                        response.sendRedirect("adm-page.jsp?pgprt=3&_=" + timestamp);
+                    }
+                    return;
                 } else {
                     session.setAttribute("error", "Failed to delete question ID: " + qid);
                 }
             }
+            // Redirect even if no question ID was provided
             String courseName = nz(request.getParameter("coursename"), "");
+            String timestamp = String.valueOf(new Date().getTime());
             if (!courseName.isEmpty()) {
-                response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
+                response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4&_=" + timestamp);
             } else {
-                response.sendRedirect("adm-page.jsp?pgprt=3");
+                response.sendRedirect("adm-page.jsp?pgprt=3&_=" + timestamp);
             }
         } else if ("bulk_delete".equalsIgnoreCase(operation)) {
-            // Verify CSRF token
-            String csrfToken = request.getParameter("csrf_token");
-            String sessionToken = (String) session.getAttribute("csrf_token");
-            
-            if (sessionToken == null || !sessionToken.equals(csrfToken)) {
-                session.setAttribute("error", "Invalid request. Please try again.");
-                String courseName = nz(request.getParameter("coursename"), "");
-                if (!courseName.isEmpty()) {
-                    response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
-                } else {
-                    response.sendRedirect("adm-page.jsp?pgprt=3");
-                }
-                return;
-            }
-            
             String[] questionIds = request.getParameterValues("questionIds");
             String courseName = nz(request.getParameter("coursename"), "");
             
@@ -617,11 +595,15 @@ try {
                     int deletedCount = pDAO.deleteQuestions(questionIdArray);
                     
                     if (deletedCount > 0) {
-                        // REGENERATE CSRF TOKEN after successful deletion
-                        String newCsrfToken = java.util.UUID.randomUUID().toString();
-                        session.setAttribute("csrf_token", newCsrfToken);
-                        
                         session.setAttribute("message", deletedCount + " question(s) deleted successfully!");
+                        // Force full page refresh with cache busting after successful bulk delete
+                        String timestamp = String.valueOf(new Date().getTime());
+                        if (!courseName.isEmpty()) {
+                            response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4&_=" + timestamp);
+                        } else {
+                            response.sendRedirect("adm-page.jsp?pgprt=3&_=" + timestamp);
+                        }
+                        return;
                     } else {
                         session.setAttribute("error", "Failed to delete selected questions.");
                     }
@@ -632,10 +614,12 @@ try {
                 session.setAttribute("error", "No questions selected for deletion.");
             }
             
+            // Redirect after unsuccessful bulk delete
+            String timestamp = String.valueOf(new Date().getTime());
             if (!courseName.isEmpty()) {
-                response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
+                response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4&_=" + timestamp);
             } else {
-                response.sendRedirect("adm-page.jsp?pgprt=3");
+                response.sendRedirect("adm-page.jsp?pgprt=3&_=" + timestamp);
             }
         } else if ("edit".equalsIgnoreCase(operation)) {
             // For multipart requests, qid parameter may be stored as attribute
