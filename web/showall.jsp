@@ -5,10 +5,12 @@
 <%
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
-// Generate new CSRF token for each page load
-// This ensures fresh token for each request
-String csrfToken = java.util.UUID.randomUUID().toString();
-session.setAttribute("csrf_token", csrfToken);
+// Initialize CSRF token if it doesn't exist in the session.
+if (session.getAttribute("csrf_token") == null) {
+    session.setAttribute("csrf_token", java.util.UUID.randomUUID().toString());
+}
+// Retrieve the token to be used in the form.
+String csrfToken = (String) session.getAttribute("csrf_token");
 %>
 
 <style>

@@ -536,8 +536,8 @@ try {
             String csrfToken = request.getParameter("csrf_token");
             String sessionToken = (String) session.getAttribute("csrf_token");
             
-            if (csrfToken == null || !csrfToken.equals(sessionToken)) {
-                session.setAttribute("error", "Invalid request. Please try again.");
+            if (csrfToken == null || sessionToken == null || !csrfToken.equals(sessionToken)) {
+                session.setAttribute("error", "Invalid request. Please try again. Session may have expired.");
                 String courseName = nz(request.getParameter("coursename"), "");
                 if (!courseName.isEmpty()) {
                     response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
