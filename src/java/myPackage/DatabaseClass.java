@@ -3145,11 +3145,7 @@ public boolean registerExamCompletion(int studentId, int examId, String endTime)
     }
     
     String sql = "UPDATE exam_register " +
-                 "SET end_time = ?, " +
-                 "    updated_at = CURRENT_TIMESTAMP, " +
-                 "    duration_seconds = TIMESTAMPDIFF(SECOND, " +
-                 "        CONCAT(exam_date, ' ', start_time), " +
-                 "        CONCAT(exam_date, ' ', ?)) " +
+                 "SET end_time = ? " +
                  "WHERE student_id = ? " +
                  "  AND exam_id = ? " +
                  "  AND exam_date = CURDATE() " +
@@ -3212,11 +3208,7 @@ public boolean registerExamCompletion(int studentId, int examId, LocalTime endTi
     
     // Regular string concatenation for Java 8
     String sql = "UPDATE exam_register " +
-                 "SET end_time = ?, " +
-                 "    updated_at = CURRENT_TIMESTAMP, " +
-                 "    duration_seconds = TIMESTAMPDIFF(SECOND, " +
-                 "        CONCAT(exam_date, ' ', start_time), " +
-                 "        CONCAT(exam_date, ' ', ?)) " +
+                 "SET end_time = ? " +
                  "WHERE student_id = ? " +
                  "  AND exam_id = ? " +
                  "  AND exam_date = CURDATE() " +

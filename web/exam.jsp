@@ -1085,7 +1085,7 @@
         flex-direction: column;
         align-items: center;
         gap: var(--spacing-lg);
-        margin-bottom: var(--spacing-xl);
+        margin-bottom: var(--spacing-xs);
     }
     
     .progress-circle {
@@ -1122,7 +1122,7 @@
     }
     
     .progress-text small {
-        font-size: 11px;
+        font-size: 8px;
         color: var(--dark-gray);
         text-transform: uppercase;
         letter-spacing: 0.5px;
@@ -1201,7 +1201,7 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: var(--spacing-sm);
-        font-size: 13px;
+        font-size: 8px;
         font-weight: 600;
         color: var(--text-dark);
     }
@@ -1220,7 +1220,7 @@
         color: var(--dark-gray);
         padding: 10px 20px;
         border-radius: var(--radius-sm);
-        font-size: 14px;
+        font-size: 10px;
         font-weight: 500;
         cursor: pointer;
         transition: all var(--transition-fast);
@@ -1237,7 +1237,7 @@
         color: var(--white);
         padding: 10px 24px;
         border-radius: var(--radius-sm);
-        font-size: 14px;
+        font-size: 10px;
         font-weight: 600;
         cursor: pointer;
         transition: all var(--transition-fast);
@@ -1799,7 +1799,9 @@
                     boolean isMultiTwo = false;
                     try{
                         String qt = q.getQuestion().toLowerCase();
-                        isMultiTwo = qt.contains("select two") || qt.contains("choose two") || 
+                        String questionType = q.getQuestionType();
+                        isMultiTwo = "MultipleSelect".equalsIgnoreCase(questionType) ||
+                                    qt.contains("select two") || qt.contains("choose two") || 
                                     qt.contains("pick two") || qt.contains("multiple answers") || 
                                     qt.contains("two options") || qt.contains("multiple select") ||
                                     qt.contains("select multiple") || qt.contains("choose multiple");
@@ -1836,7 +1838,7 @@
                     if(q.getOpt4() != null && !q.getOpt4().trim().isEmpty()) opts.add(q.getOpt4());
                     
                     // Randomize the options for the question
-                    java.util.Collections.shuffle(opts, new java.util.Random(System.currentTimeMillis()));
+                    java.util.Collections.shuffle(opts, new java.util.Random(new java.util.Date().getTime()));
                 %>
                     <div class="question-card" data-qindex="<%= i %>">
                         <div class="question-header">
@@ -3132,15 +3134,5 @@
                 inactiveModal.style.display = 'none';
             }
         }
-    });
-</script>   }
-        }
-    });
-</script>   }
-        }
-    });
-</script>
-    });
-</script>
     });
 </script>

@@ -1259,6 +1259,13 @@ try {
                 for (int i=0;i<size;i++){
                     String question = nz(request.getParameter("question"+i), "");
                     String ans      = nz(request.getParameter("ans"+i), "");
+                    
+                    // Check if this is a multiple select question and get the hidden field value
+                    String multiSelectAns = nz(request.getParameter("ans"+i+"-hidden"), "");
+                    if (!multiSelectAns.isEmpty()) {
+                        ans = multiSelectAns; // Use the multi-select answer instead
+                    }
+                    
                     int qid         = Integer.parseInt(nz(request.getParameter("qid"+i), "0"));
                     pDAO.insertAnswer(eId, qid, question, ans);
                 }
