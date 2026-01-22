@@ -556,27 +556,11 @@ try {
             String courseName = nz(request.getParameter("coursename"), "");
             
             if (questionIds != null && questionIds.length > 0) {
-                int deletedCount = 0;
-                int errorCount = 0;
-                for (String qid : questionIds) {
-                    try {
-                        int id = Integer.parseInt(qid);
-                        boolean success = pDAO.deleteQuestion(id);
-                        if (success) {
-                            deletedCount++;
-                        } else {
-                            errorCount++;
-                        }
-                    } catch (NumberFormatException e) {
-                        // Skip invalid IDs
-                        errorCount++;
-                    }
-                }
+                int deletedCount = pDAO.deleteQuestions(questionIds);
                 if (deletedCount > 0) {
                     session.setAttribute("message", deletedCount + " question(s) deleted successfully!");
-                }
-                if (errorCount > 0) {
-                    session.setAttribute("error", errorCount + " question(s) failed to delete.");
+                } else {
+                    session.setAttribute("error", "An error occurred while deleting the questions.");
                 }
             } else {
                 session.setAttribute("error", "No questions selected for deletion.");

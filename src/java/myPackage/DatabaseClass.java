@@ -819,6 +819,44 @@ public boolean isCourseActive(String courseName) {
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in isCourseActive", ex);
         }
     }
+
+    public int deleteQuestions(String[] questionIds) {
+        int questionsDeleted = 0;
+        try {
+            ensureConnection();
+            conn.setAutoCommit(false);
+            String deleteAnswersSql = "DELETE FROM answers WHERE question_id = ?";
+            String deleteQuestionSql = "DELETE FROM questions WHERE question_id = ?";
+            try (PreparedStatement psAnswers = conn.prepareStatement(deleteAnswersSql);
+                 PreparedStatement psQuestions = conn.prepareStatement(deleteQuestionSql)) {
+                for (String questionIdStr : questionIds) {
+                    try {
+                        int questionId = Integer.parseInt(questionIdStr);
+                        psAnswers.setInt(1, questionId);
+                        psAnswers.addBatch();
+                        psQuestions.setInt(1, questionId);
+                        psQuestions.addBatch();
+                    } catch (NumberFormatException e) {
+                        LOGGER.log(Level.WARNING, "Invalid question ID format: " + questionIdStr, e);
+                    }
+                }
+                psAnswers.executeBatch();
+                int[] deleteCounts = psQuestions.executeBatch();
+                for (int count : deleteCounts) {
+                    questionsDeleted += count;
+                }
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                LOGGER.log(Level.SEVERE, "Error bulk deleting questions", e);
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in deleteQuestions", e);
+        }
+        return questionsDeleted;
+    }
 }
     
 public int updateStudent(int uId, String fName, String lName, String uName, String email, String pass,
