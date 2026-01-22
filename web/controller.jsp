@@ -54,8 +54,9 @@ try {
         try {
             List<FileItem> items = upload.parseRequest(request);
             
-            // First pass: extract page and operation parameters
+            // First pass: extract page, operation, and qid parameters
             String operationParam = null;
+            String qidParam = null;
             for (FileItem item : items) {
                 if (item.isFormField()) {
                     String fieldName = item.getFieldName();
@@ -63,6 +64,8 @@ try {
                         pageParam = item.getString("UTF-8");
                     } else if ("operation".equals(fieldName)) {
                         operationParam = item.getString("UTF-8");
+                    } else if ("qid".equals(fieldName)) {
+                        qidParam = item.getString("UTF-8");
                     }
                 }
             }
@@ -76,6 +79,9 @@ try {
             
             // Store operation parameter in request for later use
             request.setAttribute("multipartOperation", operationParam);
+            
+            // Store qid parameter in request for later use
+            request.setAttribute("multipartQid", qidParam);
             
             // Store the parsed items in request attributes for later use by the respective handlers
             request.setAttribute("multipartItems", items);
@@ -526,7 +532,12 @@ try {
             operation = nz(request.getParameter("operation"), "");
         }
         if ("del".equalsIgnoreCase(operation)) {
-            String qid = nz(request.getParameter("qid"), "");
+            // For multipart requests, qid parameter may be stored as attribute
+            String qid = nz((String) request.getAttribute("multipartQid"), "");
+            if (qid.isEmpty()) {
+                // For non-multipart requests, get qid from regular parameter
+                qid = nz(request.getParameter("qid"), "");
+            }
             if (!qid.isEmpty()) pDAO.deleteQuestion(Integer.parseInt(qid));
             session.setAttribute("message","Question deleted successfully");
             String courseName = nz(request.getParameter("coursename"), "");
@@ -559,7 +570,12 @@ try {
                 response.sendRedirect("adm-page.jsp?pgprt=3");
             }
         } else if ("edit".equalsIgnoreCase(operation)) {
-            String qid = nz(request.getParameter("qid"), "");
+            // For multipart requests, qid parameter may be stored as attribute
+            String qid = nz((String) request.getAttribute("multipartQid"), "");
+            if (qid.isEmpty()) {
+                // For non-multipart requests, get qid from regular parameter
+                qid = nz(request.getParameter("qid"), "");
+            }
             if (!qid.isEmpty()) {
                 Questions question = pDAO.getQuestionById(Integer.parseInt(qid));
                 if (question != null) {
@@ -810,9 +826,15 @@ try {
             }
             String courseName = nz(request.getParameter("coursename"), "");
             
-            // Clean up multipart items attribute if it exists
+            // Clean up multipart attributes if they exist
             if (request.getAttribute("multipartItems") != null) {
                 request.removeAttribute("multipartItems");
+            }
+            if (request.getAttribute("multipartQid") != null) {
+                request.removeAttribute("multipartQid");
+            }
+            if (request.getAttribute("multipartOperation") != null) {
+                request.removeAttribute("multipartOperation");
             }
             
             if (!courseName.isEmpty()) {
