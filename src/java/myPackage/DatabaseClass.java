@@ -2194,6 +2194,123 @@ private String getCorrectAnswer(int qid) {
 }
 
 
+// New method to delete multiple questions in a single transaction
+public int deleteQuestions(int[] questionIds) {
+    if (questionIds == null || questionIds.length == 0) {
+        return 0; // No questions to delete
+    }
+    
+    boolean autoCommit = true;
+    try {
+        ensureConnection();
+        autoCommit = conn.getAutoCommit();
+        conn.setAutoCommit(false);
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in deleteQuestions", e);
+        return 0;
+    }
+    
+    PreparedStatement pstmt = null;
+    PreparedStatement pstmtAnswers = null;
+    
+    try {
+        // First, get question texts to potentially clean up related answers
+        // We'll use a batch approach for better performance
+        StringBuilder questionIdsQuery = new StringBuilder();
+        for (int i = 0; i < questionIds.length; i++) {
+            questionIdsQuery.append("?");
+            if (i < questionIds.length - 1) {
+                questionIdsQuery.append(",");
+            }
+        }
+        
+        String getQuestionsSql = "SELECT question_id, question FROM questions WHERE question_id IN (" + questionIdsQuery.toString() + ")";
+        pstmt = conn.prepareStatement(getQuestionsSql);
+        
+        // Set the parameters for question IDs
+        for (int i = 0; i < questionIds.length; i++) {
+            pstmt.setInt(i + 1, questionIds[i]);
+        }
+        
+        ResultSet rs = pstmt.executeQuery();
+        
+        // Collect question texts for answer deletion
+        Map<String, Integer> questionTextMap = new HashMap<>();
+        while (rs.next()) {
+            String questionText = rs.getString("question");
+            if (questionText != null) {
+                questionTextMap.put(questionText, rs.getInt("question_id"));
+            }
+        }
+        rs.close();
+        pstmt.close();
+        
+        // Delete related answers based on question texts
+        if (!questionTextMap.isEmpty()) {
+            StringBuilder questionTextsQuery = new StringBuilder();
+            for (int i = 0; i < questionTextMap.size(); i++) {
+                questionTextsQuery.append("?");
+                if (i < questionTextMap.size() - 1) {
+                    questionTextsQuery.append(",");
+                }
+            }
+            
+            String deleteAnswersSql = "DELETE FROM answers WHERE question IN (" + questionTextsQuery.toString() + ")";
+            pstmtAnswers = conn.prepareStatement(deleteAnswersSql);
+            
+            int paramIndex = 1;
+            for (String questionText : questionTextMap.keySet()) {
+                pstmtAnswers.setString(paramIndex++, questionText);
+            }
+            
+            int answersDeleted = pstmtAnswers.executeUpdate();
+            pstmtAnswers.close();
+            
+            if (answersDeleted > 0) {
+                LOGGER.info("Deleted " + answersDeleted + " answer record(s) related to questions");
+            }
+        }
+        
+        // Now delete the questions themselves
+        String deleteQuestionsSql = "DELETE FROM questions WHERE question_id IN (" + questionIdsQuery.toString() + ")";
+        pstmt = conn.prepareStatement(deleteQuestionsSql);
+        
+        // Set the parameters for question IDs
+        for (int i = 0; i < questionIds.length; i++) {
+            pstmt.setInt(i + 1, questionIds[i]);
+        }
+        
+        // Execute the statement and get number of affected rows
+        int rowsAffected = pstmt.executeUpdate();
+        pstmt.close();
+        
+        LOGGER.info("Deleted " + rowsAffected + " question record(s) in bulk");
+        
+        // Commit the transaction
+        conn.commit();
+        
+        return rowsAffected;
+    } catch (SQLException ex) {
+        try {
+            conn.rollback();
+            LOGGER.log(Level.SEVERE, "Transaction rolled back due to error deleting questions", ex);
+        } catch (SQLException rollbackEx) {
+            LOGGER.log(Level.SEVERE, "Rollback failed", rollbackEx);
+        }
+        LOGGER.log(Level.SEVERE, "Error deleting questions", ex);
+        return 0;
+    } finally {
+        try {
+            if (pstmt != null) pstmt.close();
+            if (pstmtAnswers != null) pstmtAnswers.close();
+            conn.setAutoCommit(autoCommit); // Restore original autocommit setting
+        } catch (SQLException e) {
+            LOGGER.log(Level.WARNING, "Error closing resources", e);
+        }
+    }
+}
+
+
 private String getAnswerStatus(String ans, String correct) {
     // 1. Normalize inputs: handle nulls and trim whitespace
     String userAnswer = (ans != null) ? ans.trim() : "";

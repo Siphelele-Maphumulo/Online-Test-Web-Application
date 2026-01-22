@@ -532,6 +532,21 @@ try {
             operation = nz(request.getParameter("operation"), "");
         }
         if ("del".equalsIgnoreCase(operation)) {
+            // Verify CSRF token
+            String csrfToken = request.getParameter("csrf_token");
+            String sessionToken = (String) session.getAttribute("csrf_token");
+            
+            if (csrfToken == null || !csrfToken.equals(sessionToken)) {
+                session.setAttribute("error", "Invalid request. Please try again.");
+                String courseName = nz(request.getParameter("coursename"), "");
+                if (!courseName.isEmpty()) {
+                    response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
+                } else {
+                    response.sendRedirect("adm-page.jsp?pgprt=3");
+                }
+                return;
+            }
+            
             // For multipart requests, qid parameter may be stored as attribute
             String qid = nz((String) request.getAttribute("multipartQid"), "");
             if (qid.isEmpty()) {
@@ -552,31 +567,58 @@ try {
                 response.sendRedirect("adm-page.jsp?pgprt=3");
             }
         } else if ("bulk_delete".equalsIgnoreCase(operation)) {
+            // Verify CSRF token
+            String csrfToken = request.getParameter("csrf_token");
+            String sessionToken = (String) session.getAttribute("csrf_token");
+            
+            if (sessionToken == null || !sessionToken.equals(csrfToken)) {
+                session.setAttribute("error", "Invalid request. Please try again.");
+                String courseName = nz(request.getParameter("coursename"), "");
+                if (!courseName.isEmpty()) {
+                    response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
+                } else {
+                    response.sendRedirect("adm-page.jsp?pgprt=3");
+                }
+                return;
+            }
+            
             String[] questionIds = request.getParameterValues("questionIds");
             String courseName = nz(request.getParameter("coursename"), "");
             
             if (questionIds != null && questionIds.length > 0) {
-                int deletedCount = 0;
-                int errorCount = 0;
+                // Convert string array to int array
+                int[] questionIdArray = new int[questionIds.length];
+                int validCount = 0;
+                
+                // Validate and convert question IDs
                 for (String qid : questionIds) {
                     try {
                         int id = Integer.parseInt(qid);
-                        boolean success = pDAO.deleteQuestion(id);
-                        if (success) {
-                            deletedCount++;
-                        } else {
-                            errorCount++;
-                        }
+                        questionIdArray[validCount++] = id;
                     } catch (NumberFormatException e) {
                         // Skip invalid IDs
-                        errorCount++;
+                        LOGGER.warning("Invalid question ID skipped: " + qid);
                     }
                 }
-                if (deletedCount > 0) {
-                    session.setAttribute("message", deletedCount + " question(s) deleted successfully!");
+                
+                // Create properly sized array with only valid IDs
+                int[] validQuestionIds = new int[validCount];
+                for (int i = 0; i < validCount; i++) {
+                    validQuestionIds[i] = questionIdArray[i];
                 }
-                if (errorCount > 0) {
-                    session.setAttribute("error", errorCount + " question(s) failed to delete.");
+                questionIdArray = validQuestionIds;
+
+                if (questionIdArray.length > 0) {
+                    // Use the new bulk delete method
+                    int deletedCount = pDAO.deleteQuestions(questionIdArray);
+                    
+                    if (deletedCount > 0) {
+                        session.setAttribute("message", deletedCount + " question(s) deleted successfully!");
+                    } else {
+                        session.setAttribute("error", "Failed to delete selected questions.");
+                    }
+                } else {
+                    session.setAttribute("error", "No valid questions selected for deletion.");
                 }
             } else {
                 session.setAttribute("error", "No questions selected for deletion.");

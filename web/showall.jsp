@@ -2,8 +2,15 @@
 <%@page import="java.util.ArrayList"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
 
-<% 
+<%
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
+
+// Generate CSRF token if not already present
+String csrfToken = (String) session.getAttribute("csrf_token");
+if (csrfToken == null) {
+    csrfToken = java.util.UUID.randomUUID().toString();
+    session.setAttribute("csrf_token", csrfToken);
+}
 %>
 
 <style>
@@ -687,7 +694,8 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             <form action="controller.jsp" method="post">
                 <input type="hidden" name="page" value="questions">
                 <input type="hidden" name="operation" value="bulk_delete">
-                 <input type="hidden" name="coursename" value="<%= courseName %>">
+                <input type="hidden" name="coursename" value="<%= courseName %>">
+                <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
 
 
             <!-- Course Header -->
@@ -803,11 +811,10 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                             Edit
                         </a>
 
-                        <a href="controller.jsp?page=questions&operation=del&qid=<%= question.getQuestionId() %>&coursename=<%= courseName %>"
-                           class="btn btn-error single-delete-btn" style="font-size: 13px; padding: 8px 16px;">
+                        <button type="button" class="btn btn-error single-delete-btn" style="font-size: 13px; padding: 8px 16px;" data-qid="<%= question.getQuestionId() %>" data-coursename="<%= courseName %>">
                             <i class="fas fa-trash"></i>
                             Delete
-                        </a>
+                        </button>
                     </div>
                 </div>
                 
@@ -1109,10 +1116,15 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             document.querySelectorAll('.single-delete-btn').forEach(button => {
                 button.addEventListener('click', function(e) {
                     e.preventDefault();
-                    window.currentDeleteUrl = this.href;
-                    // Extract question ID from the URL for confirmation
-                    const urlParams = new URL(this.href).searchParams;
-                    const qid = urlParams.get('qid');
+                    const qid = this.getAttribute('data-qid');
+                    const coursename = this.getAttribute('data-coursename');
+                    
+                    // Store the parameters for later use in confirmAction
+                    window.currentDeleteParams = {
+                        qid: qid,
+                        coursename: coursename
+                    };
+                    
                     showModal(`Are you sure you want to delete question ID ${qid}? This action cannot be undone.`);
                 });
             });
@@ -1142,14 +1154,53 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     function confirmAction() {
         clearTimeout(modalTimer);
         
-        // If we have a stored delete URL (single delete), redirect to it
-        if (window.currentDeleteUrl && !window.isBulkDelete) {
-            console.log('Redirecting to single delete URL:', window.currentDeleteUrl);
-            window.location.href = window.currentDeleteUrl;
+        // If we have stored delete parameters (single delete), submit delete request
+        if (window.currentDeleteParams && !window.isBulkDelete) {
+            console.log('Submitting single delete request for question ID:', window.currentDeleteParams.qid);
+            
+            // Create a temporary form to submit the delete request
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'controller.jsp';
+            form.style.display = 'none';
+            
+            // Add parameters for single delete
+            const pageInput = document.createElement('input');
+            pageInput.type = 'hidden';
+            pageInput.name = 'page';
+            pageInput.value = 'questions';
+            form.appendChild(pageInput);
+            
+            const operationInput = document.createElement('input');
+            operationInput.type = 'hidden';
+            operationInput.name = 'operation';
+            operationInput.value = 'del';
+            form.appendChild(operationInput);
+            
+            const qidInput = document.createElement('input');
+            qidInput.type = 'hidden';
+            qidInput.name = 'qid';
+            qidInput.value = window.currentDeleteParams.qid;
+            form.appendChild(qidInput);
+            
+            const coursenameInput = document.createElement('input');
+            coursenameInput.type = 'hidden';
+            coursenameInput.name = 'coursename';
+            coursenameInput.value = window.currentDeleteParams.coursename;
+            form.appendChild(coursenameInput);
+            
+            // Add CSRF token
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = '<%= csrfToken %>';
+            form.appendChild(csrfInput);
+            
+            document.body.appendChild(form);
+            form.submit();
         } else {
             // Perform bulk delete
             console.log('Performing bulk delete');
-            // Find the main form for question management
             const form = document.querySelector('form[action="controller.jsp"][method="post"]');
             if (form) {
                 const selectedCheckboxes = form.querySelectorAll('input[name="questionIds"]:checked');
@@ -1161,12 +1212,11 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                     return;
                 }
                 
-                // Ensure all required hidden inputs exist and are set correctly
+                // Set the operation to bulk_delete
                 let operationInput = form.querySelector('input[name="operation"]');
                 if (operationInput) {
                     operationInput.value = 'bulk_delete';
                 } else {
-                    // Create operation input if it doesn't exist
                     operationInput = document.createElement('input');
                     operationInput.type = 'hidden';
                     operationInput.name = 'operation';
@@ -1197,7 +1247,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         }
         
         // Reset flags and hide modal after action
-        window.currentDeleteUrl = null;
+        window.currentDeleteParams = null;
         window.isBulkDelete = false;
         hideModal();
     }
