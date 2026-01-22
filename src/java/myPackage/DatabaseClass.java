@@ -1321,28 +1321,78 @@ public void delQuestion(int qId) {
     }
 }
 
-public void deleteQuestion(int questionId) {
+public boolean deleteQuestion(int questionId) {
+    boolean autoCommit = true;
     try {
         ensureConnection();
+        autoCommit = conn.getAutoCommit();
+        conn.setAutoCommit(false);
     } catch (SQLException e) {
         LOGGER.log(Level.SEVERE, "Connection error in deleteQuestion", e);
-        return;
+        return false;
     }
     
-    String sql = "DELETE FROM questions WHERE question_id = ?";
+    PreparedStatement pstmt = null;
+    PreparedStatement pstmtAnswers = null;
     
     try {
-        // Prepare the SQL statement
-        PreparedStatement pstmt = conn.prepareStatement(sql);
+        // First, get the question text to potentially clean up related answers
+        String getQuestionSql = "SELECT question FROM questions WHERE question_id = ?";
+        pstmt = conn.prepareStatement(getQuestionSql);
+        pstmt.setInt(1, questionId);
+        ResultSet rs = pstmt.executeQuery();
+        
+        String questionText = null;
+        if (rs.next()) {
+            questionText = rs.getString("question");
+        }
+        rs.close();
+        pstmt.close();
+        
+        if (questionText != null) {
+            // Delete related answers based on question text (if needed)
+            // Note: This is a workaround since there's no direct foreign key to question_id in answers table
+            String deleteAnswersSql = "DELETE FROM answers WHERE question = ?";
+            pstmtAnswers = conn.prepareStatement(deleteAnswersSql);
+            pstmtAnswers.setString(1, questionText);
+            int answersDeleted = pstmtAnswers.executeUpdate();
+            pstmtAnswers.close();
+            
+            if (answersDeleted > 0) {
+                LOGGER.info("Deleted " + answersDeleted + " answer record(s) related to question ID: " + questionId);
+            }
+        }
+        
+        // Now delete the question itself
+        String deleteQuestionSql = "DELETE FROM questions WHERE question_id = ?";
+        pstmt = conn.prepareStatement(deleteQuestionSql);
         pstmt.setInt(1, questionId);
         
-        // Execute the statement
-        pstmt.executeUpdate();
+        // Execute the statement and get number of affected rows
+        int rowsAffected = pstmt.executeUpdate();
+        LOGGER.info("Deleted " + rowsAffected + " question record(s) with ID: " + questionId);
         
-        // Close the prepared statement
-        pstmt.close();
+        // Commit the transaction
+        conn.commit();
+        
+        return rowsAffected > 0;
     } catch (SQLException ex) {
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        try {
+            conn.rollback();
+            LOGGER.log(Level.SEVERE, "Transaction rolled back due to error deleting question ID: " + questionId, ex);
+        } catch (SQLException rollbackEx) {
+            LOGGER.log(Level.SEVERE, "Rollback failed", rollbackEx);
+        }
+        LOGGER.log(Level.SEVERE, "Error deleting question ID: " + questionId, ex);
+        return false;
+    } finally {
+        try {
+            if (pstmt != null) pstmt.close();
+            if (pstmtAnswers != null) pstmtAnswers.close();
+            conn.setAutoCommit(autoCommit); // Restore original autocommit setting
+        } catch (SQLException e) {
+            LOGGER.log(Level.WARNING, "Error closing resources", e);
+        }
     }
 }
 
@@ -1641,7 +1691,7 @@ public void deleteLecturer(int userId) {
 
 
     
-public void addQuestion(String cName, String question, String opt1, String opt2, String opt3, String opt4, String correct, String questionType) {
+public void addQuestion(String cName, String question, String opt1, String opt2, String opt3, String opt4, String correct, String questionType, String imagePath) {
     try {
         ensureConnection();
     } catch (SQLException e) {
@@ -1655,7 +1705,7 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
 
         // If the question type is True/False, only use two options (True/False)
         if (questionType.equals("TrueFalse")) {
-            sql = "INSERT INTO questions (question, opt1, opt2, correct, course_name, question_type) VALUES (?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO questions (question, opt1, opt2, correct, course_name, question_type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql);
             pstm.setString(1, question);
             pstm.setString(2, "True");  // True as the first option
@@ -1663,9 +1713,10 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
             pstm.setString(4, correct); // Correct answer should be "True" or "False"
             pstm.setString(5, cName); // Set the course name
             pstm.setString(6, questionType);
+            pstm.setString(7, imagePath); // Set the image path
         } else {
             // Multiple Choice Question logic
-            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql);
             pstm.setString(1, question);
             pstm.setString(2, opt1);
@@ -1675,6 +1726,7 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
             pstm.setString(6, correct);
             pstm.setString(7, cName); // Set the course name
             pstm.setString(8, questionType);
+            pstm.setString(9, imagePath); // Set the image path
         }
 
         // Execute the update
@@ -1981,7 +2033,9 @@ public ArrayList getAllQuestions(String courseName) {
                        rs.getString("question"),
                        rs.getString("answer"),
                        rs.getString("correct_answer"),
-                       rs.getString("status")
+                       rs.getString("status"),
+                       0, // score (default)
+                       rs.getInt("question_id") // question_id for image support
                     ); 
                list.add(a);
             }
@@ -2093,15 +2147,36 @@ private String getCorrectAnswer(int qid) {
     ResultSet rs = null;
     
     try {
-        pstm = conn.prepareStatement("SELECT correct FROM questions WHERE question_id=?");
+        // First, get the correct answer from the questions table
+        pstm = conn.prepareStatement("SELECT correct, question_type FROM questions WHERE question_id=?");
         pstm.setInt(1, qid);
         rs = pstm.executeQuery();
         
         if (rs.next()) {
-            String result = rs.getString(1);
+            String result = rs.getString("correct");
+            String questionType = rs.getString("question_type");
+            
             // Handle null from DB and trim whitespace
             if (result != null) {
                 ans = result.trim();
+            }
+            
+            // For True/False questions, normalize the answer to standard format
+            if ("TrueFalse".equalsIgnoreCase(questionType)) {
+                if (ans != null && !ans.isEmpty()) {
+                    // Convert variations to standard True/False format
+                    String lowerAns = ans.toLowerCase();
+                    if (lowerAns.contains("true") || lowerAns.equals("1") || lowerAns.equals("yes")) {
+                        ans = "True";
+                    } else if (lowerAns.contains("false") || lowerAns.equals("0") || lowerAns.equals("no")) {
+                        ans = "False";
+                    }
+                }
+            } else {
+                // For other question types, ensure we have a proper answer
+                if (ans == null) {
+                    ans = "";
+                }
             }
         }
     } catch (SQLException ex) {

@@ -6,6 +6,7 @@ public class Answers {
     private String correctAnswer;
     private String status;
     private int score; // Add this field
+    private int questionId; // Add this field for image support
 
     // Default constructor
     public Answers() {
@@ -18,8 +19,9 @@ public class Answers {
         this.correctAnswer = correctAnswer;
         this.status = status;
         this.score = 0; // Default score
+        this.questionId = 0; // Default questionId
     }
-
+    
     // New constructor with score
     public Answers(String question, String answer, String correctAnswer, String status, int score) {
         this.question = question;
@@ -27,6 +29,17 @@ public class Answers {
         this.correctAnswer = correctAnswer;
         this.status = status;
         this.score = score;
+        this.questionId = 0; // Default questionId
+    }
+    
+    // New constructor with questionId
+    public Answers(String question, String answer, String correctAnswer, String status, int score, int questionId) {
+        this.question = question;
+        this.answer = answer;
+        this.correctAnswer = correctAnswer;
+        this.status = status;
+        this.score = score;
+        this.questionId = questionId;
     }
 
     // Getters and setters
@@ -68,5 +81,13 @@ public class Answers {
 
     public void setScore(int score) {
         this.score = score;
+    }
+    
+    public int getQuestionId() {
+        return questionId;
+    }
+    
+    public void setQuestionId(int questionId) {
+        this.questionId = questionId;
     }
 }

@@ -1146,6 +1146,18 @@ if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
                     
                     <div class="form-group">
                         <label class="form-label"><i class="fas fa-check-circle" style="color: var(--success);"></i> Correct Answer</label>
+                        
+                        <!-- True/False Dropdown -->
+                        <div id="trueFalseContainer" style="display:none;">
+                            <select id="trueFalseSelect" name="correct" class="form-select" required>
+                                <option value="">Select Correct Answer</option>
+                                <option value="True">True</option>
+                                <option value="False">False</option>
+                            </select>
+                            <small class="form-hint">Select whether the statement is True or False</small>
+                        </div>
+                        
+                        <!-- Regular Correct Answer Textarea -->
                         <div id="correctAnswerContainer">
                             <textarea id="correctAnswer" name="correct" class="form-control" required rows="2" placeholder="Enter the correct answer"></textarea>
                             <small class="form-hint">Must match one of the options exactly</small>
@@ -1756,22 +1768,78 @@ function toggleOptions() {
     const qType = document.getElementById("questionTypeSelect").value;
     const mcq = document.getElementById("mcqOptions");
     const single = document.getElementById("correctAnswerContainer");
+    const trueFalse = document.getElementById("trueFalseContainer");
     const multiple = document.getElementById("multipleCorrectContainer");
     const correct = document.getElementById("correctAnswer");
+    const trueFalseSelect = document.getElementById("trueFalseSelect");
+    
+    // Get option inputs
+    const opt1 = document.getElementById('opt1');
+    const opt2 = document.getElementById('opt2');
+    const opt3 = document.getElementById('opt3');
+    const opt4 = document.getElementById('opt4');
     
     document.getElementById("questionTypeHidden").value = qType;
 
+    // Hide all containers
     mcq.style.display = "none";
     single.style.display = "none";
+    trueFalse.style.display = "none";
     multiple.style.display = "none";
+    
+    // Remove required attributes from all elements
     correct.required = false;
+    if (trueFalseSelect) trueFalseSelect.required = false;
+    if (opt1) opt1.required = false;
+    if (opt2) opt2.required = false;
+    if (opt3) opt3.required = false;
+    if (opt4) opt4.required = false;
 
     if (qType === "TrueFalse") {
-        single.style.display = "block";
-        correct.placeholder = "Enter 'True' or 'False'";
-        correct.required = true;
+        trueFalse.style.display = "block";
+        if (trueFalseSelect) trueFalseSelect.required = true;
+        // Don't require options for True/False questions
+        if (opt1) opt1.required = false;
+        if (opt2) opt2.required = false;
+        if (opt3) opt3.required = false;
+        if (opt4) opt4.required = false;
+        
+        // Clear and disable option fields for True/False questions
+        if (opt1) {
+            opt1.value = '';
+            opt1.disabled = true;
+        }
+        if (opt2) {
+            opt2.value = '';
+            opt2.disabled = true;
+        }
+        if (opt3) {
+            opt3.value = '';
+            opt3.disabled = true;
+        }
+        if (opt4) {
+            opt4.value = '';
+            opt4.disabled = true;
+        }
+        
+        // Update correct answer field with selected value if available
+        if (trueFalseSelect && trueFalseSelect.value) {
+            const correctAnswerField = document.getElementById('correctAnswer');
+            if (correctAnswerField) {
+                correctAnswerField.value = trueFalseSelect.value;
+            }
+        }
     } else {
         mcq.style.display = "block";
+        if (opt1) opt1.required = true;
+        if (opt2) opt2.required = true;
+        
+        // Enable option fields for non-True/False questions
+        if (opt1) opt1.disabled = false;
+        if (opt2) opt2.disabled = false;
+        if (opt3) opt3.disabled = false;
+        if (opt4) opt4.disabled = false;
+        
         if (qType === "MultipleSelect") {
             multiple.style.display = "block";
             updateCorrectOptionLabels();
@@ -1815,6 +1883,20 @@ function initializeMultipleSelectCheckboxes() {
     });
 }
 
+// Add event listener for True/False dropdown
+function initializeTrueFalseSelection() {
+    const trueFalseSelect = document.getElementById('trueFalseSelect');
+    if (trueFalseSelect) {
+        trueFalseSelect.addEventListener('change', function() {
+            // Update the hidden correct answer field with the selected value
+            const correctAnswerField = document.getElementById('correctAnswer');
+            if (correctAnswerField) {
+                correctAnswerField.value = this.value;
+            }
+        });
+    }
+}
+
 function updateCorrectOptionLabels() {
     for (let i = 1; i <= 4; i++) {
         const optInput = document.getElementById(`opt${i}`);
@@ -1845,7 +1927,21 @@ function updateCorrectAnswerField() {
 function resetForm() {
     document.getElementById('addQuestionForm').reset();
     document.getElementById('questionTypeSelect').value = 'MCQ';
-    toggleOptions();
+    toggleOptions(); // This will properly reset all containers
+    
+    // Reset True/False dropdown specifically
+    const trueFalseSelect = document.getElementById('trueFalseSelect');
+    if (trueFalseSelect) {
+        trueFalseSelect.selectedIndex = 0; // Reset to first option (empty)
+        // Also reset the correct answer field
+        const correctAnswerField = document.getElementById('correctAnswer');
+        if (correctAnswerField) {
+            correctAnswerField.value = '';
+        }
+    }
+    
+    // Reset image upload section
+    removeImageFile();
 }
 
 // Function to update scroll indicator visibility
@@ -1868,9 +1964,10 @@ function updateScrollIndicator() {
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    toggleOptions();
+    toggleOptions(); // Initialize the correct answer container visibility
     updateCorrectOptionLabels();
     syncCourseDropdowns();
+    initializeTrueFalseSelection(); // Initialize True/False dropdown event handler
     
     // Add form submission handler
     const addQuestionForm = document.getElementById('addQuestionForm');
@@ -1889,10 +1986,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             if (qType === "TrueFalse") {
-                const correctValue = document.getElementById('correctAnswer').value.trim().toLowerCase();
-                if (correctValue !== "true" && correctValue !== "false") {
-                    errorMsg = "Answer must be 'True' or 'False'.";
+                const trueFalseValue = document.getElementById('trueFalseSelect').value;
+                if (!trueFalseValue) {
+                    errorMsg = "Please select True or False for the correct answer.";
                     isValid = false;
+                }
+                // Set the correct answer field to the selected value from dropdown
+                const correctAnswerField = document.getElementById('correctAnswer');
+                if (correctAnswerField) {
+                    correctAnswerField.value = trueFalseValue;
                 }
             } else if (qType === "MultipleSelect") {
                 const selectedCount = document.querySelectorAll('.correct-checkbox:checked').length;
@@ -1901,19 +2003,40 @@ document.addEventListener('DOMContentLoaded', function() {
                     isValid = false;
                 }
             } else {
-                const opts = ['opt1', 'opt2', 'opt3', 'opt4']
-                    .map(id => document.getElementById(id).value.trim())
-                    .filter(Boolean);
-                if (new Set(opts).size !== opts.length) {
-                    errorMsg = "Options must be unique.";
-                    isValid = false;
-                } else {
+                // For MCQ questions (but not True/False, MultipleSelect, or Code)
+                if (qType === "MCQ") {
+                    // Get the options
+                    const opt1 = document.getElementById('opt1').value.trim();
+                    const opt2 = document.getElementById('opt2').value.trim();
+                    const opt3 = document.getElementById('opt3').value.trim();
+                    const opt4 = document.getElementById('opt4').value.trim();
+                    
+                    // Check if required options are filled
+                    if (!opt1 || !opt2) {
+                        errorMsg = "First and second options are required for this question type.";
+                        isValid = false;
+                    } else {
+                        const opts = [opt1, opt2, opt3, opt4].filter(Boolean);
+                        if (new Set(opts).size !== opts.length) {
+                            errorMsg = "Options must be unique.";
+                            isValid = false;
+                        } else {
+                            const correctValue = document.getElementById('correctAnswer').value.trim();
+                            if (!opts.includes(correctValue)) {
+                                errorMsg = "Correct answer must match one of the options.";
+                                isValid = false;
+                            }
+                        }
+                    }
+                } else if (qType === "Code") {
+                    // For Code questions, validate that correct answer is provided
                     const correctValue = document.getElementById('correctAnswer').value.trim();
-                    if (!opts.includes(correctValue)) {
-                        errorMsg = "Correct answer must match one of the options.";
+                    if (!correctValue) {
+                        errorMsg = "Expected output is required for Code questions.";
                         isValid = false;
                     }
                 }
+                // True/False validation is handled separately above
             }
             
             if (!isValid) {

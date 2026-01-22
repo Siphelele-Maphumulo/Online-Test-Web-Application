@@ -814,6 +814,15 @@
                             <small class="form-hint">Must match one of the options exactly</small>
                         </div>
 
+                        <div id="editTrueFalseContainer" style="display:none;">
+                            <select id="editTrueFalseSelect" name="correct" class="form-select">
+                                <option value="" disabled selected>Select the correct answer</option>
+                                <option value="True" <%= "True".equalsIgnoreCase(questionToEdit.getCorrect()) ? "selected" : "" %>>True</option>
+                                <option value="False" <%= "False".equalsIgnoreCase(questionToEdit.getCorrect()) ? "selected" : "" %>>False</option>
+                            </select>
+                            <small class="form-hint">Select the correct answer for True/False question</small>
+                        </div>
+
                         <div id="editMultipleCorrectContainer" style="display:none;">
                             <div class="options-grid">
                                 <div class="form-check">
@@ -908,19 +917,29 @@
         const mcq = document.getElementById("editMcqOptions");
         const single = document.getElementById("editCorrectAnswerContainer");
         const multiple = document.getElementById("editMultipleCorrectContainer");
+        const trueFalse = document.getElementById("editTrueFalseContainer");
         const correct = document.getElementById("editCorrectAnswer");
+        const trueFalseSelect = document.getElementById("editTrueFalseSelect");
         
         document.getElementById("questionTypeHidden").value = qType;
     
         mcq.style.display = "none";
         single.style.display = "none";
         multiple.style.display = "none";
+        trueFalse.style.display = "none";
+        
+        // Remove required attributes from all elements
         correct.required = false;
+        if (trueFalseSelect) trueFalseSelect.required = false;
     
         if (qType === "TrueFalse") {
-            single.style.display = "block";
-            correct.placeholder = "Enter 'True' or 'False";
-            correct.required = true;
+            trueFalse.style.display = "block";
+            if (trueFalseSelect) trueFalseSelect.required = true;
+            // Don't require options for True/False questions
+            document.getElementById('editOpt1').required = false;
+            document.getElementById('editOpt2').required = false;
+            document.getElementById('editOpt3').required = false;
+            document.getElementById('editOpt4').required = false;
         } else {
             mcq.style.display = "block";
             if (qType === "MultipleSelect") {
@@ -931,6 +950,11 @@
                 single.style.display = "block";
                 correct.placeholder = qType === 'Code' ? "Expected output" : "Correct Answer";
                 correct.required = true;
+                // Require options for other question types except True/False
+                document.getElementById('editOpt1').required = true;
+                document.getElementById('editOpt2').required = true;
+                document.getElementById('editOpt3').required = false;
+                document.getElementById('editOpt4').required = false;
             }
         }
     }
@@ -1034,9 +1058,9 @@ window.addEventListener('DOMContentLoaded', function() {
         }
 
         if (qType === "TrueFalse") {
-            const correctValue = document.getElementById('editCorrectAnswer').value.trim().toLowerCase();
-            if (correctValue !== "true" && correctValue !== "false") {
-                msg = "Answer must be 'True' or 'False'.";
+            const correctValue = document.getElementById('editTrueFalseSelect').value;
+            if (!correctValue) {
+                msg = "Please select the correct answer for True/False question.";
             }
         } else {
             const opt1 = document.getElementById('editOpt1').value.trim();

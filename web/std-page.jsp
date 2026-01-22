@@ -754,22 +754,26 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         const navItems = document.querySelectorAll('.nav-item');
         
         // Add active state based on current page
-        navItems.forEach(item => {
-            if (item.href && currentPath.includes(new URL(item.href).search)) {
-                item.classList.add('active');
-            }
-        });
+        if (navItems.length > 0) {
+            navItems.forEach(item => {
+                if (item.href && currentPath.includes(new URL(item.href).search)) {
+                    item.classList.add('active');
+                }
+            });
+        }
         
         // Toggle sidebar on mobile
-        let resizeTimer;
-        window.addEventListener('resize', function() {
-            clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(function() {
-                if (window.innerWidth > 768) {
-                    sidebar.classList.remove('active');
-                }
-            }, 250);
-        });
+        if (sidebar) {
+            let resizeTimer;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function() {
+                    if (window.innerWidth > 768) {
+                        sidebar.classList.remove('active');
+                    }
+                }, 250);
+            });
+        }
     });
 
     // Modal functionality
@@ -820,10 +824,14 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             
             // Hide loader after 2 seconds
             setTimeout(function() {
-                loader.classList.add('hidden');
-                setTimeout(function() {
-                    loader.style.display = 'none';
-                }, 300); // Wait for fade-out transition
+                if (loader && loader.classList) {
+                    loader.classList.add('hidden');
+                    setTimeout(function() {
+                        if (loader) {
+                            loader.style.display = 'none';
+                        }
+                    }, 300); // Wait for fade-out transition
+                }
             }, 2000); // 2 seconds
         }
     })();

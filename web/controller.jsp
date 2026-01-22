@@ -538,7 +538,12 @@ try {
                 // For non-multipart requests, get qid from regular parameter
                 qid = nz(request.getParameter("qid"), "");
             }
-            if (!qid.isEmpty()) pDAO.deleteQuestion(Integer.parseInt(qid));
+            if (!qid.isEmpty()) {
+                boolean success = pDAO.deleteQuestion(Integer.parseInt(qid));
+                if (!success) {
+                    session.setAttribute("error", "Failed to delete question ID: " + qid);
+                }
+            }
             session.setAttribute("message","Question deleted successfully");
             String courseName = nz(request.getParameter("coursename"), "");
             if (!courseName.isEmpty()) {
@@ -551,15 +556,28 @@ try {
             String courseName = nz(request.getParameter("coursename"), "");
             
             if (questionIds != null && questionIds.length > 0) {
+                int deletedCount = 0;
+                int errorCount = 0;
                 for (String qid : questionIds) {
                     try {
                         int id = Integer.parseInt(qid);
-                        pDAO.deleteQuestion(id);
+                        boolean success = pDAO.deleteQuestion(id);
+                        if (success) {
+                            deletedCount++;
+                        } else {
+                            errorCount++;
+                        }
                     } catch (NumberFormatException e) {
                         // Skip invalid IDs
+                        errorCount++;
                     }
                 }
-                session.setAttribute("message", questionIds.length + " question(s) deleted successfully!");
+                if (deletedCount > 0) {
+                    session.setAttribute("message", deletedCount + " question(s) deleted successfully!");
+                }
+                if (errorCount > 0) {
+                    session.setAttribute("error", errorCount + " question(s) failed to delete.");
+                }
             } else {
                 session.setAttribute("error", "No questions selected for deletion.");
             }

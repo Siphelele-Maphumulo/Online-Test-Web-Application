@@ -716,8 +716,10 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             <%
                     } else {
             %>
-                <!-- <button type="button" id="bulkDeleteBtn" class="btn btn-error">Delete Selected</button>
-                <br><br> -->
+                <button type="button" id="bulkDeleteBtn" class="btn btn-error">
+                    <i class="fas fa-trash"></i> Delete Selected
+                </button>
+                <br><br>
             <%
                         for (int i = 0; i < list.size(); i++) {
                             Questions question = (Questions) list.get(i);
@@ -986,7 +988,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 /* Floating delete button */
 .floating-delete-btn {
     position: fixed;
-    bottom: 07px;
+    bottom: 20px;
     right: 30px;
     z-index: 999;
     display: none;
@@ -1005,7 +1007,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 <!-- JavaScript for enhanced functionality -->
 <script>
     // Add animation to question cards
-    document.addEventListener('DOMContentLoaded', function() {
+    function initializePage() {
         const questionCards = document.querySelectorAll('.question-card');
         questionCards.forEach((card, index) => {
             card.style.animationDelay = `${index * 0.1}s`;
@@ -1036,6 +1038,8 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         floatingDeleteBtn.innerHTML = '<i class="fas fa-trash"></i> Delete Selected';
         floatingDeleteBtn.onclick = function() {
             const form = document.querySelector('form');
+            if (!form) return;
+            
             const selectedQuestions = form.querySelectorAll('input[name="questionIds"]:checked').length;
             
             if (selectedQuestions === 0) {
@@ -1046,12 +1050,18 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             document.getElementById('modalMessage').textContent = 
                 `Are you sure you want to delete the ${selectedQuestions} selected question(s)? This action cannot be undone.`;
             document.getElementById('confirmationModal').style.display = 'block';
+            
+            // Store reference to form and indicate it's a bulk delete
+            window.deleteForm = form;
+            window.isBulkDelete = true;
         };
         document.body.appendChild(floatingDeleteBtn);
         
         // Update floating delete button state based on selections
         function updateFloatingDeleteButton() {
             const form = document.querySelector('form');
+            if (!form) return;
+            
             const selectedQuestions = form.querySelectorAll('input[name="questionIds"]:checked').length;
             const floatingBtn = document.getElementById('floatingDeleteBtn');
             
@@ -1063,16 +1073,20 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         }
         
         // Add event listeners to all checkboxes
-        document.querySelectorAll('input[name="questionIds"]').forEach(checkbox => {
-            checkbox.addEventListener('change', updateFloatingDeleteButton);
-        });
+        setTimeout(function() {
+            document.querySelectorAll('input[name="questionIds"]').forEach(checkbox => {
+                checkbox.addEventListener('change', updateFloatingDeleteButton);
+            });
+            // Initial update
+            updateFloatingDeleteButton();
+        }, 100);
         
         // Add event listener to bulk delete button
         const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
         if (bulkDeleteBtn) {
             bulkDeleteBtn.addEventListener('click', function(e) {
                 e.preventDefault();
-                const form = this.closest('form');
+                const form = document.querySelector('form');
                 const selectedQuestions = form.querySelectorAll('input[name="questionIds"]:checked').length;
                 
                 if (selectedQuestions === 0) {
@@ -1083,18 +1097,34 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                 document.getElementById('modalMessage').textContent = 
                     `Are you sure you want to delete the ${selectedQuestions} selected question(s)? This action cannot be undone.`;
                 document.getElementById('confirmationModal').style.display = 'block';
+                
+                // Store reference to form and indicate it's a bulk delete
+                window.deleteForm = form;
+                window.isBulkDelete = true;
             });
         }
         
         // Add event listener to single delete buttons
-        document.querySelectorAll('.single-delete-btn').forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-                window.currentDeleteUrl = this.href;
-                showModal('Are you sure you want to delete this question? This action cannot be undone.');
+        setTimeout(function() {
+            document.querySelectorAll('.single-delete-btn').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    window.currentDeleteUrl = this.href;
+                    // Extract question ID from the URL for confirmation
+                    const urlParams = new URL(this.href).searchParams;
+                    const qid = urlParams.get('qid');
+                    showModal(`Are you sure you want to delete question ID ${qid}? This action cannot be undone.`);
+                });
             });
-        });
-    });
+        }, 100);
+    }
+    
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializePage);
+    } else {
+        initializePage();
+    }
     
     let modalTimer;
 
@@ -1111,13 +1141,65 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     
     function confirmAction() {
         clearTimeout(modalTimer);
+        
         // If we have a stored delete URL (single delete), redirect to it
-        if (window.currentDeleteUrl) {
+        if (window.currentDeleteUrl && !window.isBulkDelete) {
+            console.log('Redirecting to single delete URL:', window.currentDeleteUrl);
             window.location.href = window.currentDeleteUrl;
         } else {
-            // Otherwise, submit the form for bulk delete
-            document.querySelector('form').submit();
+            // Perform bulk delete
+            console.log('Performing bulk delete');
+            // Find the main form for question management
+            const form = document.querySelector('form[action="controller.jsp"][method="post"]');
+            if (form) {
+                const selectedCheckboxes = form.querySelectorAll('input[name="questionIds"]:checked');
+                console.log('Found form with', selectedCheckboxes.length, 'selected questions');
+                
+                if (selectedCheckboxes.length === 0) {
+                    alert('No questions selected to delete.');
+                    hideModal();
+                    return;
+                }
+                
+                // Ensure all required hidden inputs exist and are set correctly
+                let operationInput = form.querySelector('input[name="operation"]');
+                if (operationInput) {
+                    operationInput.value = 'bulk_delete';
+                } else {
+                    // Create operation input if it doesn't exist
+                    operationInput = document.createElement('input');
+                    operationInput.type = 'hidden';
+                    operationInput.name = 'operation';
+                    operationInput.value = 'bulk_delete';
+                    form.appendChild(operationInput);
+                }
+                
+                // Ensure page input exists
+                let pageInput = form.querySelector('input[name="page"]');
+                if (!pageInput) {
+                    pageInput = document.createElement('input');
+                    pageInput.type = 'hidden';
+                    pageInput.name = 'page';
+                    pageInput.value = 'questions';
+                    form.appendChild(pageInput);
+                }
+                
+                // Log form data for debugging
+                const formData = new FormData(form);
+                console.log('Form data:', [...formData.entries()]);
+                
+                form.submit();
+                console.log('Form submitted successfully');
+            } else {
+                console.error('No form found for submission');
+                alert('Error: Could not find form to submit');
+            }
         }
+        
+        // Reset flags and hide modal after action
+        window.currentDeleteUrl = null;
+        window.isBulkDelete = false;
+        hideModal();
     }
     
     // Close modal when clicking outside of it

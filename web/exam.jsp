@@ -494,6 +494,38 @@
         padding-bottom: var(--spacing-sm);
     }
     
+    /* Question Image Styles */
+    .question-image-container {
+        margin: var(--spacing-md) 0;
+        text-align: center;
+    }
+    
+    .question-image {
+        max-width: 100%;
+        max-height: 400px;
+        height: auto;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--medium-gray);
+        background: var(--white);
+        padding: var(--spacing-md);
+        object-fit: contain;
+    }
+    
+    /* Responsive adjustments for images */
+    @media (max-width: 768px) {
+        .question-image {
+            max-height: 300px;
+            padding: var(--spacing-sm);
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .question-image {
+            max-height: 250px;
+        }
+    }
+    
     /* Answers Section */
     .answers {
         margin-top: var(--spacing-md);
@@ -1769,7 +1801,8 @@
                         String qt = q.getQuestion().toLowerCase();
                         isMultiTwo = qt.contains("select two") || qt.contains("choose two") || 
                                     qt.contains("pick two") || qt.contains("multiple answers") || 
-                                    qt.contains("two options");
+                                    qt.contains("two options") || qt.contains("multiple select") ||
+                                    qt.contains("select multiple") || qt.contains("choose multiple");
                     } catch(Exception e) { isMultiTwo = false; }
 
                     String fullQuestion = q.getQuestion(), questionPart = "", codePart = "";
@@ -1801,6 +1834,9 @@
                     if(q.getOpt2() != null && !q.getOpt2().trim().isEmpty()) opts.add(q.getOpt2());
                     if(q.getOpt3() != null && !q.getOpt3().trim().isEmpty()) opts.add(q.getOpt3());
                     if(q.getOpt4() != null && !q.getOpt4().trim().isEmpty()) opts.add(q.getOpt4());
+                    
+                    // Randomize the options for the question
+                    java.util.Collections.shuffle(opts, new java.util.Random(System.currentTimeMillis()));
                 %>
                     <div class="question-card" data-qindex="<%= i %>">
                         <div class="question-header">
@@ -1809,6 +1845,14 @@
                                 <% if(!questionPart.isEmpty() && !questionPart.equals("What is the output/result of this code?")){ %>
                                     <p class="question-text"><%= questionPart %></p>
                                 <% } %>
+                                
+                                <!-- Question Image -->
+                                <% if(q.getImagePath() != null && !q.getImagePath().isEmpty()){ %>
+                                    <div class="question-image-container">
+                                        <img src="<%= q.getImagePath() %>" alt="Question Image" class="question-image" onerror="this.style.display='none';">
+                                    </div>
+                                <% } %>
+                                
                                 <% if(!codePart.isEmpty()){ %>
                                     <div class="code-question-indicator"><i class="fas fa-code"></i><strong>Code Analysis Question</strong></div>
                                     <div class="code-snippet">
@@ -1977,11 +2021,13 @@
                     }
                     
                     document.querySelectorAll('.form-check').forEach(function(c){
-                        c.classList.remove('selected');
+                        if (c && c.classList) {
+                            c.classList.remove('selected');
+                        }
                     });
                     document.querySelectorAll('.answer-input:checked').forEach(function(inp){
                         var fc = inp.closest('.form-check');
-                        if(fc) fc.classList.add('selected');
+                        if(fc && fc.classList) fc.classList.add('selected');
                     });
                     
                     updateProgress();
@@ -2113,9 +2159,11 @@
                         timerEl.textContent = fmt(minutes) + ':' + fmt(seconds);
                         
                         // Color coding
-                        timerEl.classList.remove('warning', 'critical', 'expired');
-                        if(time <= 300) timerEl.classList.add('warning');
-                        if(time <= 60) timerEl.classList.add('critical');
+                        if (timerEl.classList) {
+                            timerEl.classList.remove('warning', 'critical', 'expired');
+                            if(time <= 300) timerEl.classList.add('warning');
+                            if(time <= 60) timerEl.classList.add('critical');
+                        }
                     }
                     
                     updateTimerDisplay();
@@ -2129,8 +2177,12 @@
                         
                         if(time <= 0) {
                             clearInterval(timerInterval);
-                            timerEl.textContent = "00:00";
-                            timerEl.classList.add('expired');
+                            if (timerEl) {
+                                timerEl.textContent = "00:00";
+                                if (timerEl.classList) {
+                                    timerEl.classList.add('expired');
+                                }
+                            }
                             autoSubmitExam();
                             return;
                         }
@@ -2195,7 +2247,9 @@
                         var btn = document.getElementById('submitBtn');
                         if(btn) {
                             btn.disabled = true;
-                            btn.classList.add('loading');
+                            if (btn.classList) {
+                                btn.classList.add('loading');
+                            }
                             var btnText = btn.querySelector('.btn-text');
                             var btnLoading = btn.querySelector('.btn-loading');
                             if(btnText) btnText.style.display = 'none';
@@ -2284,13 +2338,17 @@
                     
                     if(floatBtn && modal) {
                         floatBtn.addEventListener('click', function() {
-                            modal.classList.add('active');
+                            if (modal && modal.classList) {
+                                modal.classList.add('active');
+                            }
                             updateProgress();
                         });
                         
                         closeModal.forEach(function(btn) {
                             btn.addEventListener('click', function() {
-                                modal.classList.remove('active');
+                                if (modal && modal.classList) {
+                                    modal.classList.remove('active');
+                                }
                             });
                         });
                         
@@ -2302,7 +2360,9 @@
                         
                         if(modalSubmitBtn) {
                             modalSubmitBtn.addEventListener('click', function() {
-                                modal.classList.remove('active');
+                                if (modal && modal.classList) {
+                                    modal.classList.remove('active');
+                                }
                                 submitExam();
                             });
                         }
@@ -3072,5 +3132,15 @@
                 inactiveModal.style.display = 'none';
             }
         }
+    });
+</script>   }
+        }
+    });
+</script>   }
+        }
+    });
+</script>
+    });
+</script>
     });
 </script>

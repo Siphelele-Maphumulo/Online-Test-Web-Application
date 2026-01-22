@@ -1084,6 +1084,38 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
         flex: 1;
         min-width: 0;
     }
+    
+    /* Question Image Styles */
+    .question-image-container {
+        margin: var(--spacing-md) 0;
+        text-align: center;
+    }
+    
+    .question-image {
+        max-width: 100%;
+        max-height: 400px;
+        height: auto;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--medium-gray);
+        background: var(--white);
+        padding: var(--spacing-md);
+        object-fit: contain;
+    }
+    
+    /* Responsive adjustments for images */
+    @media (max-width: 768px) {
+        .question-image {
+            max-height: 300px;
+            padding: var(--spacing-sm);
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .question-image {
+            max-height: 250px;
+        }
+    }
 
     .question-status {
         display: flex;
@@ -1411,8 +1443,10 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                 
                 // Calculate percentage
                 double percentage = 0;
+                String percentageColor = "var(--error)"; // Default to error color
                 if (examDetails.gettMarks() > 0) {
                     percentage = (double) examDetails.getObtMarks() / examDetails.gettMarks() * 100;
+                    percentageColor = (percentage >= 45.0) ? "var(--success)" : "var(--error)";
                 }
                 
                 // Determine status
@@ -1470,7 +1504,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                   </div>
                   <div style="width: 1px; height: 40px; background: var(--medium-gray);"></div>
                   <div style="text-align: center;">
-                    <div style="font-size: 2rem; font-weight: 800; color: var(--<%= percentage >= 45.0 ? "success" : "error" %>);">
+                    <div style="font-size: 2rem; font-weight: 800; color: <%= percentageColor %>;">
                       <%= String.format("%.1f", percentage) %>%
                     </div>
                     <div style="color: var(--dark-gray); font-weight: 600;">Percentage</div>
@@ -1531,6 +1565,24 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                   <% if(!questionPart.isEmpty() && !questionPart.equals("What is the output/result of this code?")){ %>
                     <p class="question-text"><%= questionPart %></p>
                   <% } %>
+                  
+                  <!-- Question Image -->
+                  <% 
+                    String imagePath = "";
+                    int questionId = a.getQuestionId();
+                    if (questionId > 0) {
+                        Questions questionObj = pDAO.getQuestionById(questionId);
+                        if (questionObj != null && questionObj.getImagePath() != null && !questionObj.getImagePath().isEmpty()) {
+                            imagePath = questionObj.getImagePath();
+                        }
+                    }
+                    if (!imagePath.isEmpty()) { 
+                  %>
+                    <div class="question-image-container">
+                        <img src="<%= imagePath %>" alt="Question Image" class="question-image" onerror="this.style.display='none';">
+                    </div>
+                  <% } %>
+                  
                   <% if(hasCode){ %>
                     <div class="code-question-indicator"><i class="fas fa-code"></i><strong>Code Analysis Question</strong></div>
                     <div class="code-snippet">
