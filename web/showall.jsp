@@ -1014,7 +1014,17 @@ if (csrfToken == null) {
 <!-- JavaScript for enhanced functionality -->
 <script>
     // Add animation to question cards
+    let pageInitialized = false;
     function initializePage() {
+        // Prevent multiple initializations
+        if (pageInitialized) {
+            console.log('Page already initialized, skipping...');
+            return;
+        }
+        
+        console.log('Starting page initialization...');
+        pageInitialized = true;
+        
         const questionCards = document.querySelectorAll('.question-card');
         questionCards.forEach((card, index) => {
             card.style.animationDelay = `${index * 0.1}s`;
@@ -1132,11 +1142,23 @@ if (csrfToken == null) {
     }
     
     // Initialize when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initializePage);
-    } else {
+    function initPage() {
+        console.log('Initializing page...');
+        // Reset initialization flag to allow re-initialization
+        pageInitialized = false;
         initializePage();
+        console.log('Page initialization complete');
     }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initPage);
+    } else {
+        initPage();
+    }
+    
+    // Also initialize after a short delay to catch any timing issues
+    setTimeout(initPage, 100);
+    setTimeout(initPage, 500);
     
     let modalTimer;
 
@@ -1193,7 +1215,7 @@ if (csrfToken == null) {
             const csrfInput = document.createElement('input');
             csrfInput.type = 'hidden';
             csrfInput.name = 'csrf_token';
-            csrfInput.value = '<%= csrfToken %>';
+            csrfInput.value = '<%= session.getAttribute("csrf_token") != null ? session.getAttribute("csrf_token") : "" %>';
             form.appendChild(csrfInput);
             
             document.body.appendChild(form);
@@ -1201,49 +1223,74 @@ if (csrfToken == null) {
         } else {
             // Perform bulk delete
             console.log('Performing bulk delete');
-            const form = document.querySelector('form[action="controller.jsp"][method="post"]');
-            if (form) {
-                const selectedCheckboxes = form.querySelectorAll('input[name="questionIds"]:checked');
-                console.log('Found form with', selectedCheckboxes.length, 'selected questions');
-                
-                if (selectedCheckboxes.length === 0) {
-                    alert('No questions selected to delete.');
-                    hideModal();
-                    return;
-                }
-                
-                // Set the operation to bulk_delete
-                let operationInput = form.querySelector('input[name="operation"]');
-                if (operationInput) {
-                    operationInput.value = 'bulk_delete';
-                } else {
-                    operationInput = document.createElement('input');
-                    operationInput.type = 'hidden';
-                    operationInput.name = 'operation';
-                    operationInput.value = 'bulk_delete';
-                    form.appendChild(operationInput);
-                }
-                
-                // Ensure page input exists
-                let pageInput = form.querySelector('input[name="page"]');
-                if (!pageInput) {
-                    pageInput = document.createElement('input');
-                    pageInput.type = 'hidden';
-                    pageInput.name = 'page';
-                    pageInput.value = 'questions';
-                    form.appendChild(pageInput);
-                }
-                
-                // Log form data for debugging
-                const formData = new FormData(form);
-                console.log('Form data:', [...formData.entries()]);
-                
-                form.submit();
-                console.log('Form submitted successfully');
-            } else {
-                console.error('No form found for submission');
-                alert('Error: Could not find form to submit');
+            
+            // Create a fresh form for each delete operation to avoid CSRF token issues
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'controller.jsp';
+            form.style.display = 'none';
+            
+            // Get selected question IDs
+            const mainForm = document.querySelector('form[action="controller.jsp"]');
+            if (!mainForm) {
+                console.error('Main form not found');
+                alert('Error: Could not find main form');
+                hideModal();
+                return;
             }
+            
+            const selectedCheckboxes = mainForm.querySelectorAll('input[name="questionIds"]:checked');
+            console.log('Found', selectedCheckboxes.length, 'selected questions');
+            
+            if (selectedCheckboxes.length === 0) {
+                alert('No questions selected to delete.');
+                hideModal();
+                return;
+            }
+            
+            // Add hidden inputs for the operation
+            const pageInput = document.createElement('input');
+            pageInput.type = 'hidden';
+            pageInput.name = 'page';
+            pageInput.value = 'questions';
+            form.appendChild(pageInput);
+            
+            const operationInput = document.createElement('input');
+            operationInput.type = 'hidden';
+            operationInput.name = 'operation';
+            operationInput.value = 'bulk_delete';
+            form.appendChild(operationInput);
+            
+            const coursenameInput = document.createElement('input');
+            coursenameInput.type = 'hidden';
+            coursenameInput.name = 'coursename';
+            coursenameInput.value = '<%= request.getParameter("coursename") %>';
+            form.appendChild(coursenameInput);
+            
+            // Add CSRF token
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = '<%= session.getAttribute("csrf_token") != null ? session.getAttribute("csrf_token") : "" %>';
+            form.appendChild(csrfInput);
+            
+            // Add selected question IDs
+            selectedCheckboxes.forEach(checkbox => {
+                const questionIdInput = document.createElement('input');
+                questionIdInput.type = 'hidden';
+                questionIdInput.name = 'questionIds';
+                questionIdInput.value = checkbox.value;
+                form.appendChild(questionIdInput);
+            });
+            
+            // Log form data for debugging
+            const formData = new FormData(form);
+            console.log('Form data:', [...formData.entries()]);
+            
+            // Append form to body and submit
+            document.body.appendChild(form);
+            form.submit();
+            console.log('Bulk delete form submitted successfully');
         }
         
         // Reset flags and hide modal after action
