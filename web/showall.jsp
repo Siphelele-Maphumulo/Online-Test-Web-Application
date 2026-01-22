@@ -689,7 +689,7 @@ session.setAttribute("csrf_token", csrfToken);
                     String courseName = request.getParameter("coursename");
             %>
             
-            <form action="controller.jsp" method="post">
+            <form id="bulkDeleteForm" action="controller.jsp" method="post">
                 <input type="hidden" name="page" value="questions">
                 <input type="hidden" name="operation" value="bulk_delete">
                 <input type="hidden" name="coursename" value="<%= courseName %>">
@@ -1052,7 +1052,7 @@ session.setAttribute("csrf_token", csrfToken);
         floatingDeleteBtn.className = 'btn btn-error floating-delete-btn';
         floatingDeleteBtn.innerHTML = '<i class="fas fa-trash"></i> Delete Selected';
         floatingDeleteBtn.onclick = function() {
-            const form = document.querySelector('form');
+            const form = document.getElementById('bulkDeleteForm');
             if (!form) return;
             
             const selectedQuestions = form.querySelectorAll('input[name="questionIds"]:checked').length;
@@ -1101,7 +1101,7 @@ session.setAttribute("csrf_token", csrfToken);
         if (bulkDeleteBtn) {
             bulkDeleteBtn.addEventListener('click', function(e) {
                 e.preventDefault();
-                const form = document.querySelector('form');
+                const form = document.getElementById('bulkDeleteForm');
                 const selectedQuestions = form.querySelectorAll('input[name="questionIds"]:checked').length;
                 
                 if (selectedQuestions === 0) {
@@ -1210,7 +1210,7 @@ session.setAttribute("csrf_token", csrfToken);
             form.appendChild(coursenameInput);
             
             // Get fresh CSRF token from the form on the page
-            const mainForm = document.querySelector('form[action="controller.jsp"]');
+            const mainForm = document.getElementById('bulkDeleteForm');
             const csrfToken = mainForm ? mainForm.querySelector('input[name="csrf_token"]').value : '';
             
             const csrfInput = document.createElement('input');
