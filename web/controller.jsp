@@ -555,11 +555,15 @@ try {
             }
             if (!qid.isEmpty()) {
                 boolean success = pDAO.deleteQuestion(Integer.parseInt(qid));
-                if (!success) {
+                if (success) {
+                    // REGENERATE CSRF TOKEN after successful deletion
+                    String newCsrfToken = java.util.UUID.randomUUID().toString();
+                    session.setAttribute("csrf_token", newCsrfToken);
+                    session.setAttribute("message","Question deleted successfully");
+                } else {
                     session.setAttribute("error", "Failed to delete question ID: " + qid);
                 }
             }
-            session.setAttribute("message","Question deleted successfully");
             String courseName = nz(request.getParameter("coursename"), "");
             if (!courseName.isEmpty()) {
                 response.sendRedirect("adm-page.jsp?coursename=" + courseName + "&pgprt=4");
@@ -613,6 +617,10 @@ try {
                     int deletedCount = pDAO.deleteQuestions(questionIdArray);
                     
                     if (deletedCount > 0) {
+                        // REGENERATE CSRF TOKEN after successful deletion
+                        String newCsrfToken = java.util.UUID.randomUUID().toString();
+                        session.setAttribute("csrf_token", newCsrfToken);
+                        
                         session.setAttribute("message", deletedCount + " question(s) deleted successfully!");
                     } else {
                         session.setAttribute("error", "Failed to delete selected questions.");

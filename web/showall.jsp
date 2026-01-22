@@ -5,12 +5,10 @@
 <%
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
-// Generate CSRF token if not already present
-String csrfToken = (String) session.getAttribute("csrf_token");
-if (csrfToken == null) {
-    csrfToken = java.util.UUID.randomUUID().toString();
-    session.setAttribute("csrf_token", csrfToken);
-}
+// Generate new CSRF token for each page load
+// This ensures fresh token for each request
+String csrfToken = java.util.UUID.randomUUID().toString();
+session.setAttribute("csrf_token", csrfToken);
 %>
 
 <style>
@@ -1211,11 +1209,14 @@ if (csrfToken == null) {
             coursenameInput.value = window.currentDeleteParams.coursename;
             form.appendChild(coursenameInput);
             
-            // Add CSRF token
+            // Get fresh CSRF token from the form on the page
+            const mainForm = document.querySelector('form[action="controller.jsp"]');
+            const csrfToken = mainForm ? mainForm.querySelector('input[name="csrf_token"]').value : '';
+            
             const csrfInput = document.createElement('input');
             csrfInput.type = 'hidden';
             csrfInput.name = 'csrf_token';
-            csrfInput.value = '<%= session.getAttribute("csrf_token") != null ? session.getAttribute("csrf_token") : "" %>';
+            csrfInput.value = csrfToken;
             form.appendChild(csrfInput);
             
             document.body.appendChild(form);
@@ -1267,11 +1268,14 @@ if (csrfToken == null) {
             coursenameInput.value = '<%= request.getParameter("coursename") %>';
             form.appendChild(coursenameInput);
             
-            // Add CSRF token
+            // Get the CSRF token from the main form
+            const csrfTokenInput = mainForm.querySelector('input[name="csrf_token"]');
+            const csrfToken = csrfTokenInput ? csrfTokenInput.value : '';
+            
             const csrfInput = document.createElement('input');
             csrfInput.type = 'hidden';
             csrfInput.name = 'csrf_token';
-            csrfInput.value = '<%= session.getAttribute("csrf_token") != null ? session.getAttribute("csrf_token") : "" %>';
+            csrfInput.value = csrfToken;
             form.appendChild(csrfInput);
             
             // Add selected question IDs
