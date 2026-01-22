@@ -9,7 +9,7 @@
         display: none;
         align-items: center;
         justify-content: center;
-        z-index: 1050;
+        z-index: 9999;
         animation: fadeIn 0.25s ease;
     }
 
@@ -52,10 +52,18 @@
         font-size: 24px;
         cursor: pointer;
         color: #555;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
     }
 
     .close-button:hover {
         color: #dc3545;
+        background: #f8f9fa;
+        border-radius: 50%;
     }
 
     .modal-body {
@@ -63,6 +71,7 @@
         line-height: 1.6;
         margin-bottom: 20px;
         color: #333;
+        min-height: 50px;
     }
 
     .modal-footer {
@@ -78,6 +87,8 @@
         font-size: 14px;
         border: none;
         cursor: pointer;
+        transition: all 0.2s ease;
+        min-width: 80px;
     }
 
     .btn-primary {
@@ -85,14 +96,29 @@
         color: #fff;
     }
 
+    .btn-primary:hover {
+        background: #1a3d6d;
+        transform: translateY(-1px);
+    }
+
     .btn-secondary {
         background: #6c757d;
         color: #fff;
     }
 
+    .btn-secondary:hover {
+        background: #5a6268;
+        transform: translateY(-1px);
+    }
+
     .btn-danger {
         background: #dc3545;
         color: #fff;
+    }
+
+    .btn-danger:hover {
+        background: #c82333;
+        transform: translateY(-1px);
     }
 
     /* ================= ANIMATIONS ================= */
@@ -105,6 +131,45 @@
         from { transform: translateY(-25px); opacity: 0; }
         to { transform: translateY(0); opacity: 1; }
     }
+
+    /* Progress bar for auto-close */
+    .modal-progress {
+        height: 4px;
+        background: #e0e0e0;
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 10px;
+        display: none;
+    }
+
+    .modal-progress-bar {
+        height: 100%;
+        background: #09294d;
+        width: 100%;
+        animation: progressShrink 5s linear forwards;
+    }
+    
+    /* Colored progress bars for different message types */
+    .modal-progress-bar.success {
+        background: #059669; /* Green for success */
+    }
+    
+    .modal-progress-bar.error {
+        background: #dc2626; /* Red for error */
+    }
+    
+    .modal-progress-bar.warning {
+        background: #d97706; /* Orange for warning */
+    }
+    
+    .modal-progress-bar.info {
+        background: #09294d; /* Blue for info/default */
+    }
+
+    @keyframes progressShrink {
+        from { width: 100%; }
+        to { width: 0%; }
+    }
 </style>
 
 <!-- ================= ALERT MODAL ================= -->
@@ -114,11 +179,14 @@
             <h3 class="modal-title" id="alertModalTitle">
                 <i class="fas fa-info-circle"></i> Alert
             </h3>
-            <button class="close-button" onclick="closeAlert()">&times;</button>
+            <button class="close-button" id="alertCloseBtn">&times;</button>
         </div>
         <div class="modal-body" id="alertModalMessage"></div>
+        <div class="modal-progress" id="alertModalProgress">
+            <div class="modal-progress-bar"></div>
+        </div>
         <div class="modal-footer">
-            <button class="btn btn-primary" onclick="closeAlert()">OK</button>
+            <button class="btn btn-primary" id="alertOkBtn">OK</button>
         </div>
     </div>
 </div>
@@ -130,49 +198,296 @@
             <h3 class="modal-title" id="confirmModalTitle">
                 <i class="fas fa-question-circle"></i> Confirmation
             </h3>
-            <button class="close-button" onclick="resolveConfirm(false)">&times;</button>
+            <button class="close-button" id="confirmCloseBtn">&times;</button>
         </div>
         <div class="modal-body" id="confirmModalMessage"></div>
         <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="resolveConfirm(false)">Cancel</button>
-            <button class="btn btn-danger" onclick="resolveConfirm(true)">Confirm</button>
+            <button class="btn btn-secondary" id="confirmCancelBtn">Cancel</button>
+            <button class="btn btn-danger" id="confirmConfirmBtn">Confirm</button>
         </div>
     </div>
 </div>
 
 <script>
-    // Initialize confirmResolver only if it doesn't exist
-    if (typeof window.confirmResolver === 'undefined') {
-        window.confirmResolver = null;
-    }
-    
-    /* ================= ALERT ================= */
-    function showAlert(message, title = 'Alert', icon = 'fa-info-circle') {
-        document.getElementById('alertModalTitle').innerHTML =
-            `<i class="fas ${icon}"></i> ${title}`;
-        document.getElementById('alertModalMessage').textContent = message;
-        document.getElementById('alertModal').style.display = 'flex';
-    }
-
-    function closeAlert() {
-        document.getElementById('alertModal').style.display = 'none';
-    }
-
-    /* ================= CONFIRM ================= */
-    function showConfirm(message, title = 'Confirmation') {
-        document.getElementById('confirmModalTitle').innerHTML =
-            `<i class="fas fa-question-circle"></i> ${title}`;
-        document.getElementById('confirmModalMessage').textContent = message;
-        document.getElementById('confirmModal').style.display = 'flex';
-
-        return new Promise((resolve) => {
-            window.confirmResolver = resolve;
+    // Global modal management object
+    (function() {
+        // Create global modal functions if they don't exist
+        if (typeof window.modalManager === 'undefined') {
+            window.modalManager = {
+                alertTimer: null,
+                confirmResolver: null,
+                isInitialized: false,
+                
+                // Alert modal functions
+                showAlert: function(message, title = 'Alert', icon = 'fa-info-circle', autoCloseSeconds = 5) {
+                    const alertModal = document.getElementById('alertModal');
+                    const alertTitle = document.getElementById('alertModalTitle');
+                    const alertMessage = document.getElementById('alertModalMessage');
+                    const progressBar = document.getElementById('alertModalProgress');
+                    
+                    if (!alertModal || !alertTitle || !alertMessage) {
+                        console.error('Alert modal elements not found');
+                        return;
+                    }
+                    
+                    // Clear any existing timer
+                    if (this.alertTimer) {
+                        clearTimeout(this.alertTimer);
+                        this.alertTimer = null;
+                    }
+                    
+                    // Hide progress bar initially
+                    if (progressBar) {
+                        progressBar.style.display = 'none';
+                    }
+                    
+                    // Set modal content
+                    alertTitle.innerHTML = `<i class="fas ${icon}"></i> ${title}`;
+                    alertMessage.textContent = message;
+                    
+                    // Show modal
+                    alertModal.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                    
+                    // Determine message type based on icon or title for progress bar coloring
+                    let messageType = 'info'; // default
+                    
+                    // Detect message type from icon
+                    if (icon.includes('check-circle') || icon.includes('check') || title.toLowerCase().includes('success')) {
+                        messageType = 'success';
+                    } else if (icon.includes('times-circle') || icon.includes('exclamation-circle') || icon.includes('ban') || title.toLowerCase().includes('error')) {
+                        messageType = 'error';
+                    } else if (icon.includes('exclamation-triangle') || icon.includes('exclamation-circle') || title.toLowerCase().includes('warning')) {
+                        messageType = 'warning';
+                    } else if (icon.includes('info-circle') || title.toLowerCase().includes('info') || title.toLowerCase().includes('notification')) {
+                        messageType = 'info';
+                    }
+                    
+                    // Start auto-close timer if specified
+                    if (autoCloseSeconds > 0) {
+                        // Show progress bar with appropriate color
+                        if (progressBar) {
+                            progressBar.style.display = 'block';
+                            const progressInner = progressBar.querySelector('.modal-progress-bar');
+                            if (progressInner) {
+                                // Remove any existing color classes
+                                progressInner.classList.remove('success', 'error', 'warning', 'info');
+                                // Add the appropriate color class
+                                progressInner.classList.add(messageType);
+                                progressInner.style.animation = `progressShrink ${autoCloseSeconds}s linear forwards`;
+                            }
+                        }
+                        
+                        this.alertTimer = setTimeout(() => {
+                            this.closeAlert();
+                        }, autoCloseSeconds * 1000);
+                    }
+                },
+                
+                closeAlert: function() {
+                    const alertModal = document.getElementById('alertModal');
+                    if (alertModal) {
+                        alertModal.style.display = 'none';
+                        document.body.style.overflow = '';
+                    }
+                    
+                    // Clear auto-close timer
+                    if (this.alertTimer) {
+                        clearTimeout(this.alertTimer);
+                        this.alertTimer = null;
+                    }
+                    
+                    // Hide progress bar
+                    const progressBar = document.getElementById('alertModalProgress');
+                    if (progressBar) {
+                        progressBar.style.display = 'none';
+                    }
+                },
+                
+                // Confirm modal functions
+                showConfirm: function(message, title = 'Confirmation') {
+                    const confirmModal = document.getElementById('confirmModal');
+                    const confirmTitle = document.getElementById('confirmModalTitle');
+                    const confirmMessage = document.getElementById('confirmModalMessage');
+                    
+                    if (!confirmModal || !confirmTitle || !confirmMessage) {
+                        console.error('Confirm modal elements not found');
+                        return Promise.resolve(false);
+                    }
+                    
+                    confirmTitle.innerHTML = `<i class="fas fa-question-circle"></i> ${title}`;
+                    confirmMessage.textContent = message;
+                    
+                    // Show modal
+                    confirmModal.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                    
+                    return new Promise((resolve) => {
+                        this.confirmResolver = resolve;
+                    });
+                },
+                
+                resolveConfirm: function(result) {
+                    const confirmModal = document.getElementById('confirmModal');
+                    if (confirmModal) {
+                        confirmModal.style.display = 'none';
+                        document.body.style.overflow = '';
+                    }
+                    
+                    if (this.confirmResolver) {
+                        this.confirmResolver(result);
+                        this.confirmResolver = null;
+                    }
+                },
+                
+                // Initialize event listeners
+                initialize: function() {
+                    if (this.isInitialized) return;
+                    
+                    // Alert modal event listeners
+                    const alertCloseBtn = document.getElementById('alertCloseBtn');
+                    const alertOkBtn = document.getElementById('alertOkBtn');
+                    const alertModal = document.getElementById('alertModal');
+                    
+                    if (alertCloseBtn) {
+                        alertCloseBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            this.closeAlert();
+                        });
+                    }
+                    
+                    if (alertOkBtn) {
+                        alertOkBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            this.closeAlert();
+                        });
+                    }
+                    
+                    if (alertModal) {
+                        alertModal.addEventListener('click', (e) => {
+                            if (e.target === alertModal) {
+                                this.closeAlert();
+                            }
+                        });
+                    }
+                    
+                    // Confirm modal event listeners
+                    const confirmCloseBtn = document.getElementById('confirmCloseBtn');
+                    const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+                    const confirmConfirmBtn = document.getElementById('confirmConfirmBtn');
+                    const confirmModal = document.getElementById('confirmModal');
+                    
+                    if (confirmCloseBtn) {
+                        confirmCloseBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            this.resolveConfirm(false);
+                        });
+                    }
+                    
+                    if (confirmCancelBtn) {
+                        confirmCancelBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            this.resolveConfirm(false);
+                        });
+                    }
+                    
+                    if (confirmConfirmBtn) {
+                        confirmConfirmBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            this.resolveConfirm(true);
+                        });
+                    }
+                    
+                    if (confirmModal) {
+                        confirmModal.addEventListener('click', (e) => {
+                            if (e.target === confirmModal) {
+                                this.resolveConfirm(false);
+                            }
+                        });
+                    }
+                    
+                    // Escape key handler
+                    document.addEventListener('keydown', (e) => {
+                        if (e.key === 'Escape') {
+                            if (alertModal && alertModal.style.display === 'flex') {
+                                this.closeAlert();
+                            }
+                            if (confirmModal && confirmModal.style.display === 'flex') {
+                                this.resolveConfirm(false);
+                            }
+                        }
+                    });
+                    
+                    this.isInitialized = true;
+                    console.log('Modal manager initialized');
+                }
+            };
+            
+            // Make functions globally available (for backward compatibility)
+            window.showAlert = function(...args) { return modalManager.showAlert(...args); };
+            window.closeAlert = function() { return modalManager.closeAlert(); };
+            window.showConfirm = function(...args) { return modalManager.showConfirm(...args); };
+            window.resolveConfirm = function(...args) { return modalManager.resolveConfirm(...args); };
+        }
+        
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                modalManager.initialize();
+                checkForServerMessages();
+            });
+        } else {
+            modalManager.initialize();
+            checkForServerMessages();
+        }
+        
+        // Check for server-side messages
+        function checkForServerMessages() {
+            // Check session messages
+            const sessionMessages = [];
+            
+            // Check for existing alert divs and convert them to modals
+            const alertElements = document.querySelectorAll('.alert');
+            alertElements.forEach(alertEl => {
+                if (alertEl.textContent && alertEl.textContent.trim() && !alertEl.hasAttribute('data-modal-processed')) {
+                    alertEl.setAttribute('data-modal-processed', 'true');
+                    
+                    // Extract message and icon
+                    let message = alertEl.textContent.trim();
+                    let icon = 'fa-info-circle';
+                    
+                    if (alertEl.innerHTML.includes('fa-check-circle')) {
+                        icon = 'fa-check-circle';
+                    } else if (alertEl.innerHTML.includes('fa-exclamation-triangle')) {
+                        icon = 'fa-exclamation-triangle';
+                    } else if (alertEl.innerHTML.includes('fa-times-circle')) {
+                        icon = 'fa-times-circle';
+                    } else if (alertEl.innerHTML.includes('fa-exclamation-circle')) {
+                        icon = 'fa-exclamation-circle';
+                    }
+                    
+                    // Hide original alert and show modal
+                    setTimeout(() => {
+                        alertEl.style.display = 'none';
+                        modalManager.showAlert(message, 'Notification', icon, 5);
+                    }, 300);
+                }
+            });
+            
+            // Check URL parameters for messages
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlMessage = urlParams.get('message');
+            if (urlMessage) {
+                setTimeout(() => {
+                    modalManager.showAlert(decodeURIComponent(urlMessage), 'Notification', 'fa-info-circle', 5);
+                }, 500);
+            }
+        }
+        
+        // Auto-show any existing server messages after page load
+        window.addEventListener('load', () => {
+            setTimeout(checkForServerMessages, 100);
         });
-    }
-
-    function resolveConfirm(result) {
-        document.getElementById('confirmModal').style.display = 'none';
-        if (window.confirmResolver) window.confirmResolver(result);
-        window.confirmResolver = null;
-    }
+        
+    })();
 </script>

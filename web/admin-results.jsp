@@ -1261,7 +1261,7 @@ public String escapeHtml(String input) {
                 }
 
                 // Create message using string concatenation
-                const message = '<div style="text-align: left; max-width: 500px;">' +
+                const message = '<div style="text-align: center; max-width: 500px;">' +
                                '<h4 style="color: #dc3545; margin-bottom: 15px;">' +
                                '<i class="fas fa-exclamation-triangle"></i> Delete Exam Result' +
                                '</h4>' +
@@ -1278,14 +1278,14 @@ public String escapeHtml(String input) {
                                '<div>' + courseName + '</div>' +
                                '<div><strong>Date:</strong></div>' +
                                '<div>' + date + '</div>' +
-                               '<div><strong>Marks:</strong></div>' +
-                               '<div>' + marks + '</div>' +
-                               '<div><strong>Percentage:</strong></div>' +
-                               '<div>' + percentage + '</div>' +
-                               '<div><strong>Status:</strong></div>' +
-                               '<div>' + status + '</div>' +
-                               '<div><strong>Exam ID:</strong></div>' +
-                               '<div>' + examId + '</div>' +
+                            //    '<div><strong>Marks:</strong></div>' +
+                            //    '<div>' + marks + '</div>' +
+                            //    '<div><strong>Percentage:</strong></div>' +
+                            //    '<div>' + percentage + '</div>' +
+                            //    '<div><strong>Status:</strong></div>' +
+                            //    '<div>' + status + '</div>' +
+                            //    '<div><strong>Exam ID:</strong></div>' +
+                            //    '<div>' + examId + '</div>' +
                                '</div>' +
                                '</div>' +
                                '<p style="color: #dc3545; font-weight: bold;">' +
@@ -1293,7 +1293,7 @@ public String escapeHtml(String input) {
                                '</p>' +
                                '</div>';
 
-                showConfirmModal(message, 'Delete Exam Result', function() {
+                showConfirmModal(message, '', function() {
                     // Callback function when confirmed
                     performSingleDelete(examId);
                 });

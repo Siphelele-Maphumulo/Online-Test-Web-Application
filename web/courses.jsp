@@ -885,6 +885,8 @@
         const modal = document.getElementById('updateConfirmationModal');
         if (modal) {
             modal.style.display = 'none';
+            // Restore body scroll
+            document.body.style.overflow = '';
         }
     }
 
@@ -892,6 +894,8 @@
         const modal = document.getElementById('deleteConfirmationModal');
         if (modal) {
             modal.style.display = 'none';
+            // Restore body scroll
+            document.body.style.overflow = '';
         }
     }
 
@@ -903,12 +907,88 @@
 
         const decodedCourseName = decodeURIComponent(courseName);
 
-        modalBody.innerHTML =
-            '<p>Are you sure you want to delete the course <strong>"' + decodedCourseName + '"</strong>?</p>' +
-            '<p class="alert alert-warning" style="margin-top: 16px;">' +
-                '<i class="fas fa-exclamation-triangle"></i>' +
-                'This will permanently delete the course, all associated questions, and all exam records. <strong>This action cannot be undone.</strong>' +
-            '</p>';
+        // Create centered, professional content
+        const container = document.createElement('div');
+        container.style.cssText = `
+            text-align: center;
+            padding: 20px;
+        `;
+        
+        // Course name display
+        const courseDisplay = document.createElement('div');
+        courseDisplay.style.cssText = `
+            background: linear-gradient(135deg, var(--light-gray), #eef2f7);
+            border: 2px solid var(--primary-blue);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 20px 0;
+            box-shadow: 0 4px 12px rgba(9, 41, 77, 0.15);
+        `;
+        
+        const courseLabel = document.createElement('div');
+        courseLabel.style.cssText = `
+            font-size: 16px;
+            color: var(--dark-gray);
+            margin-bottom: 12px;
+            font-weight: 500;
+        `;
+        courseLabel.textContent = 'Course to be deleted:';
+        
+        const courseTitle = document.createElement('div');
+        courseTitle.style.cssText = `
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary-blue);
+            margin: 8px 0;
+        `;
+        courseTitle.textContent = decodedCourseName;
+        
+        courseDisplay.appendChild(courseLabel);
+        courseDisplay.appendChild(courseTitle);
+        
+        // Warning message
+        const warningBox = document.createElement('div');
+        warningBox.className = 'alert alert-warning';
+        warningBox.style.cssText = `
+            background: linear-gradient(135deg, #fff3cd, #ffecb3);
+            border: 1px solid #ffd54f;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 24px 0;
+            text-align: left;
+            box-shadow: 0 2px 8px rgba(217, 119, 6, 0.1);
+        `;
+        
+        warningBox.innerHTML = `
+            <div style="display: flex; align-items: flex-start; gap: 16px;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 24px; color: #d97706; flex-shrink: 0; margin-top: 3px;"></i>
+                <div>
+                    <h3 style="margin: 0 0 12px 0; color: #92400e; font-size: 18px; font-weight: 600;">Permanent Action Warning</h3>
+                    <p style="margin: 0; color: #92400e; line-height: 1.6; font-size: 15px;">
+                    This will permanently delete the course 
+                    with all associated questions, and all exam records.
+                    <strong style="color: #b91c1c;">This action cannot be undone.</strong>
+                    </p>
+                </div>
+            </div>
+        `;
+        
+        // Confirmation prompt
+        const confirmPrompt = document.createElement('div');
+        confirmPrompt.style.cssText = `
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin: 24px 0 8px 0;
+        `;
+        confirmPrompt.textContent = 'Are you absolutely sure you want to proceed?';
+        
+        container.appendChild(courseDisplay);
+        container.appendChild(warningBox);
+        container.appendChild(confirmPrompt);
+        
+        modalBody.innerHTML = '';
+        modalBody.appendChild(container);
 
         confirmBtn.onclick = function() {
             const form = document.createElement('form');
@@ -943,7 +1023,13 @@
             form.submit();
         };
 
-        modal.style.display = 'block';
+        // Show modal with proper centering
+        modal.style.display = 'flex';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+        
+        // Prevent body scroll
+        document.body.style.overflow = 'hidden';
     }
 
     // Initialize when DOM is loaded
@@ -999,13 +1085,65 @@
                     const modal = document.getElementById('updateConfirmationModal');
                     const modalBody = document.getElementById('updateModalBody');
 
-                    modalBody.innerHTML =
-                        '<p>You are about to rename the course from <strong>"' + originalCourseNameFromInput + '"</strong> to <strong>"' + newCourseName + '"</strong>.</p>' +
-                        '<p class="alert alert-warning" style="margin-top: 16px;">' +
-                            '<i class="fas fa-exclamation-triangle"></i>' +
-                            'This will update all associated questions and exam records. This action cannot be undone.' +
-                        '</p>' +
-                        '<p>Are you sure you want to proceed?</p>';
+                // Create perfectly centered content with DOM methods
+                const container = document.createElement('div');
+                container.style.cssText = `
+                    text-align: center;
+                    padding: 24px;
+                `;
+                
+                // Course rename information
+                const renameInfo = document.createElement('div');
+                renameInfo.style.cssText = `
+                    margin-bottom: 20px;
+                    font-size: 16px;
+                    color: var(--text-dark);
+                `;
+                renameInfo.innerHTML = `
+                    You are about to rename the course from 
+                    <strong style="color: var(--primary-blue);">"${originalCourseNameFromInput}"</strong> 
+                    to <strong style="color: var(--primary-blue);">"${newCourseName}"</strong>.
+                `;
+                
+                // Warning message
+                const warningBox = document.createElement('div');
+                warningBox.className = 'alert alert-warning';
+                warningBox.style.cssText = `
+                    background: linear-gradient(135deg, #fff3cd, #ffecb3);
+                    border: 1px solid #ffd54f;
+                    border-radius: 12px;
+                    padding: 16px;
+                    margin: 20px 0;
+                    display: inline-block;
+                    text-align: left;
+                    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.1);
+                `;
+                warningBox.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 20px; color: #d97706;"></i>
+                        <span style="color: #92400e; font-size: 14px;">
+                            This will update all associated questions and exam records. 
+                            <strong>This action cannot be undone.</strong>
+                        </span>
+                    </div>
+                `;
+                
+                // Confirmation prompt
+                const confirmPrompt = document.createElement('div');
+                confirmPrompt.style.cssText = `
+                    font-size: 17px;
+                    font-weight: 600;
+                    color: var(--text-dark);
+                    margin: 20px 0 8px 0;
+                `;
+                confirmPrompt.textContent = 'Are you sure you want to proceed?';
+                
+                container.appendChild(renameInfo);
+                container.appendChild(warningBox);
+                container.appendChild(confirmPrompt);
+                
+                modalBody.innerHTML = '';
+                modalBody.appendChild(container);
 
                     modal.style.display = 'flex';
                 } else {

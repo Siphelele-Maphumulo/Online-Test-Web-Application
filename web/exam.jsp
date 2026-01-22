@@ -2976,7 +2976,7 @@
         modalMessage.innerHTML = `Are you sure you want to delete the exam result for:<br><br>
                                  <strong>Student:</strong> ${cleanStudentName}<br>
                                  <strong>Course:</strong> ${cleanCourseName}<br>
-                                 <strong>Exam ID:</strong> ${examId}<br><br>
+                                // <strong>Exam ID:</strong> ${examId}<br><br>
                                  <span style="color: #dc3545; font-weight: bold;">
                                  <i class="fas fa-exclamation-triangle"></i> This action cannot be undone!</span>`;
         

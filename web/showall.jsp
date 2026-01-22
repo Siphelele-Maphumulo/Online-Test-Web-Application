@@ -72,7 +72,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     
     /* Sidebar Styles - Same as profile page */
     .sidebar {
-        width: 250px;
+        width: 200px;
         background: linear-gradient(180deg, var(--primary-blue), var(--secondary-blue));
         color: var(--white);
         flex-shrink: 0;
@@ -641,6 +641,11 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                 <i class="fas fa-users"></i>
                 <h2>Accounts</h2>
             </a>
+
+            <a href="adm-page.jsp?pgprt=7" class="nav-item">
+               <i class="fas fa-users"></i>
+               <h2>Registers</h2>
+           </a>
         </nav>
     </aside>
     
@@ -797,8 +802,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         </a>
 
                         <a href="controller.jsp?page=questions&operation=del&qid=<%= question.getQuestionId() %>&coursename=<%= courseName %>"
-                           class="btn btn-error" style="font-size: 13px; padding: 8px 16px;"
-                           onclick="return confirm('Are you sure you want to delete this question? This action cannot be undone.');">
+                           class="btn btn-error single-delete-btn" style="font-size: 13px; padding: 8px 16px;">
                             <i class="fas fa-trash"></i>
                             Delete
                         </a>
@@ -1086,28 +1090,27 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         document.querySelectorAll('.single-delete-btn').forEach(button => {
             button.addEventListener('click', function(e) {
                 e.preventDefault();
-                const questionId = this.href.split('qid=')[1].split('&')[0];
-                
-                document.getElementById('modalMessage').textContent = 
-                    'Are you sure you want to delete this question? This action cannot be undone.';
-                document.getElementById('confirmationModal').style.display = 'block';
-                
-                // Store the URL for later use
                 window.currentDeleteUrl = this.href;
+                showModal('Are you sure you want to delete this question? This action cannot be undone.');
             });
         });
     });
     
+    let modalTimer;
+
     function showModal(message) {
         document.getElementById('modalMessage').textContent = message;
         document.getElementById('confirmationModal').style.display = 'block';
+        modalTimer = setTimeout(hideModal, 5000);
     }
     
     function hideModal() {
+        clearTimeout(modalTimer);
         document.getElementById('confirmationModal').style.display = 'none';
     }
     
     function confirmAction() {
+        clearTimeout(modalTimer);
         // If we have a stored delete URL (single delete), redirect to it
         if (window.currentDeleteUrl) {
             window.location.href = window.currentDeleteUrl;

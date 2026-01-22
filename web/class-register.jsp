@@ -1293,6 +1293,24 @@
         }
     }
     
+    /* Floating Delete Button */
+    .floating-delete-btn {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        display: none; /* Initially hidden */
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .floating-delete-btn.visible {
+        display: block;
+        opacity: 1;
+    }
+    
     /* Loading animation styles */
     .btn-delete-loading {
         position: relative;
@@ -1496,9 +1514,9 @@
                 
                 <div class="bulk-controls" id="bulkControls">
                     <div class="selected-count" id="selectedCount">0 selected</div>
-                    <button type="button" class="btn btn-danger" onclick="showDeleteConfirmation()">
+<!--                    <button type="button" class="btn btn-danger" onclick="showDeleteConfirmation()">
                         <i class="fas fa-trash"></i> Delete Selected
-                    </button>
+                    </button>-->
                     <button type="button" class="btn btn-outline" onclick="clearSelection()">
                         <i class="fas fa-times"></i> Clear
                     </button>
@@ -1651,6 +1669,13 @@
   </div>
 </div>
 
+<!-- Floating Delete Button -->
+<div id="floatingDeleteBtn" class="floating-delete-btn">
+    <button type="button" id="deleteSelectedBtn" class="btn btn-danger" style="padding: 15px 30px; font-size: 16px;">
+        <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCountBadge">0</span>)
+    </button>
+</div>
+
 <script>
     // Global variables
     let deleteForm = null;
@@ -1698,13 +1723,25 @@
         const bulkControls = document.getElementById('bulkControls');
         const selectAllCheckbox = document.getElementById('selectAll');
         const selectedCountElement = document.getElementById('selectedCount');
+        const floatingBtn = document.getElementById('floatingDeleteBtn');
+        const selectedCountBadge = document.getElementById('selectedCountBadge');
         
         selectedCountElement.textContent = selectedCount + ' selected';
         
+        if (selectedCountBadge) {
+            selectedCountBadge.textContent = selectedCount;
+        }
+        
         if (selectedCount > 0) {
             bulkControls.style.display = 'flex';
+            if (floatingBtn) {
+                floatingBtn.classList.add('visible');
+            }
         } else {
             bulkControls.style.display = 'none';
+            if (floatingBtn) {
+                floatingBtn.classList.remove('visible');
+            }
         }
         
         // Update select all checkbox state
@@ -1802,6 +1839,25 @@
         document.getElementById('alertModalMessage').textContent = message;
         showModal('alertModal');
     }
+
+    // Add event listener for floating delete button
+    document.addEventListener('DOMContentLoaded', function() {
+        const floatingDeleteBtn = document.getElementById('deleteSelectedBtn');
+        if (floatingDeleteBtn) {
+            floatingDeleteBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const selectedCheckboxes = document.querySelectorAll('.record-checkbox:checked');
+                
+                if (selectedCheckboxes.length === 0) {
+                    showAlert('Please select at least one record to delete.');
+                    return;
+                }
+                
+                showDeleteConfirmation();
+            });
+        }
+    });
 
     function performDelete() {
         // Show loading modal

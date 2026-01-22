@@ -944,7 +944,7 @@ if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
         </div>
         
         <!-- Upload PDF to Generate Questions Panel -->
-        <div class="question-card" id="uploadPdfPanel">
+<!--        <div class="question-card" id="uploadPdfPanel">
             <div class="card-header">
                 <span><i class="fas fa-file-pdf"></i> Upload Exam Paper (PDF)</span>
                 <i class="fas fa-upload" style="opacity: 0.8;"></i>
@@ -1013,7 +1013,7 @@ if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
                         <small class="form-hint">Upload a PDF file to extract questions automatically</small>
                     </div>
                     
-                    <!-- Progress and Status Elements for PDF Upload -->
+                     Progress and Status Elements for PDF Upload 
                     <div id="uploadProgress" class="progress" style="display: none; margin: 15px 0;">
                         <div class="progress-bar" style="width: 0%;">0%</div>
                     </div>
@@ -1031,7 +1031,7 @@ if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
                     </div>
                 </form>
             </div>
-        </div>
+        </div>-->
         
         <!-- Add Question Panel -->
         <div class="question-card" id="addQuestionPanel">

@@ -691,11 +691,20 @@
     }
     
     .floating-delete-btn {
-        position: sticky;
-        bottom: 20px;
+        position: fixed;
+        bottom: 30px;
         left: 50%;
         transform: translateX(-50%);
-        z-index: 999;
+        z-index: 9999;
+        display: none; /* Initially hidden */
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .floating-delete-btn.visible {
+        display: block;
+        opacity: 1;
     }
     
         /* Add to your existing CSS */
@@ -874,12 +883,7 @@
                 <input type="hidden" name="operation" value="bulk_delete">
                 <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
 
-                <!-- Move the delete button inside the form but before table -->
-                <div style="margin-bottom: 15px; margin-top: 15px; text-align: center;">
-                    <button type="button" id="deleteSelectedBtn" class="btn btn-danger">
-                        <i class="fas fa-trash"></i> Delete Selected
-                    </button>
-                </div>
+
 
                 <table class="results-table">
                     <thead>
@@ -1008,6 +1012,13 @@
   </div>
 </div>
 
+<!-- Floating Delete Button -->
+<div id="floatingDeleteBtn" class="floating-delete-btn">
+    <button type="button" id="deleteSelectedBtn" class="btn btn-danger" style="padding: 15px 30px; font-size: 16px;">
+        <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCountBadge">0</span>)
+    </button>
+</div>
+
 <script>
     // Wait for DOM to be fully loaded
     document.addEventListener('DOMContentLoaded', function() {
@@ -1031,7 +1042,22 @@
 
         function updateDeleteButtonState() {
             const selectedCount = document.querySelectorAll('input[name="registerIds"]:checked').length;
+            const floatingBtn = document.getElementById('floatingDeleteBtn');
             const deleteBtn = document.getElementById('deleteSelectedBtn');
+            const selectedCountBadge = document.getElementById('selectedCountBadge');
+            
+            if (selectedCountBadge) {
+                selectedCountBadge.textContent = selectedCount;
+            }
+            
+            if (floatingBtn) {
+                if (selectedCount > 0) {
+                    floatingBtn.classList.add('visible');
+                } else {
+                    floatingBtn.classList.remove('visible');
+                }
+            }
+            
             if (deleteBtn) {
                 deleteBtn.disabled = selectedCount === 0;
                 deleteBtn.title = selectedCount > 0 ? 

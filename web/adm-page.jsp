@@ -860,17 +860,29 @@
         if (sidebarToggle && sidebar) {
             sidebarToggle.addEventListener('click', function(e) {
                 e.stopPropagation();
-                sidebar.classList.toggle('active');
-                sidebarOverlay.classList.toggle('active');
-                document.body.style.overflow = sidebar.classList.contains('active') ? 'hidden' : '';
+                if (sidebar.classList) {
+                    sidebar.classList.toggle('active');
+                }
+                if (sidebarOverlay && sidebarOverlay.classList) {
+                    sidebarOverlay.classList.toggle('active');
+                }
+                if (sidebar.classList && sidebar.classList.contains('active')) {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = '';
+                }
             });
         }
         
         // Close sidebar when clicking overlay
         if (sidebarOverlay) {
             sidebarOverlay.addEventListener('click', function() {
-                sidebar.classList.remove('active');
-                this.classList.remove('active');
+                if (sidebar && sidebar.classList) {
+                    sidebar.classList.remove('active');
+                }
+                if (this && this.classList) {
+                    this.classList.remove('active');
+                }
                 document.body.style.overflow = '';
             });
         }
@@ -878,10 +890,14 @@
         // Close sidebar when clicking outside on mobile
         document.addEventListener('click', function(e) {
             if (sidebar && sidebarToggle && sidebarOverlay) {
-                if (window.innerWidth <= 768 && sidebar.classList.contains('active')) {
+                if (window.innerWidth <= 768 && sidebar && sidebar.classList && sidebar.classList.contains('active')) {
                     if (!sidebar.contains(e.target) && e.target !== sidebarToggle) {
-                        sidebar.classList.remove('active');
-                        sidebarOverlay.classList.remove('active');
+                        if (sidebar && sidebar.classList) {
+                            sidebar.classList.remove('active');
+                        }
+                        if (sidebarOverlay && sidebarOverlay.classList) {
+                            sidebarOverlay.classList.remove('active');
+                        }
                         document.body.style.overflow = '';
                     }
                 }
@@ -894,8 +910,12 @@
             navItems.forEach(item => {
                 item.addEventListener('click', function() {
                     if (window.innerWidth <= 768) {
-                        sidebar.classList.remove('active');
-                        sidebarOverlay.classList.remove('active');
+                        if (sidebar && sidebar.classList) {
+                            sidebar.classList.remove('active');
+                        }
+                        if (sidebarOverlay && sidebarOverlay.classList) {
+                            sidebarOverlay.classList.remove('active');
+                        }
                         document.body.style.overflow = '';
                     }
                 });
@@ -904,11 +924,15 @@
         
         // Add active state based on current page
         const currentPath = window.location.pathname + window.location.search;
-        navItems.forEach(item => {
-            if (item.href && currentPath.includes(new URL(item.href).search)) {
-                item.classList.add('active');
-            }
-        });
+        if (navItems && navItems.length > 0) {
+            navItems.forEach(item => {
+                if (item.href && currentPath.includes(new URL(item.href).search)) {
+                    if (item.classList) {
+                        item.classList.add('active');
+                    }
+                }
+            });
+        }
         
         // Handle window resize
         let resizeTimer;
@@ -916,8 +940,12 @@
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(function() {
                 if (window.innerWidth > 768) {
-                    sidebar.classList.remove('active');
-                    sidebarOverlay.classList.remove('active');
+                    if (sidebar && sidebar.classList) {
+                        sidebar.classList.remove('active');
+                    }
+                    if (sidebarOverlay && sidebarOverlay.classList) {
+                        sidebarOverlay.classList.remove('active');
+                    }
                     document.body.style.overflow = '';
                 }
             }, 250);
@@ -932,17 +960,23 @@
                 const currentScroll = window.pageYOffset;
                 
                 if (currentScroll <= 0) {
-                    header.style.boxShadow = '0 2px 12px rgba(0, 0, 0, 0.15)';
+                    if (header.style) {
+                        header.style.boxShadow = '0 2px 12px rgba(0, 0, 0, 0.15)';
+                    }
                     return;
                 }
                 
                 if (currentScroll > lastScroll && currentScroll > 50) {
                     // Scrolling down
-                    header.style.transform = 'translateY(-100%)';
+                    if (header.style) {
+                        header.style.transform = 'translateY(-100%)';
+                    }
                 } else {
                     // Scrolling up
-                    header.style.transform = 'translateY(0)';
-                    header.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.2)';
+                    if (header.style) {
+                        header.style.transform = 'translateY(0)';
+                        header.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.2)';
+                    }
                 }
                 
                 lastScroll = currentScroll;
@@ -958,13 +992,13 @@
         let actionTarget = null;
 
         function showModal(message, target) {
-            modalMessage.textContent = message;
+            if (modalMessage) modalMessage.textContent = message;
             actionTarget = target;
-            modal.style.display = 'flex';
+            if (modal) modal.style.display = 'flex';
         }
 
         function hideModal() {
-            modal.style.display = 'none';
+            if (modal) modal.style.display = 'none';
             actionTarget = null;
         }
 
@@ -982,36 +1016,44 @@
             bulkDeleteBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 const form = this.closest('form');
-                const selectedQuestions = form.querySelectorAll('input[name="questionIds"]:checked').length;
-                if (selectedQuestions === 0) {
-                    alert('Please select at least one question to delete.');
-                    return;
+                if (form) {
+                    const selectedQuestions = form.querySelectorAll('input[name="questionIds"]:checked').length;
+                    if (selectedQuestions === 0) {
+                        alert('Please select at least one question to delete.');
+                        return;
+                    }
+                    showModal(`Are you sure you want to delete the ${selectedQuestions} selected question(s)?`, form);
                 }
-                showModal(`Are you sure you want to delete the ${selectedQuestions} selected question(s)?`, form);
             });
         }
         
         // Modal controls
-        closeModal.addEventListener('click', hideModal);
-        cancelButton.addEventListener('click', hideModal);
+        if (closeModal) {
+            closeModal.addEventListener('click', hideModal);
+        }
+        if (cancelButton) {
+            cancelButton.addEventListener('click', hideModal);
+        }
         window.addEventListener('click', function(e) {
-            if (e.target === modal) {
+            if (modal && e.target === modal) {
                 hideModal();
             }
         });
 
-        confirmButton.addEventListener('click', function() {
-            if (actionTarget) {
-                if (typeof actionTarget === 'string') {
-                    // It's a URL for single delete
-                    window.location.href = actionTarget;
-                } else {
-                    // It's a form for bulk delete
-                    actionTarget.submit();
+        if (confirmButton) {
+            confirmButton.addEventListener('click', function() {
+                if (actionTarget) {
+                    if (typeof actionTarget === 'string') {
+                        // It's a URL for single delete
+                        window.location.href = actionTarget;
+                    } else {
+                        // It's a form for bulk delete
+                        actionTarget.submit();
+                    }
                 }
-            }
-            hideModal();
-        });
+                hideModal();
+            });
+        }
     });
 
     // Page Loader - Show for exactly 2 seconds
@@ -1023,10 +1065,14 @@
             
             // Hide loader after 2 seconds
             setTimeout(function() {
-                loader.classList.add('hidden');
-                setTimeout(function() {
-                    loader.style.display = 'none';
-                }, 300); // Wait for fade-out transition
+                if (loader && loader.classList) {
+                    loader.classList.add('hidden');
+                    setTimeout(function() {
+                        if (loader) {
+                            loader.style.display = 'none';
+                        }
+                    }, 300); // Wait for fade-out transition
+                }
             }, 2000); // 2 seconds
         }
     })();

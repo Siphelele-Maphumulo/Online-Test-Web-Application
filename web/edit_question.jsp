@@ -138,7 +138,7 @@
     
     /* Sidebar Styles - Same as profile page */
     .sidebar {
-        width: 250px;
+        width: 200px;
         background: linear-gradient(180deg, var(--primary-blue), var(--secondary-blue));
         color: var(--white);
         flex-shrink: 0;
@@ -687,11 +687,31 @@
             <img src="IMG/mut.png" alt="CodeSA Institute Pty LTD Logo" class="mut-logo">
         </div>
         <nav class="sidebar-nav">
-            <a href="adm-page.jsp?pgprt=0" class="nav-item"><i class="fas fa-user"></i><h2>Profile</h2></a>
-            <a href="adm-page.jsp?pgprt=2" class="nav-item"><i class="fas fa-book"></i><h2>Courses</h2></a>
-            <a href="adm-page.jsp?pgprt=3" class="nav-item active"><i class="fas fa-question-circle"></i><h2>Questions</h2></a>
-            <a href="adm-page.jsp?pgprt=5" class="nav-item"><i class="fas fa-chart-bar"></i><h2>Results</h2></a>
-            <a href="adm-page.jsp?pgprt=1" class="nav-item"><i class="fas fa-users"></i><h2>Accounts</h2></a>
+            <a href="adm-page.jsp?pgprt=0" class="nav-item">
+                <i class="fas fa-user"></i>
+                <h2>Profile</h2>
+            </a>
+            <a href="adm-page.jsp?pgprt=2" class="nav-item">
+                <i class="fas fa-book"></i>
+                <h2>Courses</h2>
+            </a>
+            <a href="adm-page.jsp?pgprt=3" class="nav-item active">
+                <i class="fas fa-question-circle"></i>
+                <h2>Questions</h2>
+            </a>
+            <a href="adm-page.jsp?pgprt=5" class="nav-item">
+                <i class="fas fa-chart-bar"></i>
+                <h2>Results</h2>
+            </a>
+            <a href="adm-page.jsp?pgprt=1" class="nav-item">
+                <i class="fas fa-users"></i>
+                <h2>Accounts</h2>
+            </a>
+
+            <a href="adm-page.jsp?pgprt=7" class="nav-item">
+               <i class="fas fa-users"></i>
+               <h2>Registers</h2>
+           </a>
         </nav>
     </aside>
     

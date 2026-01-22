@@ -1318,3 +1318,70 @@ if (targetUser != null) {
         box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
     }
 </style>
+
+<%-- Add auto-close functionality for alert messages --%>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-close alert messages after 5 seconds
+    const alerts = document.querySelectorAll('.alert');
+    
+    alerts.forEach(alert => {
+        // Add close button to alerts
+        const closeButton = document.createElement('button');
+        closeButton.innerHTML = '&times;';
+        closeButton.className = 'alert-close-btn';
+        closeButton.style.cssText = `
+            background: none;
+            border: none;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            color: inherit;
+            opacity: 0.7;
+            margin-left: auto;
+            padding: 0 5px;
+        `;
+        closeButton.addEventListener('click', function() {
+            closeAlert(alert);
+        });
+        alert.appendChild(closeButton);
+        
+        // Auto-close after 5 seconds
+        setTimeout(() => {
+            closeAlert(alert);
+        }, 5000);
+    });
+    
+    // Function to close alert with fade-out animation
+    function closeAlert(alertElement) {
+        if (alertElement && alertElement.parentElement) {
+            alertElement.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            alertElement.style.opacity = '0';
+            alertElement.style.transform = 'translateY(-10px)';
+            setTimeout(() => {
+                if (alertElement.parentElement) {
+                    alertElement.remove();
+                }
+            }, 300);
+        }
+    }
+});
+
+// Also close alerts when clicking anywhere outside
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('.alert') && !event.target.closest('.alert-close-btn')) {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+            closeAlert(alert);
+        });
+    }
+});
+</script>
+
+<%-- Add CSS for close button hover effect --%>
+<style>
+.alert-close-btn:hover {
+    opacity: 1 !important;
+    color: #dc2626 !important;
+}
+</style>
