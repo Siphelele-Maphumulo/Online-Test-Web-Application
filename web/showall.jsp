@@ -617,6 +617,64 @@ session.setAttribute("csrf_token", csrfToken);
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
+    
+    /* Alert Messages - Add to your existing CSS */
+    .messages-container {
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .alert {
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--spacing-sm);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        animation: slideDown 0.3s ease;
+        border-left: 4px solid transparent;
+    }
+
+    .alert-success {
+        background: linear-gradient(90deg, rgba(5, 150, 105, 0.1), rgba(16, 185, 129, 0.1));
+        color: var(--success);
+        border-color: var(--success);
+    }
+
+    .alert-error {
+        background: linear-gradient(90deg, rgba(220, 38, 38, 0.1), rgba(239, 68, 68, 0.1));
+        color: var(--error);
+        border-color: var(--error);
+    }
+
+    .alert i {
+        margin-right: var(--spacing-sm);
+        font-size: 16px;
+    }
+
+    .alert-close {
+        background: transparent;
+        border: none;
+        color: inherit;
+        cursor: pointer;
+        font-size: 14px;
+        opacity: 0.7;
+        transition: opacity var(--transition-fast);
+    }
+
+    .alert-close:hover {
+        opacity: 1;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
 
 <div class="dashboard-container">
@@ -656,6 +714,43 @@ session.setAttribute("csrf_token", csrfToken);
     
     <!-- Main Content -->
     <main class="main-content">
+        <!-- Display session messages -->
+        <div class="messages-container">
+            <% 
+                // Check for success message
+                String successMessage = (String) session.getAttribute("message");
+                String errorMessage = (String) session.getAttribute("error");
+                
+                if (successMessage != null && !successMessage.trim().isEmpty()) {
+            %>
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i>
+                    <%= successMessage %>
+                    <button type="button" class="alert-close" onclick="this.parentElement.style.display='none'">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            <%
+                    // Clear the message from session after displaying
+                    session.removeAttribute("message");
+                }
+                
+                if (errorMessage != null && !errorMessage.trim().isEmpty()) {
+            %>
+                <div class="alert alert-error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <%= errorMessage %>
+                    <button type="button" class="alert-close" onclick="this.parentElement.style.display='none'">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            <%
+                    // Clear the error from session after displaying
+                    session.removeAttribute("error");
+                }
+            %>
+        </div>
+        
         <div class="questions-container">
             <!-- Page Header -->
             <header class="page-header">
@@ -1310,6 +1405,25 @@ session.setAttribute("csrf_token", csrfToken);
             hideModal();
         }
     }
+    
+    // Auto-hide alert messages after 5 seconds
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+            if (alert.style.display !== 'none') {
+                alert.style.opacity = '1';
+                let opacity = 1;
+                const fadeOut = setInterval(function() {
+                    if (opacity <= 0) {
+                        clearInterval(fadeOut);
+                        alert.style.display = 'none';
+                    }
+                    alert.style.opacity = opacity;
+                    opacity -= 0.05;
+                }, 50);
+            }
+        });
+    }, 5000); // Hide after 5 seconds
 </script>
 
 <%!
