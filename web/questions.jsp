@@ -1474,18 +1474,19 @@ function uploadAndGenerateQuestions() {
         body: formData
     })
     .then(async response => {
-        // Check if response is OK before parsing JSON
+        // Check if response is OK before parsing
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        // Try to parse JSON response
+        // Read as text first to avoid "body stream already read" error
+        const responseText = await response.text();
         let data;
         try {
-            data = await response.json();
+            data = JSON.parse(responseText);
         } catch (parseError) {
             console.error('JSON Parse Error:', parseError);
-            console.error('Response text:', await response.text());
+            console.error('Response text:', responseText);
             throw new Error('Invalid JSON response from server');
         }
         
