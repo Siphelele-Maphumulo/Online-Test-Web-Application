@@ -811,13 +811,12 @@ public String escapeHtml(String input) {
                 </div>
             </div>
          
-            <!-- Bulk Delete Button (outside form) -->
-        <!-- <div style="display:flex; justify-content:center;">
-        <button type="button" class="btn btn-danger" id="bulkDeleteBtn" onclick="handleBulkDelete()">
-            <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
-        </button>
-        </div> -->
-
+            <!-- Hidden Form for Bulk Delete -->
+        <form id="bulkDeleteForm" action="controller.jsp" method="post" style="display: none;">
+            <input type="hidden" name="page" value="admin-results">
+            <input type="hidden" name="operation" value="bulk_delete">
+            <input type="hidden" name="csrf_token" value="<%= csrf_token %>">
+        </form>
 
         <!-- Hidden Form for Bulk Delete -->
         <form id="bulkDeleteForm" action="controller.jsp" method="post" style="display: none;">
@@ -826,9 +825,12 @@ public String escapeHtml(String input) {
             <input type="hidden" name="csrf_token" value="<%= csrf_token %>">
         </form>
 
-         <button type="button" class="btn btn-danger floating-delete-btn" id="bulkDeleteBtn" onclick="handleBulkDelete()">
-            <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
-        </button>
+        <!-- Floating Delete Button Container -->
+        <div id="floatingDeleteBtn" class="floating-delete-btn" style="display: none;">
+            <button type="button" class="btn btn-danger" onclick="handleBulkDelete()" style="padding: 12px 20px; font-size: 14px; font-weight: 500;">
+                <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCountBadge">0</span>)
+            </button>
+        </div>
                         
             <% if (request.getParameter("eid") == null) { %>
                 <div style="overflow-x:auto;">
@@ -1137,14 +1139,24 @@ public String escapeHtml(String input) {
     position: fixed;
     bottom: 30px;
     right: 30px;
-    z-index: 999;
+    z-index: 10000;
     display: none;
     animation: fadeIn 0.3s;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+    border: none;
+    border-radius: 8px;
+    background: var(--error);
+    padding: 0;
 }
-
+    
+.floating-delete-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+}
+    
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 </style>
 
@@ -1924,16 +1936,25 @@ public String escapeHtml(String input) {
     function updateFloatingDeleteButton() {
         const selectedCheckboxes = document.querySelectorAll('.record-checkbox:checked');
         const floatingDeleteBtn = document.getElementById('floatingDeleteBtn');
-        const floatingSelectedCount = document.getElementById('floatingSelectedCount');
+        const selectedCountBadge = document.getElementById('selectedCountBadge');
         
         const selectedCountNum = selectedCheckboxes.length;
-        floatingSelectedCount.textContent = selectedCountNum;
+        
+        if (selectedCountBadge) {
+            selectedCountBadge.textContent = selectedCountNum;
+        }
         
         // Show/hide floating delete button based on selection
         if (selectedCountNum > 0) {
-            floatingDeleteBtn.style.display = 'block';
+            if (floatingDeleteBtn) {
+                floatingDeleteBtn.style.display = 'block';
+                floatingDeleteBtn.classList.add('visible');
+            }
         } else {
-            floatingDeleteBtn.style.display = 'none';
+            if (floatingDeleteBtn) {
+                floatingDeleteBtn.style.display = 'none';
+                floatingDeleteBtn.classList.remove('visible');
+            }
         }
     }
     
@@ -1944,23 +1965,13 @@ public String escapeHtml(String input) {
     // Update the updateBulkDeleteButton function to also update floating button
     function updateBulkDeleteButton() {
         const selectedCheckboxes = document.querySelectorAll('.record-checkbox:checked');
-        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
-        const selectedCount = document.getElementById('selectedCount');
+        const selectedCountBadge = document.getElementById('selectedCountBadge');
         
         const selectedCountNum = selectedCheckboxes.length;
-        selectedCount.textContent = selectedCountNum;
         
-        // Show/hide bulk delete button based on selection
-        if (selectedCountNum > 0) {
-            bulkDeleteBtn.style.display = 'inline-block';
-            bulkDeleteBtn.disabled = false;
-        } else {
-            bulkDeleteBtn.style.display = 'none';
-            bulkDeleteBtn.disabled = true;
+        if (selectedCountBadge) {
+            selectedCountBadge.textContent = selectedCountNum;
         }
-        
-        // Also update floating delete button
-        updateFloatingDeleteButton();
         
         // Update select all checkbox state
         const selectAll = document.getElementById('selectAll');
@@ -1969,15 +1980,12 @@ public String escapeHtml(String input) {
             selectAll.checked = selectedCountNum === totalCheckboxes && totalCheckboxes > 0;
             selectAll.indeterminate = selectedCountNum > 0 && selectedCountNum < totalCheckboxes;
         }
+        
+        // Also update floating delete button
+        updateFloatingDeleteButton();
     }
     
-    // Add event listeners to checkboxes to update floating button
-    document.addEventListener('DOMContentLoaded', function() {
-        // Add event listeners to all checkboxes
-        document.querySelectorAll('.record-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', updateFloatingDeleteButton);
-        });
-    });
+
     
     // Modal functions
     function hideModal() {

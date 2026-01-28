@@ -817,9 +817,9 @@ session.setAttribute("csrf_token", csrfToken);
             <%
                     } else {
             %>
-                <button type="button" id="bulkDeleteBtn" class="btn btn-error">
+<!--                <button type="button" id="bulkDeleteBtn" class="btn btn-error">
                     <i class="fas fa-trash"></i> Delete Selected
-                </button>
+                </button> -->
                 <br><br>
             <%
                         for (int i = 0; i < list.size(); i++) {
