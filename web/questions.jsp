@@ -20,13 +20,25 @@ try {
     totalQuestions = 0; // Default to 0 if there's an error
 }
 
-// Get the last selected course name from request parameter
-String lastCourseName = request.getParameter("coursename");
+// Get the last selected course name and question type from session
+String lastCourseName = (String) session.getAttribute("last_course_name");
+String lastQuestionType = (String) session.getAttribute("last_question_type");
+
+// If not in session, try to get from request parameter
 if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
-    // If no course is selected, use the first course if available
+    lastCourseName = request.getParameter("coursename");
+}
+
+// If still not available, use the first course if available
+if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
     if (!courseNames.isEmpty()) {
         lastCourseName = courseNames.get(0);
     }
+}
+
+// Set default question type if not in session
+if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
+    lastQuestionType = "MCQ"; // Default to Multiple Choice
 }
 %>
 
@@ -612,7 +624,7 @@ if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
 .scroll-indicator{
     position:fixed;
     right:20px;
-    bottom:20px;
+    bottom:30px;  /* Positioned above the scroll to top button */
     width:48px;
     height:48px;
     background:#2563eb;
@@ -624,6 +636,39 @@ if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
     cursor:pointer;
     z-index:1000;
     box-shadow:0 6px 20px rgba(0,0,0,.3);
+}
+
+/* Scroll to Top Button */
+.scroll-to-top {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 999;
+    display: none;
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.scroll-to-top:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+}
+
+.scroll-to-top.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.scroll-to-top i {
+    font-size: 20px;
 }
 
 /* Modal Styles */
@@ -1047,7 +1092,7 @@ if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
                                 <i class="fas fa-book" style="color: var(--accent-blue);"></i>
                                 Select Course
                             </label>
-                            <select name="coursename" class="form-select" id="courseSelectAddNew" required>
+                            <select name="coursename" class="form-select" id="courseSelectAddNew" required onchange="saveLastSelection()">
                                 <% 
                                 if (courseNames.isEmpty()) {
                                 %>
@@ -1073,13 +1118,13 @@ if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
                                 <i class="fas fa-list" style="color: var(--info);"></i>
                                 Question Type
                             </label>
-                            <select id="questionTypeSelect" class="form-select" onchange="toggleOptions()">
-                                <option value="MCQ">Multiple Choice</option>
-                                <option value="TrueFalse">True/False</option>
-                                <option value="MultipleSelect">Multiple Select (2 correct)</option>
-                                <option value="Code">Code Snippet</option>
+                            <select id="questionTypeSelect" class="form-select" onchange="toggleOptions(); saveLastSelection()">
+                                <option value="MCQ" <%="MCQ".equals(lastQuestionType) ? "selected" : ""%>>Multiple Choice</option>
+                                <option value="TrueFalse" <%="TrueFalse".equals(lastQuestionType) ? "selected" : ""%>>True/False</option>
+                                <option value="MultipleSelect" <%="MultipleSelect".equals(lastQuestionType) ? "selected" : ""%>>Multiple Select (2 correct)</option>
+                                <option value="Code" <%="Code".equals(lastQuestionType) ? "selected" : ""%>>Code Snippet</option>
                             </select>
-                            <input type="hidden" id="questionTypeHidden" name="questionType" value="MCQ">
+                            <input type="hidden" id="questionTypeHidden" name="questionType" value="<%=lastQuestionType%>">
                         </div>
                     </div>
                     
@@ -1244,6 +1289,11 @@ if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
     </div>
 </div>
 
+<!-- Scroll to Top Button -->
+<button class="scroll-to-top" id="scrollToTopBtn" title="Scroll to top">
+    <i class="fas fa-arrow-up"></i>
+</button>
+
 <script>
 // Function to update the Show All Questions button state
 function updateShowAllButton() {
@@ -1273,6 +1323,25 @@ function showAllQuestions() {
     window.location.href = 'showall.jsp?coursename=' + encodeURIComponent(courseName);
 }
 
+// Function to save last selections to session
+function saveLastSelection() {
+    const courseSelect = document.getElementById('courseSelectAddNew');
+    const questionTypeSelect = document.getElementById('questionTypeSelect');
+    
+    if (courseSelect && courseSelect.value) {
+        // Save to session via AJAX
+        fetch('controller.jsp', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'page=questions&operation=save_selection&last_course_name=' + encodeURIComponent(courseSelect.value) + '&last_question_type=' + encodeURIComponent(questionTypeSelect.value)
+        }).catch(error => {
+            console.log('Session saved for course:', courseSelect.value, 'and question type:', questionTypeSelect.value);
+        });
+    }
+}
+
 // Function to sync all course dropdowns
 function syncCourseDropdowns() {
     const pdfCourseSelect = document.getElementById('courseSelectPdf');
@@ -1288,6 +1357,7 @@ function syncCourseDropdowns() {
         }
         if (addQuestionCourseSelect && addQuestionCourseSelect !== changedSelect) {
             addQuestionCourseSelect.value = value;
+            saveLastSelection(); // Save when course changes
         }
         if (viewCourseSelect && viewCourseSelect !== changedSelect) {
             viewCourseSelect.value = value;
@@ -1925,23 +1995,45 @@ function updateCorrectAnswerField() {
 }
 
 function resetForm() {
-    document.getElementById('addQuestionForm').reset();
-    document.getElementById('questionTypeSelect').value = 'MCQ';
-    toggleOptions(); // This will properly reset all containers
+    // Don't reset the course and question type selections
+    // Only reset the question content fields
     
-    // Reset True/False dropdown specifically
-    const trueFalseSelect = document.getElementById('trueFalseSelect');
-    if (trueFalseSelect) {
-        trueFalseSelect.selectedIndex = 0; // Reset to first option (empty)
-        // Also reset the correct answer field
-        const correctAnswerField = document.getElementById('correctAnswer');
-        if (correctAnswerField) {
-            correctAnswerField.value = '';
+    // Reset question text
+    const questionTextarea = document.getElementById('questionTextarea');
+    if (questionTextarea) {
+        questionTextarea.value = '';
+    }
+    
+    // Reset options
+    for (let i = 1; i <= 4; i++) {
+        const optInput = document.getElementById(`opt${i}`);
+        if (optInput) {
+            optInput.value = '';
         }
     }
     
+    // Reset correct answer
+    const correctAnswer = document.getElementById('correctAnswer');
+    if (correctAnswer) {
+        correctAnswer.value = '';
+    }
+    
+    // Reset True/False dropdown
+    const trueFalseSelect = document.getElementById('trueFalseSelect');
+    if (trueFalseSelect) {
+        trueFalseSelect.selectedIndex = 0;
+    }
+    
+    // Reset multiple select checkboxes
+    document.querySelectorAll('.correct-checkbox').forEach(cb => {
+        cb.checked = false;
+    });
+    
     // Reset image upload section
     removeImageFile();
+    
+    // Re-initialize options based on current question type
+    toggleOptions();
 }
 
 // Function to update scroll indicator visibility
@@ -2067,5 +2159,27 @@ document.addEventListener('DOMContentLoaded', function() {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(updateScrollIndicator, 100);
     });
+    
+    // Add scroll to top functionality
+    const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+    
+    if (scrollToTopBtn) {
+        // Show/hide scroll to top button based on scroll position
+        window.addEventListener('scroll', function() {
+            if (window.pageYOffset > 300) {  // Show after scrolling down 300px
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+        });
+        
+        // Scroll to top when button is clicked
+        scrollToTopBtn.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
 });
 </script>

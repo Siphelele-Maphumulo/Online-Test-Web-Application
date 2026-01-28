@@ -1043,6 +1043,10 @@ try {
                 pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, imagePath);
                 session.setAttribute("message","Question added successfully");
                 
+                // Save last selections to session
+                session.setAttribute("last_course_name", courseName);
+                session.setAttribute("last_question_type", questionType);
+                
                 // Clean up multipart items attribute to prevent reuse
                 request.removeAttribute("multipartItems");
                 
@@ -1080,6 +1084,11 @@ try {
             
             pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null);
             session.setAttribute("message","Question added successfully");
+            
+            // Save last selections to session
+            session.setAttribute("last_course_name", courseName);
+            session.setAttribute("last_question_type", questionType);
+            
             courseName = nz(request.getParameter("coursename"), "");
             if (!courseName.isEmpty()) {
                 response.sendRedirect("showall.jsp?coursename=" + courseName);
@@ -1087,6 +1096,22 @@ try {
                 response.sendRedirect("showall.jsp");
             }
         }
+    } else if ("save_selection".equalsIgnoreCase(operation)) {
+        // Save last course name and question type to session
+        String lastCourseName = nz(request.getParameter("last_course_name"), "");
+        String lastQuestionType = nz(request.getParameter("last_question_type"), "");
+        
+        if (!lastCourseName.isEmpty()) {
+            session.setAttribute("last_course_name", lastCourseName);
+        }
+        if (!lastQuestionType.isEmpty()) {
+            session.setAttribute("last_question_type", lastQuestionType);
+        }
+        
+        // Return success response for AJAX
+        response.setContentType("application/json");
+        response.getWriter().write("{\"success\": true}");
+        return;
     } else {
         session.setAttribute("error", "Invalid operation for questions");
         String courseName = nz(request.getParameter("coursename"), "");

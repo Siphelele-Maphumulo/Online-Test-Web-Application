@@ -594,7 +594,39 @@ session.setAttribute("csrf_token", csrfToken);
     }
 }
 
+    /* Scroll to Top Button */
+    .scroll-to-top {
+        position: fixed;
+        bottom: 140px;  /* Positioned above the floating back button */
+        right: 20px;
+        z-index: 999;
+        display: none;
+        background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
     
+    .scroll-to-top:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    .scroll-to-top.show {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .scroll-to-top i {
+        font-size: 20px;
+    }
+
     /* Loading State */
     .loading {
         opacity: 0.7;
@@ -776,6 +808,11 @@ session.setAttribute("csrf_token", csrfToken);
                 <i class="fas fa-arrow-left"></i>
                 Back
             </a>
+            
+            <!-- Scroll to Top Button -->
+            <button class="scroll-to-top" id="scrollToTopBtn" title="Scroll to top">
+                <i class="fas fa-arrow-up"></i>
+            </button>
 
             
             <%
@@ -1252,6 +1289,28 @@ session.setAttribute("csrf_token", csrfToken);
     // Also initialize after a short delay to catch any timing issues
     setTimeout(initPage, 100);
     setTimeout(initPage, 500);
+    
+    // Add scroll to top functionality
+    const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+    
+    if (scrollToTopBtn) {
+        // Show/hide scroll to top button based on scroll position
+        window.addEventListener('scroll', function() {
+            if (window.pageYOffset > 300) {  // Show after scrolling down 300px
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+        });
+        
+        // Scroll to top when button is clicked
+        scrollToTopBtn.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
     
     let modalTimer;
 

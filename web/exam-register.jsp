@@ -681,6 +681,34 @@
         100% { transform: rotate(360deg); }
     }
     
+    /* Scroll-to-top button */
+    .scroll-to-top {
+        position: fixed;
+        bottom: 30px;
+        right: 20px;
+        z-index: 999;
+        display: none;
+        background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+        color: white;
+        border: none;
+        border-radius: 40%;
+        width: 40px;
+        height: 40px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .scroll-to-top:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        background: linear-gradient(135deg, var(--secondary-blue), var(--primary-blue));
+    }
+    
+    .scroll-to-top:active {
+        transform: translateY(1px);
+    }
+    
     /* For inline forms in quick-filter-row */
     .quick-filter-row form {
         display: inline;
@@ -1012,8 +1040,13 @@
   </div>
 </div>
 
-<!-- Floating Delete Button -->
-<div id="floatingDeleteBtn" class="floating-delete-btn">
+            <!-- Scroll-to-top button -->
+            <button class="scroll-to-top" id="scrollToTopBtn" title="Go to top">
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            
+            <!-- Floating Delete Button -->
+            <div id="floatingDeleteBtn" class="floating-delete-btn">
     <button type="button" id="deleteSelectedBtn" class="btn btn-danger" style="padding: 15px 30px; font-size: 16px;">
         <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCountBadge">0</span>)
     </button>
@@ -1132,4 +1165,22 @@
             alert(message);
         }
     }
+    
+    // Scroll-to-top button functionality
+    const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+    
+    window.addEventListener('scroll', () => {
+        if (window.pageYOffset > 300) {
+            scrollToTopBtn.style.display = 'block';
+        } else {
+            scrollToTopBtn.style.display = 'none';
+        }
+    });
+    
+    scrollToTopBtn.addEventListener('click', () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
 </script>

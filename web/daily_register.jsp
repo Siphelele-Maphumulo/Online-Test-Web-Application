@@ -1207,8 +1207,34 @@
             .event-absent { background-color: #dc3545; }
             .event-weekend { background-color: #f8f9fa; }
             .event-future { background-color: #e9ecef; }
-
-
+            
+            /* Scroll-to-top button */
+            .scroll-to-top {
+                position: fixed;
+                bottom: 140px;
+                right: 20px;
+                z-index: 999;
+                display: none;
+                background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+                color: white;
+                border: none;
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            
+            .scroll-to-top:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+                background: linear-gradient(135deg, var(--secondary-blue), var(--primary-blue));
+            }
+            
+            .scroll-to-top:active {
+                transform: translateY(1px);
+            }
         </style>
 
         <%@ include file="header-messages.jsp" %>
@@ -1400,8 +1426,13 @@
                                 <i class="fas fa-clock"></i> Days Late
                             </div>
                         </div>
-                </div>
-            </div>
+                            </div>
+            
+            <!-- Scroll-to-top button -->
+            <button class="scroll-to-top" id="scrollToTopBtn" title="Go to top">
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            
         </div>
 <div id="deleteConfirmationModal" class="modal-overlay" style="display: none;">
   <div class="modal-content">
@@ -1420,5 +1451,31 @@
 </div>
 
 
+    </body>
+
+    <script>
+        // Scroll-to-top button functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+            
+            if (scrollToTopBtn) {
+                window.addEventListener('scroll', () => {
+                    if (window.pageYOffset > 300) {
+                        scrollToTopBtn.style.display = 'block';
+                    } else {
+                        scrollToTopBtn.style.display = 'none';
+                    }
+                });
+                
+                scrollToTopBtn.addEventListener('click', () => {
+                    window.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                });
+            }
+        });
+    </script>
+    
     </body>
 </html>
