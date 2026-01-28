@@ -1113,12 +1113,20 @@ try {
         response.getWriter().write("{\"success\": true}");
         return;
     } else {
-        session.setAttribute("error", "Invalid operation for questions");
-        String courseName = nz(request.getParameter("coursename"), "");
-        if (!courseName.isEmpty()) {
-            response.sendRedirect("showall.jsp?coursename=" + courseName);
+        // Check if this is an AJAX request
+        if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With"))) {
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+            response.getWriter().write("{\"success\": false, \"error\": \"Invalid operation for questions\"}");
+            return;
         } else {
-            response.sendRedirect("showall.jsp");
+            session.setAttribute("error", "Invalid operation for questions");
+            String courseName = nz(request.getParameter("coursename"), "");
+            if (!courseName.isEmpty()) {
+                response.sendRedirect("showall.jsp?coursename=" + courseName);
+            } else {
+                response.sendRedirect("showall.jsp");
+            }
         }
     }
 /* =========================

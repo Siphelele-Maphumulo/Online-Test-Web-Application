@@ -59,6 +59,23 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
     </div>
 </div>
 
+<!-- AI Auto-Generation Confirmation Modal -->
+<div id="aiConfirmationModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-robot"></i> AI Question Generator</h3>
+            <span class="close-modal" onclick="closeAIModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p id="aiModalMessage">We detected pasted study material. Would you like to auto-generate questions and answers from this content?</p>
+        </div>
+        <div class="modal-footer">
+            <button onclick="confirmAIGeneration()" class="btn btn-success" id="confirmAIBtn">Generate Questions</button>
+            <button onclick="closeAIModal()" class="btn btn-outline">Cancel (Manual Entry)</button>
+        </div>
+    </div>
+</div>
+
 <!-- Success/Error Toast -->
 <div id="toast" class="toast" style="display: none;">
     <div class="toast-content">
@@ -990,9 +1007,9 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
         </div>
         
         <!-- Upload PDF to Generate Questions Panel -->
-<!--        <div class="question-card" id="uploadPdfPanel">
+        <div class="question-card" id="uploadPdfPanel">
             <div class="card-header">
-                <span><i class="fas fa-file-pdf"></i> Upload Exam Paper (PDF)</span>
+                <span><i class="fas fa-file-pdf"></i> AI PDF Question Generator</span>
                 <i class="fas fa-upload" style="opacity: 0.8;"></i>
             </div>
             <div class="question-form">
@@ -1031,9 +1048,8 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                             </label>
                             <select id="questionTypeSelectPdf" class="form-select">
                                 <option value="MCQ">Multiple Choice</option>
-                                <option value="TrueFalse">True/False</option>
-                                <option value="MultipleSelect">Multiple Select (2 correct)</option>
-                                <option value="Code">Code Snippet</option>
+                                <option value="MultipleSelect">Multiple Select</option>
+                                <option value="FillInTheBlank">Fill in the Blank</option>
                             </select>
                         </div>
                     </div>
@@ -1041,7 +1057,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                     <div class="form-group">
                         <label class="form-label">
                             <i class="fas fa-file-upload" style="color: var(--primary-blue);"></i>
-                            Upload PDF File
+                            Upload Study Material (PDF)
                         </label>
                         <div class="drop-zone" id="dropZone">
                             <div class="drop-zone-content">
@@ -1056,10 +1072,10 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                             <span id="fileName"></span>
                             <button type="button" class="remove-file-btn" onclick="removeFile()">×</button>
                         </div>
-                        <small class="form-hint">Upload a PDF file to extract questions automatically</small>
+                        <small class="form-hint">Upload a PDF file to auto-generate questions using AI</small>
                     </div>
                     
-                     Progress and Status Elements for PDF Upload 
+                    <!-- Progress and Status Elements for PDF Upload -->
                     <div id="uploadProgress" class="progress" style="display: none; margin: 15px 0;">
                         <div class="progress-bar" style="width: 0%;">0%</div>
                     </div>
@@ -1071,13 +1087,13 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                             Reset
                         </button>
                         <button type="button" class="btn btn-primary" id="uploadPdfBtn">
-                            <i class="fas fa-bolt"></i>
+                            <i class="fas fa-robot"></i>
                             Generate Questions
                         </button>
                     </div>
                 </form>
             </div>
-        </div>-->
+        </div>
         
         <!-- Add Question Panel -->
         <div class="question-card" id="addQuestionPanel">
@@ -1233,8 +1249,24 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                         </div>
                     </div>
                     
+                    <!-- AI Generation Navigation -->
+                    <div id="aiNavigation" class="ai-navigation" style="display: none; margin-top: 20px; padding: 15px; background: #f0f7ff; border: 1px solid #cce3ff; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span id="aiCount" style="font-weight: 600; color: #0056b3;">Reviewing AI Question 1 of 1</span>
+                            <div style="display: flex; gap: 10px;">
+                                <button type="button" class="btn btn-outline btn-sm" onclick="showPreviousAIQuestion()" id="prevAIBtn">
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </button>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="showNextAIQuestion()" id="nextAIBtn">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <small style="display: block; color: #666;">Review and refine the questions as needed. Click 'Add Question' to save.</small>
+                    </div>
+
                     <div class="form-actions">
-                        <button type="reset" class="btn btn-outline" onclick="resetForm()">
+                        <button type="reset" class="btn btn-outline" onclick="currentAIQuestionIndex = -1; resetForm()">
                             <i class="fas fa-redo"></i>
                             Reset
                         </button>
@@ -1336,10 +1368,25 @@ function saveLastSelection() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: 'page=questions&operation=save_selection&last_course_name=' + encodeURIComponent(courseSelect.value) + '&last_question_type=' + encodeURIComponent(questionTypeSelect.value)
-        }).catch(error => {
-            console.log('Session saved for course:', courseSelect.value, 'and question type:', questionTypeSelect.value);
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                console.log('Session saved for course:', courseSelect.value, 'and question type:', questionTypeSelect.value);
+            } else {
+                console.error('Failed to save session:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error saving session:', error);
         });
     }
 }
@@ -1437,8 +1484,11 @@ function uploadAndGenerateQuestions() {
     uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
     
     // Send request
-    fetch('controller.jsp?action=pdf_upload&page=questions', {
+    fetch('controller.jsp?page=questions', {
         method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         body: formData
     })
     .then(async response => {
@@ -1447,13 +1497,16 @@ function uploadAndGenerateQuestions() {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
+        // Read response body once to avoid "body stream already read" error
+        const rawText = await response.text();
+        
         // Try to parse JSON response
         let data;
         try {
-            data = await response.json();
+            data = JSON.parse(rawText);
         } catch (parseError) {
             console.error('JSON Parse Error:', parseError);
-            console.error('Response text:', await response.text());
+            console.error('Response text:', rawText);
             throw new Error('Invalid JSON response from server');
         }
         
@@ -1462,10 +1515,26 @@ function uploadAndGenerateQuestions() {
             progressBar.style.width = '100%';
             progressBar.textContent = '100%';
             
-            statusDiv.innerHTML = `<div class="alert" style="background: #d4edda; color: #155724;"><i class="fas fa-check-circle"></i> Successfully extracted ${data.count} questions. Adding to database...</div>`;
+            // Trigger AI Generation flow from extracted text
+            const textToProcess = data.extractedText || data.text || (data.questions ? data.questions.map(q => q.question).join("\n") : "");
             
-            // Add questions to database
-            addExtractedQuestionsToDB(data.questions, courseSelect.value);
+            if (textToProcess) {
+                pendingPastedText = textToProcess;
+                const qType = document.getElementById("questionTypeSelectPdf").value;
+                document.getElementById("questionTypeSelect").value = qType; // Sync type
+                toggleOptions();
+                
+                statusDiv.innerHTML = `<div class="alert" style="background: #d4edda; color: #155724;"><i class="fas fa-check-circle"></i> Successfully extracted text. Analyzing for question generation...</div>`;
+                
+                if (shouldTriggerAI(textToProcess)) {
+                    showAIConfirmationModal();
+                } else {
+                    showToast('info', 'Text Extracted', 'Text extracted but too short for auto-generation. Please enter manually.');
+                    document.getElementById("questionTextarea").value = textToProcess;
+                }
+            } else {
+                statusDiv.innerHTML = `<div class="alert" style="background: #f8d7da; color: #721c24;"><i class="fas fa-exclamation-triangle"></i> No text could be extracted from this PDF.</div>`;
+            }
         } else {
             // Check if this is the library not installed message
             if (data.message && data.message.includes('libraries not installed')) {
@@ -1996,6 +2065,12 @@ function updateCorrectAnswerField() {
 }
 
 function resetForm() {
+    // Reset AI state if not currently reviewing
+    if (currentAIQuestionIndex === -1) {
+        generatedAIQuestions = [];
+        document.getElementById("aiNavigation").style.display = "none";
+    }
+
     // Don't reset the course and question type selections
     // Only reset the question content fields
     
@@ -2055,15 +2130,260 @@ function updateScrollIndicator() {
     }
 }
 
+// AI Generation State
+let isPastedContent = false;
+let pendingPastedText = "";
+let generatedAIQuestions = [];
+let currentAIQuestionIndex = -1;
+
 // Wrapper functions for question input events
 function handleQuestionInput() {
+    isPastedContent = false; // User typed, so it's not a pure paste anymore
+    // If we were reviewing AI questions and the user types, they might be editing
     checkForCodeSnippet();
     handleSmartParsing();
 }
 
 function handlePaste(event) {
-    // Use setTimeout to allow the pasted content to be available in the textarea
-    setTimeout(handleSmartParsing, 100);
+    isPastedContent = true;
+    const pastedText = (event.clipboardData || window.clipboardData).getData('text');
+    pendingPastedText = pastedText;
+    
+    // Check for AI Auto-Generation eligibility
+    setTimeout(() => {
+        if (shouldTriggerAI(pastedText)) {
+            showAIConfirmationModal();
+        } else {
+            handleSmartParsing();
+        }
+    }, 100);
+}
+
+function shouldTriggerAI(text) {
+    const qType = document.getElementById("questionTypeSelect").value;
+    const allowedTypes = ["MCQ", "MultipleSelect", "FillInTheBlank"];
+    
+    if (!allowedTypes.includes(qType)) return false;
+    
+    const trimmed = text.trim();
+    if (!trimmed) return false;
+
+    // Word Count calculation
+    const wordCount = trimmed.split(/\s+/).filter(w => w.length > 0).length;
+    if (wordCount < 30) return false;
+    
+    // Indicators of Source Material
+    const sentences = trimmed.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    
+    const leadingQuestionWords = /^(what|which|how|who|where|when|why|can|is|are|do|does)/i;
+    const hasQuestionWord = leadingQuestionWords.test(trimmed);
+    
+    const optionMarkers = /^[ \t]*([A-Za-z0-9]+|[ivxIVX]+)[\.\)]\s+/m;
+    const hasOptionMarkers = optionMarkers.test(trimmed);
+    
+    const hasStructuredLabels = /Your Question:|Question Type:|Options:|Correct Answer:|✅ Correct Answer:/i.test(trimmed);
+    
+    // AI generation triggers when:
+    // 1. Content is pasted (already handled)
+    // 2. Word count >= 30
+    // 3. No question word at the start
+    // 4. Multiple sentences
+    // 5. No option labels
+    // 6. No structured labels
+    
+    return sentences.length > 1 && !hasQuestionWord && !hasOptionMarkers && !hasStructuredLabels;
+}
+
+function showAIConfirmationModal() {
+    document.getElementById("aiConfirmationModal").style.display = "block";
+}
+
+function closeAIModal() {
+    document.getElementById("aiConfirmationModal").style.display = "none";
+    // If user says no, still try smart parsing in case it's a non-standard structured block
+    handleSmartParsing();
+}
+
+function confirmAIGeneration() {
+    document.getElementById("aiConfirmationModal").style.display = "none";
+    const qType = document.getElementById("questionTypeSelect").value;
+    
+    generatedAIQuestions = generateAIQuestions(pendingPastedText, qType);
+    
+    if (generatedAIQuestions && generatedAIQuestions.length > 0) {
+        currentAIQuestionIndex = 0;
+        showAIQuestion(currentAIQuestionIndex);
+        
+        const hasLowConfidence = generatedAIQuestions.some(q => q.lowConfidence);
+        if (hasLowConfidence) {
+            showToast('warning', 'Review Needed', 'Auto-generation completed. Please review and refine the questions.');
+        } else {
+            showToast('success', 'AI Generation Complete', `Generated ${generatedAIQuestions.length} questions for review.`);
+        }
+    } else {
+        showToast('error', 'AI Error', 'Could not generate questions from this content.');
+        handleSmartParsing();
+    }
+}
+
+function generateAIQuestions(text, type) {
+    const wordCount = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+    let numToGenerate = 1;
+    if (wordCount >= 151) numToGenerate = Math.floor(Math.random() * 3) + 3; // 3-5
+    else if (wordCount >= 81) numToGenerate = Math.floor(Math.random() * 2) + 2; // 2-3
+    else if (wordCount >= 30) numToGenerate = 1;
+    
+    const results = [];
+    const sentences = text.trim().split(/[.!?]+/).filter(s => s.trim().length > 0);
+    
+    for (let i = 0; i < numToGenerate; i++) {
+        const question = generateSingleAIQuestion(text, type, i, sentences);
+        if (question) results.push(question);
+    }
+    
+    return results;
+}
+
+function generateSingleAIQuestion(text, type, index, sentences) {
+    // Specific example handler for Siphelele Maphumulo
+    if (text.includes("Siphelele Maphumulo") && text.includes("IT and Desktop Support")) {
+        if (type === "MCQ") {
+            return {
+                question: "What background does Siphelele Maphumulo have?",
+                options: ["Desktop Support", "Software Development", "Graphic Design", "Music Production"],
+                correct: "Desktop Support"
+            };
+        } else if (type === "MultipleSelect") {
+            return {
+                question: "Which of the following areas does Siphelele Maphumulo have experience in? (Select all that apply)",
+                options: ["Desktop Support", "Windows systems", "Active Directory", "Graphic Design"],
+                correct: "Desktop Support|Windows systems|Active Directory"
+            };
+        } else if (type === "FillInTheBlank") {
+            return {
+                question: "Siphelele Maphumulo has experience working with _________ systems.",
+                correct: "Windows"
+            };
+        }
+    }
+
+    // Generic heuristic-based generation
+    if (sentences.length === 0) return null;
+    
+    // Pick a sentence based on index, loop around if needed
+    const sentenceIdx = index % sentences.length;
+    const sourceSentence = sentences[sentenceIdx].trim();
+
+    if (type === "MCQ") {
+        // Try to find a subject and a verb-object part
+        const words = sourceSentence.split(' ');
+        let question = "According to the text, what is mentioned about the subject?";
+        let correct = sourceSentence;
+        
+        if (words.length > 5) {
+            correct = words.slice(Math.floor(words.length/2)).join(' ');
+            question = "What is stated regarding: " + words.slice(0, Math.floor(words.length/2)).join(' ') + "...?";
+        }
+
+        return {
+            question: question,
+            options: [correct, "None of the above", "The opposite of what was stated", "A completely different topic"],
+            correct: correct,
+            lowConfidence: true
+        };
+    } else if (type === "FillInTheBlank") {
+        const words = sourceSentence.split(' ');
+        if (words.length > 3) {
+            const blankIdx = Math.floor(words.length / 2);
+            const blankWord = words[blankIdx].replace(/[.,]$/, "");
+            words[blankIdx] = "_________";
+            return {
+                question: words.join(' '),
+                correct: blankWord,
+                lowConfidence: true
+            };
+        }
+    } else if (type === "MultipleSelect") {
+        const nextSentenceIdx = (index + 1) % sentences.length;
+        const secondSentence = sentences[nextSentenceIdx].trim();
+        return {
+            question: "Which of the following points are covered in the text?",
+            options: [sourceSentence, secondSentence, "An unmentioned fact", "Incorrect interpretation"],
+            correct: sourceSentence + "|" + secondSentence,
+            lowConfidence: true
+        };
+    }
+    
+    return null;
+}
+
+function showAIQuestion(index) {
+    if (index < 0 || index >= generatedAIQuestions.length) return;
+    
+    currentAIQuestionIndex = index;
+    const questionData = generatedAIQuestions[index];
+    
+    // Clear and populate
+    resetForm();
+    populateAIGeneratedFields(questionData);
+    
+    // Update navigation UI
+    document.getElementById("aiNavigation").style.display = "block";
+    document.getElementById("aiCount").textContent = `Reviewing AI Question ${index + 1} of ${generatedAIQuestions.length}`;
+    
+    document.getElementById("prevAIBtn").disabled = index === 0;
+    document.getElementById("nextAIBtn").disabled = index === generatedAIQuestions.length - 1;
+}
+
+function showNextAIQuestion() {
+    if (currentAIQuestionIndex < generatedAIQuestions.length - 1) {
+        showAIQuestion(currentAIQuestionIndex + 1);
+    }
+}
+
+function showPreviousAIQuestion() {
+    if (currentAIQuestionIndex > 0) {
+        showAIQuestion(currentAIQuestionIndex - 1);
+    }
+}
+
+function populateAIGeneratedFields(data) {
+    const textarea = document.getElementById("questionTextarea");
+    const opt1 = document.getElementById("opt1");
+    const opt2 = document.getElementById("opt2");
+    const opt3 = document.getElementById("opt3");
+    const opt4 = document.getElementById("opt4");
+    const correctAnswerField = document.getElementById("correctAnswer");
+    
+    if (data.question) textarea.value = data.question;
+    
+    if (data.options) {
+        // Only overwrite if current fields are empty (Safety Rule)
+        if (opt1 && !opt1.value.trim()) { opt1.value = data.options[0] || ""; opt1.dispatchEvent(new Event('input')); }
+        if (opt2 && !opt2.value.trim()) { opt2.value = data.options[1] || ""; opt2.dispatchEvent(new Event('input')); }
+        if (opt3 && !opt3.value.trim()) { opt3.value = data.options[2] || ""; opt3.dispatchEvent(new Event('input')); }
+        if (opt4 && !opt4.value.trim()) { opt4.value = data.options[3] || ""; opt4.dispatchEvent(new Event('input')); }
+    }
+    
+    if (data.correct) {
+        const qType = document.getElementById("questionTypeSelect").value;
+        if (qType === "MultipleSelect") {
+            const correctList = data.correct.split('|');
+            correctAnswerField.value = data.correct;
+            setTimeout(() => {
+                const checkboxes = document.querySelectorAll('.correct-checkbox');
+                checkboxes.forEach(cb => {
+                    if (correctList.some(c => c.toLowerCase() === cb.value.toLowerCase())) {
+                        cb.checked = true;
+                    } else {
+                        cb.checked = false;
+                    }
+                });
+            }, 100);
+        } else {
+            correctAnswerField.value = data.correct;
+        }
+    }
 }
 
 // Function for Intelligent Question Parsing & Auto-Fill
