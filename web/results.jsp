@@ -1323,6 +1323,39 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
     *:focus:not(.focus-visible) {
         outline: none;
     }
+    
+    /* Scroll-to-top button */
+    .scroll-to-top {
+        position: fixed;
+        bottom: 30px;
+        right: 20px;
+        z-index: 999;
+        display: none;
+        background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+        color: white;
+        border: none;
+        border-radius: 40%;
+        width: 40px;
+        height: 40px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .scroll-to-top:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    .scroll-to-top.show {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .scroll-to-top i {
+        font-size: 16px;
+    }
 </style>
 
 <div class="results-wrapper">
@@ -2280,4 +2313,33 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
   
   // Initialize quick filters after page loads
   setTimeout(addQuickFilters, 100);
+  
+  // Scroll to top functionality
+  document.addEventListener('DOMContentLoaded', function() {
+    const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+    
+    if (scrollToTopBtn) {
+        // Show/hide scroll to top button based on scroll position
+        window.addEventListener('scroll', function() {
+            if (window.pageYOffset > 300) {  // Show after scrolling down 300px
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+        });
+        
+        // Scroll to top when button is clicked
+        scrollToTopBtn.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+  });
 </script>
+
+<!-- Scroll to Top Button -->
+<button class="scroll-to-top" id="scrollToTopBtn" title="Scroll to top">
+    <i class="fas fa-arrow-up"></i>
+</button>

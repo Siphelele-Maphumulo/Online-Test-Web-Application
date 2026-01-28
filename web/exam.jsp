@@ -1797,6 +1797,7 @@
                 <% for (int i=0; i<totalQ; i++){
                     Questions q = questionsList.get(i);
                     boolean isMultiTwo = false;
+                    boolean isFIB = false;
                     try{
                         String qt = q.getQuestion().toLowerCase();
                         String questionType = q.getQuestionType();
@@ -1805,7 +1806,8 @@
                                     qt.contains("pick two") || qt.contains("multiple answers") || 
                                     qt.contains("two options") || qt.contains("multiple select") ||
                                     qt.contains("select multiple") || qt.contains("choose multiple");
-                    } catch(Exception e) { isMultiTwo = false; }
+                        isFIB = "FillInTheBlank".equalsIgnoreCase(questionType);
+                    } catch(Exception e) { isMultiTwo = false; isFIB = false; }
 
                     String fullQuestion = q.getQuestion(), questionPart = "", codePart = "";
                     if(fullQuestion.contains("```")){
@@ -1864,26 +1866,41 @@
                                 <% } %>
                             </div>
                         </div>
-                        <div class="answers" data-max-select="<%= isMultiTwo?"2":"1" %>">
-                            <% if(isMultiTwo){ %>
-                                <div class="multi-select-note"><i class="fas fa-check-double"></i><strong>Choose up to 2 answers</strong></div>
-                            <% } %>
-                            <% for(int oi=0; oi<opts.size(); oi++){
-                                String optVal = opts.get(oi);
-                                String inputId = "q"+i+"o"+(oi+1);
-                            %>
-                                <div class="form-check">
-                                    <input class="form-check-input answer-input <%= isMultiTwo?"multi":"single" %>" 
-                                        type="<%= isMultiTwo?"checkbox":"radio" %>" 
-                                        id="<%= inputId %>" 
-                                        name="<%= isMultiTwo ? ("ans"+i+"_"+oi) : ("ans"+i) %>" 
-                                        value="<%= optVal %>" 
-                                        data-qindex="<%= i %>">
-                                    <label class="form-check-label" for="<%= inputId %>"><%= optVal %></label>
+                        <div class="answers" data-max-select="<%= isFIB ? "FIB" : (isMultiTwo?"2":"1") %>">
+                            <% if(isFIB) { %>
+                                <div class="fib-container" style="margin-top: 10px;">
+                                    <input type="text" class="form-control answer-input fib" 
+                                           name="ans<%= i %>" 
+                                           id="ans<%= i %>" 
+                                           placeholder="Type your answer here..." 
+                                           data-qindex="<%= i %>"
+                                           autocomplete="off"
+                                           style="width: 100%; padding: 12px; border: 2px solid var(--medium-gray); border-radius: var(--radius-md); font-size: 15px; transition: all var(--transition-fast);">
+                                    <small class="form-hint" style="display: block; margin-top: 8px; color: var(--dark-gray);">
+                                        <i class="fas fa-keyboard"></i> Type the correct answer in the box above.
+                                    </small>
                                 </div>
-                            <% } %>
-                            <% if(isMultiTwo){ %>
-                                <input type="hidden" id="ans<%= i %>-hidden" name="ans<%= i %>" value="">
+                            <% } else { %>
+                                <% if(isMultiTwo){ %>
+                                    <div class="multi-select-note"><i class="fas fa-check-double"></i><strong>Choose up to 2 answers</strong></div>
+                                <% } %>
+                                <% for(int oi=0; oi<opts.size(); oi++){
+                                    String optVal = opts.get(oi);
+                                    String inputId = "q"+i+"o"+(oi+1);
+                                %>
+                                    <div class="form-check">
+                                        <input class="form-check-input answer-input <%= isMultiTwo?"multi":"single" %>" 
+                                            type="<%= isMultiTwo?"checkbox":"radio" %>" 
+                                            id="<%= inputId %>" 
+                                            name="<%= isMultiTwo ? ("ans"+i+"_"+oi) : ("ans"+i) %>" 
+                                            value="<%= optVal %>" 
+                                            data-qindex="<%= i %>">
+                                        <label class="form-check-label" for="<%= inputId %>"><%= optVal %></label>
+                                    </div>
+                                <% } %>
+                                <% if(isMultiTwo){ %>
+                                    <input type="hidden" id="ans<%= i %>-hidden" name="ans<%= i %>" value="">
+                                <% } %>
                             <% } %>
                         </div>
                         <input type="hidden" name="question<%= i %>" value="<%= q.getQuestion() %>">
@@ -2044,11 +2061,17 @@
                         var box = card.querySelector('.answers');
                         if(!box) return;
                         
-                        var maxSel = parseInt(box.getAttribute('data-max-select') || '1', 10);
-                        if(maxSel === 1){
-                            if(box.querySelector('input.single:checked')) answered++;
+                        var maxSelAttr = box.getAttribute('data-max-select');
+                        if(maxSelAttr === "FIB") {
+                            var fibInput = box.querySelector('input.fib');
+                            if(fibInput && fibInput.value.trim() !== "") answered++;
                         } else {
-                            if(box.querySelectorAll('input.multi:checked').length >= 1) answered++;
+                            var maxSel = parseInt(maxSelAttr || '1', 10);
+                            if(maxSel === 1){
+                                if(box.querySelector('input.single:checked')) answered++;
+                            } else {
+                                if(box.querySelectorAll('input.multi:checked').length >= 1) answered++;
+                            }
                         }
                     });
                     
@@ -2224,11 +2247,17 @@
                         var box = card.querySelector('.answers');
                         if(!box) return;
                         
-                        var maxSel = parseInt(box.getAttribute('data-max-select') || '1', 10);
-                        if(maxSel === 1) {
-                            if(box.querySelector('input.single:checked')) answeredQuestions++;
+                        var maxSelAttr = box.getAttribute('data-max-select');
+                        if(maxSelAttr === "FIB") {
+                            var fibInput = box.querySelector('input.fib');
+                            if(fibInput && fibInput.value.trim() !== "") answeredQuestions++;
                         } else {
-                            if(box.querySelectorAll('input.multi:checked').length >= 1) answeredQuestions++;
+                            var maxSel = parseInt(maxSelAttr || '1', 10);
+                            if(maxSel === 1) {
+                                if(box.querySelector('input.single:checked')) answeredQuestions++;
+                            } else {
+                                if(box.querySelectorAll('input.multi:checked').length >= 1) answeredQuestions++;
+                            }
                         }
                     });
                     
@@ -2373,6 +2402,14 @@
 
                 /* --- INITIALIZATION --- */
                 document.addEventListener('DOMContentLoaded', function() {
+                    // Add input event listener for FIB fields to update progress immediately
+                    document.querySelectorAll('input.fib').forEach(function(input) {
+                        input.addEventListener('input', function() {
+                            updateProgress();
+                            dirty = true;
+                        });
+                    });
+
                     // Initialize components
                     updateProgress();
                     startTimer();

@@ -775,6 +775,7 @@
                             <select id="questionTypeSelect" class="form-select" onchange="toggleEditOptions()">
                                 <option value="MCQ" <%= "MCQ".equals(questionType) ? "selected" : "" %>>Multiple Choice (Single Answer)</option>
                                 <option value="MultipleSelect" <%= "MultipleSelect".equals(questionType) ? "selected" : "" %>>Multiple Select (Choose Two)</option>
+                                <option value="FillInTheBlank" <%= "FillInTheBlank".equals(questionType) ? "selected" : "" %>>Fill in the Blank</option>
                                 <option value="TrueFalse" <%= "TrueFalse".equals(questionType) ? "selected" : "" %>>True / False</option>
                                 <option value="Code" <%= "Code".equals(questionType) ? "selected" : "" %>>Code Snippet</option>
                             </select>
@@ -935,13 +936,40 @@
         if (qType === "TrueFalse") {
             trueFalse.style.display = "block";
             if (trueFalseSelect) trueFalseSelect.required = true;
-            // Don't require options for True/False questions
-            document.getElementById('editOpt1').required = false;
-            document.getElementById('editOpt2').required = false;
-            document.getElementById('editOpt3').required = false;
-            document.getElementById('editOpt4').required = false;
+            
+            // Disable option fields for True/False questions (they won't be submitted)
+            const opts = ['editOpt1', 'editOpt2', 'editOpt3', 'editOpt4'];
+            opts.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.disabled = true;
+                    el.required = false;
+                }
+            });
+        } else if (qType === "FillInTheBlank") {
+            single.style.display = "block";
+            correct.placeholder = "Correct Answer";
+            correct.required = true;
+            
+            // Disable option fields for Fill in the Blank questions
+            const opts = ['editOpt1', 'editOpt2', 'editOpt3', 'editOpt4'];
+            opts.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.disabled = true;
+                    el.required = false;
+                }
+            });
         } else {
             mcq.style.display = "block";
+            
+            // Enable option fields for non-True/False/FIB questions
+            const opts = ['editOpt1', 'editOpt2', 'editOpt3', 'editOpt4'];
+            opts.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = false;
+            });
+
             if (qType === "MultipleSelect") {
                 multiple.style.display = "block";
                 updateEditCorrectOptionLabels();
@@ -966,7 +994,7 @@ function checkForCodeSnippetEdit() {
     
     // Count lines and check for code indicators
     const lines = questionText.split('\n').filter(line => line.trim() !== '');
-    const hasCodeIndicators = /(?:def |function |public |class |print\(|console\.\|<[^>]*>\|\{|\}|import |int |String |printf\(|cout )/.test(questionText);
+    const hasCodeIndicators = /(?:def |function |public |class |print\(|console\.|<[^>]*>|\{|\}|import |int |String |printf\(|cout )/.test(questionText);
     
     // If question is longer than 3 lines or contains code indicators and is not already Code type
     if ((lines.length > 3 || hasCodeIndicators) && questionType !== 'Code') {
@@ -1061,6 +1089,11 @@ window.addEventListener('DOMContentLoaded', function() {
             const correctValue = document.getElementById('editTrueFalseSelect').value;
             if (!correctValue) {
                 msg = "Please select the correct answer for True/False question.";
+            }
+        } else if (qType === "FillInTheBlank") {
+            const correctValue = document.getElementById('editCorrectAnswer').value.trim();
+            if (!correctValue) {
+                msg = "Correct answer is required for Fill in the Blank questions.";
             }
         } else {
             const opt1 = document.getElementById('editOpt1').value.trim();
