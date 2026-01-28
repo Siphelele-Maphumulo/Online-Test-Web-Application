@@ -1132,7 +1132,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                     
                     <div class="form-group">
                         <label class="form-label"><i class="fas fa-question-circle" style="color: var(--primary-blue);"></i> Your Question</label>
-                        <textarea name="question" id="questionTextarea" class="question-input" rows="3" oninput="checkForCodeSnippet()"></textarea>
+                        <textarea name="question" id="questionTextarea" class="question-input" rows="3" oninput="handleQuestionInput()" onpaste="handlePaste(event)"></textarea>
                         <small class="form-hint">Enter your question text (optional if uploading an image)</small>
                     </div>
                     
@@ -2051,6 +2051,211 @@ function updateScrollIndicator() {
             scrollIndicator.style.display = 'none';
         } else {
             scrollIndicator.style.display = 'flex';
+        }
+    }
+}
+
+// Wrapper functions for question input events
+function handleQuestionInput() {
+    checkForCodeSnippet();
+    handleSmartParsing();
+}
+
+function handlePaste(event) {
+    // Use setTimeout to allow the pasted content to be available in the textarea
+    setTimeout(handleSmartParsing, 100);
+}
+
+// Function for Intelligent Question Parsing & Auto-Fill
+function handleSmartParsing() {
+    const textarea = document.getElementById("questionTextarea");
+    if (!textarea) return;
+    const text = textarea.value; // Keep raw text to preserve formatting
+    if (!text.trim()) return;
+
+    // Try Structured Block Parsing first
+    if (tryParseStructuredBlock(text)) return;
+
+    // Try Free-form / Code Snippet + Multi-line Options
+    tryParseFreeForm(text);
+}
+
+function tryParseStructuredBlock(text) {
+    const labels = {
+        question: /Your Question:\s*([\s\S]*?)(?=Question Type:|Options:|Correct Answer:|✅ Correct Answer:|$)/i,
+        type: /Question Type:\s*([\s\S]*?)(?=Your Question:|Options:|Correct Answer:|✅ Correct Answer:|$)/i,
+        options: /Options:\s*([\s\S]*?)(?=Your Question:|Question Type:|Correct Answer:|✅ Correct Answer:|$)/i,
+        correct: /(?:Correct Answer:|✅ Correct Answer:)\s*([\s\S]*?)(?=Your Question:|Question Type:|Options:|$)/i
+    };
+
+    let foundLabels = 0;
+    for (let key in labels) {
+        if (labels[key].test(text)) foundLabels++;
+    }
+
+    // If at least 2 markers are present, treat as structured block
+    if (foundLabels < 2) return false;
+
+    const qMatch = text.match(labels.question);
+    const tMatch = text.match(labels.type);
+    const oMatch = text.match(labels.options);
+    const cMatch = text.match(labels.correct);
+
+    const typeSelect = document.getElementById("questionTypeSelect");
+    const textarea = document.getElementById("questionTextarea");
+
+    if (qMatch) textarea.value = qMatch[1].trim();
+
+    if (tMatch) {
+        const typeStr = tMatch[1].trim().toLowerCase();
+        if (typeStr.includes("multiple choice") || typeStr === "mcq") typeSelect.value = "MCQ";
+        else if (typeStr.includes("true") && typeStr.includes("false") || typeStr === "truefalse") typeSelect.value = "TrueFalse";
+        else if (typeStr.includes("multiple select") || typeStr === "multipleselect") typeSelect.value = "MultipleSelect";
+        else if (typeStr.includes("fill in the blank") || typeStr.includes("fib") || typeStr === "fillintheblank") typeSelect.value = "FillInTheBlank";
+        else if (typeStr.includes("code")) typeSelect.value = "Code";
+        
+        toggleOptions();
+    }
+
+    let parsedOptions = [];
+    if (oMatch) {
+        parsedOptions = oMatch[1].split('|').map(o => o.trim()).filter(o => o.length > 0);
+        for (let i = 0; i < 4; i++) {
+            const optField = document.getElementById("opt" + (i + 1));
+            if (optField) {
+                optField.value = parsedOptions[i] || "";
+                optField.dispatchEvent(new Event('input'));
+            }
+        }
+    }
+
+    if (cMatch) {
+        const correct = cMatch[1].trim();
+        populateCorrectAnswer(correct, parsedOptions);
+    }
+    
+    showToast('success', 'Smart Fill', 'Structured data successfully parsed.');
+    return true;
+}
+
+function tryParseFreeForm(text) {
+    // Regex for prefixes: A. B. 1. 2. i. ii. etc.
+    const optionRegex = /^(?:[ \t]*)((?:[A-Za-z0-9]+|[ivxIVX]+))[\.\)]\s+([\s\S]*?)(?=\n(?:[ \t]*)(?:[A-Za-z0-9]+|[ivxIVX]+)[\.\)]\s+|\n(?:Correct Answer:|✅ Correct Answer:)|$)/gm;
+    const correctMarkerRegex = /(?:Correct Answer:|✅ Correct Answer:)\s*([\s\S]*?)$/i;
+    const questionLabelRegex = /^Question:\s*([\s\S]*?)$/i;
+
+    let match;
+    let optionMatches = [];
+    while ((match = optionRegex.exec(text)) !== null) {
+        optionMatches.push({
+            symbol: match[1],
+            text: match[2].trim()
+        });
+    }
+
+    if (optionMatches.length < 2) return false;
+
+    // Identify positions
+    const firstOptionIndex = text.search(/^[ \t]*(?:[A-Za-z0-9]+|[ivxIVX]+)[\.\)]\s+/m);
+    let questionText = text.substring(0, firstOptionIndex).trim();
+    
+    // Remove "Question:" label if present
+    const qLabelMatch = questionText.match(questionLabelRegex);
+    if (qLabelMatch) questionText = qLabelMatch[1].trim();
+
+    const typeSelect = document.getElementById("questionTypeSelect");
+    const textarea = document.getElementById("questionTextarea");
+
+    textarea.value = questionText;
+
+    // Detect code block
+    const hasCodeIndicators = /(?:def |function |public |class |print\(|console\.|<[^>]*>|\{|\}|import |int |String |printf\(|cout )/.test(questionText);
+    if (hasCodeIndicators || questionText.split('\n').length > 3) {
+        typeSelect.value = "Code";
+        toggleOptions();
+    } else {
+        typeSelect.value = "MCQ";
+        toggleOptions();
+    }
+
+    // Populate options
+    let parsedOptions = optionMatches.map(m => m.text);
+    for (let i = 0; i < 4; i++) {
+        const optField = document.getElementById("opt" + (i + 1));
+        if (optField) {
+            optField.value = i < optionMatches.length ? optionMatches[i].text : "";
+            optField.dispatchEvent(new Event('input'));
+        }
+    }
+
+    // Handle Correct Answer
+    const cMatch = text.match(correctMarkerRegex);
+    if (cMatch) {
+        const correctRaw = cMatch[1].trim();
+        // Resolve symbolic link
+        const symbolIdx = getSymbolIndex(correctRaw, optionMatches);
+        if (symbolIdx !== -1 && symbolIdx < optionMatches.length) {
+            populateCorrectAnswer(optionMatches[symbolIdx].text, parsedOptions);
+        } else {
+            populateCorrectAnswer(correctRaw, parsedOptions);
+        }
+    }
+
+    showToast('info', 'Smart Fill', 'Free-form data extracted.');
+    return true;
+}
+
+function getSymbolIndex(symbol, optionMatches) {
+    symbol = symbol.trim().toUpperCase().replace(/[\.\)]$/, "");
+    
+    // Check against extracted symbols
+    for (let i = 0; i < optionMatches.length; i++) {
+        if (optionMatches[i].symbol.toUpperCase() === symbol) return i;
+    }
+
+    // Fallback to standard mappings
+    if (/^[A-D]$/.test(symbol)) return symbol.charCodeAt(0) - 65;
+    if (/^[1-4]$/.test(symbol)) return parseInt(symbol) - 1;
+    const roman = { "I": 0, "II": 1, "III": 2, "IV": 3 };
+    if (roman[symbol] !== undefined) return roman[symbol];
+    
+    return -1;
+}
+
+function populateCorrectAnswer(correct, parsedOptions) {
+    const typeSelect = document.getElementById("questionTypeSelect");
+    const correctAnswerField = document.getElementById("correctAnswer");
+
+    if (typeSelect.value === "TrueFalse") {
+        const tfSelect = document.getElementById("trueFalseSelect");
+        if (tfSelect) {
+            if (correct.toLowerCase() === "true") tfSelect.value = "True";
+            else if (correct.toLowerCase() === "false") tfSelect.value = "False";
+            tfSelect.dispatchEvent(new Event('change'));
+        }
+    } else if (typeSelect.value === "MultipleSelect") {
+        const multipleCorrect = correct.split('|').map(c => c.trim());
+        correctAnswerField.value = correct;
+        
+        setTimeout(() => {
+            const checkboxes = document.querySelectorAll('.correct-checkbox');
+            checkboxes.forEach(cb => {
+                if (multipleCorrect.some(mc => mc.toLowerCase() === cb.value.toLowerCase())) {
+                    cb.checked = true;
+                } else {
+                    cb.checked = false;
+                }
+            });
+        }, 100);
+    } else {
+        correctAnswerField.value = correct;
+    }
+
+    // Validation for MCQ
+    if (typeSelect.value === "MCQ" && parsedOptions.length > 0) {
+        const match = parsedOptions.some(opt => opt.toLowerCase() === correct.toLowerCase());
+        if (!match) {
+            showToast('warning', 'Parsing Warning', 'Correct answer does not match any of the provided options.');
         }
     }
 }
