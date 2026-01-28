@@ -2202,25 +2202,78 @@ function closeAIModal() {
     handleSmartParsing();
 }
 
-function confirmAIGeneration() {
+async function confirmAIGeneration() {
     document.getElementById("aiConfirmationModal").style.display = "none";
     const qType = document.getElementById("questionTypeSelect").value;
     
-    generatedAIQuestions = generateAIQuestions(pendingPastedText, qType);
-    
-    if (generatedAIQuestions && generatedAIQuestions.length > 0) {
-        currentAIQuestionIndex = 0;
-        showAIQuestion(currentAIQuestionIndex);
+    // Show loading state in the status div
+    const statusDiv = document.getElementById('uploadStatus');
+    if (statusDiv) {
+        statusDiv.style.display = 'block';
+        statusDiv.innerHTML = '<div class="alert"><i class="fas fa-spinner fa-spin"></i> AI is generating high-quality questions, please wait...</div>';
         
-        const hasLowConfidence = generatedAIQuestions.some(q => q.lowConfidence);
-        if (hasLowConfidence) {
-            showToast('warning', 'Review Needed', 'Auto-generation completed. Please review and refine the questions.');
-        } else {
-            showToast('success', 'AI Generation Complete', `Generated ${generatedAIQuestions.length} questions for review.`);
+        // Scroll to status div so user sees it's working
+        statusDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    try {
+        const response = await fetch('controller.jsp?page=questions&operation=ai_generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: 'text=' + encodeURIComponent(pendingPastedText) + '&questionType=' + encodeURIComponent(qType)
+        });
+
+        const responseText = await response.text();
+        if (!response.ok) {
+            throw new Error('Server returned ' + response.status + ': ' + response.statusText + ' - ' + responseText);
         }
-    } else {
-        showToast('error', 'AI Error', 'Could not generate questions from this content.');
-        handleSmartParsing();
+
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Failed to parse AI response:', responseText);
+            throw new Error('Invalid JSON response from server');
+        }
+
+        if (data.success && data.questions && data.questions.length > 0) {
+            generatedAIQuestions = data.questions;
+            currentAIQuestionIndex = 0;
+            showAIQuestion(currentAIQuestionIndex);
+
+            showToast('success', 'AI Generation Complete', `Generated ${generatedAIQuestions.length} questions for review.`);
+            if (statusDiv) {
+                statusDiv.innerHTML = `<div class="alert" style="background: #d4edda; color: #155724;"><i class="fas fa-check-circle"></i> AI successfully generated ${generatedAIQuestions.length} questions.</div>`;
+            }
+        } else {
+            throw new Error(data.message || 'AI could not generate questions from this content.');
+        }
+    } catch (error) {
+        console.error('AI Generation Error:', error);
+        showToast('error', 'AI Error', error.message || 'An error occurred during AI generation.');
+        if (statusDiv) {
+            statusDiv.innerHTML = `<div class="alert" style="background: #f8d7da; color: #721c24;"><i class="fas fa-exclamation-triangle"></i> AI Generation failed: ${error.message}</div>`;
+        }
+
+        // Fallback to local heuristic generation if AI fails
+        console.log('Falling back to local heuristic generation...');
+        generatedAIQuestions = generateAIQuestions(pendingPastedText, qType);
+        if (generatedAIQuestions && generatedAIQuestions.length > 0) {
+            currentAIQuestionIndex = 0;
+            showAIQuestion(currentAIQuestionIndex);
+        } else {
+            handleSmartParsing();
+        }
+    } finally {
+        // Keep status visible for a few seconds then hide if successful
+        setTimeout(() => {
+            if (statusDiv && statusDiv.innerHTML.includes('check-circle')) {
+                statusDiv.style.display = 'none';
+            }
+        }, 5000);
     }
 }
 

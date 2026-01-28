@@ -1,0 +1,4 @@
+# OpenRouter API Configuration
+# Get your API key at https://openrouter.ai/keys
+openrouter.api.key=YOUR_API_KEY_HERE
+openrouter.model=openai/gpt-4o-mini
