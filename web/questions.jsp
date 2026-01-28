@@ -68,9 +68,14 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
         </div>
         <div class="modal-body">
             <p id="aiModalMessage">We detected pasted study material. Would you like to auto-generate questions and answers from this content?</p>
+            <div style="margin-top: 15px;">
+                <label class="form-label"><i class="fas fa-key"></i> AI API Key (Optional)</label>
+                <input type="password" id="aiApiKey" class="form-control" placeholder="Enter OpenAI API Key for better results">
+                <small class="form-hint">If left blank, a simple heuristic generator will be used.</small>
+            </div>
         </div>
         <div class="modal-footer">
-            <button onclick="confirmAIGeneration()" class="btn btn-success" id="confirmAIBtn">Generate Questions</button>
+            <button onclick="confirmAIGeneration()" class="btn btn-success" id="confirmAIBtn">Generate 1st Question</button>
             <button onclick="closeAIModal()" class="btn btn-outline">Cancel (Manual Entry)</button>
         </div>
     </div>
@@ -1252,13 +1257,10 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                     <!-- AI Generation Navigation -->
                     <div id="aiNavigation" class="ai-navigation" style="display: none; margin-top: 20px; padding: 15px; background: #f0f7ff; border: 1px solid #cce3ff; border-radius: 8px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <span id="aiCount" style="font-weight: 600; color: #0056b3;">Reviewing AI Question 1 of 1</span>
+                            <span id="aiCount" style="font-weight: 600; color: #0056b3;">AI Question Generated</span>
                             <div style="display: flex; gap: 10px;">
-                                <button type="button" class="btn btn-outline btn-sm" onclick="showPreviousAIQuestion()" id="prevAIBtn">
-                                    <i class="fas fa-chevron-left"></i> Previous
-                                </button>
-                                <button type="button" class="btn btn-outline btn-sm" onclick="showNextAIQuestion()" id="nextAIBtn">
-                                    Next <i class="fas fa-chevron-right"></i>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="confirmAIGeneration()" id="nextAIBtn">
+                                    Generate Another <i class="fas fa-robot"></i>
                                 </button>
                             </div>
                         </div>
@@ -2204,146 +2206,53 @@ function closeAIModal() {
     handleSmartParsing();
 }
 
-function confirmAIGeneration() {
+async function confirmAIGeneration() {
     document.getElementById("aiConfirmationModal").style.display = "none";
     const qType = document.getElementById("questionTypeSelect").value;
+    const apiKey = document.getElementById("aiApiKey").value;
     
-    generatedAIQuestions = generateAIQuestions(pendingPastedText, qType);
+    // Save API key to local storage for convenience
+    if (apiKey) localStorage.setItem('ai_api_key', apiKey);
     
-    if (generatedAIQuestions && generatedAIQuestions.length > 0) {
-        currentAIQuestionIndex = 0;
-        showAIQuestion(currentAIQuestionIndex);
+    const nextBtn = document.getElementById("nextAIBtn");
+    nextBtn.disabled = true;
+    nextBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+    
+    try {
+        let body = `questionType=${encodeURIComponent(qType)}&apiKey=${encodeURIComponent(apiKey || '')}`;
+        if (pendingPastedText) {
+            body += `&text=${encodeURIComponent(pendingPastedText)}`;
+        }
+
+        const response = await fetch('controller.jsp?page=questions&operation=ai_generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: body
+        });
         
-        const hasLowConfidence = generatedAIQuestions.some(q => q.lowConfidence);
-        if (hasLowConfidence) {
-            showToast('warning', 'Review Needed', 'Auto-generation completed. Please review and refine the questions.');
+        if (!response.ok) throw new Error('Network response was not ok');
+
+        const data = await response.json();
+        if (data.success && data.question) {
+            resetForm();
+            populateAIGeneratedFields(data.question);
+            document.getElementById("aiNavigation").style.display = "block";
+            showToast('success', 'AI Generation Complete', 'Question generated and autofilled.');
+
+            // Scroll to the add question panel
+            document.getElementById("addQuestionPanel").scrollIntoView({ behavior: 'smooth' });
         } else {
-            showToast('success', 'AI Generation Complete', `Generated ${generatedAIQuestions.length} questions for review.`);
+            showToast('error', 'AI Error', data.message || 'Could not generate question.');
         }
-    } else {
-        showToast('error', 'AI Error', 'Could not generate questions from this content.');
-        handleSmartParsing();
-    }
-}
-
-function generateAIQuestions(text, type) {
-    const wordCount = text.trim().split(/\s+/).filter(w => w.length > 0).length;
-    let numToGenerate = 1;
-    if (wordCount >= 151) numToGenerate = Math.floor(Math.random() * 3) + 3; // 3-5
-    else if (wordCount >= 81) numToGenerate = Math.floor(Math.random() * 2) + 2; // 2-3
-    else if (wordCount >= 30) numToGenerate = 1;
-    
-    const results = [];
-    const sentences = text.trim().split(/[.!?]+/).filter(s => s.trim().length > 0);
-    
-    for (let i = 0; i < numToGenerate; i++) {
-        const question = generateSingleAIQuestion(text, type, i, sentences);
-        if (question) results.push(question);
-    }
-    
-    return results;
-}
-
-function generateSingleAIQuestion(text, type, index, sentences) {
-    // Specific example handler for Siphelele Maphumulo
-    if (text.includes("Siphelele Maphumulo") && text.includes("IT and Desktop Support")) {
-        if (type === "MCQ") {
-            return {
-                question: "What background does Siphelele Maphumulo have?",
-                options: ["Desktop Support", "Software Development", "Graphic Design", "Music Production"],
-                correct: "Desktop Support"
-            };
-        } else if (type === "MultipleSelect") {
-            return {
-                question: "Which of the following areas does Siphelele Maphumulo have experience in? (Select all that apply)",
-                options: ["Desktop Support", "Windows systems", "Active Directory", "Graphic Design"],
-                correct: "Desktop Support|Windows systems|Active Directory"
-            };
-        } else if (type === "FillInTheBlank") {
-            return {
-                question: "Siphelele Maphumulo has experience working with _________ systems.",
-                correct: "Windows"
-            };
-        }
-    }
-
-    // Generic heuristic-based generation
-    if (sentences.length === 0) return null;
-    
-    // Pick a sentence based on index, loop around if needed
-    const sentenceIdx = index % sentences.length;
-    const sourceSentence = sentences[sentenceIdx].trim();
-
-    if (type === "MCQ") {
-        // Try to find a subject and a verb-object part
-        const words = sourceSentence.split(' ');
-        let question = "According to the text, what is mentioned about the subject?";
-        let correct = sourceSentence;
-        
-        if (words.length > 5) {
-            correct = words.slice(Math.floor(words.length/2)).join(' ');
-            question = "What is stated regarding: " + words.slice(0, Math.floor(words.length/2)).join(' ') + "...?";
-        }
-
-        return {
-            question: question,
-            options: [correct, "None of the above", "The opposite of what was stated", "A completely different topic"],
-            correct: correct,
-            lowConfidence: true
-        };
-    } else if (type === "FillInTheBlank") {
-        const words = sourceSentence.split(' ');
-        if (words.length > 3) {
-            const blankIdx = Math.floor(words.length / 2);
-            const blankWord = words[blankIdx].replace(/[.,]$/, "");
-            words[blankIdx] = "_________";
-            return {
-                question: words.join(' '),
-                correct: blankWord,
-                lowConfidence: true
-            };
-        }
-    } else if (type === "MultipleSelect") {
-        const nextSentenceIdx = (index + 1) % sentences.length;
-        const secondSentence = sentences[nextSentenceIdx].trim();
-        return {
-            question: "Which of the following points are covered in the text?",
-            options: [sourceSentence, secondSentence, "An unmentioned fact", "Incorrect interpretation"],
-            correct: sourceSentence + "|" + secondSentence,
-            lowConfidence: true
-        };
-    }
-    
-    return null;
-}
-
-function showAIQuestion(index) {
-    if (index < 0 || index >= generatedAIQuestions.length) return;
-    
-    currentAIQuestionIndex = index;
-    const questionData = generatedAIQuestions[index];
-    
-    // Clear and populate
-    resetForm();
-    populateAIGeneratedFields(questionData);
-    
-    // Update navigation UI
-    document.getElementById("aiNavigation").style.display = "block";
-    document.getElementById("aiCount").textContent = `Reviewing AI Question ${index + 1} of ${generatedAIQuestions.length}`;
-    
-    document.getElementById("prevAIBtn").disabled = index === 0;
-    document.getElementById("nextAIBtn").disabled = index === generatedAIQuestions.length - 1;
-}
-
-function showNextAIQuestion() {
-    if (currentAIQuestionIndex < generatedAIQuestions.length - 1) {
-        showAIQuestion(currentAIQuestionIndex + 1);
-    }
-}
-
-function showPreviousAIQuestion() {
-    if (currentAIQuestionIndex > 0) {
-        showAIQuestion(currentAIQuestionIndex - 1);
+    } catch (error) {
+        console.error('AI Generation Error:', error);
+        showToast('error', 'AI Error', 'An error occurred during AI generation.');
+    } finally {
+        nextBtn.disabled = false;
+        nextBtn.innerHTML = 'Generate Another <i class="fas fa-robot"></i>';
     }
 }
 
@@ -2357,12 +2266,11 @@ function populateAIGeneratedFields(data) {
     
     if (data.question) textarea.value = data.question;
     
-    if (data.options) {
-        // Only overwrite if current fields are empty (Safety Rule)
-        if (opt1 && !opt1.value.trim()) { opt1.value = data.options[0] || ""; opt1.dispatchEvent(new Event('input')); }
-        if (opt2 && !opt2.value.trim()) { opt2.value = data.options[1] || ""; opt2.dispatchEvent(new Event('input')); }
-        if (opt3 && !opt3.value.trim()) { opt3.value = data.options[2] || ""; opt3.dispatchEvent(new Event('input')); }
-        if (opt4 && !opt4.value.trim()) { opt4.value = data.options[3] || ""; opt4.dispatchEvent(new Event('input')); }
+    if (data.options && Array.isArray(data.options)) {
+        if (opt1) { opt1.value = data.options[0] || ""; opt1.dispatchEvent(new Event('input')); }
+        if (opt2) { opt2.value = data.options[1] || ""; opt2.dispatchEvent(new Event('input')); }
+        if (opt3) { opt3.value = data.options[2] || ""; opt3.dispatchEvent(new Event('input')); }
+        if (opt4) { opt4.value = data.options[3] || ""; opt4.dispatchEvent(new Event('input')); }
     }
     
     if (data.correct) {
@@ -2373,13 +2281,20 @@ function populateAIGeneratedFields(data) {
             setTimeout(() => {
                 const checkboxes = document.querySelectorAll('.correct-checkbox');
                 checkboxes.forEach(cb => {
-                    if (correctList.some(c => c.toLowerCase() === cb.value.toLowerCase())) {
+                    if (correctList.some(c => c.trim().toLowerCase() === cb.value.trim().toLowerCase())) {
                         cb.checked = true;
                     } else {
                         cb.checked = false;
                     }
                 });
             }, 100);
+        } else if (qType === "TrueFalse") {
+            const tfSelect = document.getElementById("trueFalseSelect");
+            if (tfSelect) {
+                if (data.correct.toLowerCase().includes("true")) tfSelect.value = "True";
+                else if (data.correct.toLowerCase().includes("false")) tfSelect.value = "False";
+                tfSelect.dispatchEvent(new Event('change'));
+            }
         } else {
             correctAnswerField.value = data.correct;
         }
@@ -2582,6 +2497,12 @@ function populateCorrectAnswer(correct, parsedOptions) {
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+    // Load AI API Key if available
+    const savedKey = localStorage.getItem('ai_api_key');
+    if (savedKey && document.getElementById('aiApiKey')) {
+        document.getElementById('aiApiKey').value = savedKey;
+    }
+
     toggleOptions(); // Initialize the correct answer container visibility
     updateCorrectOptionLabels();
     syncCourseDropdowns();

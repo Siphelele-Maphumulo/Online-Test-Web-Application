@@ -17,6 +17,7 @@
 <%@ page import="myPackage.classes.Questions" %>
 <%@ page import="org.mindrot.jbcrypt.BCrypt" %>
 <%@ page import="org.json.JSONObject" %>
+<%@page import="org.json.JSONArray"%>
 <%@ page import="org.json.JSONException" %>
 <%@ page contentType="text/html" pageEncoding="UTF-8"%>
 <%@ page trimDirectiveWhitespaces="true" %>
@@ -31,6 +32,7 @@ final Logger LOGGER = Logger.getLogger("controller.jsp");
 private String nz(String v, String fallback){
     return (v != null && !v.trim().isEmpty()) ? v.trim() : fallback;
 }
+
 %>
 
 <%
@@ -532,6 +534,17 @@ try {
         operation = nz(request.getParameter("operation"), "");
     }
     
+    // Auto-detect PDF upload if operation is missing but pdfFile is present
+    List<FileItem> multipartItems = (List<FileItem>) request.getAttribute("multipartItems");
+    if (operation.isEmpty() && multipartItems != null) {
+        for (FileItem item : multipartItems) {
+            if (!item.isFormField() && "pdfFile".equals(item.getFieldName())) {
+                operation = "pdf_upload";
+                break;
+            }
+        }
+    }
+
     // --- START CSRF VALIDATION ---
     if ("del".equalsIgnoreCase(operation) || "bulk_delete".equalsIgnoreCase(operation)) {
         String submittedToken = request.getParameter("csrf_token");
@@ -1111,6 +1124,76 @@ try {
         // Return success response for AJAX
         response.setContentType("application/json");
         response.getWriter().write("{\"success\": true}");
+        return;
+    } else if ("pdf_upload".equalsIgnoreCase(operation)) {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            String extractedText = "";
+            List<FileItem> items = (List<FileItem>) request.getAttribute("multipartItems");
+
+            if (items == null && ServletFileUpload.isMultipartContent(request)) {
+                DiskFileItemFactory factory = new DiskFileItemFactory();
+                ServletFileUpload upload = new ServletFileUpload(factory);
+                items = upload.parseRequest(request);
+            }
+
+            if (items != null) {
+                for (FileItem item : items) {
+                    if (!item.isFormField() && "pdfFile".equals(item.getFieldName())) {
+                        InputStream is = item.getInputStream();
+                        byte[] bytes = org.apache.commons.io.IOUtils.toByteArray(is);
+                        extractedText = AIGenerator.extractTextFromPDF(bytes);
+                        break;
+                    }
+                }
+            }
+
+            if (!extractedText.isEmpty()) {
+                session.setAttribute("last_extracted_text", extractedText);
+                response.getWriter().write("{\"success\": true, \"extractedText\": " + JSONObject.quote(extractedText) + "}");
+            } else {
+                response.getWriter().write("{\"success\": false, \"message\": \"No text could be extracted from the PDF\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\": false, \"message\": \"Error processing PDF: " + e.getMessage() + "\"}");
+        }
+        return;
+    } else if ("ai_generate".equalsIgnoreCase(operation)) {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        String text = request.getParameter("text");
+        if (text == null || text.trim().isEmpty()) {
+            text = (String) session.getAttribute("last_extracted_text");
+        }
+
+        if (text == null || text.trim().isEmpty()) {
+            response.getWriter().write("{\"success\": false, \"message\": \"No study material found. Please upload a PDF or paste text first.\"}");
+            return;
+        }
+
+        String type = nz(request.getParameter("questionType"), "MCQ");
+        String apiKey = request.getParameter("apiKey");
+
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            apiKey = System.getenv("OPENAI_API_KEY");
+        }
+
+        try {
+            if (apiKey != null && !apiKey.trim().isEmpty()) {
+                String aiResponse = AIGenerator.callOpenAI(apiKey, text, type);
+                response.getWriter().write(aiResponse);
+            } else {
+                JSONObject question = AIGenerator.generateHeuristicQuestion(text, type);
+                response.getWriter().write("{\"success\": true, \"question\": " + question.toString() + "}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\": false, \"message\": \"AI Error: " + e.getMessage() + "\"}");
+        }
         return;
     } else {
         // Check if this is an AJAX request
