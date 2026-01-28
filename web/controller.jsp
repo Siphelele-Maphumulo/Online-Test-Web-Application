@@ -22,6 +22,7 @@
 <%@ page import="org.json.JSONObject" %>
 <%@ page import="org.json.JSONException" %>
 <%@ page import="org.apache.pdfbox.pdmodel.PDDocument" %>
+<%@ page import="org.apache.pdfbox.Loader" %>
 <%@ page import="org.apache.pdfbox.text.PDFTextStripper" %>
 <%@ page contentType="text/html" pageEncoding="UTF-8"%>
 <%@ page trimDirectiveWhitespaces="true" %>
@@ -1137,8 +1138,8 @@ try {
             try {
                 for (FileItem item : items) {
                     if (!item.isFormField() && "pdfFile".equals(item.getFieldName())) {
-                        try (InputStream inputStream = item.getInputStream();
-                             PDDocument document = PDDocument.load(inputStream)) {
+                        byte[] pdfBytes = item.get();
+                        try (PDDocument document = Loader.loadPDF(pdfBytes)) {
                             PDFTextStripper stripper = new PDFTextStripper();
                             extractedText = stripper.getText(document);
                             success = true;
