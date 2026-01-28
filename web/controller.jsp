@@ -1185,19 +1185,39 @@ try {
         response.setContentType("application/json");
         PrintWriter outJSON = response.getWriter();
         String text = nz(request.getParameter("text"), "");
-        String questionType = nz(request.getParameter("questionType"), "MCQ");
         
         if (text.isEmpty()) {
             outJSON.print("{\"success\": false, \"message\": \"No text provided for AI generation.\"}");
             return;
         }
+
+        // Forced to MCQ as per plan
+        String questionType = "MCQ";
+
+        // Step 1: Decide Question Count
+        int wordCount = text.split("\\s+").length;
+        int numQuestions;
+        String numQsParam = request.getParameter("numQuestions");
+
+        if (numQsParam != null && !numQsParam.trim().isEmpty()) {
+            try {
+                numQuestions = Integer.parseInt(numQsParam.trim());
+            } catch (NumberFormatException e) {
+                if (wordCount < 300) numQuestions = 5;
+                else if (wordCount < 800) numQuestions = 10;
+                else numQuestions = 20;
+            }
+        } else {
+            if (wordCount < 300) numQuestions = 5;
+            else if (wordCount < 800) numQuestions = 10;
+            else numQuestions = 20;
+        }
         
         try {
-            String aiResponse = OpenRouterClient.generateQuestions(text, questionType);
+            String aiResponse = OpenRouterClient.generateQuestions(text, questionType, numQuestions);
             if (aiResponse != null) {
-                // The AI response should be a JSON string like {"questions": [...]}
                 try {
-                    // Clean up potential markdown code blocks if AI included them
+                    // Clean up potential markdown code blocks
                     if (aiResponse.contains("```json")) {
                         aiResponse = aiResponse.substring(aiResponse.indexOf("```json") + 7);
                         aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
@@ -1206,16 +1226,46 @@ try {
                         aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
                     }
                     
-                    JSONObject result;
+                    JSONObject rawJson;
                     if (aiResponse.trim().startsWith("[")) {
                         JSONArray questions = new JSONArray(aiResponse);
-                        result = new JSONObject();
-                        result.put("questions", questions);
+                        rawJson = new JSONObject();
+                        rawJson.put("questions", questions);
                     } else {
-                        result = new JSONObject(aiResponse);
+                        rawJson = new JSONObject(aiResponse);
                     }
+
+                    // Step 7: Validation (Safety Net)
+                    JSONArray questions = rawJson.getJSONArray("questions");
+                    JSONArray validatedQuestions = new JSONArray();
+
+                    for (int i = 0; i < questions.length(); i++) {
+                        JSONObject q = questions.getJSONObject(i);
+                        JSONArray opts = q.getJSONArray("options");
+                        String correct = q.getString("correct");
+
+                        // Strict validation
+                        if (opts.length() != 4) continue;
+
+                        boolean found = false;
+                        for (int j = 0; j < opts.length(); j++) {
+                            if (opts.getString(j).equals(correct)) {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) continue;
+
+                        // Ensure questionType is set for frontend batch insert
+                        q.put("type", "MCQ");
+                        validatedQuestions.put(q);
+                    }
+
+                    JSONObject result = new JSONObject();
                     result.put("success", true);
+                    result.put("questions", validatedQuestions);
                     outJSON.print(result.toString());
+
                 } catch (Exception parseEx) {
                     LOGGER.log(Level.WARNING, "Failed to parse AI response as JSON: " + aiResponse, parseEx);
                     outJSON.print("{\"success\": false, \"message\": \"AI returned invalid format.\"}");

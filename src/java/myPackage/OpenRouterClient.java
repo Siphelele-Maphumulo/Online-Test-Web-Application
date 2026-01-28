@@ -41,10 +41,11 @@ public class OpenRouterClient {
     /**
      * Generates questions from text using OpenRouter API.
      * @param text The source text to generate questions from.
-     * @param questionType The type of questions (MCQ, MultipleSelect, FillInTheBlank).
+     * @param questionType The type of questions (Forced to MCQ by this method).
+     * @param numQuestions The number of questions to generate.
      * @return JSON string containing the generated questions.
      */
-    public static String generateQuestions(String text, String questionType) {
+    public static String generateQuestions(String text, String questionType, int numQuestions) {
         if (API_KEY == null || API_KEY.trim().isEmpty()) {
             LOGGER.severe("OpenRouter API Key is missing. AI generation will fail.");
             return null;
@@ -55,24 +56,50 @@ public class OpenRouterClient {
                     .connectTimeout(Duration.ofSeconds(30))
                     .build();
             
-            String prompt = "Act as an educational expert. Generate 3 to 5 high-quality " + questionType + " questions based on the provided text. " +
-                            "Output must be a JSON object with a 'questions' key containing an array of objects. " +
-                            "Each question object MUST have: " +
-                            "1. 'question': the question text. " +
-                            "2. 'options': an array of exactly 4 strings (for MCQ and MultipleSelect, empty array for FillInTheBlank). " +
-                            "3. 'correct': the correct answer. For MultipleSelect, use 'OptionText1|OptionText2' format. For MCQ, it MUST match one of the options exactly. " +
-                            "The response should be strictly JSON, no extra text.\n\n" +
-                            "Text: " + text;
+            String prompt = "You are an exam question generator.\n\n" +
+                            "Rules:\n" +
+                            "- Generate ONLY multiple-choice questions.\n" +
+                            "- Each question MUST have exactly 4 options.\n" +
+                            "- EXACTLY ONE option must be correct.\n" +
+                            "- Return STRICT JSON ONLY.\n" +
+                            "- No markdown.\n" +
+                            "- No explanations.\n" +
+                            "- No prose.\n" +
+                            "- No extra text.\n" +
+                            "- No numbering outside JSON.\n\n" +
+                            "From the content below:\n" +
+                            "1. If existing questions are found (e.g. \"Q1\", \"Question 1\"), extract and normalize them.\n" +
+                            "2. Otherwise, generate new questions.\n\n" +
+                            "Generate " + numQuestions + " UNIQUE multiple-choice questions.\n\n" +
+                            "Output JSON format:\n" +
+                            "{\n" +
+                            "  \"questions\": [\n" +
+                            "    {\n" +
+                            "      \"question\": \"...\",\n" +
+                            "      \"options\": [\"A\", \"B\", \"C\", \"D\"],\n" +
+                            "      \"correct\": \"EXACT_OPTION_TEXT\"\n" +
+                            "    }\n" +
+                            "  ]\n" +
+                            "}\n\n" +
+                            "Content:\n" + text;
 
             JSONObject body = new JSONObject();
             body.put("model", MODEL);
-            body.put("max_tokens", 1500);
+            body.put("max_tokens", 2500);
+            body.put("temperature", 0.4);
             
             JSONArray messages = new JSONArray();
-            JSONObject message = new JSONObject();
-            message.put("role", "user");
-            message.put("content", prompt);
-            messages.put(message);
+
+            // Add system prompt for extra reliability
+            JSONObject systemMessage = new JSONObject();
+            systemMessage.put("role", "system");
+            systemMessage.put("content", "You are an exam question generator. Return STRICT JSON ONLY. No markdown. No prose.");
+            messages.put(systemMessage);
+
+            JSONObject userMessage = new JSONObject();
+            userMessage.put("role", "user");
+            userMessage.put("content", prompt);
+            messages.put(userMessage);
             
             body.put("messages", messages);
 
