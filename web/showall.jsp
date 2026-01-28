@@ -949,43 +949,50 @@ session.setAttribute("csrf_token", csrfToken);
                 </div>
                 
                 <div class="question-content">
-                    <div class="options-grid">
-                        <!-- Option A -->
-                        <div class="option-item <%= isMultipleSelect ? 
-                              (containsAnswer(correctAnswers, opt1) ? "option-correct-multiple" : "") : 
-                              (correct != null && correct.equals(opt1) ? "option-correct" : "") %>">
-                            <span class="option-label">Option A</span>
-                            <div class="option-text"><%= opt1 %></div>
+                    <% if ("FillInTheBlank".equalsIgnoreCase(questionType)) { %>
+                        <div class="fib-answer-display" style="background: linear-gradient(135deg, rgba(5, 150, 105, 0.1), rgba(16, 185, 129, 0.1)); border: 1px solid var(--success); border-radius: var(--radius-sm); padding: var(--spacing-md); position: relative; margin-bottom: var(--spacing-md);">
+                            <span class="option-label" style="color: var(--success);"><i class="fas fa-check-circle"></i> Correct Answer</span>
+                            <div class="option-text" style="font-size: 16px; font-weight: 600;"><%= correct %></div>
                         </div>
-                        
-                        <!-- Option B -->
-                        <div class="option-item <%= isMultipleSelect ? 
-                              (containsAnswer(correctAnswers, opt2) ? "option-correct-multiple" : "") : 
-                              (correct != null && correct.equals(opt2) ? "option-correct" : "") %>">
-                            <span class="option-label">Option B</span>
-                            <div class="option-text"><%= opt2 %></div>
+                    <% } else { %>
+                        <div class="options-grid">
+                            <!-- Option A -->
+                            <div class="option-item <%= isMultipleSelect ?
+                                  (containsAnswer(correctAnswers, opt1) ? "option-correct-multiple" : "") :
+                                  (correct != null && correct.equals(opt1) ? "option-correct" : "") %>">
+                                <span class="option-label">Option A</span>
+                                <div class="option-text"><%= opt1 %></div>
+                            </div>
+
+                            <!-- Option B -->
+                            <div class="option-item <%= isMultipleSelect ?
+                                  (containsAnswer(correctAnswers, opt2) ? "option-correct-multiple" : "") :
+                                  (correct != null && correct.equals(opt2) ? "option-correct" : "") %>">
+                                <span class="option-label">Option B</span>
+                                <div class="option-text"><%= opt2 %></div>
+                            </div>
+
+                            <!-- Option C -->
+                            <% if (opt3 != null && !opt3.isEmpty()) { %>
+                            <div class="option-item <%= isMultipleSelect ?
+                                  (containsAnswer(correctAnswers, opt3) ? "option-correct-multiple" : "") :
+                                  (correct != null && correct.equals(opt3) ? "option-correct" : "") %>">
+                                <span class="option-label">Option C</span>
+                                <div class="option-text"><%= opt3 %></div>
+                            </div>
+                            <% } %>
+
+                            <!-- Option D -->
+                            <% if (opt4 != null && !opt4.isEmpty()) { %>
+                            <div class="option-item <%= isMultipleSelect ?
+                                  (containsAnswer(correctAnswers, opt4) ? "option-correct-multiple" : "") :
+                                  (correct != null && correct.equals(opt4) ? "option-correct" : "") %>">
+                                <span class="option-label">Option D</span>
+                                <div class="option-text"><%= opt4 %></div>
+                            </div>
+                            <% } %>
                         </div>
-                        
-                        <!-- Option C -->
-                        <% if (opt3 != null && !opt3.isEmpty()) { %>
-                        <div class="option-item <%= isMultipleSelect ? 
-                              (containsAnswer(correctAnswers, opt3) ? "option-correct-multiple" : "") : 
-                              (correct != null && correct.equals(opt3) ? "option-correct" : "") %>">
-                            <span class="option-label">Option C</span>
-                            <div class="option-text"><%= opt3 %></div>
-                        </div>
-                        <% } %>
-                        
-                        <!-- Option D -->
-                        <% if (opt4 != null && !opt4.isEmpty()) { %>
-                        <div class="option-item <%= isMultipleSelect ? 
-                              (containsAnswer(correctAnswers, opt4) ? "option-correct-multiple" : "") : 
-                              (correct != null && correct.equals(opt4) ? "option-correct" : "") %>">
-                            <span class="option-label">Option D</span>
-                            <div class="option-text"><%= opt4 %></div>
-                        </div>
-                        <% } %>
-                    </div>
+                    <% } %>
                     
                     <div class="question-meta">
                         <div class="meta-item">
