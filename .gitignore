@@ -1,2 +1,16 @@
 /build/
 /dist/
+# Sensitive configuration files
+openrouter.properties
+*.properties
+*.war
+*.jar
+*.zip
+*.tar.gz
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+.DS_Store
+Thumbs.db

@@ -20,6 +20,7 @@
 <%@ page import="myPackage.classes.Questions" %>
 <%@ page import="org.mindrot.jbcrypt.BCrypt" %>
 <%@ page import="org.json.JSONObject" %>
+<%@ page import="org.json.JSONArray" %>
 <%@ page import="org.json.JSONException" %>
 <%@ page import="org.apache.pdfbox.Loader" %>
 <%@ page import="org.apache.pdfbox.pdmodel.PDDocument" %>
@@ -1178,6 +1179,53 @@ try {
             }
         } else {
             outJSON.print("{\"success\": false, \"message\": \"Not a multipart request.\"}");
+        }
+        return;
+    } else if ("ai_generate".equalsIgnoreCase(operation)) {
+        response.setContentType("application/json");
+        PrintWriter outJSON = response.getWriter();
+        String text = nz(request.getParameter("text"), "");
+        String questionType = nz(request.getParameter("questionType"), "MCQ");
+        
+        if (text.isEmpty()) {
+            outJSON.print("{\"success\": false, \"message\": \"No text provided for AI generation.\"}");
+            return;
+        }
+        
+        try {
+            String aiResponse = OpenRouterClient.generateQuestions(text, questionType);
+            if (aiResponse != null) {
+                // The AI response should be a JSON string like {"questions": [...]}
+                try {
+                    // Clean up potential markdown code blocks if AI included them
+                    if (aiResponse.contains("```json")) {
+                        aiResponse = aiResponse.substring(aiResponse.indexOf("```json") + 7);
+                        aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
+                    } else if (aiResponse.contains("```")) {
+                        aiResponse = aiResponse.substring(aiResponse.indexOf("```") + 3);
+                        aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
+                    }
+                    
+                    JSONObject result;
+                    if (aiResponse.trim().startsWith("[")) {
+                        JSONArray questions = new JSONArray(aiResponse);
+                        result = new JSONObject();
+                        result.put("questions", questions);
+                    } else {
+                        result = new JSONObject(aiResponse);
+                    }
+                    result.put("success", true);
+                    outJSON.print(result.toString());
+                } catch (Exception parseEx) {
+                    LOGGER.log(Level.WARNING, "Failed to parse AI response as JSON: " + aiResponse, parseEx);
+                    outJSON.print("{\"success\": false, \"message\": \"AI returned invalid format.\"}");
+                }
+            } else {
+                outJSON.print("{\"success\": false, \"message\": \"AI generation failed. Please try again later.\"}");
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error in AI generation endpoint", e);
+            outJSON.print("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
         }
         return;
     } else {

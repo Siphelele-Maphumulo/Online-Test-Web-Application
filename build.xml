@@ -74,6 +74,7 @@
         <echo message="Copying mail.properties to classpath..."/>
         <copy todir="${build.classes.dir}" failonerror="false">
             <fileset dir="${src.dir}/../resources" includes="**/*.properties"/>
+            <fileset dir="src/resources" includes="**/*.properties"/>
         </copy>
     </target>
 </project>
