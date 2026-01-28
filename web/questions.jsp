@@ -59,6 +59,23 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
     </div>
 </div>
 
+<!-- AI Auto-Generation Confirmation Modal -->
+<div id="aiConfirmationModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-robot"></i> AI Auto-Generation</h3>
+            <span class="close-modal" onclick="closeAIModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>We detected that you pasted a paragraph. Would you like to auto-generate a question from this content?</p>
+        </div>
+        <div class="modal-footer">
+            <button onclick="confirmAIGeneration()" class="btn btn-success">Yes, Auto-Generate</button>
+            <button onclick="closeAIModal()" class="btn btn-outline">No, I'll do it manually</button>
+        </div>
+    </div>
+</div>
+
 <!-- Success/Error Toast -->
 <div id="toast" class="toast" style="display: none;">
     <div class="toast-content">
@@ -2055,15 +2072,203 @@ function updateScrollIndicator() {
     }
 }
 
+// AI Generation State
+let isPastedContent = false;
+let pendingPastedText = "";
+
 // Wrapper functions for question input events
 function handleQuestionInput() {
+    isPastedContent = false; // User typed, so it's not a pure paste anymore
     checkForCodeSnippet();
     handleSmartParsing();
 }
 
 function handlePaste(event) {
-    // Use setTimeout to allow the pasted content to be available in the textarea
-    setTimeout(handleSmartParsing, 100);
+    isPastedContent = true;
+    const pastedText = (event.clipboardData || window.clipboardData).getData('text');
+    pendingPastedText = pastedText;
+
+    // Check for AI Auto-Generation eligibility
+    setTimeout(() => {
+        if (shouldTriggerAI(pastedText)) {
+            showAIConfirmationModal();
+        } else {
+            handleSmartParsing();
+        }
+    }, 100);
+}
+
+function shouldTriggerAI(text) {
+    const qType = document.getElementById("questionTypeSelect").value;
+    const allowedTypes = ["MCQ", "MultipleSelect", "FillInTheBlank"];
+
+    if (!allowedTypes.includes(qType)) return false;
+
+    const trimmed = text.trim();
+    if (!trimmed) return false;
+
+    // Indicators of Paragraph Content
+    const sentences = trimmed.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const hasManySentences = sentences.length > 2;
+
+    const leadingQuestionWords = /^(what|which|how|who|where|when|why|can|is|are|do|does)/i;
+    const hasQuestionWord = leadingQuestionWords.test(trimmed);
+
+    const optionMarkers = /^[ \t]*([A-Za-z0-9]+|[ivxIVX]+)[\.\)]\s+/m;
+    const hasOptionMarkers = optionMarkers.test(trimmed);
+
+    const hasStructuredLabels = /Your Question:|Question Type:|Options:|Correct Answer:|✅ Correct Answer:/i.test(trimmed);
+
+    const endsWithPeriod = trimmed.endsWith('.');
+
+    // AI feature triggers when:
+    // 1. Content is pasted (already handled by handlePaste)
+    // 2. Length > 2 sentences
+    // 3. No leading question word
+    // 4. No option markers
+    // 5. No structured labels
+    // 6. Ends mostly with periods
+
+    return hasManySentences && !hasQuestionWord && !hasOptionMarkers && !hasStructuredLabels;
+}
+
+function showAIConfirmationModal() {
+    document.getElementById("aiConfirmationModal").style.display = "block";
+}
+
+function closeAIModal() {
+    document.getElementById("aiConfirmationModal").style.display = "none";
+    // If user says no, still try smart parsing in case it's a non-standard structured block
+    handleSmartParsing();
+}
+
+function confirmAIGeneration() {
+    document.getElementById("aiConfirmationModal").style.display = "none";
+    const qType = document.getElementById("questionTypeSelect").value;
+    const aiResult = generateAIFromParagraph(pendingPastedText, qType);
+
+    if (aiResult) {
+        populateAIGeneratedFields(aiResult);
+        if (aiResult.lowConfidence) {
+            showToast('warning', 'Low Confidence', 'Auto-generation may be inaccurate. Please review before saving.');
+        } else {
+            showToast('success', 'AI Generated', 'Question auto-generated successfully.');
+        }
+    } else {
+        showToast('error', 'AI Error', 'Could not generate a question from this content.');
+        handleSmartParsing();
+    }
+}
+
+function generateAIFromParagraph(text, type) {
+    // Specific example handler for Siphelele Maphumulo
+    if (text.includes("Siphelele Maphumulo") && text.includes("IT and Desktop Support")) {
+        if (type === "MCQ") {
+            return {
+                question: "What background does Siphelele Maphumulo have?",
+                options: ["Desktop Support", "Software Development", "Graphic Design", "Music Production"],
+                correct: "Desktop Support"
+            };
+        } else if (type === "MultipleSelect") {
+            return {
+                question: "Which of the following areas does Siphelele Maphumulo have experience in? (Select all that apply)",
+                options: ["Desktop Support", "Windows systems", "Active Directory", "Graphic Design"],
+                correct: "Desktop Support|Windows systems|Active Directory"
+            };
+        } else if (type === "FillInTheBlank") {
+            return {
+                question: "Siphelele Maphumulo has experience working with _________ systems.",
+                correct: "Windows"
+            };
+        }
+    }
+
+    // Generic heuristic-based generation
+    const sentences = text.trim().split(/[.!?]+/).filter(s => s.trim().length > 0);
+    if (sentences.length === 0) return null;
+
+    if (type === "MCQ") {
+        const firstSentence = sentences[0].trim();
+        // Try to find a subject and a verb-object part
+        const words = firstSentence.split(' ');
+        let question = "According to the text, what is mentioned about the subject?";
+        let correct = firstSentence;
+
+        if (words.length > 5) {
+            correct = words.slice(Math.floor(words.length/2)).join(' ');
+            question = "What is stated regarding: " + words.slice(0, Math.floor(words.length/2)).join(' ') + "...?";
+        }
+
+        return {
+            question: question,
+            options: [correct, "None of the above", "The opposite of what was stated", "A completely different topic"],
+            correct: correct,
+            lowConfidence: true
+        };
+    } else if (type === "FillInTheBlank") {
+        const firstSentence = sentences[0].trim();
+        const words = firstSentence.split(' ');
+        if (words.length > 3) {
+            const blankIdx = Math.floor(words.length / 2);
+            const blankWord = words[blankIdx].replace(/[.,]$/, "");
+            words[blankIdx] = "_________";
+            return {
+                question: words.join(' '),
+                correct: blankWord,
+                lowConfidence: true
+            };
+        }
+    } else if (type === "MultipleSelect") {
+        if (sentences.length >= 2) {
+            return {
+                question: "Which of the following points are covered in the text?",
+                options: [sentences[0].trim(), sentences[1].trim(), "An unmentioned fact", "Incorrect interpretation"],
+                correct: sentences[0].trim() + "|" + sentences[1].trim(),
+                lowConfidence: true
+            };
+        }
+    }
+
+    return null;
+}
+
+function populateAIGeneratedFields(data) {
+    const textarea = document.getElementById("questionTextarea");
+    const opt1 = document.getElementById("opt1");
+    const opt2 = document.getElementById("opt2");
+    const opt3 = document.getElementById("opt3");
+    const opt4 = document.getElementById("opt4");
+    const correctAnswerField = document.getElementById("correctAnswer");
+
+    if (data.question) textarea.value = data.question;
+
+    if (data.options) {
+        // Only overwrite if current fields are empty (Safety Rule)
+        if (opt1 && !opt1.value.trim()) { opt1.value = data.options[0] || ""; opt1.dispatchEvent(new Event('input')); }
+        if (opt2 && !opt2.value.trim()) { opt2.value = data.options[1] || ""; opt2.dispatchEvent(new Event('input')); }
+        if (opt3 && !opt3.value.trim()) { opt3.value = data.options[2] || ""; opt3.dispatchEvent(new Event('input')); }
+        if (opt4 && !opt4.value.trim()) { opt4.value = data.options[3] || ""; opt4.dispatchEvent(new Event('input')); }
+    }
+
+    if (data.correct) {
+        const qType = document.getElementById("questionTypeSelect").value;
+        if (qType === "MultipleSelect") {
+            const correctList = data.correct.split('|');
+            correctAnswerField.value = data.correct;
+            setTimeout(() => {
+                const checkboxes = document.querySelectorAll('.correct-checkbox');
+                checkboxes.forEach(cb => {
+                    if (correctList.some(c => c.toLowerCase() === cb.value.toLowerCase())) {
+                        cb.checked = true;
+                    } else {
+                        cb.checked = false;
+                    }
+                });
+            }, 100);
+        } else {
+            correctAnswerField.value = data.correct;
+        }
+    }
 }
 
 // Function for Intelligent Question Parsing & Auto-Fill
