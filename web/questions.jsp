@@ -2070,22 +2070,22 @@ function handlePaste(event) {
 function handleSmartParsing() {
     const textarea = document.getElementById("questionTextarea");
     if (!textarea) return;
-    const text = textarea.value.trim();
-    if (!text) return;
+    const text = textarea.value; // Keep raw text to preserve formatting
+    if (!text.trim()) return;
 
     // Try Structured Block Parsing first
     if (tryParseStructuredBlock(text)) return;
 
-    // Try Multi-line Options Parsing if not a structured block
-    tryParseMultiLineOptions(text);
+    // Try Free-form / Code Snippet + Multi-line Options
+    tryParseFreeForm(text);
 }
 
 function tryParseStructuredBlock(text) {
     const labels = {
-        question: /Your Question:\s*([\s\S]*?)(?=Question Type:|Options:|Correct Answer:|$)/i,
-        type: /Question Type:\s*([\s\S]*?)(?=Your Question:|Options:|Correct Answer:|$)/i,
-        options: /Options:\s*([\s\S]*?)(?=Your Question:|Question Type:|Correct Answer:|$)/i,
-        correct: /Correct Answer:\s*([\s\S]*?)(?=Your Question:|Question Type:|Options:|$)/i
+        question: /Your Question:\s*([\s\S]*?)(?=Question Type:|Options:|Correct Answer:|✅ Correct Answer:|$)/i,
+        type: /Question Type:\s*([\s\S]*?)(?=Your Question:|Options:|Correct Answer:|✅ Correct Answer:|$)/i,
+        options: /Options:\s*([\s\S]*?)(?=Your Question:|Question Type:|Correct Answer:|✅ Correct Answer:|$)/i,
+        correct: /(?:Correct Answer:|✅ Correct Answer:)\s*([\s\S]*?)(?=Your Question:|Question Type:|Options:|$)/i
     };
 
     let foundLabels = 0;
@@ -2124,7 +2124,6 @@ function tryParseStructuredBlock(text) {
             const optField = document.getElementById("opt" + (i + 1));
             if (optField) {
                 optField.value = parsedOptions[i] || "";
-                // Trigger input event to update any dependent labels or checkboxes
                 optField.dispatchEvent(new Event('input'));
             }
         }
@@ -2132,85 +2131,133 @@ function tryParseStructuredBlock(text) {
 
     if (cMatch) {
         const correct = cMatch[1].trim();
-        if (typeSelect.value === "TrueFalse") {
-            const tfSelect = document.getElementById("trueFalseSelect");
-            if (tfSelect) {
-                if (correct.toLowerCase() === "true") tfSelect.value = "True";
-                else if (correct.toLowerCase() === "false") tfSelect.value = "False";
-                tfSelect.dispatchEvent(new Event('change'));
-            }
-        } else if (typeSelect.value === "MultipleSelect") {
-            const multipleCorrect = correct.split('|').map(c => c.trim());
-            document.getElementById("correctAnswer").value = correct;
-
-            // For MultipleSelect, we also need to check the corresponding checkboxes
-            setTimeout(() => {
-                const checkboxes = document.querySelectorAll('.correct-checkbox');
-                checkboxes.forEach(cb => {
-                    if (multipleCorrect.some(mc => mc.toLowerCase() === cb.value.toLowerCase())) {
-                        cb.checked = true;
-                    } else {
-                        cb.checked = false;
-                    }
-                });
-            }, 100);
-        } else {
-            document.getElementById("correctAnswer").value = correct;
-        }
-
-        // Validation: Ensure correct answer exists in options for MCQ
-        if (typeSelect.value === "MCQ" && parsedOptions.length > 0) {
-            const match = parsedOptions.some(opt => opt.toLowerCase() === correct.toLowerCase());
-            if (!match) {
-                showToast('warning', 'Parsing Warning', 'Correct answer does not match any of the provided options.');
-            }
-        }
+        populateCorrectAnswer(correct, parsedOptions);
     }
 
-    showToast('success', 'Smart Fill', 'Question data successfully parsed and populated.');
+    showToast('success', 'Smart Fill', 'Structured data successfully parsed.');
     return true;
 }
 
-function tryParseMultiLineOptions(text) {
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+function tryParseFreeForm(text) {
     // Regex for prefixes: A. B. 1. 2. i. ii. etc.
-    const optionRegex = /^([A-Za-z0-9]+|[ivxIVX]+)[\.\)]\s+(.+)$/;
+    const optionRegex = /^(?:[ \t]*)((?:[A-Za-z0-9]+|[ivxIVX]+))[\.\)]\s+([\s\S]*?)(?=\n(?:[ \t]*)(?:[A-Za-z0-9]+|[ivxIVX]+)[\.\)]\s+|\n(?:Correct Answer:|✅ Correct Answer:)|$)/gm;
+    const correctMarkerRegex = /(?:Correct Answer:|✅ Correct Answer:)\s*([\s\S]*?)$/i;
+    const questionLabelRegex = /^Question:\s*([\s\S]*?)$/i;
 
-    let optionLines = [];
-    let questionLines = [];
-    let inOptionsBlock = false;
+    let match;
+    let optionMatches = [];
+    while ((match = optionRegex.exec(text)) !== null) {
+        optionMatches.push({
+            symbol: match[1],
+            text: match[2].trim()
+        });
+    }
 
-    for (let line of lines) {
-        const match = line.match(optionRegex);
-        if (match) {
-            optionLines.push(match[2].trim());
-            inOptionsBlock = true;
-        } else if (!inOptionsBlock) {
-            questionLines.push(line);
+    if (optionMatches.length < 2) return false;
+
+    // Identify positions
+    const firstOptionIndex = text.search(/^[ \t]*(?:[A-Za-z0-9]+|[ivxIVX]+)[\.\)]\s+/m);
+    let questionText = text.substring(0, firstOptionIndex).trim();
+
+    // Remove "Question:" label if present
+    const qLabelMatch = questionText.match(questionLabelRegex);
+    if (qLabelMatch) questionText = qLabelMatch[1].trim();
+
+    const typeSelect = document.getElementById("questionTypeSelect");
+    const textarea = document.getElementById("questionTextarea");
+
+    textarea.value = questionText;
+
+    // Detect code block
+    const hasCodeIndicators = /(?:def |function |public |class |print\(|console\.|<[^>]*>|\{|\}|import |int |String |printf\(|cout )/.test(questionText);
+    if (hasCodeIndicators || questionText.split('\n').length > 3) {
+        typeSelect.value = "Code";
+        toggleOptions();
+    } else {
+        typeSelect.value = "MCQ";
+        toggleOptions();
+    }
+
+    // Populate options
+    let parsedOptions = optionMatches.map(m => m.text);
+    for (let i = 0; i < 4; i++) {
+        const optField = document.getElementById("opt" + (i + 1));
+        if (optField) {
+            optField.value = i < optionMatches.length ? optionMatches[i].text : "";
+            optField.dispatchEvent(new Event('input'));
         }
     }
 
-    // Only proceed if we found at least 2 options
-    if (optionLines.length >= 2) {
-        // Limit to 4 options
-        const countToFill = Math.min(optionLines.length, 4);
-
-        for (let i = 0; i < 4; i++) {
-            const optField = document.getElementById("opt" + (i + 1));
-            if (optField) {
-                optField.value = i < countToFill ? optionLines[i] : "";
-                optField.dispatchEvent(new Event('input'));
-            }
+    // Handle Correct Answer
+    const cMatch = text.match(correctMarkerRegex);
+    if (cMatch) {
+        const correctRaw = cMatch[1].trim();
+        // Resolve symbolic link
+        const symbolIdx = getSymbolIndex(correctRaw, optionMatches);
+        if (symbolIdx !== -1 && symbolIdx < optionMatches.length) {
+            populateCorrectAnswer(optionMatches[symbolIdx].text, parsedOptions);
+        } else {
+            populateCorrectAnswer(correctRaw, parsedOptions);
         }
-
-        if (questionLines.length > 0) {
-            document.getElementById("questionTextarea").value = questionLines.join('\n').trim();
-        }
-
-        showToast('info', 'Smart Fill', 'Options extracted from multi-line format.');
-        return true;
     }
-    return false;
+
+    showToast('info', 'Smart Fill', 'Free-form data extracted.');
+    return true;
+}
+
+function getSymbolIndex(symbol, optionMatches) {
+    symbol = symbol.trim().toUpperCase().replace(/[\.\)]$/, "");
+
+    // Check against extracted symbols
+    for (let i = 0; i < optionMatches.length; i++) {
+        if (optionMatches[i].symbol.toUpperCase() === symbol) return i;
+    }
+
+    // Fallback to standard mappings
+    if (/^[A-D]$/.test(symbol)) return symbol.charCodeAt(0) - 65;
+    if (/^[1-4]$/.test(symbol)) return parseInt(symbol) - 1;
+    const roman = { "I": 0, "II": 1, "III": 2, "IV": 3 };
+    if (roman[symbol] !== undefined) return roman[symbol];
+
+    return -1;
+}
+
+function populateCorrectAnswer(correct, parsedOptions) {
+    const typeSelect = document.getElementById("questionTypeSelect");
+    const correctAnswerField = document.getElementById("correctAnswer");
+
+    if (typeSelect.value === "TrueFalse") {
+        const tfSelect = document.getElementById("trueFalseSelect");
+        if (tfSelect) {
+            if (correct.toLowerCase() === "true") tfSelect.value = "True";
+            else if (correct.toLowerCase() === "false") tfSelect.value = "False";
+            tfSelect.dispatchEvent(new Event('change'));
+        }
+    } else if (typeSelect.value === "MultipleSelect") {
+        const multipleCorrect = correct.split('|').map(c => c.trim());
+        correctAnswerField.value = correct;
+
+        setTimeout(() => {
+            const checkboxes = document.querySelectorAll('.correct-checkbox');
+            checkboxes.forEach(cb => {
+                if (multipleCorrect.some(mc => mc.toLowerCase() === cb.value.toLowerCase())) {
+                    cb.checked = true;
+                } else {
+                    cb.checked = false;
+                }
+            });
+        }, 100);
+    } else {
+        correctAnswerField.value = correct;
+    }
+
+    // Validation for MCQ
+    if (typeSelect.value === "MCQ" && parsedOptions.length > 0) {
+        const match = parsedOptions.some(opt => opt.toLowerCase() === correct.toLowerCase());
+        if (!match) {
+            showToast('warning', 'Parsing Warning', 'Correct answer does not match any of the provided options.');
+        }
+    }
 }
 
 // Initialize when DOM is loaded
