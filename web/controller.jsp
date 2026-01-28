@@ -1185,14 +1185,12 @@ try {
         response.setContentType("application/json");
         PrintWriter outJSON = response.getWriter();
         String text = nz(request.getParameter("text"), "");
+        String questionType = nz(request.getParameter("questionType"), "MCQ");
         
         if (text.isEmpty()) {
             outJSON.print("{\"success\": false, \"message\": \"No text provided for AI generation.\"}");
             return;
         }
-
-        // Forced to MCQ as per plan
-        String questionType = "MCQ";
 
         // Step 1: Decide Question Count
         int wordCount = text.split("\\s+").length;
@@ -1212,7 +1210,7 @@ try {
             else if (wordCount < 800) numQuestions = 10;
             else numQuestions = 20;
         }
-        
+
         try {
             String aiResponse = OpenRouterClient.generateQuestions(text, questionType, numQuestions);
             if (aiResponse != null) {
@@ -1241,24 +1239,51 @@ try {
 
                     for (int i = 0; i < questions.length(); i++) {
                         JSONObject q = questions.getJSONObject(i);
-                        JSONArray opts = q.getJSONArray("options");
-                        String correct = q.getString("correct");
+                        String qText = nz(q.optString("question"), "");
+                        JSONArray opts = q.optJSONArray("options");
+                        String correct = nz(q.optString("correct"), "");
 
-                        // Strict validation
-                        if (opts.length() != 4) continue;
+                        if (qText.isEmpty() || correct.isEmpty()) continue;
 
-                        boolean found = false;
-                        for (int j = 0; j < opts.length(); j++) {
-                            if (opts.getString(j).equals(correct)) {
-                                found = true;
-                                break;
+                        // Professional Sanitization: Remove "Q1:", "Question 1:" prefixes
+                        qText = qText.replaceAll("^(?i)Q\\d+[:.\\s]+", "");
+                        qText = qText.replaceAll("^(?i)Question\\s+\\d+[:.\\s]+", "");
+                        q.put("question", qText.trim());
+
+                        boolean isValid = false;
+                        if ("FillInTheBlank".equalsIgnoreCase(questionType)) {
+                            isValid = true; // FIB doesn't need options
+                        } else if ("MultipleSelect".equalsIgnoreCase(questionType)) {
+                            if (opts != null && opts.length() == 4) {
+                                // For MultipleSelect, ensure correct answer contains valid options
+                                String[] correctParts = correct.split("\\|");
+                                int validParts = 0;
+                                for (String part : correctParts) {
+                                    for (int j = 0; j < opts.length(); j++) {
+                                        if (opts.getString(j).trim().equalsIgnoreCase(part.trim())) {
+                                            validParts++;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (validParts > 0) isValid = true;
+                            }
+                        } else {
+                            // Default MCQ/TrueFalse/Code
+                            if (opts != null && opts.length() == 4) {
+                                for (int j = 0; j < opts.length(); j++) {
+                                    if (opts.getString(j).trim().equalsIgnoreCase(correct.trim())) {
+                                        isValid = true;
+                                        break;
+                                    }
+                                }
                             }
                         }
-                        if (!found) continue;
 
-                        // Ensure questionType is set for frontend batch insert
-                        q.put("type", "MCQ");
-                        validatedQuestions.put(q);
+                        if (isValid) {
+                            q.put("type", questionType);
+                            validatedQuestions.put(q);
+                        }
                     }
 
                     JSONObject result = new JSONObject();

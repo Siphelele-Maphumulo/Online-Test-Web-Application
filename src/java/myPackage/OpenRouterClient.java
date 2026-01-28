@@ -41,7 +41,7 @@ public class OpenRouterClient {
     /**
      * Generates questions from text using OpenRouter API.
      * @param text The source text to generate questions from.
-     * @param questionType The type of questions (Forced to MCQ by this method).
+     * @param questionType The type of questions (MCQ, MultipleSelect, FillInTheBlank, etc.).
      * @param numQuestions The number of questions to generate.
      * @return JSON string containing the generated questions.
      */
@@ -56,36 +56,35 @@ public class OpenRouterClient {
                     .connectTimeout(Duration.ofSeconds(30))
                     .build();
             
-            String prompt = "You are an exam question generator.\n\n" +
-                            "Rules:\n" +
-                            "- Generate ONLY multiple-choice questions.\n" +
-                            "- Each question MUST have exactly 4 options.\n" +
-                            "- EXACTLY ONE option must be correct.\n" +
-                            "- Return STRICT JSON ONLY.\n" +
-                            "- No markdown.\n" +
-                            "- No explanations.\n" +
-                            "- No prose.\n" +
-                            "- No extra text.\n" +
-                            "- No numbering outside JSON.\n\n" +
-                            "From the content below:\n" +
-                            "1. If existing questions are found (e.g. \"Q1\", \"Question 1\"), extract and normalize them.\n" +
-                            "2. Otherwise, generate new questions.\n\n" +
-                            "Generate " + numQuestions + " UNIQUE multiple-choice questions.\n\n" +
+            String prompt = "Act as an elite educational content engineer. Your task is to " +
+                            "accurately extract or generate exactly " + numQuestions + " high-quality " + questionType + " questions " +
+                            "from the provided content.\n\n" +
+                            "STRICT FORMATTING RULES:\n" +
+                            "- Return STRICT JSON ONLY. No markdown, no prose, no explanations.\n" +
+                            "- If extraction: Identify and isolate individual questions. Ignore website artifacts like 'View Answer', 'Report', pagination, or headers.\n" +
+                            "- If generation: Use the provided text as context to create high-quality, relevant questions.\n" +
+                            "- Question Text: Clean and professional. Remove prefixes like 'Q1:', 'Question 1:'.\n" +
+                            "- Options: Exactly 4 distinct options (except for FillInTheBlank which should have an empty array []).\n" +
+                            "- Correct Answer:\n" +
+                            "  - For MCQ: Must EXACTLY match one of the 4 options.\n" +
+                            "  - For MultipleSelect: Combine all correct options using the pipe '|' separator (e.g., 'OptionA|OptionB'). Must match options exactly.\n" +
+                            "  - For FillInTheBlank: Provide the precise missing word or phrase.\n" +
+                            "  - For True/False: Options must be ['True', 'False'] and correct must be one of them.\n\n" +
                             "Output JSON format:\n" +
                             "{\n" +
                             "  \"questions\": [\n" +
                             "    {\n" +
-                            "      \"question\": \"...\",\n" +
-                            "      \"options\": [\"A\", \"B\", \"C\", \"D\"],\n" +
-                            "      \"correct\": \"EXACT_OPTION_TEXT\"\n" +
+                            "      \"question\": \"Question text here?\",\n" +
+                            "      \"options\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"],\n" +
+                            "      \"correct\": \"Correct Option Text\"\n" +
                             "    }\n" +
                             "  ]\n" +
                             "}\n\n" +
-                            "Content:\n" + text;
+                            "SOURCE CONTENT:\n" + text;
 
             JSONObject body = new JSONObject();
             body.put("model", MODEL);
-            body.put("max_tokens", 2500);
+            body.put("max_tokens", 4000);
             body.put("temperature", 0.4);
             
             JSONArray messages = new JSONArray();
@@ -93,7 +92,7 @@ public class OpenRouterClient {
             // Add system prompt for extra reliability
             JSONObject systemMessage = new JSONObject();
             systemMessage.put("role", "system");
-            systemMessage.put("content", "You are an exam question generator. Return STRICT JSON ONLY. No markdown. No prose.");
+            systemMessage.put("content", "You are a professional exam generator. Your internal knowledge is superior. Use it to solve questions if the answer isn't clear in the text. Return JSON ONLY.");
             messages.put(systemMessage);
 
             JSONObject userMessage = new JSONObject();
