@@ -155,9 +155,11 @@
                            required>
                 </div>
 
-                <button type="submit" class="btn btn-login w-100">
+                <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-login">
                     <i class="fas fa-sign-in-alt me-2"></i>Login
                 </button>
+                </div>
 
                 <a href="Forgot_Password.jsp" class="forgot-password">
                     <i class="fas fa-question-circle me-2"></i>Forgot Password?
