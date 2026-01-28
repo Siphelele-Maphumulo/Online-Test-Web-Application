@@ -1,3 +1,4 @@
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@page import="myPackage.classes.Questions"%>
 <%@page import="java.util.ArrayList"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
@@ -1281,8 +1282,6 @@ session.setAttribute("csrf_token", csrfToken);
     // Initialize when DOM is ready
     function initPage() {
         console.log('Initializing page...');
-        // Reset initialization flag to allow re-initialization
-        pageInitialized = false;
         initializePage();
         console.log('Page initialization complete');
     }
@@ -1292,10 +1291,6 @@ session.setAttribute("csrf_token", csrfToken);
     } else {
         initPage();
     }
-    
-    // Also initialize after a short delay to catch any timing issues
-    setTimeout(initPage, 100);
-    setTimeout(initPage, 500);
     
     // Add scroll to top functionality
     const scrollToTopBtn = document.getElementById('scrollToTopBtn');

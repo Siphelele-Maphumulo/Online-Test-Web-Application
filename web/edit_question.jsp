@@ -994,7 +994,7 @@ function checkForCodeSnippetEdit() {
     
     // Count lines and check for code indicators
     const lines = questionText.split('\n').filter(line => line.trim() !== '');
-    const hasCodeIndicators = /(?:def |function |public |class |print\(|console\.\|<[^>]*>\|\{|\}|import |int |String |printf\(|cout )/.test(questionText);
+    const hasCodeIndicators = /(?:def |function |public |class |print\(|console\.|<[^>]*>|\{|\}|import |int |String |printf\(|cout )/.test(questionText);
     
     // If question is longer than 3 lines or contains code indicators and is not already Code type
     if ((lines.length > 3 || hasCodeIndicators) && questionType !== 'Code') {
