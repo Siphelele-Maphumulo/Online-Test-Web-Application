@@ -1047,10 +1047,18 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                 Question Type
                             </label>
                             <select id="questionTypeSelectPdf" class="form-select">
-                                <option value="MCQ">Multiple Choice</option>
+                                <option value="MCQ">Multiple Choice (AI Preferred)</option>
                                 <option value="MultipleSelect">Multiple Select</option>
                                 <option value="FillInTheBlank">Fill in the Blank</option>
                             </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-hashtag" style="color: var(--accent-blue);"></i>
+                                Number of Questions
+                            </label>
+                            <input type="number" id="numQuestionsPdf" class="form-control" placeholder="Auto-detect based on length" min="1" max="50">
                         </div>
                     </div>
                     
@@ -1259,6 +1267,9 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                 </button>
                                 <button type="button" class="btn btn-outline btn-sm" onclick="showNextAIQuestion()" id="nextAIBtn">
                                     Next <i class="fas fa-chevron-right"></i>
+                                </button>
+                                <button type="button" class="btn btn-success btn-sm" onclick="saveAllAIQuestions()" id="saveAllAIBtn" style="margin-left: 10px;">
+                                    <i class="fas fa-save"></i> Save All
                                 </button>
                             </div>
                         </div>
@@ -2204,7 +2215,13 @@ function closeAIModal() {
 
 async function confirmAIGeneration() {
     document.getElementById("aiConfirmationModal").style.display = "none";
-    const qType = document.getElementById("questionTypeSelect").value;
+
+    // Force MCQ Default
+    document.getElementById("questionTypeSelect").value = "MCQ";
+    toggleOptions();
+
+    const qType = "MCQ";
+    const numQuestions = document.getElementById("numQuestionsPdf").value;
     
     // Show loading state in the status div
     const statusDiv = document.getElementById('uploadStatus');
@@ -2223,7 +2240,7 @@ async function confirmAIGeneration() {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            body: 'text=' + encodeURIComponent(pendingPastedText) + '&questionType=' + encodeURIComponent(qType)
+            body: 'text=' + encodeURIComponent(pendingPastedText) + '&questionType=' + encodeURIComponent(qType) + '&numQuestions=' + numQuestions
         });
         
         const responseText = await response.text();
@@ -2395,6 +2412,31 @@ function showNextAIQuestion() {
 function showPreviousAIQuestion() {
     if (currentAIQuestionIndex > 0) {
         showAIQuestion(currentAIQuestionIndex - 1);
+    }
+}
+
+function saveAllAIQuestions() {
+    if (!generatedAIQuestions || generatedAIQuestions.length === 0) {
+        showToast('warning', 'No Questions', 'There are no AI generated questions to save.');
+        return;
+    }
+
+    const courseSelect = document.getElementById('courseSelectAddNew');
+    const courseName = courseSelect.value;
+
+    if (!courseName) {
+        showToast('error', 'Course Required', 'Please select a course before saving all questions.');
+        return;
+    }
+
+    if (confirm(`Are you sure you want to batch insert all ${generatedAIQuestions.length} questions into ${courseName}?`)) {
+        addExtractedQuestionsToDB(generatedAIQuestions, courseName);
+
+        // Hide review panel after batch insert starts
+        document.getElementById("aiNavigation").style.display = "none";
+        generatedAIQuestions = [];
+        currentAIQuestionIndex = -1;
+        resetForm();
     }
 }
 
