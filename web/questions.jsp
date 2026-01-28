@@ -1132,7 +1132,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                     
                     <div class="form-group">
                         <label class="form-label"><i class="fas fa-question-circle" style="color: var(--primary-blue);"></i> Your Question</label>
-                        <textarea name="question" id="questionTextarea" class="question-input" rows="3" oninput="checkForCodeSnippet()"></textarea>
+                        <textarea name="question" id="questionTextarea" class="question-input" rows="3" oninput="handleQuestionInput()" onpaste="handlePaste(event)"></textarea>
                         <small class="form-hint">Enter your question text (optional if uploading an image)</small>
                     </div>
                     
@@ -2053,6 +2053,164 @@ function updateScrollIndicator() {
             scrollIndicator.style.display = 'flex';
         }
     }
+}
+
+// Wrapper functions for question input events
+function handleQuestionInput() {
+    checkForCodeSnippet();
+    handleSmartParsing();
+}
+
+function handlePaste(event) {
+    // Use setTimeout to allow the pasted content to be available in the textarea
+    setTimeout(handleSmartParsing, 100);
+}
+
+// Function for Intelligent Question Parsing & Auto-Fill
+function handleSmartParsing() {
+    const textarea = document.getElementById("questionTextarea");
+    if (!textarea) return;
+    const text = textarea.value.trim();
+    if (!text) return;
+
+    // Try Structured Block Parsing first
+    if (tryParseStructuredBlock(text)) return;
+
+    // Try Multi-line Options Parsing if not a structured block
+    tryParseMultiLineOptions(text);
+}
+
+function tryParseStructuredBlock(text) {
+    const labels = {
+        question: /Your Question:\s*([\s\S]*?)(?=Question Type:|Options:|Correct Answer:|$)/i,
+        type: /Question Type:\s*([\s\S]*?)(?=Your Question:|Options:|Correct Answer:|$)/i,
+        options: /Options:\s*([\s\S]*?)(?=Your Question:|Question Type:|Correct Answer:|$)/i,
+        correct: /Correct Answer:\s*([\s\S]*?)(?=Your Question:|Question Type:|Options:|$)/i
+    };
+
+    let foundLabels = 0;
+    for (let key in labels) {
+        if (labels[key].test(text)) foundLabels++;
+    }
+
+    // If at least 2 markers are present, treat as structured block
+    if (foundLabels < 2) return false;
+
+    const qMatch = text.match(labels.question);
+    const tMatch = text.match(labels.type);
+    const oMatch = text.match(labels.options);
+    const cMatch = text.match(labels.correct);
+
+    const typeSelect = document.getElementById("questionTypeSelect");
+    const textarea = document.getElementById("questionTextarea");
+
+    if (qMatch) textarea.value = qMatch[1].trim();
+
+    if (tMatch) {
+        const typeStr = tMatch[1].trim().toLowerCase();
+        if (typeStr.includes("multiple choice") || typeStr === "mcq") typeSelect.value = "MCQ";
+        else if (typeStr.includes("true") && typeStr.includes("false") || typeStr === "truefalse") typeSelect.value = "TrueFalse";
+        else if (typeStr.includes("multiple select") || typeStr === "multipleselect") typeSelect.value = "MultipleSelect";
+        else if (typeStr.includes("fill in the blank") || typeStr.includes("fib") || typeStr === "fillintheblank") typeSelect.value = "FillInTheBlank";
+        else if (typeStr.includes("code")) typeSelect.value = "Code";
+
+        toggleOptions();
+    }
+
+    let parsedOptions = [];
+    if (oMatch) {
+        parsedOptions = oMatch[1].split('|').map(o => o.trim()).filter(o => o.length > 0);
+        for (let i = 0; i < 4; i++) {
+            const optField = document.getElementById("opt" + (i + 1));
+            if (optField) {
+                optField.value = parsedOptions[i] || "";
+                // Trigger input event to update any dependent labels or checkboxes
+                optField.dispatchEvent(new Event('input'));
+            }
+        }
+    }
+
+    if (cMatch) {
+        const correct = cMatch[1].trim();
+        if (typeSelect.value === "TrueFalse") {
+            const tfSelect = document.getElementById("trueFalseSelect");
+            if (tfSelect) {
+                if (correct.toLowerCase() === "true") tfSelect.value = "True";
+                else if (correct.toLowerCase() === "false") tfSelect.value = "False";
+                tfSelect.dispatchEvent(new Event('change'));
+            }
+        } else if (typeSelect.value === "MultipleSelect") {
+            const multipleCorrect = correct.split('|').map(c => c.trim());
+            document.getElementById("correctAnswer").value = correct;
+
+            // For MultipleSelect, we also need to check the corresponding checkboxes
+            setTimeout(() => {
+                const checkboxes = document.querySelectorAll('.correct-checkbox');
+                checkboxes.forEach(cb => {
+                    if (multipleCorrect.some(mc => mc.toLowerCase() === cb.value.toLowerCase())) {
+                        cb.checked = true;
+                    } else {
+                        cb.checked = false;
+                    }
+                });
+            }, 100);
+        } else {
+            document.getElementById("correctAnswer").value = correct;
+        }
+
+        // Validation: Ensure correct answer exists in options for MCQ
+        if (typeSelect.value === "MCQ" && parsedOptions.length > 0) {
+            const match = parsedOptions.some(opt => opt.toLowerCase() === correct.toLowerCase());
+            if (!match) {
+                showToast('warning', 'Parsing Warning', 'Correct answer does not match any of the provided options.');
+            }
+        }
+    }
+
+    showToast('success', 'Smart Fill', 'Question data successfully parsed and populated.');
+    return true;
+}
+
+function tryParseMultiLineOptions(text) {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    // Regex for prefixes: A. B. 1. 2. i. ii. etc.
+    const optionRegex = /^([A-Za-z0-9]+|[ivxIVX]+)[\.\)]\s+(.+)$/;
+
+    let optionLines = [];
+    let questionLines = [];
+    let inOptionsBlock = false;
+
+    for (let line of lines) {
+        const match = line.match(optionRegex);
+        if (match) {
+            optionLines.push(match[2].trim());
+            inOptionsBlock = true;
+        } else if (!inOptionsBlock) {
+            questionLines.push(line);
+        }
+    }
+
+    // Only proceed if we found at least 2 options
+    if (optionLines.length >= 2) {
+        // Limit to 4 options
+        const countToFill = Math.min(optionLines.length, 4);
+
+        for (let i = 0; i < 4; i++) {
+            const optField = document.getElementById("opt" + (i + 1));
+            if (optField) {
+                optField.value = i < countToFill ? optionLines[i] : "";
+                optField.dispatchEvent(new Event('input'));
+            }
+        }
+
+        if (questionLines.length > 0) {
+            document.getElementById("questionTextarea").value = questionLines.join('\n').trim();
+        }
+
+        showToast('info', 'Smart Fill', 'Options extracted from multi-line format.');
+        return true;
+    }
+    return false;
 }
 
 // Initialize when DOM is loaded
