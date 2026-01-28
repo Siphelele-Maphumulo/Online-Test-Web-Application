@@ -1484,7 +1484,7 @@ function uploadAndGenerateQuestions() {
     uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
     
     // Send request
-    fetch('controller.jsp?page=questions', {
+    fetch('controller.jsp?action=pdf_upload&page=questions', {
         method: 'POST',
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
@@ -1492,21 +1492,19 @@ function uploadAndGenerateQuestions() {
         body: formData
     })
     .then(async response => {
-        // Check if response is OK before parsing JSON
+        // Check if response is OK before parsing
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        // Read response body once to avoid "body stream already read" error
-        const rawText = await response.text();
-        
-        // Try to parse JSON response
+        // Read as text first to avoid "body stream already read" error
+        const responseText = await response.text();
         let data;
         try {
-            data = JSON.parse(rawText);
+            data = JSON.parse(responseText);
         } catch (parseError) {
             console.error('JSON Parse Error:', parseError);
-            console.error('Response text:', rawText);
+            console.error('Response text:', responseText);
             throw new Error('Invalid JSON response from server');
         }
         

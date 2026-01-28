@@ -5,7 +5,10 @@
 <%@ page import="java.time.temporal.ChronoUnit" %>
 <%@ page import="java.time.format.DateTimeFormatter" %>
 <%@ page import="java.util.*" %>
+<%@ page import="java.util.List" %>
 <%@ page import="java.io.*" %>
+<%@ page import="java.io.InputStream" %>
+<%@ page import="java.io.PrintWriter" %>
 <%@ page import="java.util.logging.Level" %>
 <%@ page import="java.util.logging.Logger" %>
 <%@ page import="java.sql.Connection" %>
@@ -18,6 +21,10 @@
 <%@ page import="org.mindrot.jbcrypt.BCrypt" %>
 <%@ page import="org.json.JSONObject" %>
 <%@ page import="org.json.JSONException" %>
+<%@ page import="org.apache.pdfbox.Loader" %>
+<%@ page import="org.apache.pdfbox.pdmodel.PDDocument" %>
+<%@ page import="org.apache.pdfbox.text.PDFTextStripper" %>
+<%@ page import="org.apache.pdfbox.pdfparser.PDFParser" %>
 <%@ page contentType="text/html" pageEncoding="UTF-8"%>
 <%@ page trimDirectiveWhitespaces="true" %>
 
@@ -1112,21 +1119,74 @@ try {
         response.setContentType("application/json");
         response.getWriter().write("{\"success\": true}");
         return;
-    } else {
-        // Check if this is an AJAX request
-        if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With"))) {
-            response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
-            response.getWriter().write("{\"success\": false, \"error\": \"Invalid operation for questions\"}");
+    } else if ("pdf_upload".equalsIgnoreCase(request.getParameter("action"))) {
+        // Handle PDF upload and text extraction
+        response.setContentType("application/json");
+        PrintWriter outJSON = response.getWriter();
+        
+        // Check if PDFBox is available
+        try {
+            Class.forName("org.apache.pdfbox.Loader");
+            Class.forName("org.apache.pdfbox.pdmodel.PDDocument");
+            Class.forName("org.apache.pdfbox.text.PDFTextStripper");
+        } catch (ClassNotFoundException e) {
+            LOGGER.log(Level.WARNING, "PDFBox libraries not found", e);
+            outJSON.print("{\"success\": false, \"message\": \"PDF processing libraries not installed. Please install Apache PDFBox version 3.x.\"}");
             return;
-        } else {
-            session.setAttribute("error", "Invalid operation for questions");
-            String courseName = nz(request.getParameter("coursename"), "");
-            if (!courseName.isEmpty()) {
-                response.sendRedirect("showall.jsp?coursename=" + courseName);
-            } else {
-                response.sendRedirect("showall.jsp");
+        }
+        
+        if (ServletFileUpload.isMultipartContent(request)) {
+            List<FileItem> items = (List<FileItem>) request.getAttribute("multipartItems");
+            
+            if (items == null) {
+                DiskFileItemFactory factory = new DiskFileItemFactory();
+                ServletFileUpload upload = new ServletFileUpload(factory);
+                items = upload.parseRequest(request);
             }
+            
+            String extractedText = "";
+            boolean success = false;
+            
+            try {
+                for (FileItem item : items) {
+                    if (!item.isFormField() && "pdfFile".equals(item.getFieldName())) {
+                        try {
+                            byte[] pdfBytes = item.get();
+                            try (PDDocument document = Loader.loadPDF(pdfBytes)) {
+                                PDFTextStripper stripper = new PDFTextStripper();
+                                extractedText = stripper.getText(document);
+                                success = true;
+                            }
+                        } catch (Exception loadError) {
+                            LOGGER.log(Level.WARNING, "Error loading PDF: " + loadError.getMessage(), loadError);
+                            throw loadError;
+                        }
+                    }
+                }
+                
+                if (success) {
+                    JSONObject responseJson = new JSONObject();
+                    responseJson.put("success", true);
+                    responseJson.put("extractedText", extractedText);
+                    outJSON.print(responseJson.toString());
+                } else {
+                    outJSON.print("{\"success\": false, \"message\": \"No PDF file found in request.\"}");
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error extracting text from PDF", e);
+                outJSON.print("{\"success\": false, \"message\": \"Error extracting text: " + e.getMessage() + "\"}");
+            }
+        } else {
+            outJSON.print("{\"success\": false, \"message\": \"Not a multipart request.\"}");
+        }
+        return;
+    } else {
+        session.setAttribute("error", "Invalid operation for questions");
+        String courseName = nz(request.getParameter("coursename"), "");
+        if (!courseName.isEmpty()) {
+            response.sendRedirect("showall.jsp?coursename=" + courseName);
+        } else {
+            response.sendRedirect("showall.jsp");
         }
     }
 /* =========================
