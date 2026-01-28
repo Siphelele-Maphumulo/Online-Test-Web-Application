@@ -1122,6 +1122,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                 <option value="MCQ" <%="MCQ".equals(lastQuestionType) ? "selected" : ""%>>Multiple Choice</option>
                                 <option value="TrueFalse" <%="TrueFalse".equals(lastQuestionType) ? "selected" : ""%>>True/False</option>
                                 <option value="MultipleSelect" <%="MultipleSelect".equals(lastQuestionType) ? "selected" : ""%>>Multiple Select (2 correct)</option>
+                                <option value="FillInTheBlank" <%="FillInTheBlank".equals(lastQuestionType) ? "selected" : ""%>>Fill in the Blank</option>
                                 <option value="Code" <%="Code".equals(lastQuestionType) ? "selected" : ""%>>Code Snippet</option>
                             </select>
                             <input type="hidden" id="questionTypeHidden" name="questionType" value="<%=lastQuestionType%>">
@@ -1868,29 +1869,14 @@ function toggleOptions() {
     if (qType === "TrueFalse") {
         trueFalse.style.display = "block";
         if (trueFalseSelect) trueFalseSelect.required = true;
-        // Don't require options for True/False questions
-        if (opt1) opt1.required = false;
-        if (opt2) opt2.required = false;
-        if (opt3) opt3.required = false;
-        if (opt4) opt4.required = false;
         
-        // Clear and disable option fields for True/False questions
-        if (opt1) {
-            opt1.value = '';
-            opt1.disabled = true;
-        }
-        if (opt2) {
-            opt2.value = '';
-            opt2.disabled = true;
-        }
-        if (opt3) {
-            opt3.value = '';
-            opt3.disabled = true;
-        }
-        if (opt4) {
-            opt4.value = '';
-            opt4.disabled = true;
-        }
+        // Disable option fields for True/False questions (they won't be submitted)
+        [opt1, opt2, opt3, opt4].forEach(el => {
+            if (el) {
+                el.disabled = true;
+                el.required = false;
+            }
+        });
         
         // Update correct answer field with selected value if available
         if (trueFalseSelect && trueFalseSelect.value) {
@@ -1899,16 +1885,30 @@ function toggleOptions() {
                 correctAnswerField.value = trueFalseSelect.value;
             }
         }
+    } else if (qType === "FillInTheBlank") {
+        single.style.display = "block";
+        correct.placeholder = "Correct Answer";
+        correct.required = true;
+
+        // Disable option fields for Fill in the Blank questions
+        [opt1, opt2, opt3, opt4].forEach(el => {
+            if (el) {
+                el.disabled = true;
+                el.required = false;
+            }
+        });
     } else {
         mcq.style.display = "block";
+
+        // Enable option fields for non-True/False/FIB questions
+        [opt1, opt2, opt3, opt4].forEach(el => {
+            if (el) {
+                el.disabled = false;
+            }
+        });
+
         if (opt1) opt1.required = true;
         if (opt2) opt2.required = true;
-        
-        // Enable option fields for non-True/False questions
-        if (opt1) opt1.disabled = false;
-        if (opt2) opt2.disabled = false;
-        if (opt3) opt3.disabled = false;
-        if (opt4) opt4.disabled = false;
         
         if (qType === "MultipleSelect") {
             multiple.style.display = "block";
@@ -2125,6 +2125,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     const correctValue = document.getElementById('correctAnswer').value.trim();
                     if (!correctValue) {
                         errorMsg = "Expected output is required for Code questions.";
+                        isValid = false;
+                    }
+                } else if (qType === "FillInTheBlank") {
+                    // For Fill in the Blank questions, validate that correct answer is provided
+                    const correctValue = document.getElementById('correctAnswer').value.trim();
+                    if (!correctValue) {
+                        errorMsg = "Correct answer is required for Fill in the Blank questions.";
                         isValid = false;
                     }
                 }
