@@ -1047,18 +1047,10 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                 Question Type
                             </label>
                             <select id="questionTypeSelectPdf" class="form-select">
-                                <option value="MCQ">Multiple Choice (AI Preferred)</option>
+                                <option value="MCQ">Multiple Choice</option>
                                 <option value="MultipleSelect">Multiple Select</option>
                                 <option value="FillInTheBlank">Fill in the Blank</option>
                             </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-hashtag" style="color: var(--accent-blue);"></i>
-                                Number of Questions
-                            </label>
-                            <input type="number" id="numQuestionsPdf" class="form-control" placeholder="Auto-detect based on length" min="1" max="50">
                         </div>
                     </div>
                     
@@ -1267,9 +1259,6 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                 </button>
                                 <button type="button" class="btn btn-outline btn-sm" onclick="showNextAIQuestion()" id="nextAIBtn">
                                     Next <i class="fas fa-chevron-right"></i>
-                                </button>
-                                <button type="button" class="btn btn-success btn-sm" onclick="saveAllAIQuestions()" id="saveAllAIBtn" style="margin-left: 10px;">
-                                    <i class="fas fa-save"></i> Save All
                                 </button>
                             </div>
                         </div>
@@ -2215,13 +2204,7 @@ function closeAIModal() {
 
 async function confirmAIGeneration() {
     document.getElementById("aiConfirmationModal").style.display = "none";
-    
-    // Sync Question Type from PDF Panel to Main Form
-    const qType = document.getElementById("questionTypeSelectPdf").value;
-    document.getElementById("questionTypeSelect").value = qType;
-    toggleOptions();
-    
-    const numQuestions = document.getElementById("numQuestionsPdf").value;
+    const qType = document.getElementById("questionTypeSelect").value;
     
     // Show loading state in the status div
     const statusDiv = document.getElementById('uploadStatus');
@@ -2240,7 +2223,7 @@ async function confirmAIGeneration() {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            body: 'text=' + encodeURIComponent(pendingPastedText) + '&questionType=' + encodeURIComponent(qType) + '&numQuestions=' + numQuestions
+            body: 'text=' + encodeURIComponent(pendingPastedText) + '&questionType=' + encodeURIComponent(qType)
         });
         
         const responseText = await response.text();
@@ -2415,31 +2398,6 @@ function showPreviousAIQuestion() {
     }
 }
 
-function saveAllAIQuestions() {
-    if (!generatedAIQuestions || generatedAIQuestions.length === 0) {
-        showToast('warning', 'No Questions', 'There are no AI generated questions to save.');
-        return;
-    }
-    
-    const courseSelect = document.getElementById('courseSelectAddNew');
-    const courseName = courseSelect.value;
-    
-    if (!courseName) {
-        showToast('error', 'Course Required', 'Please select a course before saving all questions.');
-        return;
-    }
-    
-    if (confirm(`Are you sure you want to batch insert all ${generatedAIQuestions.length} questions into ${courseName}?`)) {
-        addExtractedQuestionsToDB(generatedAIQuestions, courseName);
-        
-        // Hide review panel after batch insert starts
-        document.getElementById("aiNavigation").style.display = "none";
-        generatedAIQuestions = [];
-        currentAIQuestionIndex = -1;
-        resetForm();
-    }
-}
-
 function populateAIGeneratedFields(data) {
     const textarea = document.getElementById("questionTextarea");
     const opt1 = document.getElementById("opt1");
@@ -2447,43 +2405,32 @@ function populateAIGeneratedFields(data) {
     const opt3 = document.getElementById("opt3");
     const opt4 = document.getElementById("opt4");
     const correctAnswerField = document.getElementById("correctAnswer");
-    const typeSelect = document.getElementById("questionTypeSelect");
     
     if (data.question) textarea.value = data.question;
     
-    // Sync Question Type if provided by AI
-    if (data.type) {
-        typeSelect.value = data.type;
-        toggleOptions();
-    }
-
-    if (data.options && data.options.length > 0) {
-        if (opt1) { opt1.value = data.options[0] || ""; opt1.dispatchEvent(new Event('input')); }
-        if (opt2) { opt2.value = data.options[1] || ""; opt2.dispatchEvent(new Event('input')); }
-        if (opt3) { opt3.value = data.options[2] || ""; opt3.dispatchEvent(new Event('input')); }
-        if (opt4) { opt4.value = data.options[3] || ""; opt4.dispatchEvent(new Event('input')); }
+    if (data.options) {
+        // Only overwrite if current fields are empty (Safety Rule)
+        if (opt1 && !opt1.value.trim()) { opt1.value = data.options[0] || ""; opt1.dispatchEvent(new Event('input')); }
+        if (opt2 && !opt2.value.trim()) { opt2.value = data.options[1] || ""; opt2.dispatchEvent(new Event('input')); }
+        if (opt3 && !opt3.value.trim()) { opt3.value = data.options[2] || ""; opt3.dispatchEvent(new Event('input')); }
+        if (opt4 && !opt4.value.trim()) { opt4.value = data.options[3] || ""; opt4.dispatchEvent(new Event('input')); }
     }
     
     if (data.correct) {
-        const qType = typeSelect.value;
+        const qType = document.getElementById("questionTypeSelect").value;
         if (qType === "MultipleSelect") {
-            const correctList = data.correct.split('|').map(c => c.trim().toLowerCase());
+            const correctList = data.correct.split('|');
             correctAnswerField.value = data.correct;
-            
-            // Wait for DOM updates from dispatchEvent('input')
             setTimeout(() => {
-                document.querySelectorAll('.correct-checkbox').forEach(cb => {
-                    const cbValue = cb.value.trim().toLowerCase();
-                    cb.checked = cbValue && correctList.includes(cbValue);
+                const checkboxes = document.querySelectorAll('.correct-checkbox');
+                checkboxes.forEach(cb => {
+                    if (correctList.some(c => c.toLowerCase() === cb.value.toLowerCase())) {
+                        cb.checked = true;
+                    } else {
+                        cb.checked = false;
+                    }
                 });
-            }, 150);
-        } else if (qType === "TrueFalse") {
-            const tfSelect = document.getElementById("trueFalseSelect");
-            if (tfSelect) {
-                const val = data.correct.trim().toLowerCase();
-                tfSelect.value = val.startsWith('t') ? 'True' : 'False';
-                tfSelect.dispatchEvent(new Event('change'));
-            }
+            }, 100);
         } else {
             correctAnswerField.value = data.correct;
         }
@@ -2563,8 +2510,8 @@ function tryParseStructuredBlock(text) {
 }
 
 function tryParseFreeForm(text) {
-    // Enhanced Regex for prefixes: A. B. 1. 2. i. ii. etc. (Handles same-line options)
-    const optionRegex = /(?:^|[ \t\n]+)((?:[A-Za-z0-9]+|[ivxIVX]+))[\.\)]\s+([\s\S]*?)(?=[ \t\n]+(?:[A-Za-z0-9]+|[ivxIVX]+)[\.\)]\s+|(?:Correct Answer:|✅ Correct Answer:)|$)/gm;
+    // Regex for prefixes: A. B. 1. 2. i. ii. etc.
+    const optionRegex = /^(?:[ \t]*)((?:[A-Za-z0-9]+|[ivxIVX]+))[\.\)]\s+([\s\S]*?)(?=\n(?:[ \t]*)(?:[A-Za-z0-9]+|[ivxIVX]+)[\.\)]\s+|\n(?:Correct Answer:|✅ Correct Answer:)|$)/gm;
     const correctMarkerRegex = /(?:Correct Answer:|✅ Correct Answer:)\s*([\s\S]*?)$/i;
     const questionLabelRegex = /^Question:\s*([\s\S]*?)$/i;
 
