@@ -9,6 +9,7 @@ import java.text.SimpleDateFormat;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import myPackage.classes.Answers;
+import myPackage.classes.Courses;
 import myPackage.classes.Exams;
 import myPackage.classes.Questions;
 import myPackage.classes.User;

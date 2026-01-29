@@ -18,14 +18,13 @@
 <%@ page import="myPackage.*" %>
 <%@ page import="myPackage.classes.User" %>
 <%@ page import="myPackage.classes.Questions" %>
+<%@ page import="myPackage.classes.Courses" %>
 <%@ page import="org.mindrot.jbcrypt.BCrypt" %>
 <%@ page import="org.json.JSONObject" %>
 <%@ page import="org.json.JSONArray" %>
 <%@ page import="org.json.JSONException" %>
-<%@ page import="org.apache.pdfbox.Loader" %>
 <%@ page import="org.apache.pdfbox.pdmodel.PDDocument" %>
 <%@ page import="org.apache.pdfbox.text.PDFTextStripper" %>
-<%@ page import="org.apache.pdfbox.pdfparser.PDFParser" %>
 <%@ page contentType="text/html" pageEncoding="UTF-8"%>
 <%@ page trimDirectiveWhitespaces="true" %>
 
@@ -389,6 +388,60 @@ try {
        ========================= */
     } else if ("courses".equalsIgnoreCase(pageParam)) {
         String operation = nz(request.getParameter("operation"), "");
+
+        if ("getCourseData".equalsIgnoreCase(operation)) {
+            String courseName = nz(request.getParameter("courseName"), "");
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+
+            if (courseName.isEmpty()) {
+                JSONObject error = new JSONObject();
+                error.put("success", false);
+                error.put("message", "Course name is required");
+                out.print(error.toString());
+                return;
+            }
+
+            // Fetch directly from DB here to avoid requiring a rebuilt DatabaseClass on the server classpath.
+            try {
+                Connection conn = pDAO.getConnection();
+                PreparedStatement ps = conn.prepareStatement(
+                    "SELECT course_name, total_marks, time, exam_date FROM courses WHERE course_name = ?"
+                );
+                ps.setString(1, courseName);
+                ResultSet rs = ps.executeQuery();
+
+                if (!rs.next()) {
+                    JSONObject error = new JSONObject();
+                    error.put("success", false);
+                    error.put("message", "Course not found");
+                    out.print(error.toString());
+                    rs.close();
+                    ps.close();
+                    return;
+                }
+
+                JSONObject json = new JSONObject();
+                json.put("success", true);
+                json.put("courseName", rs.getString("course_name"));
+                json.put("totalMarks", rs.getInt("total_marks"));
+                json.put("time", rs.getString("time"));
+                json.put("examDate", rs.getString("exam_date"));
+                out.print(json.toString());
+
+                rs.close();
+                ps.close();
+                return;
+            } catch (Exception ex) {
+                LOGGER.log(Level.SEVERE, "getCourseData failed", ex);
+                JSONObject error = new JSONObject();
+                error.put("success", false);
+                error.put("message", "Server error: " + ex.getMessage());
+                out.print(error.toString());
+                return;
+            }
+        }
+
         if ("addnew".equalsIgnoreCase(operation)) {
             String courseName = nz(request.getParameter("coursename"), "");
             int totalMarks    = Integer.parseInt(nz(request.getParameter("totalmarks"), "0"));
@@ -1127,12 +1180,11 @@ try {
         
         // Check if PDFBox is available
         try {
-            Class.forName("org.apache.pdfbox.Loader");
             Class.forName("org.apache.pdfbox.pdmodel.PDDocument");
             Class.forName("org.apache.pdfbox.text.PDFTextStripper");
-        } catch (ClassNotFoundException e) {
+        } catch (Throwable e) {
             LOGGER.log(Level.WARNING, "PDFBox libraries not found", e);
-            outJSON.print("{\"success\": false, \"message\": \"PDF processing libraries not installed. Please install Apache PDFBox version 3.x.\"}");
+            outJSON.print("{\"success\": false, \"message\": \"PDF processing libraries not installed or incompatible. Please add Apache PDFBox to WEB-INF/lib.\"}");
             return;
         }
         
@@ -1142,7 +1194,16 @@ try {
             if (items == null) {
                 DiskFileItemFactory factory = new DiskFileItemFactory();
                 ServletFileUpload upload = new ServletFileUpload(factory);
-                items = upload.parseRequest(request);
+                try {
+                    items = upload.parseRequest(request);
+                } catch (Exception parseEx) {
+                    LOGGER.log(Level.SEVERE, "Error parsing multipart PDF upload", parseEx);
+                    JSONObject err = new JSONObject();
+                    err.put("success", false);
+                    err.put("message", "Error parsing upload: " + parseEx.getMessage());
+                    outJSON.print(err.toString());
+                    return;
+                }
             }
             
             String extractedText = "";
@@ -1153,14 +1214,56 @@ try {
                     if (!item.isFormField() && "pdfFile".equals(item.getFieldName())) {
                         try {
                             byte[] pdfBytes = item.get();
-                            try (PDDocument document = Loader.loadPDF(pdfBytes)) {
+                            PDDocument document = null;
+                            try {
+                                // Load PDF via reflection to support multiple PDFBox versions.
+                                // This avoids compile errors when certain overloads do not exist.
+                                try {
+                                    java.lang.reflect.Method m = PDDocument.class.getMethod("load", byte[].class);
+                                    document = (PDDocument) m.invoke(null, pdfBytes);
+                                } catch (NoSuchMethodException noByteArrayLoad) {
+                                    try {
+                                        java.io.InputStream in = new java.io.ByteArrayInputStream(pdfBytes);
+                                        java.lang.reflect.Method m = PDDocument.class.getMethod("load", java.io.InputStream.class);
+                                        document = (PDDocument) m.invoke(null, in);
+                                    } catch (NoSuchMethodException noStreamLoad) {
+                                        // Last resort: Loader.loadPDF (may still fail if PDFBox jars are inconsistent)
+                                        Class<?> loaderClass = Class.forName("org.apache.pdfbox.Loader");
+                                        java.lang.reflect.Method loadMethod = loaderClass.getMethod("loadPDF", byte[].class);
+                                        document = (PDDocument) loadMethod.invoke(null, pdfBytes);
+                                    }
+                                }
+
                                 PDFTextStripper stripper = new PDFTextStripper();
                                 extractedText = stripper.getText(document);
                                 success = true;
+                            } finally {
+                                if (document != null) {
+                                    try { document.close(); } catch (Exception ignore) {}
+                                }
                             }
-                        } catch (Exception loadError) {
-                            LOGGER.log(Level.WARNING, "Error loading PDF: " + loadError.getMessage(), loadError);
-                            throw loadError;
+                        } catch (Throwable loadError) {
+                            Throwable root = loadError;
+                            if (root instanceof java.lang.reflect.InvocationTargetException) {
+                                Throwable target = ((java.lang.reflect.InvocationTargetException) root).getTargetException();
+                                if (target != null) root = target;
+                            }
+                            while (root.getCause() != null && root.getCause() != root) {
+                                root = root.getCause();
+                            }
+
+                            String technical = String.valueOf(root);
+                            String message = "Error loading PDF: " + technical;
+                            if (technical.contains("IOUtils.createMemoryOnlyStreamCache")) {
+                                message = "PDFBox libraries are incompatible/mismatched (mixed versions in WEB-INF/lib). Please keep a single consistent PDFBox version set (e.g. pdfbox-3.0.6 + pdfbox-io-3.0.6 + fontbox-3.0.6) and remove older pdfbox-app/pdfbox-tools jars.";
+                            }
+
+                            LOGGER.log(Level.WARNING, message, loadError);
+                            JSONObject err = new JSONObject();
+                            err.put("success", false);
+                            err.put("message", message);
+                            outJSON.print(err.toString());
+                            return;
                         }
                     }
                 }
