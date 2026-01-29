@@ -1151,12 +1151,18 @@
                 const submitBtn = this.querySelector('#submit-btn');
                 const newCourseName = document.getElementById('courseName').value.trim();
                 const originalCourseNameFromInput = document.getElementById('original-course-name').value;
+                const totalMarks = document.getElementById('totalMarks').value;
+                const time = document.getElementById('time').value;
+                const examDate = document.getElementById('examDate').value;
                 
                 console.log('=== FORM SUBMISSION DEBUG ===');
                 console.log('Raw values:');
                 console.log('- courseName field value:', '"' + document.getElementById('courseName').value + '"');
                 console.log('- original-course-name field value:', '"' + originalCourseNameFromInput + '"');
                 console.log('- newCourseName (trimmed):', '"' + newCourseName + '"');
+                console.log('- totalMarks:', '"' + totalMarks + '"');
+                console.log('- time:', '"' + time + '"');
+                console.log('- examDate:', '"' + examDate + '"');
                 console.log('- isEditing:', isEditing);
                 console.log('- originalCourseName (global):', '"' + originalCourseName + '"');
                 
@@ -1198,6 +1204,9 @@
                 // Use the same values that were used in the condition check
                 const originalName = originalCourseNameFromInput;
                 const finalNewName = newCourseName;
+                const finalTotalMarks = totalMarks;
+                const finalTime = time;
+                const finalExamDate = examDate;
                 
                 // Safety check - ensure both values exist, are not empty, and not just whitespace
                 if (!originalName || !finalNewName || originalName.length === 0 || finalNewName.length === 0) {
@@ -1232,6 +1241,46 @@
                     <strong style="color: var(--primary-blue);">"${finalNewName}"</strong>.
                 `;
                 
+                // Course Details Section
+                const detailsContainer = document.createElement('div');
+                detailsContainer.style.cssText = `
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    padding: 20px;
+                    margin: 20px 0;
+                    text-align: left;
+                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+                `;
+
+                detailsContainer.innerHTML = `
+                    <div style="font-weight: 700; color: var(--primary-blue); margin-bottom: 12px; font-size: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+                        <i class="fas fa-info-circle"></i> Updated Course Information
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-book" style="color: var(--accent-blue); width: 16px;"></i>
+                            <span style="color: var(--dark-gray); width: 110px; font-size: 13px;">Course Name:</span>
+                            <strong style="color: var(--text-dark);">${finalNewName}</strong>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-chart-line" style="color: var(--success); width: 16px;"></i>
+                            <span style="color: var(--dark-gray); width: 110px; font-size: 13px;">Total Marks:</span>
+                            <strong style="color: var(--text-dark);">${finalTotalMarks} Marks</strong>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-clock" style="color: var(--info); width: 16px;"></i>
+                            <span style="color: var(--dark-gray); width: 110px; font-size: 13px;">Duration:</span>
+                            <strong style="color: var(--text-dark);">${finalTime} minutes</strong>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-calendar-alt" style="color: var(--dark-gray); width: 16px;"></i>
+                            <span style="color: var(--dark-gray); width: 110px; font-size: 13px;">Exam Date:</span>
+                            <strong style="color: var(--text-dark);">${finalExamDate}</strong>
+                        </div>
+                    </div>
+                `;
+
                 // Warning message
                 const warningBox = document.createElement('div');
                 warningBox.className = 'alert alert-warning';
@@ -1266,6 +1315,7 @@
                 confirmPrompt.textContent = 'Are you sure you want to proceed?';
                 
                 container.appendChild(renameInfo);
+                container.appendChild(detailsContainer);
                 container.appendChild(warningBox);
                 container.appendChild(confirmPrompt);
                 
