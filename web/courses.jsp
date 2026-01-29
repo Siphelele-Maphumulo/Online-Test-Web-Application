@@ -1195,27 +1195,27 @@
                 console.log('- newCourseName:', '"' + newCourseName + '"');
                 console.log('- originalCourseName (global):', '"' + originalCourseName + '"');
                 
-                // Get the actual course names from the form with robust fallbacks
-                const currentCourseNameField = document.getElementById('courseName');
-                const originalCourseNameField = document.getElementById('original-course-name');
+                // Use the same values that were used in the condition check
+                const originalName = originalCourseNameFromInput;
+                const finalNewName = newCourseName;
                 
-                const currentCourseNameRaw = currentCourseNameField ? currentCourseNameField.value.trim() : "";
-                const originalNameFromInput = originalCourseNameField ? originalCourseNameField.value.trim() : "";
-                
-                // Robust old name selection: priority to global var, then hidden input
-                let originalName = originalCourseName || originalNameFromInput;
-                
-                // Final fallback if still empty or whitespace
-                if (!originalName || originalName.trim() === "") {
-                    originalName = "Unknown Course";
+                // Safety check - ensure both values exist, are not empty, and not just whitespace
+                if (!originalName || !finalNewName || originalName.length === 0 || finalNewName.length === 0) {
+                    console.log('Safety check failed: originalName="' + originalName + '", finalNewName="' + finalNewName + '"');
+                    alert("Course name data is missing or invalid. Original: '" + originalName + "', New: '" + finalNewName + "'");
+                    return;
                 }
-                
-                // Ensure current name is not empty for display
-                const finalNewName = currentCourseNameRaw || "New Course Name";
                 
                 console.log('Processed values for modal:');
                 console.log('- originalName:', '"' + originalName + '"');
                 console.log('- finalNewName:', '"' + finalNewName + '"');
+                
+                // Debug the template literal values
+                console.log('About to set modal content with values:', {
+                    originalName: originalName,
+                    finalNewName: finalNewName,
+                    templateLiteral: `You are about to rename the course from "${originalName}" to "${finalNewName}".`
+                });
                 
                 // Course rename information
                 const renameInfo = document.createElement('div');
@@ -1226,9 +1226,10 @@
                 `;
                 
                 renameInfo.innerHTML = `
-                    You are about to rename the course from 
-                    <strong style="color: var(--primary-blue);">"${originalName}"</strong> 
-                    to <strong style="color: var(--primary-blue);">"${finalNewName}"</strong>.
+                    You are about to rename the course from
+                    <strong style="color: var(--primary-blue);">"${originalName}"</strong>
+                    to
+                    <strong style="color: var(--primary-blue);">"${finalNewName}"</strong>.
                 `;
                 
                 // Warning message
