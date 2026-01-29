@@ -16,7 +16,7 @@ import org.json.JSONObject;
 public class OpenRouterClient {
     private static String API_KEY = "";
     private static final String API_URL = "https://openrouter.ai/api/v1/chat/completions";
-    private static String MODEL = "openai/gpt-4o-mini";
+    private static String MODEL = "meta-llama/llama-3-8b-instruct";
     private static final Logger LOGGER = Logger.getLogger(OpenRouterClient.class.getName());
 
     static {
@@ -32,7 +32,7 @@ public class OpenRouterClient {
             }
             prop.load(input);
             API_KEY = prop.getProperty("openrouter.api.key", "");
-            MODEL = prop.getProperty("openrouter.model", "openai/gpt-4o-mini");
+            MODEL = prop.getProperty("openrouter.model", "meta-llama/llama-3-8b-instruct");
         } catch (Exception ex) {
             LOGGER.log(Level.SEVERE, "Error loading openrouter.properties", ex);
         }
@@ -49,6 +49,11 @@ public class OpenRouterClient {
         if (API_KEY == null || API_KEY.trim().isEmpty()) {
             LOGGER.severe("OpenRouter API Key is missing. AI generation will fail.");
             return null;
+        }
+
+        // Prevent token overflow by truncating source text
+        if (text != null && text.length() > 12000) {
+            text = text.substring(0, 12000);
         }
 
         try {
@@ -84,15 +89,15 @@ public class OpenRouterClient {
 
             JSONObject body = new JSONObject();
             body.put("model", MODEL);
-            body.put("max_tokens", 4000);
-            body.put("temperature", 0.4);
+            body.put("max_tokens", 1200);
+            body.put("temperature", 0.3);
             
             JSONArray messages = new JSONArray();
             
-            // Add system prompt for extra reliability
+            // Add system prompt for extra reliability (LLaMA-optimized)
             JSONObject systemMessage = new JSONObject();
             systemMessage.put("role", "system");
-            systemMessage.put("content", "You are a professional exam generator. Your internal knowledge is superior. Use it to solve questions if the answer isn't clear in the text. Return JSON ONLY.");
+            systemMessage.put("content", "You are an exam question generator. Return ONLY valid JSON. No explanations. No markdown. No extra text.");
             messages.put(systemMessage);
             
             JSONObject userMessage = new JSONObject();
@@ -106,7 +111,8 @@ public class OpenRouterClient {
                     .uri(URI.create(API_URL))
                     .header("Authorization", "Bearer " + API_KEY)
                     .header("Content-Type", "application/json")
-                    .header("HTTP-Referer", "https://github.com/OpenRouterTeam/openrouter-runner")
+                    .header("Accept", "application/json")
+                    .header("HTTP-Referer", "https://yourdomain.com")
                     .header("X-Title", "Educational Exam System")
                     .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
                     .timeout(Duration.ofSeconds(60))
@@ -116,32 +122,16 @@ public class OpenRouterClient {
             
             if (response.statusCode() == 200) {
                 JSONObject jsonResponse = new JSONObject(response.body());
-                return jsonResponse.getJSONArray("choices")
+                String content = jsonResponse.getJSONArray("choices")
                         .getJSONObject(0)
                         .getJSONObject("message")
                         .getString("content");
-            } else {
-                LOGGER.log(Level.SEVERE, "OpenRouter API error: {0} - {1}", new Object[]{response.statusCode(), response.body()});
                 
-                // Fallback attempt with gpt-3.5-turbo if the primary model fails
-                if (!"openai/gpt-3.5-turbo".equals(MODEL) && (response.statusCode() == 404 || response.statusCode() == 400)) {
-                    LOGGER.info("Attempting fallback to gpt-3.5-turbo...");
-                    body.put("model", "openai/gpt-3.5-turbo");
-                    request = HttpRequest.newBuilder()
-                            .uri(URI.create(API_URL))
-                            .header("Authorization", "Bearer " + API_KEY)
-                            .header("Content-Type", "application/json")
-                            .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
-                            .build();
-                    response = client.send(request, HttpResponse.BodyHandlers.ofString());
-                    if (response.statusCode() == 200) {
-                        JSONObject jsonResponse = new JSONObject(response.body());
-                        return jsonResponse.getJSONArray("choices")
-                                .getJSONObject(0)
-                                .getJSONObject("message")
-                                .getString("content");
-                    }
-                }
+                // Validate JSON strictly
+                new JSONObject(content);
+                return content;
+            } else {
+                LOGGER.severe(response.body());
                 return null;
             }
         } catch (Exception e) {
