@@ -860,10 +860,22 @@
                 const month = String(date.getMonth() + 1).padStart(2, '0');
                 const day = String(date.getDate()).padStart(2, '0');
                 examDateValue = `${year}-${month}-${day}`;
+            } else {
+                // If the date is invalid (like "--"), reset it to empty or today
+                console.warn('Invalid date detected in dataset:', examDateValue);
+                examDateValue = '';
             }
         }
         
-        document.getElementById('examDate').value = examDateValue;
+        // Final safety check for date input format (YYYY-MM-DD)
+        const dateInput = document.getElementById('examDate');
+        const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+        if (examDateValue && !datePattern.test(examDateValue)) {
+            console.warn('Date value does not match YYYY-MM-DD format:', examDateValue);
+            dateInput.value = '';
+        } else {
+            dateInput.value = examDateValue;
+        }
         console.log('Exam date set to:', document.getElementById('examDate').value);
         
         // Change form operation
@@ -1148,18 +1160,26 @@
             courseForm.addEventListener('submit', function(e) {
                 e.preventDefault(); // Always prevent default submission
 
-                const submitBtn = this.querySelector('#submit-btn');
-                const newCourseName = document.getElementById('courseName').value.trim();
-                const originalCourseNameFromInput = document.getElementById('original-course-name').value;
-                const totalMarks = document.getElementById('totalMarks').value;
-                const time = document.getElementById('time').value;
-                const examDate = document.getElementById('examDate').value;
+                // Get elements directly from the form for maximum reliability
+                const form = this;
+                const submitBtn = form.querySelector('#submit-btn');
+                const newCourseName = (form.elements['coursename']?.value || '').trim();
+                const originalCourseNameFromInput = form.elements['original_course_name']?.value || '';
+                const totalMarks = form.elements['totalmarks']?.value || '';
+                const time = form.elements['time']?.value || '';
+                const examDate = form.elements['examdate']?.value || '';
                 
                 console.log('=== FORM SUBMISSION DEBUG ===');
+                console.log('JSON stringified values (to detect hidden characters):');
+                console.log('- newCourseName:', JSON.stringify(newCourseName));
+                console.log('- originalCourseNameFromInput:', JSON.stringify(originalCourseNameFromInput));
+                console.log('- totalMarks:', JSON.stringify(totalMarks));
+                console.log('- time:', JSON.stringify(time));
+                console.log('- examDate:', JSON.stringify(examDate));
+
                 console.log('Raw values:');
-                console.log('- courseName field value:', '"' + document.getElementById('courseName').value + '"');
-                console.log('- original-course-name field value:', '"' + originalCourseNameFromInput + '"');
                 console.log('- newCourseName (trimmed):', '"' + newCourseName + '"');
+                console.log('- original-course-name field value:', '"' + originalCourseNameFromInput + '"');
                 console.log('- totalMarks:', '"' + totalMarks + '"');
                 console.log('- time:', '"' + time + '"');
                 console.log('- examDate:', '"' + examDate + '"');
@@ -1208,10 +1228,13 @@
                 const finalTime = time;
                 const finalExamDate = examDate;
                 
-                // Safety check - ensure both values exist, are not empty, and not just whitespace
-                if (!originalName || !finalNewName || originalName.length === 0 || finalNewName.length === 0) {
-                    console.log('Safety check failed: originalName="' + originalName + '", finalNewName="' + finalNewName + '"');
-                    alert("Course name data is missing or invalid. Original: '" + originalName + "', New: '" + finalNewName + "'");
+                // Stricter safety check - ensure both values exist, are not empty, and not just whitespace
+                if (!originalName || !finalNewName || originalName.trim().length === 0 || finalNewName.trim().length === 0) {
+                    console.error('Safety check failed!', {
+                        originalName: JSON.stringify(originalName),
+                        finalNewName: JSON.stringify(finalNewName)
+                    });
+                    alert("Course name data is missing or invalid. Please ensure the course name is filled correctly.");
                     return;
                 }
                 
