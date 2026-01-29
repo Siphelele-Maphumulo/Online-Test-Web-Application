@@ -603,8 +603,8 @@
                         %>
                         <%
                         String courseNameDisplay = (courseName != null) ? courseName : "NULL";
-                        String courseNameAttr = (courseName != null) ? courseName : "NO_COURSE_NAME";
-                        String originalNameAttr = (courseName != null) ? courseName : "";
+                        String courseNameAttr = (courseName != null) ? courseName.replace("\"", "&quot;") : "NO_COURSE_NAME";
+                        String originalNameAttr = (courseName != null) ? courseName.replace("\"", "&quot;") : "";
                         %>
                         <tr id="course-row-<%= i %>" data-debug-course="<%= courseNameDisplay %>">
                             <td>
@@ -819,33 +819,32 @@
     // Function to handle edit button click
     function handleEditButtonClick() {
         console.log('=== EDIT BUTTON CLICKED ===');
-        console.log('Button element:', this);
-        console.log('Dataset:', this.dataset);
-        console.log('All dataset properties:', Object.keys(this.dataset));
+        
+        // Use both dataset and getAttribute for maximum reliability
+        const btn = this;
+        const dataset = btn.dataset || {};
+        const courseNameFromData = dataset.courseName || btn.getAttribute('data-course-name');
         
         isEditing = true;
-        currentIndex = this.dataset.index;
-        originalCourseName = this.dataset.courseName;
+        currentIndex = dataset.index || btn.getAttribute('data-index');
+        originalCourseName = courseNameFromData;
         
         console.log('Extracted values:');
         console.log('- currentIndex:', currentIndex);
         console.log('- originalCourseName:', originalCourseName);
-        console.log('- typeof originalCourseName:', typeof originalCourseName);
-        console.log('- originalCourseName length:', originalCourseName ? originalCourseName.length : 'N/A');
         
         // Debug variables
         debugVariables();
         
-        // Check if dataset values are actually present
-        if (!this.dataset.courseName) {
-            console.error('ERROR: courseName is missing from dataset!');
-            console.log('Available dataset keys:', Object.keys(this.dataset));
+        // Check if course name is present
+        if (!courseNameFromData) {
+            console.error('ERROR: courseName is missing from element dataset!');
             return;
         }
         
         // Populate form fields
         document.getElementById('original-course-name').value = originalCourseName;
-        document.getElementById('courseName').value = this.dataset.courseName || '';
+        document.getElementById('courseName').value = courseNameFromData || '';
         document.getElementById('totalMarks').value = this.dataset.totalMarks || '';
         document.getElementById('time').value = this.dataset.time || '';
         
@@ -1196,22 +1195,27 @@
                 console.log('- newCourseName:', '"' + newCourseName + '"');
                 console.log('- originalCourseName (global):', '"' + originalCourseName + '"');
                 
-                // Get the actual course names from the form with fallbacks
-                const currentCourseName = document.getElementById('courseName').value.trim();
-                const originalName = originalCourseName || originalCourseNameFromInput || 'Unknown Course';
+                // Get the actual course names from the form with robust fallbacks
+                const currentCourseNameField = document.getElementById('courseName');
+                const originalCourseNameField = document.getElementById('original-course-name');
                 
-                console.log('Processed values:');
-                console.log('- currentCourseName (from form):', '"' + currentCourseName + '"');
-                console.log('- originalName (final):', '"' + originalName + '"');
+                const currentCourseNameRaw = currentCourseNameField ? currentCourseNameField.value.trim() : "";
+                const originalNameFromInput = originalCourseNameField ? originalCourseNameField.value.trim() : "";
                 
-                // Validate that we have actual data
-                if (!originalName || originalName === 'Unknown Course') {
-                    console.error('ERROR: Cannot determine original course name for modal!');
+                // Robust old name selection: priority to global var, then hidden input
+                let originalName = originalCourseName || originalNameFromInput;
+                
+                // Final fallback if still empty or whitespace
+                if (!originalName || originalName.trim() === "") {
+                    originalName = "Unknown Course";
                 }
                 
-                if (!currentCourseName) {
-                    console.error('ERROR: Cannot determine current course name for modal!');
-                }
+                // Ensure current name is not empty for display
+                const finalNewName = currentCourseNameRaw || "New Course Name";
+                
+                console.log('Processed values for modal:');
+                console.log('- originalName:', '"' + originalName + '"');
+                console.log('- finalNewName:', '"' + finalNewName + '"');
                 
                 // Course rename information
                 const renameInfo = document.createElement('div');
@@ -1224,7 +1228,7 @@
                 renameInfo.innerHTML = `
                     You are about to rename the course from 
                     <strong style="color: var(--primary-blue);">"${originalName}"</strong> 
-                    to <strong style="color: var(--primary-blue);">"${currentCourseName}"</strong>.
+                    to <strong style="color: var(--primary-blue);">"${finalNewName}"</strong>.
                 `;
                 
                 // Warning message
@@ -1293,14 +1297,6 @@
         console.log('Course management initialized successfully');
     });
 
-    // Also initialize if DOM is already loaded
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        setTimeout(() => {
-            document.querySelectorAll('.edit-btn').forEach(button => {
-                button.addEventListener('click', handleEditButtonClick);
-            });
-        }, 100);
-    }
     
     // Close modal when clicking outside (if you have modals)
     window.addEventListener('click', function(event) {
