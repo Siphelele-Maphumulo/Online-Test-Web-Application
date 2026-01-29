@@ -1153,14 +1153,20 @@ try {
                     if (!item.isFormField() && "pdfFile".equals(item.getFieldName())) {
                         try {
                             byte[] pdfBytes = item.get();
+                            if (pdfBytes == null || pdfBytes.length == 0) {
+                                throw new Exception("Uploaded PDF file is empty.");
+                            }
                             try (PDDocument document = Loader.loadPDF(pdfBytes)) {
                                 PDFTextStripper stripper = new PDFTextStripper();
                                 extractedText = stripper.getText(document);
                                 success = true;
                             }
-                        } catch (Exception loadError) {
-                            LOGGER.log(Level.WARNING, "Error loading PDF: " + loadError.getMessage(), loadError);
-                            throw loadError;
+                        } catch (Throwable loadError) {
+                            String errorMsg = (loadError.getMessage() != null) ? loadError.getMessage() : loadError.toString();
+                            LOGGER.log(Level.WARNING, "Error loading PDF: " + errorMsg, loadError);
+                            // Throwing as Exception so it's caught by the outer catch(Exception e)
+                            if (loadError instanceof Exception) throw (Exception) loadError;
+                            else throw new Exception(errorMsg, loadError);
                         }
                     }
                 }
@@ -1175,7 +1181,8 @@ try {
                 }
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Error extracting text from PDF", e);
-                outJSON.print("{\"success\": false, \"message\": \"Error extracting text: " + e.getMessage() + "\"}");
+                String errorMsg = (e.getMessage() != null) ? e.getMessage() : e.toString();
+                outJSON.print("{\"success\": false, \"message\": \"Error extracting text: " + errorMsg + "\"}");
             }
         } else {
             outJSON.print("{\"success\": false, \"message\": \"Not a multipart request.\"}");
