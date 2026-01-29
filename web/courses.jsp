@@ -860,22 +860,10 @@
                 const month = String(date.getMonth() + 1).padStart(2, '0');
                 const day = String(date.getDate()).padStart(2, '0');
                 examDateValue = `${year}-${month}-${day}`;
-            } else {
-                // If the date is invalid (like "--"), reset it to empty or today
-                console.warn('Invalid date detected in dataset:', examDateValue);
-                examDateValue = '';
             }
         }
         
-        // Final safety check for date input format (YYYY-MM-DD)
-        const dateInput = document.getElementById('examDate');
-        const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-        if (examDateValue && !datePattern.test(examDateValue)) {
-            console.warn('Date value does not match YYYY-MM-DD format:', examDateValue);
-            dateInput.value = '';
-        } else {
-            dateInput.value = examDateValue;
-        }
+        document.getElementById('examDate').value = examDateValue;
         console.log('Exam date set to:', document.getElementById('examDate').value);
         
         // Change form operation
@@ -1159,30 +1147,16 @@
         if (courseForm) {
             courseForm.addEventListener('submit', function(e) {
                 e.preventDefault(); // Always prevent default submission
-                
-                // Get elements directly from the form for maximum reliability
-                const form = this;
-                const submitBtn = form.querySelector('#submit-btn');
-                const newCourseName = (form.elements['coursename']?.value || '').trim();
-                const originalCourseNameFromInput = form.elements['original_course_name']?.value || '';
-                const totalMarks = form.elements['totalmarks']?.value || '';
-                const time = form.elements['time']?.value || '';
-                const examDate = form.elements['examdate']?.value || '';
+
+                const submitBtn = this.querySelector('#submit-btn');
+                const newCourseName = document.getElementById('courseName').value.trim();
+                const originalCourseNameFromInput = document.getElementById('original-course-name').value;
                 
                 console.log('=== FORM SUBMISSION DEBUG ===');
-                console.log('JSON stringified values (to detect hidden characters):');
-                console.log('- newCourseName:', JSON.stringify(newCourseName));
-                console.log('- originalCourseNameFromInput:', JSON.stringify(originalCourseNameFromInput));
-                console.log('- totalMarks:', JSON.stringify(totalMarks));
-                console.log('- time:', JSON.stringify(time));
-                console.log('- examDate:', JSON.stringify(examDate));
-                
                 console.log('Raw values:');
-                console.log('- newCourseName (trimmed):', '"' + newCourseName + '"');
+                console.log('- courseName field value:', '"' + document.getElementById('courseName').value + '"');
                 console.log('- original-course-name field value:', '"' + originalCourseNameFromInput + '"');
-                console.log('- totalMarks:', '"' + totalMarks + '"');
-                console.log('- time:', '"' + time + '"');
-                console.log('- examDate:', '"' + examDate + '"');
+                console.log('- newCourseName (trimmed):', '"' + newCourseName + '"');
                 console.log('- isEditing:', isEditing);
                 console.log('- originalCourseName (global):', '"' + originalCourseName + '"');
                 
@@ -1224,17 +1198,11 @@
                 // Use the same values that were used in the condition check
                 const originalName = originalCourseNameFromInput;
                 const finalNewName = newCourseName;
-                const finalTotalMarks = totalMarks;
-                const finalTime = time;
-                const finalExamDate = examDate;
                 
-                // Stricter safety check - ensure both values exist, are not empty, and not just whitespace
-                if (!originalName || !finalNewName || originalName.trim().length === 0 || finalNewName.trim().length === 0) {
-                    console.error('Safety check failed!', {
-                        originalName: JSON.stringify(originalName),
-                        finalNewName: JSON.stringify(finalNewName)
-                    });
-                    alert("Course name data is missing or invalid. Please ensure the course name is filled correctly.");
+                // Safety check - ensure both values exist, are not empty, and not just whitespace
+                if (!originalName || !finalNewName || originalName.length === 0 || finalNewName.length === 0) {
+                    console.log('Safety check failed: originalName="' + originalName + '", finalNewName="' + finalNewName + '"');
+                    alert("Course name data is missing or invalid. Original: '" + originalName + "', New: '" + finalNewName + "'");
                     return;
                 }
                 
@@ -1246,7 +1214,7 @@
                 console.log('About to set modal content with values:', {
                     originalName: originalName,
                     finalNewName: finalNewName,
-                    templateLiteral: `You are about to rename the course from "${originalName}" to "${finalNewName}".`
+                    templateLiteral: `You are about to rename the course.`
                 });
                 
                 // Course rename information
@@ -1258,50 +1226,7 @@
                 `;
                 
                 renameInfo.innerHTML = `
-                    You are about to rename the course from
-                    <strong style="color: var(--primary-blue);">"${originalName}"</strong>
-                    to
-                    <strong style="color: var(--primary-blue);">"${finalNewName}"</strong>.
-                `;
-                
-                // Course Details Section
-                const detailsContainer = document.createElement('div');
-                detailsContainer.style.cssText = `
-                    background: #f8fafc;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 12px;
-                    padding: 20px;
-                    margin: 20px 0;
-                    text-align: left;
-                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
-                `;
-                
-                detailsContainer.innerHTML = `
-                    <div style="font-weight: 700; color: var(--primary-blue); margin-bottom: 12px; font-size: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
-                        <i class="fas fa-info-circle"></i> Updated Course Information
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <i class="fas fa-book" style="color: var(--accent-blue); width: 16px;"></i>
-                            <span style="color: var(--dark-gray); width: 110px; font-size: 13px;">Course Name:</span>
-                            <strong style="color: var(--text-dark);">${finalNewName}</strong>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <i class="fas fa-chart-line" style="color: var(--success); width: 16px;"></i>
-                            <span style="color: var(--dark-gray); width: 110px; font-size: 13px;">Total Marks:</span>
-                            <strong style="color: var(--text-dark);">${finalTotalMarks} Marks</strong>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <i class="fas fa-clock" style="color: var(--info); width: 16px;"></i>
-                            <span style="color: var(--dark-gray); width: 110px; font-size: 13px;">Duration:</span>
-                            <strong style="color: var(--text-dark);">${finalTime} minutes</strong>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <i class="fas fa-calendar-alt" style="color: var(--dark-gray); width: 16px;"></i>
-                            <span style="color: var(--dark-gray); width: 110px; font-size: 13px;">Exam Date:</span>
-                            <strong style="color: var(--text-dark);">${finalExamDate}</strong>
-                        </div>
-                    </div>
+                    You are about to rename the course '` + originalCourseName + ` to '` + newCourseName + `'.
                 `;
                 
                 // Warning message
@@ -1338,7 +1263,6 @@
                 confirmPrompt.textContent = 'Are you sure you want to proceed?';
                 
                 container.appendChild(renameInfo);
-                container.appendChild(detailsContainer);
                 container.appendChild(warningBox);
                 container.appendChild(confirmPrompt);
                 
