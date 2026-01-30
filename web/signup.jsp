@@ -47,8 +47,8 @@
     String title = "Create your account";
     String subtitle = "Please fill in your details to sign up.";
     if ("student".equalsIgnoreCase(userType)) {
-        title = "Creating Student Account";
-        subtitle = "You are creating a student account.";
+        title = "Creating Account";
+        subtitle = "System will auto generate if Lecture or Student.";
     } else if ("lecture".equalsIgnoreCase(userType) || "lecturer".equalsIgnoreCase(userType)) {
         title = "Creating Lecturer Account";
         subtitle = "You are creating a lecturer account with elevated privileges.";
@@ -71,9 +71,25 @@
     String sessionSuccess = (String) session.getAttribute("success");
     String sessionMessage = (String) session.getAttribute("message");
     String urlError = request.getParameter("error");
+    
+    String sessionErrorB64 = "";
+    String sessionSuccessB64 = "";
+    String sessionMessageB64 = "";
+    String errorField = (String) session.getAttribute("errorField");
+    try {
+        if (sessionError != null && !sessionError.isEmpty()) {
+            sessionErrorB64 = java.util.Base64.getEncoder().encodeToString(sessionError.getBytes("UTF-8"));
+        }
+        if (sessionSuccess != null && !sessionSuccess.isEmpty()) {
+            sessionSuccessB64 = java.util.Base64.getEncoder().encodeToString(sessionSuccess.getBytes("UTF-8"));
+        }
+        if (sessionMessage != null && !sessionMessage.isEmpty()) {
+            sessionMessageB64 = java.util.Base64.getEncoder().encodeToString(sessionMessage.getBytes("UTF-8"));
+        }
+    } catch (Exception ignore) {}
 %>
 
-<body>
+<body data-session-error-b64="<%= sessionErrorB64 %>" data-session-success-b64="<%= sessionSuccessB64 %>" data-session-message-b64="<%= sessionMessageB64 %>" data-error-field="<%= (errorField != null ? errorField : "") %>">
 
 <!-- Header -->
 <jsp:include page="header.jsp" />
@@ -92,6 +108,8 @@
                     <form id="registerForm" action="controller.jsp" method="POST">
                         <input type="hidden" name="page" value="register"/>
                         <input type="hidden" id="hiddenUserType" name="user_type" value="<%= userType %>"/>
+                        <input type="hidden" id="hiddenCity" name="city" value=""/>
+                        <input type="hidden" id="hiddenAddress" name="address" value=""/>
                         <% if (fromPage != null) { %>
                             <input type="hidden" name="from_page" value="<%= fromPage %>"/>
                         <% } %>
@@ -200,6 +218,32 @@
     </div>
 </main>
 
+<!-- Modal for signup code -->
+<div class="modal fade" id="signupCodeModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Enter Signup Code</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-2">Lecturer invitation was found for this email. Please Check your email for the signup code.</p>
+                <div class="form-group">
+                    <label for="signupCodeInput">Signup Code</label>
+                    <input type="text" class="form-control" id="signupCodeInput" maxlength="8" autocomplete="one-time-code" placeholder="e.g. A1B2C3">
+                    <small id="signupCodeError" class="text-danger" style="display:none;"></small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="verifySignupCodeBtn">Verify & Register as Lecturer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Footer -->
 <footer class="mt-auto">
     <jsp:include page="footer.jsp"/>
@@ -222,39 +266,43 @@ $(document).ready(function () {
         icon.classList.toggle("fa-eye-slash");
     };
 
-    /* ==========================
-       SESSION MODAL MESSAGES
-       ========================== */
-    <% if (sessionError != null && !sessionError.isEmpty()) { %>
-        showAlert('<%= sessionError %>', 'error', { title: 'Registration Error' });
-        <% session.removeAttribute("error"); %>
-    <% } %>
+    const decodeB64Utf8 = function (b64) {
+        try {
+            const bin = atob(b64);
+            const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+            if (window.TextDecoder) {
+                return new TextDecoder('utf-8').decode(bytes);
+            }
+            let str = '';
+            for (let i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);
+            return str;
+        } catch (e) {
+            return '';
+        }
+    };
 
-    <% if (sessionSuccess != null && !sessionSuccess.isEmpty()) { %>
-        showAlert('<%= sessionSuccess %>', 'success', { title: 'Success' });
-        <% session.removeAttribute("success"); %>
-    <% } %>
-
-    <% if (sessionMessage != null && !sessionMessage.isEmpty()) { %>
-        showAlert('<%= sessionMessage %>', 'info', { title: 'Information' });
-        <% session.removeAttribute("message"); %>
-    <% } %>
+    const bodyEl = document.body;
+    const errB64 = bodyEl.getAttribute('data-session-error-b64') || '';
+    const okB64 = bodyEl.getAttribute('data-session-success-b64') || '';
+    const infoB64 = bodyEl.getAttribute('data-session-message-b64') || '';
+    if (errB64) showAlert(decodeB64Utf8(errB64), 'error', { title: 'Registration Error' });
+    if (okB64) showAlert(decodeB64Utf8(okB64), 'success', { title: 'Success' });
+    if (infoB64) showAlert(decodeB64Utf8(infoB64), 'info', { title: 'Information' });
 
     /* ==========================
        FOCUS ERROR FIELD (SERVER)
        ========================== */
-    <% String errorField = (String) session.getAttribute("errorField"); %>
-    <% if (errorField != null) { %>
+    const errorFieldId = bodyEl.getAttribute('data-error-field') || '';
+    if (errorFieldId) {
         setTimeout(function () {
-            const field = document.getElementById('<%= errorField %>');
+            const field = document.getElementById(errorFieldId);
             if (field) {
                 field.focus();
                 field.style.borderColor = '#dc3545';
                 field.style.boxShadow = '0 0 0 0.2rem rgba(220,53,69,.25)';
             }
         }, 300);
-        <% session.removeAttribute("errorField"); %>
-    <% } %>
+    }
 
     /* ==========================
        TIMEOUT HOLDERS
@@ -367,31 +415,31 @@ $(document).ready(function () {
 
         if (!/^\d{8}$/.test(id)) {
             $('#errorUsername').text('ID number must be exactly 8 digits.');
-            firstError ??= 'uname';
+            if (!firstError) firstError = 'uname';
             isValid = false;
         }
 
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             $('#errorEmail').text('Invalid email address.');
-            firstError ??= 'email';
+            if (!firstError) firstError = 'email';
             isValid = false;
         }
 
         if (pass.length < 6) {
             $('#errorPassword').text('Password must be at least 6 characters.');
-            firstError ??= 'pass';
+            if (!firstError) firstError = 'pass';
             isValid = false;
         }
 
         if (pass !== cpass) {
             $('#errorConfirmPassword').text('Passwords do not match.');
-            firstError ??= 'cpass';
+            if (!firstError) firstError = 'cpass';
             isValid = false;
         }
 
         if (contact && !/^[\d\s\+\-\(\)]{8,15}$/.test(contact)) {
             $('#errorContact').text('Invalid contact number.');
-            firstError ??= 'contactno';
+            if (!firstError) firstError = 'contactno';
             isValid = false;
         }
 
@@ -406,12 +454,82 @@ $(document).ready(function () {
             .prop('disabled', true)
             .html('<i class="fas fa-spinner fa-spin"></i> Registering...');
 
-        this.submit();
+        const form = this;
+        const hiddenUserType = document.getElementById('hiddenUserType');
+        const emailValue = $('#email').val().trim();
+
+        $.ajax({
+            url: 'controller.jsp',
+            method: 'POST',
+            dataType: 'json',
+            data: { action: 'check_signup_code_email', email: emailValue }
+        }).done(function (res) {
+            const exists = res && res.exists === true;
+            if (exists) {
+                $('#signupCodeInput').val('');
+                $('#signupCodeError').hide().text('');
+                $('#signupCodeModal').modal('show');
+                $('#submitBtn').prop('disabled', false).html('<i class="fa-solid fa-user-plus mr-1"></i> Sign Up');
+            } else {
+                if (hiddenUserType) hiddenUserType.value = 'student';
+                form.submit();
+            }
+        }).fail(function () {
+            if (hiddenUserType) hiddenUserType.value = 'student';
+            form.submit();
+        });
     });
 
-    /* ==========================
-       CLEANUP
-       ========================== */
+    $('#verifySignupCodeBtn').on('click', function () {
+        const code = ($('#signupCodeInput').val() || '').trim().toUpperCase();
+        if (!code) {
+            $('#signupCodeError').show().text('Please enter the signup code.');
+            return;
+        }
+        $('#signupCodeError').hide().text('');
+        $('#verifySignupCodeBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Verifying...');
+
+        const payload = {
+            action: 'verify_signup_code_and_register_lecture',
+            fname: $('#fname').val(),
+            lname: $('#lname').val(),
+            uname: $('#uname').val(),
+            email: $('#email').val(),
+            pass: $('#pass').val(),
+            contactno: $('#contactno').val(),
+            city: $('#hiddenCity').val() || '',
+            address: $('#hiddenAddress').val() || '',
+            code: code
+        };
+
+        $.ajax({
+            url: 'controller.jsp',
+            method: 'POST',
+            dataType: 'json',
+            data: payload
+        }).done(function (res) {
+            if (res && res.success) {
+                $('#signupCodeModal').modal('hide');
+                showAlert('Lecturer registration successful! Redirecting to login...', 'success', { title: 'Success' });
+                setTimeout(function () {
+                    window.location.href = 'login.jsp';
+                }, 3000);
+                return;
+            }
+            $('#signupCodeError').show().text((res && res.message) ? res.message : 'Invalid signup code.');
+        }).fail(function () {
+            $('#signupCodeError').show().text('Verification failed. Please try again.');
+        }).always(function () {
+            $('#verifySignupCodeBtn').prop('disabled', false).text('Verify & Register as Lecturer');
+        });
+    });
+
+    // Reset submit button and refresh page when signup code modal is hidden (cancel/backdrop)
+    $('#signupCodeModal').on('hidden.bs.modal', function () {
+        $('#submitBtn').prop('disabled', false).html('<i class="fa-solid fa-user-plus mr-1"></i> Sign Up');
+        location.reload();
+    });
+
     $(window).on('beforeunload', function () {
         clearTimeout(usernameTimeout);
         clearTimeout(emailTimeout);
@@ -420,6 +538,12 @@ $(document).ready(function () {
 });
 </script>
 
+<%
+    if (sessionError != null) session.removeAttribute("error");
+    if (sessionSuccess != null) session.removeAttribute("success");
+    if (sessionMessage != null) session.removeAttribute("message");
+    if (errorField != null) session.removeAttribute("errorField");
+%>
 
 </body>
 </html>

@@ -153,6 +153,13 @@
                         </a>
                         <% } %>
 
+                        <% if (!isLoggedIn && !isSignupPage) { %>
+                        <a href="#" class="nav-link lecture-link" id="lecturerRequestLink">
+                            <i class="fas fa-chalkboard-user"></i>
+                            <span class="link-text">Lecture</span>
+                        </a>
+                        <% } %>
+
                         <% if (!isLoggedIn && !isLoginPage) { %>
                         <a href="login.jsp" class="nav-link login-link">
                             <i class="fas fa-sign-in-alt"></i>
@@ -188,6 +195,50 @@
             }
         %>
 
+<div id="lecturerRequestModal" class="lr-modal" aria-hidden="true">
+    <div class="lr-modal-dialog" role="dialog" aria-modal="true">
+        <div class="lr-modal-header">
+            <div class="lr-modal-title">Lecturer Request</div>
+            <button type="button" class="lr-modal-close" id="lrModalCloseBtn">&times;</button>
+        </div>
+        <form id="lecturerRequestForm" autocomplete="off">
+            <div class="lr-modal-body">
+                <div class="lr-field">
+                    <label for="lrFirstNames">First Names</label>
+                    <input type="text" id="lrFirstNames" name="firstNames" required>
+                </div>
+                <div class="lr-field">
+                    <label for="lrSurname">Surname</label>
+                    <input type="text" id="lrSurname" name="surname" required>
+                </div>
+                <div class="lr-field">
+                    <label for="lrStaffNumber">Staff Number (6 Digits of ID)</label>
+                    <input type="text" id="lrStaffNumber" name="staffNumber" inputmode="numeric" maxlength="6" required>
+                </div>
+                <div class="lr-field">
+                    <label for="lrEmail">Email</label>
+                    <input type="email" id="lrEmail" name="email" required>
+                </div>
+                <div class="lr-field">
+                    <label for="lrCourse">Course</label>
+                    <input type="text" id="lrCourse" name="course" required>
+                </div>
+                <div class="lr-field">
+                    <label for="lrContact">Contact</label>
+                    <input type="text" id="lrContact" name="contact" required>
+                </div>
+                <div id="lrFormMessage" class="lr-form-message" style="display:none;"></div>
+            </div>
+            <div class="lr-modal-footer">
+                <button type="button" class="btn btn-secondary" id="lrCancelBtn">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="lrSubmitBtn">
+                    <i class="fas fa-paper-plane"></i>
+                    <span class="link-text">Request</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <!-- Logout Loader Overlay -->
 <div id="logoutLoader" class="logout-loader">
@@ -314,6 +365,76 @@ button.nav-link:hover { background: rgba(255,255,255,0.18); transform: translate
 .login-link:hover { background: rgba(74,144,226,0.2);  }
 .signup-link:hover { background: rgba(46,204,113,0.2);  }
 .logout-link:hover { background: rgba(231,76,60,0.2); }
+.lecture-link:hover { background: rgba(255, 193, 7, 0.18); }
+
+.lr-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 99998;
+}
+
+.lr-modal-dialog {
+    width: min(420px, 92vw);
+    height: auto;
+    background: #ffffff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 18px 60px rgba(0,0,0,0.25);
+    border: 1px solid rgba(0,0,0,0.08);
+}
+
+.lr-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+    color: #fff;
+}
+
+.lr-modal-title {
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+.lr-modal-close {
+    background: transparent;
+    border: 0;
+    color: #fff;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 6px;
+}
+
+.lr-modal-body { padding: 12px 16px; }
+
+.lr-field { margin-bottom: 10px; }
+.lr-field label { display: block; font-size: 0.85rem; margin-bottom: 6px; color: #1f2a37; font-weight: 600; }
+.lr-field input {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px solid rgba(15, 23, 42, 0.18);
+    border-radius: 8px;
+    outline: none;
+    font-size: 0.95rem;
+}
+.lr-field input:focus { border-color: rgba(9, 41, 77, 0.55); box-shadow: 0 0 0 3px rgba(9, 41, 77, 0.12); }
+
+.lr-form-message { margin-top: 8px; font-size: 0.9rem; padding: 10px 12px; border-radius: 8px; }
+.lr-form-message.ok { background: rgba(46,204,113,0.12); color: #146c2e; border: 1px solid rgba(46,204,113,0.25); }
+.lr-form-message.err { background: rgba(231,76,60,0.10); color: #8a1f14; border: 1px solid rgba(231,76,60,0.22); }
+
+.lr-modal-footer {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    padding: 10px 8px 6px;
+}
 
 @media (max-width: 767.98px) { .header-logo { max-height: 36px; } .header-title { font-size: 0.875rem; } .header-subtitle { font-size: 0.625rem; } .nav-link { padding: 5px 8px; font-size: 0.75rem; } }
 
@@ -402,6 +523,111 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     }
+
+    const lrLink = document.getElementById('lecturerRequestLink');
+    const lrModal = document.getElementById('lecturerRequestModal');
+    const lrCloseBtn = document.getElementById('lrModalCloseBtn');
+    const lrCancelBtn = document.getElementById('lrCancelBtn');
+    const lrForm = document.getElementById('lecturerRequestForm');
+    const lrMsg = document.getElementById('lrFormMessage');
+    const lrSubmitBtn = document.getElementById('lrSubmitBtn');
+
+    const showLrMsg = function (type, text) {
+        if (!lrMsg) return;
+        lrMsg.className = 'lr-form-message ' + (type === 'ok' ? 'ok' : 'err');
+        lrMsg.textContent = text;
+        lrMsg.style.display = 'block';
+    };
+
+    const closeLrModal = function () {
+        if (!lrModal) return;
+        lrModal.style.display = 'none';
+        lrModal.setAttribute('aria-hidden', 'true');
+        if (lrMsg) lrMsg.style.display = 'none';
+        try { if (lrSubmitBtn) { lrSubmitBtn.disabled = false; lrSubmitBtn.classList.remove('loading'); } } catch (e) {}
+    };
+
+    if (lrLink && lrModal) {
+        lrLink.addEventListener('click', function (e) {
+            e.preventDefault();
+            lrModal.style.display = 'flex';
+            lrModal.setAttribute('aria-hidden', 'false');
+        });
+    }
+    if (lrCloseBtn) lrCloseBtn.addEventListener('click', closeLrModal);
+    if (lrCancelBtn) lrCancelBtn.addEventListener('click', closeLrModal);
+    if (lrModal) {
+        lrModal.addEventListener('click', function (e) {
+            if (e.target === lrModal) closeLrModal();
+        });
+    }
+
+    if (lrForm) {
+        lrForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const firstNames = (document.getElementById('lrFirstNames') || {}).value || '';
+            const surname = (document.getElementById('lrSurname') || {}).value || '';
+            const staffNumber = (document.getElementById('lrStaffNumber') || {}).value || '';
+            const email = (document.getElementById('lrEmail') || {}).value || '';
+            const course = (document.getElementById('lrCourse') || {}).value || '';
+            const contact = (document.getElementById('lrContact') || {}).value || '';
+
+            if (!firstNames.trim() || !surname.trim() || !staffNumber.trim() || !email.trim() || !course.trim() || !contact.trim()) {
+                showLrMsg('err', 'Please fill in all fields.');
+                return;
+            }
+            if (!/^\d{6}$/.test(staffNumber.trim())) {
+                showLrMsg('err', 'Staff Number must be exactly 6 digits.');
+                return;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+                showLrMsg('err', 'Please enter a valid email address.');
+                return;
+            }
+
+            try {
+                if (lrSubmitBtn) { lrSubmitBtn.classList.add('loading'); lrSubmitBtn.disabled = true; }
+
+                const params = new URLSearchParams();
+                params.append('action', 'lecturer_request');
+                params.append('firstNames', firstNames);
+                params.append('surname', surname);
+                params.append('staffNumber', staffNumber);
+                params.append('email', email);
+                params.append('course', course);
+                params.append('contact', contact);
+
+                const resp = await fetch('controller.jsp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                    body: params.toString()
+                });
+
+                let data = null;
+                try { data = await resp.json(); } catch (parseErr) {}
+
+                if (!resp.ok || !data) {
+                    showLrMsg('err', 'Request failed. Please try again.');
+                    if (lrSubmitBtn) { lrSubmitBtn.disabled = false; lrSubmitBtn.classList.remove('loading'); }
+                    return;
+                }
+
+                if (data.success) {
+                    showLrMsg('ok', data.message || 'Request sent successfully.');
+                    try { lrForm.reset(); } catch (err) {}
+                    setTimeout(function () {
+                        window.location.href = 'signup.jsp';
+                    }, 1400);
+                } else {
+                    showLrMsg('err', data.message || 'Request failed.');
+                    if (lrSubmitBtn) { lrSubmitBtn.disabled = false; lrSubmitBtn.classList.remove('loading'); }
+                }
+            } catch (err) {
+                showLrMsg('err', 'Request failed. Please try again.');
+                if (lrSubmitBtn) { lrSubmitBtn.disabled = false; lrSubmitBtn.classList.remove('loading'); }
+            }
+        });
+    }
 });
 </script>
-

@@ -94,7 +94,7 @@
 <body>
 
   <div class="container">
-    <img src="IMG/Result.gif" alt="Assessment System">
+    <img src="IMG/main_large.gif" alt="Assessment System">
 
     <div class="callout_row callout_row_text">
       Welcome to our automatic grading and test submissions.<br>

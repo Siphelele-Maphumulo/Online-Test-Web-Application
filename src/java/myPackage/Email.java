@@ -59,6 +59,93 @@ public class Email {
         sendEmail(to, firstName, code, "Password Reset Request - Code SA Institute");
     }
 
+    public static void sendLecturerRequestEmail(String firstNames, String surname, String staffNumber, String lecturerEmail, String course, String contact, String signupCode) throws MessagingException {
+        if (mailProperties == null || mailProperties.isEmpty()) {
+            throw new MessagingException("Mail properties not loaded. Check if mail.properties file exists.");
+        }
+    
+        final String username = mailProperties.getProperty("EMAIL_USER");
+        final String password = mailProperties.getProperty("EMAIL_PASS");
+        final String smtpHost = mailProperties.getProperty("SMTP_HOST");
+        final String smtpPort = mailProperties.getProperty("SMTP_PORT");
+        final String emailFrom = mailProperties.getProperty("EMAIL_FROM");
+        final String emailTo = mailProperties.getProperty("LECTURER_REQUEST_TO");
+    
+        if (username == null || username.trim().isEmpty()) throw new MessagingException("EMAIL_USER property is missing or empty");
+        if (password == null || password.trim().isEmpty()) throw new MessagingException("EMAIL_PASS property is missing or empty");
+        if (smtpHost == null || smtpHost.trim().isEmpty()) throw new MessagingException("SMTP_HOST property is missing or empty");
+        if (smtpPort == null || smtpPort.trim().isEmpty()) throw new MessagingException("SMTP_PORT property is missing or empty");
+        if (emailFrom == null || emailFrom.trim().isEmpty()) throw new MessagingException("EMAIL_FROM property is missing or empty");
+    
+        String finalTo = (emailTo != null && !emailTo.trim().isEmpty()) ? emailTo.trim() : username;
+    
+        Properties props = new Properties();
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.starttls.required", "true");
+        props.put("mail.smtp.host", smtpHost);
+        props.put("mail.smtp.port", smtpPort);
+        props.put("mail.smtp.ssl.trust", smtpHost);
+        props.put("mail.smtp.ssl.protocols", "TLSv1.2");
+        props.put("mail.debug", "true");
+    
+        Session session = Session.getInstance(props, new Authenticator() {
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(username, password);
+            }
+        });
+        session.setDebug(true);
+    
+        Message message = new MimeMessage(session);
+        message.setFrom(new InternetAddress(emailFrom));
+        message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(finalTo));
+        try {
+            if (lecturerEmail != null && !lecturerEmail.trim().isEmpty()) {
+                message.setReplyTo(new jakarta.mail.Address[] { new InternetAddress(lecturerEmail.trim()) });
+            }
+        } catch (Exception ignore) {}
+    
+        String subject = "Lecturer Request: " + (firstNames != null ? firstNames : "") + " " + (surname != null ? surname : "") + " (" + (staffNumber != null ? staffNumber : "") + ")";
+        message.setSubject(subject);
+    
+        String safeFirstNames = firstNames == null ? "" : firstNames;
+        String safeSurname = surname == null ? "" : surname;
+        String safeStaff = staffNumber == null ? "" : staffNumber;
+        String safeEmail = lecturerEmail == null ? "" : lecturerEmail;
+        String safeCourse = course == null ? "" : course;
+        String safeContact = contact == null ? "" : contact;
+        String safeCode = signupCode == null ? "" : signupCode;
+    
+        String body = "<!DOCTYPE html>" +
+            "<html lang='en'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+            "<title>Lecturer Request</title>" +
+            "<style>body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:20px;}" +
+            ".box{max-width:640px;margin:0 auto;background:#fff;padding:22px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,0.1);}" +
+            ".h{border-bottom:2px solid #09294D;padding-bottom:10px;margin-bottom:16px;}" +
+            ".h h2{margin:0;color:#09294D;font-size:20px;}" +
+            "table{width:100%;border-collapse:collapse;}" +
+            "td{padding:10px;border:1px solid #e5e7eb;font-size:14px;}" +
+            "td.k{background:#f8fafc;font-weight:700;width:38%;}" +
+            ".f{margin-top:16px;color:#6b7280;font-size:12px;}" +
+            "</style></head><body>" +
+            "<div class='box'>" +
+            "<div class='h'><h2>Lecturer Request to Join System</h2></div>" +
+            "<table>" +
+            "<tr><td class='k'>First Names</td><td>" + safeFirstNames + "</td></tr>" +
+            "<tr><td class='k'>Surname</td><td>" + safeSurname + "</td></tr>" +
+            "<tr><td class='k'>Staff Number</td><td>" + safeStaff + "</td></tr>" +
+            "<tr><td class='k'>Email</td><td>" + safeEmail + "</td></tr>" +
+            "<tr><td class='k'>Course</td><td>" + safeCourse + "</td></tr>" +
+            "<tr><td class='k'>Contact</td><td>" + safeContact + "</td></tr>" +
+            "<tr><td class='k'>Signup Code</td><td><strong>" + safeCode + "</strong></td></tr>" +
+            "</table>" +
+            "<div class='f'>Reply to this email to contact the lecturer (Reply-To is set to the lecturer email if provided).</div>" +
+            "</div></body></html>";
+    
+        message.setContent(body, "text/html; charset=utf-8");
+        Transport.send(message);
+    }
+
     private static void sendEmail(String to, String firstName, String code, String subject) throws MessagingException {
         // Validate mail properties are loaded
         if (mailProperties == null || mailProperties.isEmpty()) {
