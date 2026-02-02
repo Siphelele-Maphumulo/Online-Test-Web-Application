@@ -6,10 +6,13 @@
 <%
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
-// Generate new CSRF token for each page load
-// This ensures fresh token for each request
-String csrfToken = java.util.UUID.randomUUID().toString();
-session.setAttribute("csrf_token", csrfToken);
+// Use lazy initialization for CSRF token
+// This improves performance and ensures multi-tab consistency
+String csrfToken = (String) session.getAttribute("csrf_token");
+if (csrfToken == null) {
+    csrfToken = java.util.UUID.randomUUID().toString();
+    session.setAttribute("csrf_token", csrfToken);
+}
 %>
 
 <style>
