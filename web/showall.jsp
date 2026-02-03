@@ -6,10 +6,13 @@
 <%
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
-// Generate new CSRF token for each page load
-// This ensures fresh token for each request
-String csrfToken = java.util.UUID.randomUUID().toString();
-session.setAttribute("csrf_token", csrfToken);
+// Bolt Optimization ⚡: Lazy initialization of CSRF token
+// This ensures consistency across multiple tabs and improves performance
+String csrfToken = (String) session.getAttribute("csrf_token");
+if (csrfToken == null) {
+    csrfToken = java.util.UUID.randomUUID().toString();
+    session.setAttribute("csrf_token", csrfToken);
+}
 %>
 
 <style>
@@ -1209,6 +1212,7 @@ session.setAttribute("csrf_token", csrfToken);
             // Store reference to form and indicate it's a bulk delete
             window.deleteForm = form;
             window.isBulkDelete = true;
+            window.currentDeleteParams = null; // Reset single delete params
         };
         document.body.appendChild(floatingDeleteBtn);
         
@@ -1256,6 +1260,7 @@ session.setAttribute("csrf_token", csrfToken);
                 // Store reference to form and indicate it's a bulk delete
                 window.deleteForm = form;
                 window.isBulkDelete = true;
+                window.currentDeleteParams = null; // Reset single delete params
             });
         }
         
@@ -1272,6 +1277,7 @@ session.setAttribute("csrf_token", csrfToken);
                         qid: qid,
                         coursename: coursename
                     };
+                    window.isBulkDelete = false; // Reset bulk delete flag
                     
                     showModal(`Are you sure you want to delete question ID ${qid}? This action cannot be undone.`);
                 });
