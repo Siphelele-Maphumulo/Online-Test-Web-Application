@@ -1016,10 +1016,10 @@ session.setAttribute("csrf_token", csrfToken);
             </div>
             <%
                         }
+                    }
             %>
             </form>
             <%
-                    }
                 } else {
             %>
                 <div class="no-results">
@@ -1036,18 +1036,19 @@ session.setAttribute("csrf_token", csrfToken);
 </div>
 
 <!-- Professional Modal for Delete Confirmation -->
-<div id="confirmationModal" class="modal" style="display: none;">
+<!-- Prefixed with showall to avoid collision when included in other pages -->
+<div id="showallConfirmationModal" class="modal" style="display: none;">
     <div class="modal-content">
         <div class="modal-header">
-            <h3 id="modalTitle"><i class="fas fa-exclamation-triangle"></i> Confirmation</h3>
+            <h3 id="showallModalTitle"><i class="fas fa-exclamation-triangle"></i> Confirmation</h3>
             <span class="close-modal" onclick="hideModal()">&times;</span>
         </div>
         <div class="modal-body">
-            <p id="modalMessage"></p>
+            <p id="showallModalMessage"></p>
         </div>
         <div class="modal-footer">
-            <button id="cancelButton" class="btn btn-outline" onclick="hideModal()">Cancel</button>
-            <button id="confirmButton" class="btn btn-error" onclick="confirmAction()">Delete</button>
+            <button id="showallCancelButton" class="btn btn-outline" onclick="hideModal()">Cancel</button>
+            <button id="showallConfirmButton" class="btn btn-error" onclick="confirmAction()">Delete</button>
         </div>
     </div>
 </div>
@@ -1202,9 +1203,9 @@ session.setAttribute("csrf_token", csrfToken);
                 return;
             }
             
-            document.getElementById('modalMessage').textContent = 
+            document.getElementById('showallModalMessage').textContent =
                 `Are you sure you want to delete the ${selectedQuestions} selected question(s)? This action cannot be undone.`;
-            document.getElementById('confirmationModal').style.display = 'block';
+            document.getElementById('showallConfirmationModal').style.display = 'block';
             
             // Store reference to form and indicate it's a bulk delete
             window.deleteForm = form;
@@ -1249,9 +1250,9 @@ session.setAttribute("csrf_token", csrfToken);
                     return;
                 }
                 
-                document.getElementById('modalMessage').textContent = 
+                document.getElementById('showallModalMessage').textContent =
                     `Are you sure you want to delete the ${selectedQuestions} selected question(s)? This action cannot be undone.`;
-                document.getElementById('confirmationModal').style.display = 'block';
+                document.getElementById('showallConfirmationModal').style.display = 'block';
                 
                 // Store reference to form and indicate it's a bulk delete
                 window.deleteForm = form;
@@ -1317,14 +1318,14 @@ session.setAttribute("csrf_token", csrfToken);
     let modalTimer;
 
     function showModal(message) {
-        document.getElementById('modalMessage').textContent = message;
-        document.getElementById('confirmationModal').style.display = 'block';
+        document.getElementById('showallModalMessage').textContent = message;
+        document.getElementById('showallConfirmationModal').style.display = 'block';
         modalTimer = setTimeout(hideModal, 5000);
     }
     
     function hideModal() {
         clearTimeout(modalTimer);
-        document.getElementById('confirmationModal').style.display = 'none';
+        document.getElementById('showallConfirmationModal').style.display = 'none';
     }
     
     function confirmAction() {
@@ -1461,7 +1462,7 @@ session.setAttribute("csrf_token", csrfToken);
     
     // Close modal when clicking outside of it
     window.onclick = function(event) {
-        const modal = document.getElementById('confirmationModal');
+        const modal = document.getElementById('showallConfirmationModal');
         if (event.target === modal) {
             hideModal();
         }
