@@ -4,7 +4,7 @@
 
 <%
     String csrfToken = UUID.randomUUID().toString();
-    session.setAttribute("csrfToken", csrfToken);
+    session.setAttribute("csrf_token", csrfToken);
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
     User currentUser = null;
@@ -502,7 +502,7 @@
 <%@ include file="modal_assets.jspf" %>
 
 <script>
-    const csrfToken = '<%= session.getAttribute("csrfToken") %>';
+    const csrfToken = '<%= session.getAttribute("csrf_token") %>';
 </script>
 
 <div class="dashboard-container">
@@ -1059,7 +1059,7 @@
 
             const csrfInput = document.createElement('input');
             csrfInput.type = 'hidden';
-            csrfInput.name = 'csrfToken';
+            csrfInput.name = 'csrf_token';
             csrfInput.value = csrfToken;
             form.appendChild(csrfInput);
 

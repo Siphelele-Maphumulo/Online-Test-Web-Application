@@ -3,8 +3,9 @@
 <%@page import="java.util.ArrayList"%>
 <% 
 // CSRF Token Generation
+// Standardized to csrf_token for consistency across the application
 String csrfToken = UUID.randomUUID().toString();
-session.setAttribute("csrfToken", csrfToken);
+session.setAttribute("csrf_token", csrfToken);
 
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
@@ -972,7 +973,7 @@ for (User user : studentList) {
                      <input type="hidden" name="page" value="accounts">
                     <input type="hidden" name="operation" value="del">
                     <input type="hidden" name="uid" id="deleteStudentId">
-                    <input type="hidden" name="csrfToken" value="<%= session.getAttribute("csrfToken") %>">
+                    <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
                     <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">
                         <i class="fas fa-times-circle"></i> Cancel
                     </button>
