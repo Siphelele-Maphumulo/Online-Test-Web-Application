@@ -3,8 +3,8 @@
 <%@ page import="java.util.UUID" %>
 
 <%
-    String csrfToken = UUID.randomUUID().toString();
-    session.setAttribute("csrfToken", csrfToken);
+    String csrf_token = UUID.randomUUID().toString();
+    session.setAttribute("csrf_token", csrf_token);
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
     User currentUser = null;
@@ -502,7 +502,7 @@
 <%@ include file="modal_assets.jspf" %>
 
 <script>
-    const csrfToken = '<%= session.getAttribute("csrfToken") %>';
+    const csrf_token = '<%= session.getAttribute("csrf_token") %>';
 </script>
 
 <div class="dashboard-container">
@@ -621,6 +621,7 @@
                                     <input type="hidden" name="page" value="courses">
                                     <input type="hidden" name="operation" value="toggle_status">
                                     <input type="hidden" name="cname" value="<%= courseName %>">
+                                    <input type="hidden" name="csrf_token" value="<%= csrf_token %>">
                                     <label class="switch">
                                         <input type="checkbox" name="is_active" 
                                                <%= isActive ? "checked" : "" %> 
@@ -668,6 +669,7 @@
                     <input type="hidden" id="original-course-name" name="original_course_name">
                     <input type="hidden" name="page" value="courses">
                     <input type="hidden" id="operation" name="operation" value="addnew">
+                    <input type="hidden" name="csrf_token" value="<%= csrf_token %>">
                     
                     <div class="form-grid">
                         <div class="form-group">
@@ -1059,8 +1061,8 @@
 
             const csrfInput = document.createElement('input');
             csrfInput.type = 'hidden';
-            csrfInput.name = 'csrfToken';
-            csrfInput.value = csrfToken;
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrf_token;
             form.appendChild(csrfInput);
 
             const pageInput = document.createElement('input');
