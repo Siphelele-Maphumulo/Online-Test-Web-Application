@@ -25,11 +25,13 @@ DROP TABLE IF EXISTS `answers`;
 CREATE TABLE `answers` (
   `answer_id` int(11) NOT NULL AUTO_INCREMENT,
   `exam_id` int(11) NOT NULL,
+  `question_id` int(11) DEFAULT NULL,
   `question` varchar(45) NOT NULL,
   `answer` varchar(45) NOT NULL,
   `correct_answer` varchar(45) NOT NULL,
   `status` varchar(45) NOT NULL,
-  PRIMARY KEY (`answer_id`)
+  PRIMARY KEY (`answer_id`),
+  KEY `idx_question_id` (`question_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
