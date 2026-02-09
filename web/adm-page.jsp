@@ -7,9 +7,12 @@
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
  
 <% 
-    // Generate a CSRF token and store it in the session
-    String csrfToken = UUID.randomUUID().toString();
-    session.setAttribute("csrfToken", csrfToken);
+    // Standardized CSRF token initialization
+    String csrfToken = (String) session.getAttribute("csrf_token");
+    if (csrfToken == null) {
+        csrfToken = UUID.randomUUID().toString();
+        session.setAttribute("csrf_token", csrfToken);
+    }
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 %>
 <!DOCTYPE html>
