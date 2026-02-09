@@ -5,8 +5,8 @@
 
 <% 
 // CSRF Token Generation
-String csrfToken = UUID.randomUUID().toString();
-session.setAttribute("csrfToken", csrfToken);
+String csrf_token = UUID.randomUUID().toString();
+session.setAttribute("csrf_token", csrf_token);
 
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
@@ -919,7 +919,7 @@ int lecturerCount = lecturerList.size();
                      <input type="hidden" name="page" value="Lecturers_accounts">
                     <input type="hidden" name="operation" value="del">
                     <input type="hidden" name="uid" id="deleteLecturerId">
-                    <input type="hidden" name="csrfToken" value="<%= session.getAttribute("csrfToken") %>">
+                    <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
                     <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">
                         <i class="fas fa-times-circle"></i> Cancel
                     </button>

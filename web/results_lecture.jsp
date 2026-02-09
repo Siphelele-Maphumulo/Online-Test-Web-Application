@@ -22,10 +22,10 @@ public String escapeHtml(String input) {
     // The main adm-page.jsp will handle user session checks.
     // We just need the DAO and a fresh CSRF token.
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
-    String csrfToken = (String) session.getAttribute("csrfToken");
-    if (csrfToken == null) {
-        csrfToken = UUID.randomUUID().toString();
-        session.setAttribute("csrfToken", csrfToken);
+    String csrf_token = (String) session.getAttribute("csrf_token");
+    if (csrf_token == null) {
+        csrf_token = UUID.randomUUID().toString();
+        session.setAttribute("csrf_token", csrf_token);
     }
     
     // Get the current user from the request scope, set by adm-page.jsp
@@ -518,7 +518,7 @@ public String escapeHtml(String input) {
             <form id="resultsForm" action="controller.jsp" method="post">
                 <input type="hidden" name="page" value="results">
                 <input type="hidden" name="operation" id="bulkOperation" value="">
-                <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
+                <input type="hidden" name="csrf_token" value="<%= csrf_token %>">
 
                 <!-- Results Header with Delete Selected Button at Top -->
                 <div class="results-header">
@@ -675,7 +675,7 @@ public String escapeHtml(String input) {
 let originalResults = [];
 let currentSortColumn = -1;
 let sortDirection = 1; // 1 for ascending, -1 for descending
-const csrfToken = '<%= csrfToken %>';
+const csrf_token = '<%= csrf_token %>';
 
 // Update bulk delete button state based on selected checkboxes
 function updateBulkDeleteButton() {
@@ -779,8 +779,8 @@ function submitSingleDelete(examId) {
     
     const csrfTokenInput = document.createElement('input');
     csrfTokenInput.type = 'hidden';
-    csrfTokenInput.name = 'csrfToken';
-    csrfTokenInput.value = csrfToken;
+    csrfTokenInput.name = 'csrf_token';
+    csrfTokenInput.value = csrf_token;
     
     // Append inputs to form
     form.appendChild(pageInput);
