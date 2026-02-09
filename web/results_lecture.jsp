@@ -22,10 +22,11 @@ public String escapeHtml(String input) {
     // The main adm-page.jsp will handle user session checks.
     // We just need the DAO and a fresh CSRF token.
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
-    String csrfToken = (String) session.getAttribute("csrfToken");
+    // Standardized to csrf_token for consistency across the application
+    String csrfToken = (String) session.getAttribute("csrf_token");
     if (csrfToken == null) {
         csrfToken = UUID.randomUUID().toString();
-        session.setAttribute("csrfToken", csrfToken);
+        session.setAttribute("csrf_token", csrfToken);
     }
     
     // Get the current user from the request scope, set by adm-page.jsp
@@ -518,7 +519,7 @@ public String escapeHtml(String input) {
             <form id="resultsForm" action="controller.jsp" method="post">
                 <input type="hidden" name="page" value="results">
                 <input type="hidden" name="operation" id="bulkOperation" value="">
-                <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
+                <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
 
                 <!-- Results Header with Delete Selected Button at Top -->
                 <div class="results-header">
@@ -779,7 +780,7 @@ function submitSingleDelete(examId) {
     
     const csrfTokenInput = document.createElement('input');
     csrfTokenInput.type = 'hidden';
-    csrfTokenInput.name = 'csrfToken';
+    csrfTokenInput.name = 'csrf_token';
     csrfTokenInput.value = csrfToken;
     
     // Append inputs to form

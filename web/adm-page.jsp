@@ -8,8 +8,9 @@
  
 <% 
     // Generate a CSRF token and store it in the session
+    // Standardized to csrf_token for consistency across the application
     String csrfToken = UUID.randomUUID().toString();
-    session.setAttribute("csrfToken", csrfToken);
+    session.setAttribute("csrf_token", csrfToken);
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 %>
 <!DOCTYPE html>
