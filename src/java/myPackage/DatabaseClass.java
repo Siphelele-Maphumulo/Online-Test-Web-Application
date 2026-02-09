@@ -1337,34 +1337,18 @@ public boolean deleteQuestion(int questionId) {
     PreparedStatement pstmtAnswers = null;
     
     try {
-        // First, get the question text to potentially clean up related answers
-        String getQuestionSql = "SELECT question FROM questions WHERE question_id = ?";
-        pstmt = conn.prepareStatement(getQuestionSql);
-        pstmt.setInt(1, questionId);
-        ResultSet rs = pstmt.executeQuery();
+        // 1. Delete related answers based on question_id (indexed column)
+        String deleteAnswersSql = "DELETE FROM answers WHERE question_id = ?";
+        pstmtAnswers = conn.prepareStatement(deleteAnswersSql);
+        pstmtAnswers.setInt(1, questionId);
+        int answersDeleted = pstmtAnswers.executeUpdate();
+        pstmtAnswers.close();
         
-        String questionText = null;
-        if (rs.next()) {
-            questionText = rs.getString("question");
-        }
-        rs.close();
-        pstmt.close();
-        
-        if (questionText != null) {
-            // Delete related answers based on question text (if needed)
-            // Note: This is a workaround since there's no direct foreign key to question_id in answers table
-            String deleteAnswersSql = "DELETE FROM answers WHERE question = ?";
-            pstmtAnswers = conn.prepareStatement(deleteAnswersSql);
-            pstmtAnswers.setString(1, questionText);
-            int answersDeleted = pstmtAnswers.executeUpdate();
-            pstmtAnswers.close();
-            
-            if (answersDeleted > 0) {
-                LOGGER.info("Deleted " + answersDeleted + " answer record(s) related to question ID: " + questionId);
-            }
+        if (answersDeleted > 0) {
+            LOGGER.info("Deleted " + answersDeleted + " answer record(s) related to question ID: " + questionId);
         }
         
-        // Now delete the question itself
+        // 2. Now delete the question itself
         String deleteQuestionSql = "DELETE FROM questions WHERE question_id = ?";
         pstmt = conn.prepareStatement(deleteQuestionSql);
         pstmt.setInt(1, questionId);
@@ -2215,8 +2199,6 @@ public int deleteQuestions(int[] questionIds) {
     PreparedStatement pstmtAnswers = null;
     
     try {
-        // First, get question texts to potentially clean up related answers
-        // We'll use a batch approach for better performance
         StringBuilder questionIdsQuery = new StringBuilder();
         for (int i = 0; i < questionIds.length; i++) {
             questionIdsQuery.append("?");
@@ -2225,58 +2207,22 @@ public int deleteQuestions(int[] questionIds) {
             }
         }
         
-        String getQuestionsSql = "SELECT question_id, question FROM questions WHERE question_id IN (" + questionIdsQuery.toString() + ")";
-        pstmt = conn.prepareStatement(getQuestionsSql);
-        
-        // Set the parameters for question IDs
+        // 1. Delete related answers based on question_ids (indexed column) in a single query
+        String deleteAnswersSql = "DELETE FROM answers WHERE question_id IN (" + questionIdsQuery.toString() + ")";
+        pstmtAnswers = conn.prepareStatement(deleteAnswersSql);
         for (int i = 0; i < questionIds.length; i++) {
-            pstmt.setInt(i + 1, questionIds[i]);
+            pstmtAnswers.setInt(i + 1, questionIds[i]);
+        }
+        int answersDeleted = pstmtAnswers.executeUpdate();
+        pstmtAnswers.close();
+        
+        if (answersDeleted > 0) {
+            LOGGER.info("Deleted " + answersDeleted + " answer record(s) related to questions");
         }
         
-        ResultSet rs = pstmt.executeQuery();
-        
-        // Collect question texts for answer deletion
-        Map<String, Integer> questionTextMap = new HashMap<>();
-        while (rs.next()) {
-            String questionText = rs.getString("question");
-            if (questionText != null) {
-                questionTextMap.put(questionText, rs.getInt("question_id"));
-            }
-        }
-        rs.close();
-        pstmt.close();
-        
-        // Delete related answers based on question texts
-        if (!questionTextMap.isEmpty()) {
-            StringBuilder questionTextsQuery = new StringBuilder();
-            for (int i = 0; i < questionTextMap.size(); i++) {
-                questionTextsQuery.append("?");
-                if (i < questionTextMap.size() - 1) {
-                    questionTextsQuery.append(",");
-                }
-            }
-            
-            String deleteAnswersSql = "DELETE FROM answers WHERE question IN (" + questionTextsQuery.toString() + ")";
-            pstmtAnswers = conn.prepareStatement(deleteAnswersSql);
-            
-            int paramIndex = 1;
-            for (String questionText : questionTextMap.keySet()) {
-                pstmtAnswers.setString(paramIndex++, questionText);
-            }
-            
-            int answersDeleted = pstmtAnswers.executeUpdate();
-            pstmtAnswers.close();
-            
-            if (answersDeleted > 0) {
-                LOGGER.info("Deleted " + answersDeleted + " answer record(s) related to questions");
-            }
-        }
-        
-        // Now delete the questions themselves
+        // 2. Now delete the questions themselves
         String deleteQuestionsSql = "DELETE FROM questions WHERE question_id IN (" + questionIdsQuery.toString() + ")";
         pstmt = conn.prepareStatement(deleteQuestionsSql);
-        
-        // Set the parameters for question IDs
         for (int i = 0; i < questionIds.length; i++) {
             pstmt.setInt(i + 1, questionIds[i]);
         }
