@@ -25,9 +25,10 @@ DROP TABLE IF EXISTS `answers`;
 CREATE TABLE `answers` (
   `answer_id` int(11) NOT NULL AUTO_INCREMENT,
   `exam_id` int(11) NOT NULL,
+  `question_id` int(11) DEFAULT NULL,
   `question` varchar(45) NOT NULL,
-  `answer` varchar(45) NOT NULL,
-  `correct_answer` varchar(45) NOT NULL,
+  `answer` TEXT NOT NULL,
+  `correct_answer` TEXT NOT NULL,
   `status` varchar(45) NOT NULL,
   PRIMARY KEY (`answer_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8;
@@ -86,6 +87,9 @@ CREATE TABLE `questions` (
   `opt3` varchar(85) NOT NULL,
   `opt4` varchar(85) NOT NULL,
   `correct` varchar(85) NOT NULL,
+  `question_type` varchar(45) DEFAULT NULL,
+  `image_path` varchar(255) DEFAULT NULL,
+  `extra_data` TEXT DEFAULT NULL,
   PRIMARY KEY (`question_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;

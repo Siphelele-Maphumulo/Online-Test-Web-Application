@@ -1149,6 +1149,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                 <option value="MultipleSelect" <%="MultipleSelect".equals(lastQuestionType) ? "selected" : ""%>>Multiple Select (2 correct)</option>
                                 <option value="FillInTheBlank" <%="FillInTheBlank".equals(lastQuestionType) ? "selected" : ""%>>Fill in the Blank</option>
                                 <option value="Code" <%="Code".equals(lastQuestionType) ? "selected" : ""%>>Code Snippet</option>
+                                <option value="DragAndDrop" <%="DragAndDrop".equals(lastQuestionType) ? "selected" : ""%>>Drag and Drop</option>
                             </select>
                             <input type="hidden" id="questionTypeHidden" name="questionType" value="<%=lastQuestionType%>">
                         </div>
@@ -1215,8 +1216,40 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                         </div>
                     </div>
                     
+                    <input type="hidden" id="extraData" name="extraData" value="">
+
+                    <!-- Drag and Drop Section -->
+                    <div id="dragAndDropContainer" style="display:none; border: 1px solid var(--medium-gray); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 15px; color: var(--primary-blue);"><i class="fas fa-hand-rock"></i> Drag and Drop Configuration</h4>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <!-- Draggable Items -->
+                            <div>
+                                <label class="form-label">Draggable Items (Answers)</label>
+                                <div id="draggableItemsList" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <!-- Items will be added here -->
+                                </div>
+                                <button type="button" class="btn btn-outline" style="margin-top: 10px; width: 100%;" onclick="addDraggableItem()">
+                                    <i class="fas fa-plus"></i> Add Item
+                                </button>
+                            </div>
+
+                            <!-- Drop Zones -->
+                            <div>
+                                <label class="form-label">Drop Zones (Targets)</label>
+                                <div id="dropZonesList" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <!-- Zones will be added here -->
+                                </div>
+                                <button type="button" class="btn btn-outline" style="margin-top: 10px; width: 100%;" onclick="addDropZone()">
+                                    <i class="fas fa-plus"></i> Add Zone
+                                </button>
+                            </div>
+                        </div>
+                        <small class="form-hint" style="margin-top: 15px; display: block;">Define items and zones. For each zone, select which item is the correct match.</small>
+                    </div>
+
                     <div class="form-group">
-                        <label class="form-label"><i class="fas fa-check-circle" style="color: var(--success);"></i> Correct Answer</label>
+                        <label class="form-label" id="correctAnswerLabel"><i class="fas fa-check-circle" style="color: var(--success);"></i> Correct Answer</label>
                         
                         <!-- True/False Dropdown -->
                         <div id="trueFalseContainer" style="display:none;">
@@ -1945,7 +1978,11 @@ function toggleOptions() {
     if (opt3) opt3.required = false;
     if (opt4) opt4.required = false;
 
+    const dnd = document.getElementById("dragAndDropContainer");
+    const correctLabel = document.getElementById("correctAnswerLabel");
+
     if (qType === "TrueFalse") {
+        if (dnd) dnd.style.display = "none";
         trueFalse.style.display = "block";
         if (trueFalseSelect) trueFalseSelect.required = true;
         
@@ -1964,7 +2001,34 @@ function toggleOptions() {
                 correctAnswerField.value = trueFalseSelect.value;
             }
         }
+    } else if (qType === "DragAndDrop") {
+        if (mcq) mcq.style.display = "none";
+        if (single) single.style.display = "none";
+        if (trueFalse) trueFalse.style.display = "none";
+        if (multiple) multiple.style.display = "none";
+        if (dnd) dnd.style.display = "block";
+        if (correctLabel) correctLabel.style.display = "none";
+        if (correct) {
+            correct.required = false;
+            correct.value = "DragAndDrop"; // Placeholder to satisfy validation
+        }
+
+        // Disable option fields
+        [opt1, opt2, opt3, opt4].forEach(el => {
+            if (el) {
+                el.disabled = true;
+                el.required = false;
+            }
+        });
+
+        // Ensure at least one item and zone exist
+        if (document.getElementById('draggableItemsList').children.length === 0) {
+            addDraggableItem();
+            addDropZone();
+        }
     } else if (qType === "FillInTheBlank") {
+        if (dnd) dnd.style.display = "none";
+        if (correctLabel) correctLabel.style.display = "block";
         single.style.display = "block";
         correct.placeholder = "Correct Answer";
         correct.required = true;
@@ -1977,6 +2041,8 @@ function toggleOptions() {
             }
         });
     } else {
+        if (dnd) dnd.style.display = "none";
+        if (correctLabel) correctLabel.style.display = "block";
         mcq.style.display = "block";
         
         // Enable option fields for non-True/False/FIB questions
@@ -2684,6 +2750,118 @@ function populateCorrectAnswer(correct, parsedOptions) {
     }
 }
 
+// Drag and Drop Management
+let itemCounter = 0;
+let zoneCounter = 0;
+
+function addDraggableItem(text = '') {
+    const list = document.getElementById('draggableItemsList');
+    const id = ++itemCounter;
+    const div = document.createElement('div');
+    div.id = `draggable-item-${id}`;
+    div.className = 'form-group';
+    div.style.cssText = 'display: flex; gap: 10px; align-items: center; background: var(--light-gray); padding: 10px; border-radius: 4px;';
+    div.innerHTML = `
+        <span style="font-weight: bold; color: var(--primary-blue);">ID: ${id}</span>
+        <input type="text" class="form-control dnd-item-text" placeholder="Display Text" value="${text}" oninput="updateZoneCorrectOptions()">
+        <button type="button" class="btn btn-outline" style="color: var(--error); padding: 5px 10px;" onclick="removeDraggableItem(${id})">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
+    list.appendChild(div);
+    updateZoneCorrectOptions();
+}
+
+function removeDraggableItem(id) {
+    const item = document.getElementById(`draggable-item-${id}`);
+    if (item) item.remove();
+    updateZoneCorrectOptions();
+}
+
+function addDropZone(label = '', correctId = '') {
+    const list = document.getElementById('dropZonesList');
+    const id = ++zoneCounter;
+    const div = document.createElement('div');
+    div.id = `drop-zone-${id}`;
+    div.className = 'form-group';
+    div.style.cssText = 'display: flex; flex-direction: column; gap: 5px; background: var(--light-gray); padding: 10px; border-radius: 4px; border-left: 3px solid var(--accent-blue);';
+    div.innerHTML = `
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" class="form-control dnd-zone-label" placeholder="Zone Label (e.g. Target A)" value="${label}">
+            <button type="button" class="btn btn-outline" style="color: var(--error); padding: 5px 10px;" onclick="removeDropZone(${id})">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px;">
+            <small style="font-weight: 600;">Correct Item:</small>
+            <select class="form-select dnd-zone-correct" style="padding: 4px 8px; font-size: 12px; margin-bottom: 0;"></select>
+        </div>
+    `;
+    list.appendChild(div);
+    updateZoneCorrectOptions();
+    if (correctId) {
+        const select = div.querySelector('.dnd-zone-correct');
+        select.dataset.pendingValue = correctId;
+    }
+}
+
+function removeDropZone(id) {
+    const zone = document.getElementById(`drop-zone-${id}`);
+    if (zone) zone.remove();
+}
+
+function updateZoneCorrectOptions() {
+    const items = Array.from(document.querySelectorAll('#draggableItemsList > div')).map(div => {
+        return {
+            id: div.id.replace('draggable-item-', ''),
+            text: div.querySelector('.dnd-item-text').value || `Item ${div.id.replace('draggable-item-', '')}`
+        };
+    });
+
+    document.querySelectorAll('.dnd-zone-correct').forEach(select => {
+        const currentValue = select.value || select.dataset.pendingValue;
+        select.innerHTML = '<option value="">Select Correct Item</option>';
+        items.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.id;
+            option.textContent = `ID ${item.id}: ${item.text}`;
+            if (item.id == currentValue) option.selected = true;
+            select.appendChild(option);
+        });
+        delete select.dataset.pendingValue;
+    });
+}
+
+function serializeDragAndDrop() {
+    const items = Array.from(document.querySelectorAll('#draggableItemsList > div')).map(div => {
+        return {
+            id: div.id.replace('draggable-item-', ''),
+            text: div.querySelector('.dnd-item-text').value
+        };
+    });
+
+    const zones = Array.from(document.querySelectorAll('#dropZonesList > div')).map(div => {
+        return {
+            id: div.id.replace('drop-zone-', ''),
+            label: div.querySelector('.dnd-zone-label').value,
+            correctItemId: div.querySelector('.dnd-zone-correct').value
+        };
+    });
+
+    const config = { items, zones };
+    document.getElementById('extraData').value = JSON.stringify(config);
+
+    // Also build the simple 'correct' string for backward compatibility or easy display
+    // Store as JSON in 'correct' column for marking
+    const correctMapping = {};
+    zones.forEach(z => {
+        if (z.correctItemId) {
+            correctMapping[`zone_${z.id}`] = `item_${z.correctItemId}`;
+        }
+    });
+    document.getElementById('correctAnswer').value = JSON.stringify(correctMapping);
+}
+
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     toggleOptions(); // Initialize the correct answer container visibility
@@ -2707,7 +2885,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 isValid = false;
             }
             
-            if (qType === "TrueFalse") {
+            if (qType === "DragAndDrop") {
+                serializeDragAndDrop();
+                const config = JSON.parse(document.getElementById('extraData').value);
+                if (config.items.length < 2 || config.zones.length < 1) {
+                    errorMsg = "At least 2 items and 1 zone are required for Drag and Drop.";
+                    isValid = false;
+                } else {
+                    const unmapped = config.zones.some(z => !z.correctItemId);
+                    if (unmapped) {
+                        errorMsg = "All drop zones must have a correct item assigned.";
+                        isValid = false;
+                    }
+                }
+            } else if (qType === "TrueFalse") {
                 const trueFalseValue = document.getElementById('trueFalseSelect').value;
                 if (!trueFalseValue) {
                     errorMsg = "Please select True or False for the correct answer.";
