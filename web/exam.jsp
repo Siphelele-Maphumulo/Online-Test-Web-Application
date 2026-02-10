@@ -1779,7 +1779,8 @@
                 <a class="nav-item" href="std-page.jsp?pgprt=0"><i class="fas fa-user"></i><span>Profile</span></a>
                 <a class="nav-item active" href="std-page.jsp?pgprt=1"><i class="fas fa-file-alt"></i><span>Exams</span></a>
                 <a class="nav-item" href="std-page.jsp?pgprt=2"><i class="fas fa-chart-line"></i><span>Results</span></a>
-                <a class="nav-item" href="std-page.jsp?pgprt=3"><i class="fas fa-chart-line"></i><span>Exam Results</span></a>
+                <a class="nav-item" href="std-page.jsp?pgprt=3"><i class="fas fa-calendar-check"></i><span>Register</span></a>
+                <a class="nav-item" href="std-page.jsp?pgprt=4"><i class="fas fa-eye"></i><span>Attendance</span></a>
             </div>
         </nav>
     </aside>
@@ -1896,7 +1897,7 @@
                                         <% for(org.json.JSONObject item : itemList) { %>
                                             <div class="dnd-draggable-item" 
                                                  draggable="true" 
-                                                 id="item_<%= item.get("id") %>" 
+                                                 id="q<%= i %>_item_<%= item.get("id") %>"
                                                  data-item-id="<%= item.get("id") %>"
                                                  style="padding: 8px 16px; background: var(--white); border: 2px solid var(--primary-blue); border-radius: 6px; cursor: move; font-weight: 500; box-shadow: var(--shadow-sm); transition: transform 0.2s;">
                                                 <%= item.get("text") %>
@@ -2185,6 +2186,7 @@
                     formData.append('qid', qid);
                     formData.append('question', question);
                     formData.append('ans', answer);
+                    formData.append('csrf_token', '<%= session.getAttribute("csrf_token") %>');
 
                     navigator.sendBeacon('controller.jsp', new URLSearchParams(formData));
                 }
@@ -2788,15 +2790,7 @@
                     </div>
                 </div>
 
-                <!-- Action Buttons
-                <div style="text-align: center; margin-top: 20px;">
-                    <a href="std-page.jsp?pgprt=2&eid=<%= request.getParameter("eid") %>" class="action-btn" style="background: linear-gradient(135deg, #4a90e2, #357abd); margin-right: 10px;">
-                        <i class="fas fa-eye"></i>
-                        View Details
-                    </a> -->
-                </div>
-                </div>
-                                <!-- Action Buttons -->
+                <!-- Action Buttons -->
                 <div style="text-align: center; margin-top: 20px;">
                     <a href="std-page.jsp?pgprt=2&eid=<%= result.getExamId() %>" class="action-btn" style="background: linear-gradient(135deg, #4a90e2, #357abd); margin-right: 10px;">
                         <i class="fas fa-eye"></i>

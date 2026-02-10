@@ -685,6 +685,10 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                 pageTitle = "Student Exams";
             } else if ("2".equals(pgprt)) {
                 pageTitle = "Student Results";
+            } else if ("3".equals(pgprt)) {
+                pageTitle = "Register";
+            } else if ("4".equals(pgprt)) {
+                pageTitle = "View Attendance";
             }
     %>
     

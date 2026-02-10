@@ -2050,6 +2050,38 @@ try {
     /* =========================
        STUDENT SIGNUP WITH EMAIL VERIFICATION
        ========================= */
+    } else if ("saveAnswer".equalsIgnoreCase(pageParam)) {
+        // Asynchronous answer saving from exam page
+        String submittedToken = request.getParameter("csrf_token");
+        String sessionToken = (String) session.getAttribute("csrf_token");
+
+        if (sessionToken == null || !sessionToken.equals(submittedToken)) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        }
+
+        try {
+            int qid = Integer.parseInt(nz(request.getParameter("qid"), "0"));
+            String question = nz(request.getParameter("question"), "");
+            String ans = nz(request.getParameter("ans"), "");
+            int eId = 0;
+
+            if (session.getAttribute("examId") != null) {
+                eId = Integer.parseInt(session.getAttribute("examId").toString());
+            }
+
+            if (eId > 0 && qid > 0) {
+                pDAO.insertAnswer(eId, qid, question, ans);
+                response.setStatus(HttpServletResponse.SC_OK);
+            } else {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error in saveAnswer", e);
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
+        return;
+
     } else if ("student_signup".equalsIgnoreCase(pageParam)) {
         String action = nz(request.getParameter("action"), "");
         
