@@ -894,6 +894,7 @@ try {
                         String correctAnswer = "";
                         String courseName = "";
                         String questionType = "";
+                        String extraData = "";
                         String currentImagePath = "";
                         boolean removeImage = false;
                         String imagePath = null;
@@ -920,6 +921,8 @@ try {
                                     courseName = nz(fieldValue, "");
                                 } else if ("questionType".equals(fieldName)) {
                                     questionType = nz(fieldValue, "");
+                                } else if ("extraData".equals(fieldName)) {
+                                    extraData = nz(fieldValue, "");
                                 } else if ("currentImagePath".equals(fieldName)) {
                                     currentImagePath = nz(fieldValue, "");
                                 } else if ("removeImage".equals(fieldName)) {
@@ -989,6 +992,7 @@ try {
                         question.setCorrect(correctAnswer);
                         question.setCourseName(courseName);
                         question.setQuestionType(questionType);
+                        question.setExtraData(extraData);
                         
                         // Handle image logic
                         if (removeImage) {
@@ -1067,6 +1071,8 @@ try {
                     // Also get and set question type for regular forms
                     String questionType = nz(request.getParameter("questionType"), "");
                     question.setQuestionType(questionType);
+                    String extraData = nz(request.getParameter("extraData"), "");
+                    question.setExtraData(extraData);
                     
                     // Handle image removal for regular forms
                     String removeImageParam = nz(request.getParameter("removeImage"), "");
@@ -1161,6 +1167,7 @@ try {
                 String correctAnswer = "";
                 String courseName = "";
                 String questionType = "";
+                String extraData = "";
                 String correctMultiple = "";
                 String imagePath = null;
                 
@@ -1186,6 +1193,8 @@ try {
                             courseName = nz(fieldValue, "");
                         } else if ("questionType".equals(fieldName)) {
                             questionType = nz(fieldValue, "");
+                        } else if ("extraData".equals(fieldName)) {
+                            extraData = nz(fieldValue, "");
                         } else if ("correctMultiple".equals(fieldName)) {
                             correctMultiple = nz(fieldValue, "");
                         }
@@ -1247,7 +1256,7 @@ try {
                     if (!correctMultiple.isEmpty()) correctAnswer = correctMultiple;
                 }
                 
-                pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, imagePath);
+                pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, imagePath, extraData);
                 session.setAttribute("message","Question added successfully");
                 
                 // Save last selections to session
@@ -1283,13 +1292,14 @@ try {
             String correctAnswer = nz(request.getParameter("correct"), "");
             String courseName    = nz(request.getParameter("coursename"), "");
             String questionType  = nz(request.getParameter("questionType"), "");
+            String extraData     = nz(request.getParameter("extraData"), "");
             
             if ("MultipleSelect".equalsIgnoreCase(questionType)) {
                 String correctMultiple = nz(request.getParameter("correctMultiple"), "");
                 if (!correctMultiple.isEmpty()) correctAnswer = correctMultiple;
             }
             
-            pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null);
+            pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null, extraData);
             session.setAttribute("message","Question added successfully");
             
             // Save last selections to session

@@ -26,6 +26,9 @@ import java.util.ArrayList;
 import java.sql.Types;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Iterator;
+import org.json.JSONObject;
+import org.json.JSONArray;
 // Add these imports at the top of your DatabaseClass.java
 import myPackage.classes.Result;
 
@@ -1160,10 +1163,14 @@ public boolean addNewCourse(String courseName, int tMarks, String time, String e
     
     
 public void addNewQuestion(String questionText, String opt1, String opt2, String opt3, String opt4, String correctAnswer, String courseName, String questionType) {
-    addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null);
+    addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null, null);
 }
 
 public void addNewQuestion(String questionText, String opt1, String opt2, String opt3, String opt4, String correctAnswer, String courseName, String questionType, String imagePath) {
+    addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, imagePath, null);
+}
+
+public void addNewQuestion(String questionText, String opt1, String opt2, String opt3, String opt4, String correctAnswer, String courseName, String questionType, String imagePath, String extraData) {
     try {
         ensureConnection();
     } catch (SQLException e) {
@@ -1177,7 +1184,7 @@ public void addNewQuestion(String questionText, String opt1, String opt2, String
 
         // If it's a True/False question, only use two options.
         if ("TrueFalse".equalsIgnoreCase(questionType)) {
-            sql = "INSERT INTO questions (question, opt1, opt2, correct, course_name, question_type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO questions (question, opt1, opt2, correct, course_name, question_type, image_path, extra_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql);
             pstm.setString(1, questionText);
             pstm.setString(2, "True");  // Hardcoded options for True/False
@@ -1186,9 +1193,10 @@ public void addNewQuestion(String questionText, String opt1, String opt2, String
             pstm.setString(5, courseName);
             pstm.setString(6, questionType);
             pstm.setString(7, imagePath);
+            pstm.setString(8, extraData);
         } else {
             // Otherwise, handle multiple-choice questions
-            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path, extra_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql);
             pstm.setString(1, questionText);
             pstm.setString(2, opt1);
@@ -1199,6 +1207,7 @@ public void addNewQuestion(String questionText, String opt1, String opt2, String
             pstm.setString(7, courseName);
             pstm.setString(8, questionType);
             pstm.setString(9, imagePath);
+            pstm.setString(10, extraData);
         }
 
         // Execute the update
@@ -1246,6 +1255,7 @@ public Questions getQuestionById(int questionId) {
             question.setCourseName(rs.getString("course_name"));
             question.setQuestionType(rs.getString("question_type"));
             question.setImagePath(rs.getString("image_path"));
+            question.setExtraData(rs.getString("extra_data"));
         }
     } catch (SQLException e) {
         e.printStackTrace();
@@ -1273,7 +1283,7 @@ public boolean updateQuestion(Questions question) {
         return false;
     }
     
-    String sql = "UPDATE questions SET question=?, opt1=?, opt2=?, opt3=?, opt4=?, correct=?, course_name=?, question_type=?, image_path=? WHERE question_id=?";
+    String sql = "UPDATE questions SET question=?, opt1=?, opt2=?, opt3=?, opt4=?, correct=?, course_name=?, question_type=?, image_path=?, extra_data=? WHERE question_id=?";
     try (PreparedStatement pstm = conn.prepareStatement(sql)) {
         pstm.setString(1, question.getQuestion());
         pstm.setString(2, question.getOpt1());
@@ -1284,7 +1294,8 @@ public boolean updateQuestion(Questions question) {
         pstm.setString(7, question.getCourseName());
         pstm.setString(8, question.getQuestionType());
         pstm.setString(9, question.getImagePath());
-        pstm.setInt(10, question.getQuestionId());
+        pstm.setString(10, question.getExtraData());
+        pstm.setInt(11, question.getQuestionId());
 
         int rowsAffected = pstm.executeUpdate();
         return rowsAffected > 0;
@@ -1693,6 +1704,10 @@ public void deleteLecturer(int userId) {
 
     
 public void addQuestion(String cName, String question, String opt1, String opt2, String opt3, String opt4, String correct, String questionType, String imagePath) {
+    addQuestion(cName, question, opt1, opt2, opt3, opt4, correct, questionType, imagePath, null);
+}
+
+public void addQuestion(String cName, String question, String opt1, String opt2, String opt3, String opt4, String correct, String questionType, String imagePath, String extraData) {
     try {
         ensureConnection();
     } catch (SQLException e) {
@@ -1705,8 +1720,8 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
         PreparedStatement pstm;
 
         // If the question type is True/False, only use two options (True/False)
-        if (questionType.equals("TrueFalse")) {
-            sql = "INSERT INTO questions (question, opt1, opt2, correct, course_name, question_type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        if ("TrueFalse".equalsIgnoreCase(questionType)) {
+            sql = "INSERT INTO questions (question, opt1, opt2, correct, course_name, question_type, image_path, extra_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql);
             pstm.setString(1, question);
             pstm.setString(2, "True");  // True as the first option
@@ -1715,9 +1730,10 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
             pstm.setString(5, cName); // Set the course name
             pstm.setString(6, questionType);
             pstm.setString(7, imagePath); // Set the image path
+            pstm.setString(8, extraData);
         } else {
             // Multiple Choice Question logic
-            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path, extra_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql);
             pstm.setString(1, question);
             pstm.setString(2, opt1);
@@ -1728,6 +1744,7 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
             pstm.setString(7, cName); // Set the course name
             pstm.setString(8, questionType);
             pstm.setString(9, imagePath); // Set the image path
+            pstm.setString(10, extraData);
         }
 
         // Execute the update
@@ -1777,7 +1794,8 @@ public ArrayList getQuestions(String courseName, int questions) {
                 rs.getString("correct"),
                 rs.getString("course_name"),
                 rs.getString("question_type"),
-                rs.getString("image_path")
+                rs.getString("image_path"),
+                rs.getString("extra_data")
             );
             list.add(question);
         }
@@ -1995,7 +2013,8 @@ public ArrayList getAllQuestions(String courseName) {
                 rs.getString("correct"),
                 rs.getString("course_name"),
                 rs.getString("question_type"),
-                rs.getString("image_path")
+                rs.getString("image_path"),
+                rs.getString("extra_data")
             );
             list.add(question);
         }
@@ -2105,8 +2124,20 @@ public void insertAnswer(int eId, int qid, String question, String ans) {
     
     PreparedStatement pstm = null;
     try {
-        String correct = getCorrectAnswer(qid);
-        String status = getAnswerStatus(ans, correct);
+        // Get correct answer and question type
+        String correct = "";
+        String questionType = "";
+        try (PreparedStatement psQ = conn.prepareStatement("SELECT correct, question_type FROM questions WHERE question_id=?")) {
+            psQ.setInt(1, qid);
+            try (ResultSet rsQ = psQ.executeQuery()) {
+                if (rsQ.next()) {
+                    correct = rsQ.getString("correct");
+                    questionType = rsQ.getString("question_type");
+                }
+            }
+        }
+
+        String status = getAnswerStatus(ans, correct, questionType);
         
         String userAnswerForDb = (ans != null && !ans.trim().isEmpty()) ? ans.trim() : "N/A";
 
@@ -2312,7 +2343,7 @@ public int deleteQuestions(int[] questionIds) {
 }
 
 
-private String getAnswerStatus(String ans, String correct) {
+private String getAnswerStatus(String ans, String correct, String questionType) {
     // 1. Normalize inputs: handle nulls and trim whitespace
     String userAnswer = (ans != null) ? ans.trim() : "";
     String correctAnswer = (correct != null) ? correct.trim() : "";
@@ -2322,8 +2353,35 @@ private String getAnswerStatus(String ans, String correct) {
         return "incorrect";
     }
 
-    // 3. Compare based on question type (multi-select or single)
-    if (correctAnswer.contains("|")) {
+    // 3. Handle Drag and Drop
+    if ("DragAndDrop".equalsIgnoreCase(questionType)) {
+        try {
+            JSONObject userObj = new JSONObject(userAnswer);
+            JSONObject correctObj = new JSONObject(correctAnswer);
+
+            int total = correctObj.length();
+            if (total == 0) return "incorrect";
+
+            int matched = 0;
+            Iterator<String> keys = correctObj.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                if (userObj.has(key) && String.valueOf(userObj.get(key)).equals(String.valueOf(correctObj.get(key)))) {
+                    matched++;
+                }
+            }
+
+            if (matched == total) return "correct";
+            if (matched == 0) return "incorrect";
+            return "partial:" + ((float)matched / total);
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error parsing DragAndDrop JSON", e);
+            return userAnswer.equalsIgnoreCase(correctAnswer) ? "correct" : "incorrect";
+        }
+    }
+
+    // 4. Compare based on question type (multi-select or single)
+    if (correctAnswer.contains("|") || "MultipleSelect".equalsIgnoreCase(questionType)) {
         // Normalize multi-select answers by splitting, trimming, sorting, and rejoining
         String[] ansParts = userAnswer.split("\\|");
         for (int i = 0; i < ansParts.length; i++) {
@@ -2989,11 +3047,19 @@ private int getObtMarks(int examId, int tMarks, int size) {
             String status = rs.getString("status");
             String questionType = rs.getString("question_type");
             
-            float weight = "MultipleSelect".equalsIgnoreCase(questionType) ? 2.0f : 1.0f;
+            float weight = "MultipleSelect".equalsIgnoreCase(questionType) ? 2.0f :
+                          "DragAndDrop".equalsIgnoreCase(questionType) ? 4.0f : 1.0f;
             totalWeight += weight;
 
             if ("correct".equals(status)) {
                 correctWeight += weight;
+            } else if (status != null && status.startsWith("partial:")) {
+                try {
+                    float ratio = Float.parseFloat(status.substring(8));
+                    correctWeight += (weight * ratio);
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Error parsing partial score: " + status, e);
+                }
             }
         }
         

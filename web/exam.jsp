@@ -1,8 +1,12 @@
 <!-- Font Awesome for Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<!-- Mobile Drag and Drop Polyfill -->
+<script src="https://cdn.jsdelivr.net/npm/drag-drop-touch@1.3.0/DragDropTouch.js"></script>
 <%@page import="java.util.ArrayList"%>
 <%@page import="myPackage.classes.Questions"%>
 <%@page import="myPackage.classes.Exams"%>
+<%@page import="org.json.JSONObject"%>
+<%@page import="org.json.JSONArray"%>
 <%
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     
@@ -1798,6 +1802,7 @@
                     Questions q = questionsList.get(i);
                     boolean isMultiTwo = false;
                     boolean isFIB = false;
+                    boolean isDnD = false;
                     try{
                         String qt = q.getQuestion().toLowerCase();
                         String questionType = q.getQuestionType();
@@ -1807,7 +1812,8 @@
                                     qt.contains("two options") || qt.contains("multiple select") ||
                                     qt.contains("select multiple") || qt.contains("choose multiple");
                         isFIB = "FillInTheBlank".equalsIgnoreCase(questionType);
-                    } catch(Exception e) { isMultiTwo = false; isFIB = false; }
+                        isDnD = "DragAndDrop".equalsIgnoreCase(questionType);
+                    } catch(Exception e) { isMultiTwo = false; isFIB = false; isDnD = false; }
 
                     String fullQuestion = q.getQuestion(), questionPart = "", codePart = "";
                     if(fullQuestion.contains("```")){
@@ -1866,8 +1872,52 @@
                                 <% } %>
                             </div>
                         </div>
-                        <div class="answers" data-max-select="<%= isFIB ? "FIB" : (isMultiTwo?"2":"1") %>">
-                            <% if(isFIB) { %>
+                        <div class="answers" data-max-select="<%= isDnD ? "DnD" : (isFIB ? "FIB" : (isMultiTwo?"2":"1")) %>">
+                            <% if(isDnD) {
+                                String extraData = q.getExtraData();
+                                try {
+                                    org.json.JSONObject config = new org.json.JSONObject(extraData);
+                                    org.json.JSONArray items = config.getJSONArray("items");
+                                    org.json.JSONArray zones = config.getJSONArray("zones");
+
+                                    java.util.List<org.json.JSONObject> itemList = new java.util.ArrayList<>();
+                                    for(int j=0; j<items.length(); j++) itemList.add(items.getJSONObject(j));
+                                    java.util.Collections.shuffle(itemList);
+                            %>
+                                <div class="dnd-exam-container" style="margin-top: 15px;">
+                                    <div class="dnd-items-pool" style="display: flex; flex-wrap: wrap; gap: 10px; padding: 15px; background: var(--light-gray); border-radius: 8px; border: 1px dashed var(--medium-gray); margin-bottom: 20px;">
+                                        <% for(org.json.JSONObject item : itemList) { %>
+                                            <div class="dnd-draggable-item"
+                                                 draggable="true"
+                                                 id="item_<%= item.get("id") %>"
+                                                 data-item-id="<%= item.get("id") %>"
+                                                 style="padding: 8px 16px; background: var(--white); border: 2px solid var(--primary-blue); border-radius: 6px; cursor: move; font-weight: 500; box-shadow: var(--shadow-sm); transition: transform 0.2s;">
+                                                <%= item.get("text") %>
+                                            </div>
+                                        <% } %>
+                                    </div>
+
+                                    <div class="dnd-zones-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                                        <% for(int j=0; j<zones.length(); j++) {
+                                            org.json.JSONObject zone = zones.getJSONObject(j);
+                                        %>
+                                            <div class="dnd-drop-zone"
+                                                 data-zone-id="<%= zone.get("id") %>"
+                                                 style="min-height: 100px; padding: 15px; border: 2px dashed var(--accent-blue); border-radius: 8px; background: var(--white); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; transition: all 0.3s;">
+                                                <span style="font-size: 12px; font-weight: 600; color: var(--dark-gray);"><%= zone.get("label") %></span>
+                                                <div class="zone-occupant" style="width: 100%; min-height: 40px; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+                                                    <small style="color: var(--medium-gray);">Drop here</small>
+                                                </div>
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                    <input type="hidden" id="ans<%= i %>" name="ans<%= i %>" value="{}">
+                                </div>
+                            <%
+                                } catch(Exception e) {
+                                    out.println("Error loading Drag and Drop question structure.");
+                                }
+                            } else if(isFIB) { %>
                                 <div class="fib-container" style="margin-top: 10px;">
                                     <input type="text" class="form-control answer-input fib" 
                                            name="ans<%= i %>" 
@@ -1905,7 +1955,7 @@
                         </div>
                         <input type="hidden" name="question<%= i %>" value="<%= q.getQuestion() %>">
                         <input type="hidden" name="qid<%= i %>" value="<%= q.getQuestionId() %>">
-                        <input type="hidden" name="qtype<%= i %>" value="<%= isMultiTwo?"multi2":"single" %>">
+                        <input type="hidden" name="qtype<%= i %>" value="<%= isDnD ? "dnd" : (isMultiTwo?"multi2":"single") %>">
                     </div>
                 <% } %>
                 </div>
@@ -2062,7 +2112,10 @@
                         if(!box) return;
                         
                         var maxSelAttr = box.getAttribute('data-max-select');
-                        if(maxSelAttr === "FIB") {
+                        if(maxSelAttr === "DnD") {
+                            var ansInput = box.querySelector('input[type="hidden"]');
+                            if(ansInput && ansInput.value !== "{}" && ansInput.value !== "") answered++;
+                        } else if(maxSelAttr === "FIB") {
                             var fibInput = box.querySelector('input.fib');
                             if(fibInput && fibInput.value.trim() !== "") answered++;
                         } else {
@@ -2248,7 +2301,10 @@
                         if(!box) return;
                         
                         var maxSelAttr = box.getAttribute('data-max-select');
-                        if(maxSelAttr === "FIB") {
+                        if(maxSelAttr === "DnD") {
+                            var ansInput = box.querySelector('input[type="hidden"]');
+                            if(ansInput && ansInput.value !== "{}" && ansInput.value !== "") answeredQuestions++;
+                        } else if(maxSelAttr === "FIB") {
                             var fibInput = box.querySelector('input.fib');
                             if(fibInput && fibInput.value.trim() !== "") answeredQuestions++;
                         } else {
@@ -2400,8 +2456,93 @@
                     }
                 }
 
+                /* --- DRAG AND DROP INTERACTION --- */
+                function setupDragAndDrop() {
+                    document.querySelectorAll('.dnd-draggable-item').forEach(item => {
+                        item.addEventListener('dragstart', e => {
+                            e.dataTransfer.setData('text/plain', item.id);
+                            item.style.opacity = '0.5';
+                        });
+                        item.addEventListener('dragend', e => {
+                            item.style.opacity = '1';
+                        });
+                    });
+
+                    document.querySelectorAll('.dnd-drop-zone').forEach(zone => {
+                        zone.addEventListener('dragover', e => {
+                            e.preventDefault();
+                            zone.style.background = 'var(--accent-blue-light)';
+                        });
+                        zone.addEventListener('dragleave', e => {
+                            zone.style.background = 'var(--white)';
+                        });
+                        zone.addEventListener('drop', e => {
+                            e.preventDefault();
+                            zone.style.background = 'var(--white)';
+                            const itemId = e.dataTransfer.getData('text/plain');
+                            const item = document.getElementById(itemId);
+                            if (!item) return;
+
+                            const occupant = zone.querySelector('.zone-occupant');
+
+                            // If zone already has an item, return it to pool
+                            const existingItem = occupant.querySelector('.dnd-draggable-item');
+                            if (existingItem) {
+                                const pool = zone.closest('.dnd-exam-container').querySelector('.dnd-items-pool');
+                                pool.appendChild(existingItem);
+                            }
+
+                            occupant.innerHTML = '';
+                            occupant.appendChild(item);
+
+                            const qindex = zone.closest('.question-card').dataset.qindex;
+                            updateDnDAnswer(qindex);
+                        });
+                    });
+
+                    // Allow returning items to pool
+                    document.querySelectorAll('.dnd-items-pool').forEach(pool => {
+                        pool.addEventListener('dragover', e => e.preventDefault());
+                        pool.addEventListener('drop', e => {
+                            e.preventDefault();
+                            const itemId = e.dataTransfer.getData('text/plain');
+                            const item = document.getElementById(itemId);
+                            if (item) {
+                                pool.appendChild(item);
+                                const qindex = pool.closest('.question-card').dataset.qindex;
+                                updateDnDAnswer(qindex);
+                            }
+                        });
+                    });
+                }
+
+                function updateDnDAnswer(qindex) {
+                    const card = document.querySelector(`.question-card[data-qindex="${qindex}"]`);
+                    const zones = card.querySelectorAll('.dnd-drop-zone');
+                    const mapping = {};
+                    let hasAnswers = false;
+
+                    zones.forEach(zone => {
+                        const zoneId = zone.dataset.zoneId;
+                        const item = zone.querySelector('.dnd-draggable-item');
+                        if (item) {
+                            mapping[`zone_${zoneId}`] = `item_${item.dataset.itemId}`;
+                            hasAnswers = true;
+                        }
+                    });
+
+                    const ansInput = document.getElementById(`ans${qindex}`);
+                    const val = hasAnswers ? JSON.stringify(mapping) : "{}";
+                    ansInput.value = val;
+
+                    updateProgress();
+                    saveAnswer(qindex, val);
+                    dirty = true;
+                }
+
                 /* --- INITIALIZATION --- */
                 document.addEventListener('DOMContentLoaded', function() {
+                    setupDragAndDrop();
                     // Add input event listener for FIB fields to update progress immediately
                     document.querySelectorAll('input.fib').forEach(function(input) {
                         input.addEventListener('input', function() {

@@ -45,8 +45,9 @@
             rs.getString("opt4"),
             rs.getString("correct"),
             rs.getString("course_name"),
-            rs.getString("question_type"),  // 9th parameter
-            rs.getString("image_path")      // 10th parameter
+            rs.getString("question_type"),
+            rs.getString("image_path"),
+            rs.getString("extra_data")
         );
             questionType = rs.getString("question_type") != null ? rs.getString("question_type") : "MCQ";
         }
@@ -743,6 +744,7 @@
                     <input type="hidden" name="coursename" value="<%= currentCourseName %>">
                     <input type="hidden" id="currentImagePath" name="currentImagePath" value="<%= questionToEdit.getImagePath() != null ? questionToEdit.getImagePath() : "" %>">
                     <input type="hidden" id="questionTypeHidden" name="questionType" value="<%= questionType %>">
+                    <input type="hidden" id="extraData" name="extraData" value='<%= (questionToEdit.getExtraData() != null) ? questionToEdit.getExtraData().replace("'", "&#x27;") : "" %>'>
 
                     <div class="form-grid">
                         <div class="form-group">
@@ -778,6 +780,7 @@
                                 <option value="FillInTheBlank" <%= "FillInTheBlank".equals(questionType) ? "selected" : "" %>>Fill in the Blank</option>
                                 <option value="TrueFalse" <%= "TrueFalse".equals(questionType) ? "selected" : "" %>>True / False</option>
                                 <option value="Code" <%= "Code".equals(questionType) ? "selected" : "" %>>Code Snippet</option>
+                                <option value="DragAndDrop" <%= "DragAndDrop".equals(questionType) ? "selected" : "" %>>Drag and Drop</option>
                             </select>
                         </div>
                     </div>
@@ -794,6 +797,36 @@
                                 <pre id="previewCode"></pre>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Drag and Drop Section -->
+                    <div id="editDragAndDropContainer" style="display:none; border: 1px solid var(--medium-gray); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 15px; color: var(--primary-blue);"><i class="fas fa-hand-rock"></i> Drag and Drop Configuration</h4>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <!-- Draggable Items -->
+                            <div>
+                                <label class="form-label">Draggable Items (Answers)</label>
+                                <div id="draggableItemsList" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <!-- Items will be added here -->
+                                </div>
+                                <button type="button" class="btn btn-outline" style="margin-top: 10px; width: 100%;" onclick="addDraggableItem()">
+                                    <i class="fas fa-plus"></i> Add Item
+                                </button>
+                            </div>
+
+                            <!-- Drop Zones -->
+                            <div>
+                                <label class="form-label">Drop Zones (Targets)</label>
+                                <div id="dropZonesList" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <!-- Zones will be added here -->
+                                </div>
+                                <button type="button" class="btn btn-outline" style="margin-top: 10px; width: 100%;" onclick="addDropZone()">
+                                    <i class="fas fa-plus"></i> Add Zone
+                                </button>
+                            </div>
+                        </div>
+                        <small class="form-hint" style="margin-top: 15px; display: block;">Define items and zones. For each zone, select which item is the correct match.</small>
                     </div>
 
                     <div id="editMcqOptions">
@@ -919,6 +952,7 @@
         const single = document.getElementById("editCorrectAnswerContainer");
         const multiple = document.getElementById("editMultipleCorrectContainer");
         const trueFalse = document.getElementById("editTrueFalseContainer");
+        const dnd = document.getElementById("editDragAndDropContainer");
         const correct = document.getElementById("editCorrectAnswer");
         const trueFalseSelect = document.getElementById("editTrueFalseSelect");
         
@@ -928,12 +962,28 @@
         single.style.display = "none";
         multiple.style.display = "none";
         trueFalse.style.display = "none";
+        if (dnd) dnd.style.display = "none";
         
         // Remove required attributes from all elements
         correct.required = false;
         if (trueFalseSelect) trueFalseSelect.required = false;
     
-        if (qType === "TrueFalse") {
+        if (qType === "DragAndDrop") {
+            if (dnd) dnd.style.display = "block";
+            if (correct) {
+                correct.required = false;
+                if (!correct.value || correct.value === "") correct.value = "DragAndDrop";
+            }
+
+            // Disable option fields
+            ['editOpt1', 'editOpt2', 'editOpt3', 'editOpt4'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.disabled = true;
+                    el.required = false;
+                }
+            });
+        } else if (qType === "TrueFalse") {
             trueFalse.style.display = "block";
             if (trueFalseSelect) trueFalseSelect.required = true;
             
@@ -1109,6 +1159,18 @@ window.addEventListener('DOMContentLoaded', function() {
                 
             if (new Set(opts).size !== opts.length) {
                 msg = "Options must be unique.";
+            } else if (qType === "DragAndDrop") {
+                serializeDragAndDrop();
+                const extraDataVal = document.getElementById('extraData').value;
+                const config = JSON.parse(extraDataVal || '{}');
+                if (!config.items || config.items.length < 2 || !config.zones || config.zones.length < 1) {
+                    msg = "At least 2 items and 1 zone are required for Drag and Drop.";
+                } else {
+                    const unmapped = config.zones.some(z => !z.correctItemId);
+                    if (unmapped) {
+                        msg = "All drop zones must have a correct item assigned.";
+                    }
+                }
             } else if (qType === "MultipleSelect") {
                 const selectedCount = document.querySelectorAll('.edit-correct-checkbox:checked').length;
                 if (selectedCount !== 2) {
@@ -1274,7 +1336,140 @@ window.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+// Drag and Drop Management
+let itemCounter = 0;
+let zoneCounter = 0;
+
+function addDraggableItem(text = '') {
+    const list = document.getElementById('draggableItemsList');
+    if (!list) return;
+    const id = ++itemCounter;
+    const div = document.createElement('div');
+    div.id = `draggable-item-${id}`;
+    div.className = 'form-group';
+    div.style.cssText = 'display: flex; gap: 10px; align-items: center; background: var(--light-gray); padding: 10px; border-radius: 4px;';
+    div.innerHTML = `
+        <span style="font-weight: bold; color: var(--primary-blue);">ID: ${id}</span>
+        <input type="text" class="form-control dnd-item-text" placeholder="Display Text" value="${text}" oninput="updateZoneCorrectOptions()">
+        <button type="button" class="btn btn-outline" style="color: var(--error); padding: 5px 10px;" onclick="removeDraggableItem(${id})">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
+    list.appendChild(div);
+    updateZoneCorrectOptions();
+}
+
+function removeDraggableItem(id) {
+    const item = document.getElementById(`draggable-item-${id}`);
+    if (item) item.remove();
+    updateZoneCorrectOptions();
+}
+
+function addDropZone(label = '', correctId = '') {
+    const list = document.getElementById('dropZonesList');
+    if (!list) return;
+    const id = ++zoneCounter;
+    const div = document.createElement('div');
+    div.id = `drop-zone-${id}`;
+    div.className = 'form-group';
+    div.style.cssText = 'display: flex; flex-direction: column; gap: 5px; background: var(--light-gray); padding: 10px; border-radius: 4px; border-left: 3px solid var(--accent-blue);';
+    div.innerHTML = `
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" class="form-control dnd-zone-label" placeholder="Zone Label (e.g. Target A)" value="${label}">
+            <button type="button" class="btn btn-outline" style="color: var(--error); padding: 5px 10px;" onclick="removeDropZone(${id})">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px;">
+            <small style="font-weight: 600;">Correct Item:</small>
+            <select class="form-select dnd-zone-correct" style="padding: 4px 8px; font-size: 12px; margin-bottom: 0;"></select>
+        </div>
+    `;
+    list.appendChild(div);
+    updateZoneCorrectOptions();
+    if (correctId) {
+        const select = div.querySelector('.dnd-zone-correct');
+        select.dataset.pendingValue = correctId;
+        // Wait for options to be populated then select
+        setTimeout(() => {
+            select.value = correctId;
+        }, 0);
+    }
+}
+
+function removeDropZone(id) {
+    const zone = document.getElementById(`drop-zone-${id}`);
+    if (zone) zone.remove();
+}
+
+function updateZoneCorrectOptions() {
+    const items = Array.from(document.querySelectorAll('#draggableItemsList > div')).map(div => {
+        const input = div.querySelector('.dnd-item-text');
+        return {
+            id: div.id.replace('draggable-item-', ''),
+            text: input ? input.value : `Item ${div.id.replace('draggable-item-', '')}`
+        };
+    });
+
+    document.querySelectorAll('.dnd-zone-correct').forEach(select => {
+        const currentValue = select.value || select.dataset.pendingValue;
+        select.innerHTML = '<option value="">Select Correct Item</option>';
+        items.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.id;
+            option.textContent = `ID ${item.id}: ${item.text}`;
+            if (item.id == currentValue) option.selected = true;
+            select.appendChild(option);
+        });
+    });
+}
+
+function serializeDragAndDrop() {
+    const items = Array.from(document.querySelectorAll('#draggableItemsList > div')).map(div => {
+        return {
+            id: div.id.replace('draggable-item-', ''),
+            text: div.querySelector('.dnd-item-text').value
+        };
+    });
+
+    const zones = Array.from(document.querySelectorAll('#dropZonesList > div')).map(div => {
+        return {
+            id: div.id.replace('drop-zone-', ''),
+            label: div.querySelector('.dnd-zone-label').value,
+            correctItemId: div.querySelector('.dnd-zone-correct').value
+        };
+    });
+
+    const config = { items, zones };
+    document.getElementById('extraData').value = JSON.stringify(config);
+
+    const correctMapping = {};
+    zones.forEach(z => {
+        if (z.correctItemId) {
+            correctMapping[`zone_${z.id}`] = `item_${z.correctItemId}`;
+        }
+    });
+    document.getElementById('editCorrectAnswer').value = JSON.stringify(correctMapping);
+}
+
+function populateDragAndDrop() {
+    const extraDataStr = document.getElementById('extraData').value;
+    if (!extraDataStr) return;
+    try {
+        const config = JSON.parse(extraDataStr);
+        if (config.items) {
+            config.items.forEach(item => addDraggableItem(item.text));
+        }
+        if (config.zones) {
+            config.zones.forEach(zone => addDropZone(zone.label, zone.correctItemId));
+        }
+    } catch (e) {
+        console.error('Error populating Drag and Drop', e);
+    }
+}
+
     document.addEventListener('DOMContentLoaded', function() {
+        populateDragAndDrop();
         toggleEditOptions();
         
         // Initialize option values for checkboxes
