@@ -5,7 +5,10 @@
 <%@ page import="java.time.temporal.ChronoUnit" %>
 <%@ page import="java.time.format.DateTimeFormatter" %>
 <%@ page import="java.util.*" %>
+<%@ page import="java.util.List" %>
 <%@ page import="java.io.*" %>
+<%@ page import="java.io.InputStream" %>
+<%@ page import="java.io.PrintWriter" %>
 <%@ page import="java.util.logging.Level" %>
 <%@ page import="java.util.logging.Logger" %>
 <%@ page import="java.sql.Connection" %>
@@ -15,9 +18,15 @@
 <%@ page import="myPackage.*" %>
 <%@ page import="myPackage.classes.User" %>
 <%@ page import="myPackage.classes.Questions" %>
+<%@ page import="myPackage.classes.Courses" %>
 <%@ page import="org.mindrot.jbcrypt.BCrypt" %>
+<%@ page import="myPackage.Email" %>
+<%@ page import="myPackage.OpenRouterClient" %>
 <%@ page import="org.json.JSONObject" %>
+<%@ page import="org.json.JSONArray" %>
 <%@ page import="org.json.JSONException" %>
+<%@ page import="org.apache.pdfbox.pdmodel.PDDocument" %>
+<%@ page import="org.apache.pdfbox.text.PDFTextStripper" %>
 <%@ page contentType="text/html" pageEncoding="UTF-8"%>
 <%@ page trimDirectiveWhitespaces="true" %>
 
@@ -35,6 +44,152 @@ private String nz(String v, String fallback){
 
 <%
 try {
+    String actionParamEarly = request.getParameter("action");
+    if (actionParamEarly != null && "check_signup_code_email".equalsIgnoreCase(actionParamEarly)) {
+        response.setContentType("application/json");
+        PrintWriter outJSON = response.getWriter();
+        JSONObject res = new JSONObject();
+
+        String email = nz(request.getParameter("email"), "");
+        if (email.isEmpty()) {
+            res.put("exists", false);
+            outJSON.print(res.toString());
+            return;
+        }
+
+        boolean exists = pDAO.signupCodeEmailExists(email);
+        res.put("exists", exists);
+        outJSON.print(res.toString());
+        return;
+    }
+
+    if (actionParamEarly != null && "verify_signup_code_and_register_lecture".equalsIgnoreCase(actionParamEarly)) {
+        response.setContentType("application/json");
+        PrintWriter outJSON = response.getWriter();
+        JSONObject res = new JSONObject();
+
+        String fName     = nz(request.getParameter("fname"), "");
+        String lName     = nz(request.getParameter("lname"), "");
+        String uName     = nz(request.getParameter("uname"), "");
+        String email     = nz(request.getParameter("email"), "");
+        String pass      = nz(request.getParameter("pass"), "");
+        String contactNo = nz(request.getParameter("contactno"), "");
+        String city      = nz(request.getParameter("city"), "");
+        String address   = nz(request.getParameter("address"), "");
+        String code      = nz(request.getParameter("code"), "");
+
+        if (fName.isEmpty() || lName.isEmpty() || uName.isEmpty() || email.isEmpty() || pass.isEmpty() || code.isEmpty()) {
+            res.put("success", false);
+            res.put("message", "Missing required fields.");
+            outJSON.print(res.toString());
+            return;
+        }
+        if (!uName.matches("\\d{8}")) {
+            res.put("success", false);
+            res.put("message", "ID number must be exactly 8 digits.");
+            outJSON.print(res.toString());
+            return;
+        }
+
+        try {
+            String hashedPass = PasswordUtils.bcryptHashPassword(pass);
+            boolean ok = pDAO.registerLecturerFromSignupCode(fName, lName, uName, email, hashedPass, contactNo, city, address, code);
+            if (ok) {
+                res.put("success", true);
+                res.put("message", "Lecturer registration successful! Please login.");
+            } else {
+                res.put("success", false);
+                res.put("message", "Invalid signup code.");
+            }
+            outJSON.print(res.toString());
+            return;
+        } catch (RuntimeException ex) {
+            LOGGER.log(Level.SEVERE, "Error registering lecturer from signup code", ex);
+            res.put("success", false);
+            res.put("message", "Registration failed. " + ex.getMessage());
+            outJSON.print(res.toString());
+            return;
+        } catch (Exception ex) {
+            LOGGER.log(Level.SEVERE, "Error hashing password/processing lecturer signup", ex);
+            res.put("success", false);
+            res.put("message", "Registration failed.");
+            outJSON.print(res.toString());
+            return;
+        }
+    }
+
+    if (actionParamEarly != null && "lecturer_request".equalsIgnoreCase(actionParamEarly)) {
+        response.setContentType("application/json");
+        PrintWriter outJSON = response.getWriter();
+        JSONObject res = new JSONObject();
+
+        String firstNames = nz(request.getParameter("firstNames"), "");
+        String surname = nz(request.getParameter("surname"), "");
+        String lecturerLegacy = nz(request.getParameter("lecturer"), "");
+        String staffNumber = nz(request.getParameter("staffNumber"), "");
+        String email = nz(request.getParameter("email"), "");
+        String course = nz(request.getParameter("course"), "");
+        String contact = nz(request.getParameter("contact"), "");
+
+        if ((firstNames.isEmpty() || surname.isEmpty()) && !lecturerLegacy.isEmpty()) {
+            String[] parts = lecturerLegacy.trim().split("\\s+", 2);
+            if (firstNames.isEmpty() && parts.length > 0) firstNames = parts[0];
+            if (surname.isEmpty() && parts.length > 1) surname = parts[1];
+        }
+        if (firstNames.isEmpty() && !lecturerLegacy.isEmpty()) {
+            firstNames = lecturerLegacy;
+        }
+
+        if (firstNames.isEmpty() || surname.isEmpty() || staffNumber.isEmpty() || email.isEmpty() || course.isEmpty() || contact.isEmpty()) {
+            res.put("success", false);
+            res.put("message", "Please fill in all fields.");
+            outJSON.print(res.toString());
+            return;
+        }
+        if (!staffNumber.matches("\\d{6}")) {
+            res.put("success", false);
+            res.put("message", "Staff Number must be exactly 6 digits.");
+            outJSON.print(res.toString());
+            return;
+        }
+        if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+            res.put("success", false);
+            res.put("message", "Please enter a valid email address.");
+            outJSON.print(res.toString());
+            return;
+        }
+
+        String alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        java.security.SecureRandom rnd = new java.security.SecureRandom();
+        StringBuilder sb = new StringBuilder(6);
+        for (int i = 0; i < 6; i++) {
+            sb.append(alphabet.charAt(rnd.nextInt(alphabet.length())));
+        }
+        String signupCode = sb.toString();
+
+        try {
+            boolean stored = pDAO.storeSignupCode(firstNames, surname, email, signupCode);
+            if (!stored) {
+                res.put("success", false);
+                res.put("message", "Could not store signup code. Please try again later.");
+                outJSON.print(res.toString());
+                return;
+            }
+
+            Email.sendLecturerRequestEmail(firstNames, surname, staffNumber, email, course, contact, signupCode);
+            res.put("success", true);
+            res.put("message", "Request sent successfully.");
+            outJSON.print(res.toString());
+            return;
+        } catch (Throwable mailErr) {
+            LOGGER.log(Level.SEVERE, "Failed to send lecturer request email", mailErr);
+            res.put("success", false);
+            res.put("message", "Could not send request email. Please try again later.");
+            outJSON.print(res.toString());
+            return;
+        }
+    }
+
     String pageParam = request.getParameter("page");
     
     // Special handling for multipart form submissions
@@ -381,6 +536,60 @@ try {
        ========================= */
     } else if ("courses".equalsIgnoreCase(pageParam)) {
         String operation = nz(request.getParameter("operation"), "");
+
+        if ("getCourseData".equalsIgnoreCase(operation)) {
+            String courseName = nz(request.getParameter("courseName"), "");
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+
+            if (courseName.isEmpty()) {
+                JSONObject error = new JSONObject();
+                error.put("success", false);
+                error.put("message", "Course name is required");
+                out.print(error.toString());
+                return;
+            }
+
+            // Fetch directly from DB here to avoid requiring a rebuilt DatabaseClass on the server classpath.
+            try {
+                Connection conn = pDAO.getConnection();
+                PreparedStatement ps = conn.prepareStatement(
+                    "SELECT course_name, total_marks, time, exam_date FROM courses WHERE course_name = ?"
+                );
+                ps.setString(1, courseName);
+                ResultSet rs = ps.executeQuery();
+
+                if (!rs.next()) {
+                    JSONObject error = new JSONObject();
+                    error.put("success", false);
+                    error.put("message", "Course not found");
+                    out.print(error.toString());
+                    rs.close();
+                    ps.close();
+                    return;
+                }
+
+                JSONObject json = new JSONObject();
+                json.put("success", true);
+                json.put("courseName", rs.getString("course_name"));
+                json.put("totalMarks", rs.getInt("total_marks"));
+                json.put("time", rs.getString("time"));
+                json.put("examDate", rs.getString("exam_date"));
+                out.print(json.toString());
+
+                rs.close();
+                ps.close();
+                return;
+            } catch (Exception ex) {
+                LOGGER.log(Level.SEVERE, "getCourseData failed", ex);
+                JSONObject error = new JSONObject();
+                error.put("success", false);
+                error.put("message", "Server error: " + ex.getMessage());
+                out.print(error.toString());
+                return;
+            }
+        }
+
         if ("addnew".equalsIgnoreCase(operation)) {
             String courseName = nz(request.getParameter("coursename"), "");
             int totalMarks    = Integer.parseInt(nz(request.getParameter("totalmarks"), "0"));
@@ -687,6 +896,7 @@ try {
                         String correctAnswer = "";
                         String courseName = "";
                         String questionType = "";
+                        String extraData = "";
                         String currentImagePath = "";
                         boolean removeImage = false;
                         String imagePath = null;
@@ -713,6 +923,8 @@ try {
                                     courseName = nz(fieldValue, "");
                                 } else if ("questionType".equals(fieldName)) {
                                     questionType = nz(fieldValue, "");
+                                } else if ("extraData".equals(fieldName)) {
+                                    extraData = nz(fieldValue, "");
                                 } else if ("currentImagePath".equals(fieldName)) {
                                     currentImagePath = nz(fieldValue, "");
                                 } else if ("removeImage".equals(fieldName)) {
@@ -782,6 +994,7 @@ try {
                         question.setCorrect(correctAnswer);
                         question.setCourseName(courseName);
                         question.setQuestionType(questionType);
+                        question.setExtraData(extraData);
                         
                         // Handle image logic
                         if (removeImage) {
@@ -860,6 +1073,8 @@ try {
                     // Also get and set question type for regular forms
                     String questionType = nz(request.getParameter("questionType"), "");
                     question.setQuestionType(questionType);
+                    String extraData = nz(request.getParameter("extraData"), "");
+                    question.setExtraData(extraData);
                     
                     // Handle image removal for regular forms
                     String removeImageParam = nz(request.getParameter("removeImage"), "");
@@ -954,6 +1169,7 @@ try {
                 String correctAnswer = "";
                 String courseName = "";
                 String questionType = "";
+                String extraData = "";
                 String correctMultiple = "";
                 String imagePath = null;
                 
@@ -979,6 +1195,8 @@ try {
                             courseName = nz(fieldValue, "");
                         } else if ("questionType".equals(fieldName)) {
                             questionType = nz(fieldValue, "");
+                        } else if ("extraData".equals(fieldName)) {
+                            extraData = nz(fieldValue, "");
                         } else if ("correctMultiple".equals(fieldName)) {
                             correctMultiple = nz(fieldValue, "");
                         }
@@ -1040,8 +1258,12 @@ try {
                     if (!correctMultiple.isEmpty()) correctAnswer = correctMultiple;
                 }
                 
-                pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, imagePath);
-                session.setAttribute("message","Question added successfully");
+                boolean questionAdded = pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, imagePath, extraData);
+                if (questionAdded) {
+                    session.setAttribute("message","Question added successfully");
+                } else {
+                    session.setAttribute("error","Failed to add question. Please check the server logs for details.");
+                }
                 
                 // Save last selections to session
                 session.setAttribute("last_course_name", courseName);
@@ -1076,14 +1298,19 @@ try {
             String correctAnswer = nz(request.getParameter("correct"), "");
             String courseName    = nz(request.getParameter("coursename"), "");
             String questionType  = nz(request.getParameter("questionType"), "");
+            String extraData     = nz(request.getParameter("extraData"), "");
             
             if ("MultipleSelect".equalsIgnoreCase(questionType)) {
                 String correctMultiple = nz(request.getParameter("correctMultiple"), "");
                 if (!correctMultiple.isEmpty()) correctAnswer = correctMultiple;
             }
             
-            pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null);
-            session.setAttribute("message","Question added successfully");
+            boolean questionAdded = pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null, extraData);
+            if (questionAdded) {
+                session.setAttribute("message","Question added successfully");
+            } else {
+                session.setAttribute("error","Failed to add question. Please check the server logs for details.");
+            }
             
             // Save last selections to session
             session.setAttribute("last_course_name", courseName);
@@ -1111,6 +1338,239 @@ try {
         // Return success response for AJAX
         response.setContentType("application/json");
         response.getWriter().write("{\"success\": true}");
+        return;
+    } else if ("pdf_upload".equalsIgnoreCase(request.getParameter("action"))) {
+        // Handle PDF upload and text extraction
+        response.setContentType("application/json");
+        PrintWriter outJSON = response.getWriter();
+        
+        // Check if PDFBox is available
+        try {
+            Class.forName("org.apache.pdfbox.pdmodel.PDDocument");
+            Class.forName("org.apache.pdfbox.text.PDFTextStripper");
+        } catch (Throwable e) {
+            LOGGER.log(Level.WARNING, "PDFBox libraries not found", e);
+            outJSON.print("{\"success\": false, \"message\": \"PDF processing libraries not installed or incompatible. Please add Apache PDFBox to WEB-INF/lib.\"}");
+            return;
+        }
+        
+        if (ServletFileUpload.isMultipartContent(request)) {
+            List<FileItem> items = (List<FileItem>) request.getAttribute("multipartItems");
+            
+            if (items == null) {
+                DiskFileItemFactory factory = new DiskFileItemFactory();
+                ServletFileUpload upload = new ServletFileUpload(factory);
+                try {
+                    items = upload.parseRequest(request);
+                } catch (Exception parseEx) {
+                    LOGGER.log(Level.SEVERE, "Error parsing multipart PDF upload", parseEx);
+                    JSONObject err = new JSONObject();
+                    err.put("success", false);
+                    err.put("message", "Error parsing upload: " + parseEx.getMessage());
+                    outJSON.print(err.toString());
+                    return;
+                }
+            }
+            
+            String extractedText = "";
+            boolean success = false;
+            
+            try {
+                for (FileItem item : items) {
+                    if (!item.isFormField() && "pdfFile".equals(item.getFieldName())) {
+                        try {
+                            byte[] pdfBytes = item.get();
+                            PDDocument document = null;
+                            try {
+                                // Load PDF via reflection to support multiple PDFBox versions.
+                                // This avoids compile errors when certain overloads do not exist.
+                                try {
+                                    java.lang.reflect.Method m = PDDocument.class.getMethod("load", byte[].class);
+                                    document = (PDDocument) m.invoke(null, pdfBytes);
+                                } catch (NoSuchMethodException noByteArrayLoad) {
+                                    try {
+                                        java.io.InputStream in = new java.io.ByteArrayInputStream(pdfBytes);
+                                        java.lang.reflect.Method m = PDDocument.class.getMethod("load", java.io.InputStream.class);
+                                        document = (PDDocument) m.invoke(null, in);
+                                    } catch (NoSuchMethodException noStreamLoad) {
+                                        // Last resort: Loader.loadPDF (may still fail if PDFBox jars are inconsistent)
+                                        Class<?> loaderClass = Class.forName("org.apache.pdfbox.Loader");
+                                        java.lang.reflect.Method loadMethod = loaderClass.getMethod("loadPDF", byte[].class);
+                                        document = (PDDocument) loadMethod.invoke(null, pdfBytes);
+                                    }
+                                }
+
+                                PDFTextStripper stripper = new PDFTextStripper();
+                                extractedText = stripper.getText(document);
+                                success = true;
+                            } finally {
+                                if (document != null) {
+                                    try { document.close(); } catch (Exception ignore) {}
+                                }
+                            }
+                        } catch (Throwable loadError) {
+                            Throwable root = loadError;
+                            if (root instanceof java.lang.reflect.InvocationTargetException) {
+                                Throwable target = ((java.lang.reflect.InvocationTargetException) root).getTargetException();
+                                if (target != null) root = target;
+                            }
+                            while (root.getCause() != null && root.getCause() != root) {
+                                root = root.getCause();
+                            }
+
+                            String technical = String.valueOf(root);
+                            String message = "Error loading PDF: " + technical;
+                            if (technical.contains("IOUtils.createMemoryOnlyStreamCache")) {
+                                message = "PDFBox libraries are incompatible/mismatched (mixed versions in WEB-INF/lib). Please keep a single consistent PDFBox version set (e.g. pdfbox-3.0.6 + pdfbox-io-3.0.6 + fontbox-3.0.6) and remove older pdfbox-app/pdfbox-tools jars.";
+                            }
+
+                            LOGGER.log(Level.WARNING, message, loadError);
+                            JSONObject err = new JSONObject();
+                            err.put("success", false);
+                            err.put("message", message);
+                            outJSON.print(err.toString());
+                            return;
+                        }
+                    }
+                }
+                
+                if (success) {
+                    JSONObject responseJson = new JSONObject();
+                    responseJson.put("success", true);
+                    responseJson.put("extractedText", extractedText);
+                    outJSON.print(responseJson.toString());
+                } else {
+                    outJSON.print("{\"success\": false, \"message\": \"No PDF file found in request.\"}");
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error extracting text from PDF", e);
+                outJSON.print("{\"success\": false, \"message\": \"Error extracting text: " + e.getMessage() + "\"}");
+            }
+        } else {
+            outJSON.print("{\"success\": false, \"message\": \"Not a multipart request.\"}");
+        }
+        return;
+    } else if ("ai_generate".equalsIgnoreCase(operation)) {
+        response.setContentType("application/json");
+        PrintWriter outJSON = response.getWriter();
+        String text = nz(request.getParameter("text"), "");
+        String questionType = nz(request.getParameter("questionType"), "MCQ");
+        
+        if (text.isEmpty()) {
+            outJSON.print("{\"success\": false, \"message\": \"No text provided for AI generation.\"}");
+            return;
+        }
+        
+        // Step 1: Decide Question Count
+        int wordCount = text.split("\\s+").length;
+        int numQuestions;
+        String numQsParam = request.getParameter("numQuestions");
+        
+        if (numQsParam != null && !numQsParam.trim().isEmpty()) {
+            try {
+                numQuestions = Integer.parseInt(numQsParam.trim());
+            } catch (NumberFormatException e) {
+                if (wordCount < 300) numQuestions = 5;
+                else if (wordCount < 800) numQuestions = 10;
+                else numQuestions = 20;
+            }
+        } else {
+            if (wordCount < 300) numQuestions = 5;
+            else if (wordCount < 800) numQuestions = 10;
+            else numQuestions = 20;
+        }
+        
+        try {
+            String aiResponse = OpenRouterClient.generateQuestions(text, questionType, numQuestions);
+            if (aiResponse != null) {
+                try {
+                    // Clean up potential markdown code blocks
+                    if (aiResponse.contains("```json")) {
+                        aiResponse = aiResponse.substring(aiResponse.indexOf("```json") + 7);
+                        aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
+                    } else if (aiResponse.contains("```")) {
+                        aiResponse = aiResponse.substring(aiResponse.indexOf("```") + 3);
+                        aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
+                    }
+                    
+                    JSONObject rawJson;
+                    if (aiResponse.trim().startsWith("[")) {
+                        JSONArray questions = new JSONArray(aiResponse);
+                        rawJson = new JSONObject();
+                        rawJson.put("questions", questions);
+                    } else {
+                        rawJson = new JSONObject(aiResponse);
+                    }
+
+                    // Step 7: Validation (Safety Net)
+                    JSONArray questions = rawJson.getJSONArray("questions");
+                    JSONArray validatedQuestions = new JSONArray();
+                    
+                    for (int i = 0; i < questions.length(); i++) {
+                        JSONObject q = questions.getJSONObject(i);
+                        String qText = nz(q.optString("question"), "");
+                        JSONArray opts = q.optJSONArray("options");
+                        String correct = nz(q.optString("correct"), "");
+                        
+                        if (qText.isEmpty() || correct.isEmpty()) continue;
+                        
+                        // Professional Sanitization: Remove "Q1:", "Question 1:" prefixes
+                        qText = qText.replaceAll("^(?i)Q\\d+[:.\\s]+", "");
+                        qText = qText.replaceAll("^(?i)Question\\s+\\d+[:.\\s]+", "");
+                        q.put("question", qText.trim());
+
+                        boolean isValid = false;
+                        if ("FillInTheBlank".equalsIgnoreCase(questionType)) {
+                            isValid = true; // FIB doesn't need options
+                        } else if ("MultipleSelect".equalsIgnoreCase(questionType)) {
+                            if (opts != null && opts.length() == 4) {
+                                // For MultipleSelect, ensure correct answer contains valid options
+                                String[] correctParts = correct.split("\\|");
+                                int validParts = 0;
+                                for (String part : correctParts) {
+                                    for (int j = 0; j < opts.length(); j++) {
+                                        if (opts.getString(j).trim().equalsIgnoreCase(part.trim())) {
+                                            validParts++;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (validParts > 0) isValid = true;
+                            }
+                        } else {
+                            // Default MCQ/TrueFalse/Code
+                            if (opts != null && opts.length() == 4) {
+                                for (int j = 0; j < opts.length(); j++) {
+                                    if (opts.getString(j).trim().equalsIgnoreCase(correct.trim())) {
+                                        isValid = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (isValid) {
+                            q.put("type", questionType);
+                            validatedQuestions.put(q);
+                        }
+                    }
+                    
+                    JSONObject result = new JSONObject();
+                    result.put("success", true);
+                    result.put("questions", validatedQuestions);
+                    outJSON.print(result.toString());
+                    
+                } catch (Exception parseEx) {
+                    LOGGER.log(Level.WARNING, "Failed to parse AI response as JSON: " + aiResponse, parseEx);
+                    outJSON.print("{\"success\": false, \"message\": \"AI returned invalid format.\"}");
+                }
+            } else {
+                outJSON.print("{\"success\": false, \"message\": \"AI generation failed. Please try again later.\"}");
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error in AI generation endpoint", e);
+            outJSON.print("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+        }
         return;
     } else {
         session.setAttribute("error", "Invalid operation for questions");
@@ -1292,10 +1752,20 @@ try {
                     }
                     
                     int qid         = Integer.parseInt(nz(request.getParameter("qid"+i), "0"));
-                    pDAO.insertAnswer(eId, qid, question, ans);
+                    boolean answerInserted = pDAO.insertAnswer(eId, qid, question, ans);
+                    if (!answerInserted) {
+                        session.setAttribute("error","Failed to insert answer for question " + (i+1));
+                        response.sendRedirect("std-page.jsp");
+                        return;
+                    }
                 }
 
-                pDAO.calculateResult(eId, tMarks, endTime, size);
+                boolean resultCalculated = pDAO.calculateResult(eId, tMarks, endTime, size);
+                if (!resultCalculated) {
+                    session.setAttribute("error","Failed to calculate exam result");
+                    response.sendRedirect("std-page.jsp");
+                    return;
+                }
                 
                 // REGISTER EXAM COMPLETION
                 if (userId > 0) {

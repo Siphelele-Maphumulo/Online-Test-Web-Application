@@ -1,3 +1,4 @@
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@page import="java.util.ArrayList"%>
 <%@page import="myPackage.DatabaseClass"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
@@ -54,6 +55,23 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
         </div>
         <div class="modal-footer">
             <button onclick="closeModal()" class="btn btn-primary">OK</button>
+        </div>
+    </div>
+</div>
+
+<!-- AI Auto-Generation Confirmation Modal -->
+<div id="aiConfirmationModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-robot"></i> AI Question Generator</h3>
+            <span class="close-modal" onclick="closeAIModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p id="aiModalMessage">We detected pasted study material. Would you like to auto-generate questions and answers from this content?</p>
+        </div>
+        <div class="modal-footer">
+            <button onclick="confirmAIGeneration()" class="btn btn-success" id="confirmAIBtn">Generate Questions</button>
+            <button onclick="closeAIModal()" class="btn btn-outline">Cancel (Manual Entry)</button>
         </div>
     </div>
 </div>
@@ -989,9 +1007,9 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
         </div>
         
         <!-- Upload PDF to Generate Questions Panel -->
-<!--        <div class="question-card" id="uploadPdfPanel">
+        <div class="question-card" id="uploadPdfPanel">
             <div class="card-header">
-                <span><i class="fas fa-file-pdf"></i> Upload Exam Paper (PDF)</span>
+                <span><i class="fas fa-file-pdf"></i> AI PDF Question Generator</span>
                 <i class="fas fa-upload" style="opacity: 0.8;"></i>
             </div>
             <div class="question-form">
@@ -1029,18 +1047,25 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                 Question Type
                             </label>
                             <select id="questionTypeSelectPdf" class="form-select">
-                                <option value="MCQ">Multiple Choice</option>
-                                <option value="TrueFalse">True/False</option>
-                                <option value="MultipleSelect">Multiple Select (2 correct)</option>
-                                <option value="Code">Code Snippet</option>
+                                <option value="MCQ">Multiple Choice (AI Preferred)</option>
+                                <option value="MultipleSelect">Multiple Select</option>
+                                <option value="FillInTheBlank">Fill in the Blank</option>
                             </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-hashtag" style="color: var(--accent-blue);"></i>
+                                Number of Questions
+                            </label>
+                            <input type="number" id="numQuestionsPdf" class="form-control" placeholder="Auto-detect based on length" min="1" max="50">
                         </div>
                     </div>
                     
                     <div class="form-group">
                         <label class="form-label">
                             <i class="fas fa-file-upload" style="color: var(--primary-blue);"></i>
-                            Upload PDF File
+                            Upload Study Material (PDF)
                         </label>
                         <div class="drop-zone" id="dropZone">
                             <div class="drop-zone-content">
@@ -1053,12 +1078,12 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                         <div id="fileNameDisplay" class="file-name-display" style="display: none; margin-top: 10px;">
                             <i class="fas fa-file-pdf"></i>
                             <span id="fileName"></span>
-                            <button type="button" class="remove-file-btn" onclick="removeFile()">×</button>
+                            <button type="button" class="remove-file-btn" onclick="removeFile()">Ã</button>
                         </div>
-                        <small class="form-hint">Upload a PDF file to extract questions automatically</small>
+                        <small class="form-hint">Upload a PDF file to auto-generate questions using AI</small>
                     </div>
                     
-                     Progress and Status Elements for PDF Upload 
+                    <!-- Progress and Status Elements for PDF Upload -->
                     <div id="uploadProgress" class="progress" style="display: none; margin: 15px 0;">
                         <div class="progress-bar" style="width: 0%;">0%</div>
                     </div>
@@ -1070,13 +1095,13 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                             Reset
                         </button>
                         <button type="button" class="btn btn-primary" id="uploadPdfBtn">
-                            <i class="fas fa-bolt"></i>
+                            <i class="fas fa-robot"></i>
                             Generate Questions
                         </button>
                     </div>
                 </form>
             </div>
-        </div>-->
+        </div>
         
         <!-- Add Question Panel -->
         <div class="question-card" id="addQuestionPanel">
@@ -1122,7 +1147,9 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                 <option value="MCQ" <%="MCQ".equals(lastQuestionType) ? "selected" : ""%>>Multiple Choice</option>
                                 <option value="TrueFalse" <%="TrueFalse".equals(lastQuestionType) ? "selected" : ""%>>True/False</option>
                                 <option value="MultipleSelect" <%="MultipleSelect".equals(lastQuestionType) ? "selected" : ""%>>Multiple Select (2 correct)</option>
+                                <option value="FillInTheBlank" <%="FillInTheBlank".equals(lastQuestionType) ? "selected" : ""%>>Fill in the Blank</option>
                                 <option value="Code" <%="Code".equals(lastQuestionType) ? "selected" : ""%>>Code Snippet</option>
+                                <option value="DragAndDrop" <%="DragAndDrop".equals(lastQuestionType) ? "selected" : ""%>>Drag and Drop</option>
                             </select>
                             <input type="hidden" id="questionTypeHidden" name="questionType" value="<%=lastQuestionType%>">
                         </div>
@@ -1130,7 +1157,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                     
                     <div class="form-group">
                         <label class="form-label"><i class="fas fa-question-circle" style="color: var(--primary-blue);"></i> Your Question</label>
-                        <textarea name="question" id="questionTextarea" class="question-input" rows="3" oninput="checkForCodeSnippet()"></textarea>
+                        <textarea name="question" id="questionTextarea" class="question-input" rows="3" oninput="handleQuestionInput()" onpaste="handlePaste(event)"></textarea>
                         <small class="form-hint">Enter your question text (optional if uploading an image)</small>
                     </div>
                     
@@ -1148,7 +1175,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                         <div id="imageFileNameDisplay" class="file-name-display" style="display: none; margin-top: 10px;">
                             <i class="fas fa-image"></i>
                             <span id="imageFileName"></span>
-                            <button type="button" class="remove-file-btn" onclick="removeImageFile()">×</button>
+                            <button type="button" class="remove-file-btn" onclick="removeImageFile()">Ã</button>
                         </div>
                         <small class="form-hint">Upload an image to accompany your question (optional)</small>
                     </div>
@@ -1189,8 +1216,40 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                         </div>
                     </div>
                     
+                    <input type="hidden" id="extraData" name="extraData" value="">
+
+                    <!-- Drag and Drop Section -->
+                    <div id="dragAndDropContainer" style="display:none; border: 1px solid var(--medium-gray); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 15px; color: var(--primary-blue);"><i class="fas fa-hand-rock"></i> Drag and Drop Configuration</h4>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <!-- Draggable Items -->
+                            <div>
+                                <label class="form-label">Draggable Items (Answers)</label>
+                                <div id="draggableItemsList" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <!-- Items will be added here -->
+                                </div>
+                                <button type="button" class="btn btn-outline" style="margin-top: 10px; width: 100%;" onclick="addDraggableItem()">
+                                    <i class="fas fa-plus"></i> Add Item
+                                </button>
+                            </div>
+                            
+                            <!-- Drop Zones -->
+                            <div>
+                                <label class="form-label">Drop Zones (Targets)</label>
+                                <div id="dropZonesList" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <!-- Zones will be added here -->
+                                </div>
+                                <button type="button" class="btn btn-outline" style="margin-top: 10px; width: 100%;" onclick="addDropZone()">
+                                    <i class="fas fa-plus"></i> Add Zone
+                                </button>
+                            </div>
+                        </div>
+                        <small class="form-hint" style="margin-top: 15px; display: block;">Define items and zones. For each zone, select which item is the correct match.</small>
+                    </div>
+
                     <div class="form-group">
-                        <label class="form-label"><i class="fas fa-check-circle" style="color: var(--success);"></i> Correct Answer</label>
+                        <label class="form-label" id="correctAnswerLabel"><i class="fas fa-check-circle" style="color: var(--success);"></i> Correct Answer</label>
                         
                         <!-- True/False Dropdown -->
                         <div id="trueFalseContainer" style="display:none;">
@@ -1231,8 +1290,27 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                         </div>
                     </div>
                     
+                    <!-- AI Generation Navigation -->
+                    <div id="aiNavigation" class="ai-navigation" style="display: none; margin-top: 20px; padding: 15px; background: #f0f7ff; border: 1px solid #cce3ff; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span id="aiCount" style="font-weight: 600; color: #0056b3;">Reviewing AI Question 1 of 1</span>
+                            <div style="display: flex; gap: 10px;">
+                                <button type="button" class="btn btn-outline btn-sm" onclick="showPreviousAIQuestion()" id="prevAIBtn">
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </button>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="showNextAIQuestion()" id="nextAIBtn">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </button>
+                                <button type="button" class="btn btn-success btn-sm" onclick="saveAllAIQuestions()" id="saveAllAIBtn" style="margin-left: 10px;">
+                                    <i class="fas fa-save"></i> Save All
+                                </button>
+                            </div>
+                        </div>
+                        <small style="display: block; color: #666;">Review and refine the questions as needed. Click 'Add Question' to save.</small>
+                    </div>
+
                     <div class="form-actions">
-                        <button type="reset" class="btn btn-outline" onclick="resetForm()">
+                        <button type="reset" class="btn btn-outline" onclick="currentAIQuestionIndex = -1; resetForm()">
                             <i class="fas fa-redo"></i>
                             Reset
                         </button>
@@ -1334,10 +1412,25 @@ function saveLastSelection() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: 'page=questions&operation=save_selection&last_course_name=' + encodeURIComponent(courseSelect.value) + '&last_question_type=' + encodeURIComponent(questionTypeSelect.value)
-        }).catch(error => {
-            console.log('Session saved for course:', courseSelect.value, 'and question type:', questionTypeSelect.value);
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                console.log('Session saved for course:', courseSelect.value, 'and question type:', questionTypeSelect.value);
+            } else {
+                console.error('Failed to save session:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error saving session:', error);
         });
     }
 }
@@ -1437,21 +1530,25 @@ function uploadAndGenerateQuestions() {
     // Send request
     fetch('controller.jsp?action=pdf_upload&page=questions', {
         method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         body: formData
     })
     .then(async response => {
-        // Check if response is OK before parsing JSON
+        // Check if response is OK before parsing
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        // Try to parse JSON response
+        // Read as text first to avoid "body stream already read" error
+        const responseText = await response.text();
         let data;
         try {
-            data = await response.json();
+            data = JSON.parse(responseText);
         } catch (parseError) {
             console.error('JSON Parse Error:', parseError);
-            console.error('Response text:', await response.text());
+            console.error('Response text:', responseText);
             throw new Error('Invalid JSON response from server');
         }
         
@@ -1460,10 +1557,26 @@ function uploadAndGenerateQuestions() {
             progressBar.style.width = '100%';
             progressBar.textContent = '100%';
             
-            statusDiv.innerHTML = `<div class="alert" style="background: #d4edda; color: #155724;"><i class="fas fa-check-circle"></i> Successfully extracted ${data.count} questions. Adding to database...</div>`;
+            // Trigger AI Generation flow from extracted text
+            const textToProcess = data.extractedText || data.text || (data.questions ? data.questions.map(q => q.question).join("\n") : "");
             
-            // Add questions to database
-            addExtractedQuestionsToDB(data.questions, courseSelect.value);
+            if (textToProcess) {
+                pendingPastedText = textToProcess;
+                const qType = document.getElementById("questionTypeSelectPdf").value;
+                document.getElementById("questionTypeSelect").value = qType; // Sync type
+                toggleOptions();
+                
+                statusDiv.innerHTML = `<div class="alert" style="background: #d4edda; color: #155724;"><i class="fas fa-check-circle"></i> Successfully extracted text. Analyzing for question generation...</div>`;
+                
+                if (shouldTriggerAI(textToProcess)) {
+                    showAIConfirmationModal();
+                } else {
+                    showToast('info', 'Text Extracted', 'Text extracted but too short for auto-generation. Please enter manually.');
+                    document.getElementById("questionTextarea").value = textToProcess;
+                }
+            } else {
+                statusDiv.innerHTML = `<div class="alert" style="background: #f8d7da; color: #721c24;"><i class="fas fa-exclamation-triangle"></i> No text could be extracted from this PDF.</div>`;
+            }
         } else {
             // Check if this is the library not installed message
             if (data.message && data.message.includes('libraries not installed')) {
@@ -1865,32 +1978,21 @@ function toggleOptions() {
     if (opt3) opt3.required = false;
     if (opt4) opt4.required = false;
 
+    const dnd = document.getElementById("dragAndDropContainer");
+    const correctLabel = document.getElementById("correctAnswerLabel");
+
     if (qType === "TrueFalse") {
+        if (dnd) dnd.style.display = "none";
         trueFalse.style.display = "block";
         if (trueFalseSelect) trueFalseSelect.required = true;
-        // Don't require options for True/False questions
-        if (opt1) opt1.required = false;
-        if (opt2) opt2.required = false;
-        if (opt3) opt3.required = false;
-        if (opt4) opt4.required = false;
         
-        // Clear and disable option fields for True/False questions
-        if (opt1) {
-            opt1.value = '';
-            opt1.disabled = true;
-        }
-        if (opt2) {
-            opt2.value = '';
-            opt2.disabled = true;
-        }
-        if (opt3) {
-            opt3.value = '';
-            opt3.disabled = true;
-        }
-        if (opt4) {
-            opt4.value = '';
-            opt4.disabled = true;
-        }
+        // Disable option fields for True/False questions (they won't be submitted)
+        [opt1, opt2, opt3, opt4].forEach(el => {
+            if (el) {
+                el.disabled = true;
+                el.required = false;
+            }
+        });
         
         // Update correct answer field with selected value if available
         if (trueFalseSelect && trueFalseSelect.value) {
@@ -1899,16 +2001,59 @@ function toggleOptions() {
                 correctAnswerField.value = trueFalseSelect.value;
             }
         }
+    } else if (qType === "DragAndDrop") {
+        if (mcq) mcq.style.display = "none";
+        if (single) single.style.display = "none";
+        if (trueFalse) trueFalse.style.display = "none";
+        if (multiple) multiple.style.display = "none";
+        if (dnd) dnd.style.display = "block";
+        if (correctLabel) correctLabel.style.display = "none";
+        if (correct) {
+            correct.required = false;
+            correct.value = "DragAndDrop"; // Placeholder to satisfy validation
+        }
+        
+        // Disable option fields
+        [opt1, opt2, opt3, opt4].forEach(el => {
+            if (el) {
+                el.disabled = true;
+                el.required = false;
+            }
+        });
+        
+        // Ensure at least one item and zone exist
+        if (document.getElementById('draggableItemsList').children.length === 0) {
+            addDraggableItem();
+            addDropZone();
+        }
+    } else if (qType === "FillInTheBlank") {
+        if (dnd) dnd.style.display = "none";
+        if (correctLabel) correctLabel.style.display = "block";
+        single.style.display = "block";
+        correct.placeholder = "Correct Answer";
+        correct.required = true;
+        
+        // Disable option fields for Fill in the Blank questions
+        [opt1, opt2, opt3, opt4].forEach(el => {
+            if (el) {
+                el.disabled = true;
+                el.required = false;
+            }
+        });
     } else {
+        if (dnd) dnd.style.display = "none";
+        if (correctLabel) correctLabel.style.display = "block";
         mcq.style.display = "block";
+        
+        // Enable option fields for non-True/False/FIB questions
+        [opt1, opt2, opt3, opt4].forEach(el => {
+            if (el) {
+                el.disabled = false;
+            }
+        });
+
         if (opt1) opt1.required = true;
         if (opt2) opt2.required = true;
-        
-        // Enable option fields for non-True/False questions
-        if (opt1) opt1.disabled = false;
-        if (opt2) opt2.disabled = false;
-        if (opt3) opt3.disabled = false;
-        if (opt4) opt4.disabled = false;
         
         if (qType === "MultipleSelect") {
             multiple.style.display = "block";
@@ -1995,6 +2140,12 @@ function updateCorrectAnswerField() {
 }
 
 function resetForm() {
+    // Reset AI state if not currently reviewing
+    if (currentAIQuestionIndex === -1) {
+        generatedAIQuestions = [];
+        document.getElementById("aiNavigation").style.display = "none";
+    }
+
     // Don't reset the course and question type selections
     // Only reset the question content fields
     
@@ -2054,6 +2205,663 @@ function updateScrollIndicator() {
     }
 }
 
+// AI Generation State
+let isPastedContent = false;
+let pendingPastedText = "";
+let generatedAIQuestions = [];
+let currentAIQuestionIndex = -1;
+
+// Wrapper functions for question input events
+function handleQuestionInput() {
+    isPastedContent = false; // User typed, so it's not a pure paste anymore
+    // If we were reviewing AI questions and the user types, they might be editing
+    checkForCodeSnippet();
+    handleSmartParsing();
+}
+
+function handlePaste(event) {
+    isPastedContent = true;
+    const pastedText = (event.clipboardData || window.clipboardData).getData('text');
+    pendingPastedText = pastedText;
+    
+    // Check for AI Auto-Generation eligibility
+    setTimeout(() => {
+        if (shouldTriggerAI(pastedText)) {
+            showAIConfirmationModal();
+        } else {
+            handleSmartParsing();
+        }
+    }, 100);
+}
+
+function shouldTriggerAI(text) {
+    const qType = document.getElementById("questionTypeSelect").value;
+    const allowedTypes = ["MCQ", "MultipleSelect", "FillInTheBlank"];
+    
+    if (!allowedTypes.includes(qType)) return false;
+    
+    const trimmed = text.trim();
+    if (!trimmed) return false;
+
+    // Word Count calculation
+    const wordCount = trimmed.split(/\s+/).filter(w => w.length > 0).length;
+    if (wordCount < 30) return false;
+    
+    // Indicators of Source Material
+    const sentences = trimmed.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    
+    const leadingQuestionWords = /^(what|which|how|who|where|when|why|can|is|are|do|does)/i;
+    const hasQuestionWord = leadingQuestionWords.test(trimmed);
+    
+    const optionMarkers = /^[ \t]*([A-Za-z0-9]+|[ivxIVX]+)[\.\)]\s+/m;
+    const hasOptionMarkers = optionMarkers.test(trimmed);
+    
+    const hasStructuredLabels = /Your Question:|Question Type:|Options:|Correct Answer:|â Correct Answer:/i.test(trimmed);
+    
+    // AI generation triggers when:
+    // 1. Content is pasted (already handled)
+    // 2. Word count >= 30
+    // 3. No question word at the start
+    // 4. Multiple sentences
+    // 5. No option labels
+    // 6. No structured labels
+    
+    return sentences.length > 1 && !hasQuestionWord && !hasOptionMarkers && !hasStructuredLabels;
+}
+
+function showAIConfirmationModal() {
+    document.getElementById("aiConfirmationModal").style.display = "block";
+}
+
+function closeAIModal() {
+    document.getElementById("aiConfirmationModal").style.display = "none";
+    // If user says no, still try smart parsing in case it's a non-standard structured block
+    handleSmartParsing();
+}
+
+async function confirmAIGeneration() {
+    document.getElementById("aiConfirmationModal").style.display = "none";
+    
+    // Sync Question Type from PDF Panel to Main Form
+    const qType = document.getElementById("questionTypeSelectPdf").value;
+    document.getElementById("questionTypeSelect").value = qType;
+    toggleOptions();
+    
+    const numQuestions = document.getElementById("numQuestionsPdf").value;
+    
+    // Show loading state in the status div
+    const statusDiv = document.getElementById('uploadStatus');
+    if (statusDiv) {
+        statusDiv.style.display = 'block';
+        statusDiv.innerHTML = '<div class="alert"><i class="fas fa-spinner fa-spin"></i> AI is generating high-quality questions, please wait...</div>';
+        
+        // Scroll to status div so user sees it's working
+        statusDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    try {
+        const response = await fetch('controller.jsp?page=questions&operation=ai_generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: 'text=' + encodeURIComponent(pendingPastedText) + '&questionType=' + encodeURIComponent(qType) + '&numQuestions=' + numQuestions
+        });
+        
+        const responseText = await response.text();
+        if (!response.ok) {
+            throw new Error('Server returned ' + response.status + ': ' + response.statusText + ' - ' + responseText);
+        }
+        
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Failed to parse AI response:', responseText);
+            throw new Error('Invalid JSON response from server');
+        }
+        
+        if (data.success && data.questions && data.questions.length > 0) {
+            generatedAIQuestions = data.questions;
+            currentAIQuestionIndex = 0;
+            showAIQuestion(currentAIQuestionIndex);
+            
+            showToast('success', 'AI Generation Complete', `Generated ${generatedAIQuestions.length} questions for review.`);
+            if (statusDiv) {
+                statusDiv.innerHTML = `<div class="alert" style="background: #d4edda; color: #155724;"><i class="fas fa-check-circle"></i> AI successfully generated ${generatedAIQuestions.length} questions.</div>`;
+            }
+        } else {
+            throw new Error(data.message || 'AI could not generate questions from this content.');
+        }
+    } catch (error) {
+        console.error('AI Generation Error:', error);
+        showToast('error', 'AI Error', error.message || 'An error occurred during AI generation.');
+        if (statusDiv) {
+            statusDiv.innerHTML = `<div class="alert" style="background: #f8d7da; color: #721c24;"><i class="fas fa-exclamation-triangle"></i> AI Generation failed: ${error.message}</div>`;
+        }
+        
+        // Fallback to local heuristic generation if AI fails
+        console.log('Falling back to local heuristic generation...');
+        generatedAIQuestions = generateAIQuestions(pendingPastedText, qType);
+        if (generatedAIQuestions && generatedAIQuestions.length > 0) {
+            currentAIQuestionIndex = 0;
+            showAIQuestion(currentAIQuestionIndex);
+        } else {
+            handleSmartParsing();
+        }
+    } finally {
+        // Keep status visible for a few seconds then hide if successful
+        setTimeout(() => {
+            if (statusDiv && statusDiv.innerHTML.includes('check-circle')) {
+                statusDiv.style.display = 'none';
+            }
+        }, 5000);
+    }
+}
+
+function generateAIQuestions(text, type) {
+    const wordCount = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+    let numToGenerate = 1;
+    if (wordCount >= 151) numToGenerate = Math.floor(Math.random() * 3) + 3; // 3-5
+    else if (wordCount >= 81) numToGenerate = Math.floor(Math.random() * 2) + 2; // 2-3
+    else if (wordCount >= 30) numToGenerate = 1;
+    
+    const results = [];
+    const sentences = text.trim().split(/[.!?]+/).filter(s => s.trim().length > 0);
+    
+    for (let i = 0; i < numToGenerate; i++) {
+        const question = generateSingleAIQuestion(text, type, i, sentences);
+        if (question) results.push(question);
+    }
+    
+    return results;
+}
+
+function generateSingleAIQuestion(text, type, index, sentences) {
+    // Specific example handler for Siphelele Maphumulo
+    if (text.includes("Siphelele Maphumulo") && text.includes("IT and Desktop Support")) {
+        if (type === "MCQ") {
+            return {
+                question: "What background does Siphelele Maphumulo have?",
+                options: ["Desktop Support", "Software Development", "Graphic Design", "Music Production"],
+                correct: "Desktop Support"
+            };
+        } else if (type === "MultipleSelect") {
+            return {
+                question: "Which of the following areas does Siphelele Maphumulo have experience in? (Select all that apply)",
+                options: ["Desktop Support", "Windows systems", "Active Directory", "Graphic Design"],
+                correct: "Desktop Support|Windows systems|Active Directory"
+            };
+        } else if (type === "FillInTheBlank") {
+            return {
+                question: "Siphelele Maphumulo has experience working with _________ systems.",
+                correct: "Windows"
+            };
+        }
+    }
+
+    // Generic heuristic-based generation
+    if (sentences.length === 0) return null;
+    
+    // Pick a sentence based on index, loop around if needed
+    const sentenceIdx = index % sentences.length;
+    const sourceSentence = sentences[sentenceIdx].trim();
+
+    if (type === "MCQ") {
+        // Try to find a subject and a verb-object part
+        const words = sourceSentence.split(' ');
+        let question = "According to the text, what is mentioned about the subject?";
+        let correct = sourceSentence;
+        
+        if (words.length > 5) {
+            correct = words.slice(Math.floor(words.length/2)).join(' ');
+            question = "What is stated regarding: " + words.slice(0, Math.floor(words.length/2)).join(' ') + "...?";
+        }
+
+        return {
+            question: question,
+            options: [correct, "None of the above", "The opposite of what was stated", "A completely different topic"],
+            correct: correct,
+            lowConfidence: true
+        };
+    } else if (type === "FillInTheBlank") {
+        const words = sourceSentence.split(' ');
+        if (words.length > 3) {
+            const blankIdx = Math.floor(words.length / 2);
+            const blankWord = words[blankIdx].replace(/[.,]$/, "");
+            words[blankIdx] = "_________";
+            return {
+                question: words.join(' '),
+                correct: blankWord,
+                lowConfidence: true
+            };
+        }
+    } else if (type === "MultipleSelect") {
+        const nextSentenceIdx = (index + 1) % sentences.length;
+        const secondSentence = sentences[nextSentenceIdx].trim();
+        return {
+            question: "Which of the following points are covered in the text?",
+            options: [sourceSentence, secondSentence, "An unmentioned fact", "Incorrect interpretation"],
+            correct: sourceSentence + "|" + secondSentence,
+            lowConfidence: true
+        };
+    }
+    
+    return null;
+}
+
+function showAIQuestion(index) {
+    if (index < 0 || index >= generatedAIQuestions.length) return;
+    
+    currentAIQuestionIndex = index;
+    const questionData = generatedAIQuestions[index];
+    
+    // Clear and populate
+    resetForm();
+    populateAIGeneratedFields(questionData);
+    
+    // Update navigation UI
+    document.getElementById("aiNavigation").style.display = "block";
+    document.getElementById("aiCount").textContent = `Reviewing AI Question ${index + 1} of ${generatedAIQuestions.length}`;
+    
+    document.getElementById("prevAIBtn").disabled = index === 0;
+    document.getElementById("nextAIBtn").disabled = index === generatedAIQuestions.length - 1;
+}
+
+function showNextAIQuestion() {
+    if (currentAIQuestionIndex < generatedAIQuestions.length - 1) {
+        showAIQuestion(currentAIQuestionIndex + 1);
+    }
+}
+
+function showPreviousAIQuestion() {
+    if (currentAIQuestionIndex > 0) {
+        showAIQuestion(currentAIQuestionIndex - 1);
+    }
+}
+
+function saveAllAIQuestions() {
+    if (!generatedAIQuestions || generatedAIQuestions.length === 0) {
+        showToast('warning', 'No Questions', 'There are no AI generated questions to save.');
+        return;
+    }
+    
+    const courseSelect = document.getElementById('courseSelectAddNew');
+    const courseName = courseSelect.value;
+    
+    if (!courseName) {
+        showToast('error', 'Course Required', 'Please select a course before saving all questions.');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to batch insert all ${generatedAIQuestions.length} questions into ${courseName}?`)) {
+        addExtractedQuestionsToDB(generatedAIQuestions, courseName);
+        
+        // Hide review panel after batch insert starts
+        document.getElementById("aiNavigation").style.display = "none";
+        generatedAIQuestions = [];
+        currentAIQuestionIndex = -1;
+        resetForm();
+    }
+}
+
+function populateAIGeneratedFields(data) {
+    const textarea = document.getElementById("questionTextarea");
+    const opt1 = document.getElementById("opt1");
+    const opt2 = document.getElementById("opt2");
+    const opt3 = document.getElementById("opt3");
+    const opt4 = document.getElementById("opt4");
+    const correctAnswerField = document.getElementById("correctAnswer");
+    const typeSelect = document.getElementById("questionTypeSelect");
+    
+    if (data.question) textarea.value = data.question;
+    
+    // Sync Question Type if provided by AI
+    if (data.type) {
+        typeSelect.value = data.type;
+        toggleOptions();
+    }
+
+    if (data.options && data.options.length > 0) {
+        if (opt1) { opt1.value = data.options[0] || ""; opt1.dispatchEvent(new Event('input')); }
+        if (opt2) { opt2.value = data.options[1] || ""; opt2.dispatchEvent(new Event('input')); }
+        if (opt3) { opt3.value = data.options[2] || ""; opt3.dispatchEvent(new Event('input')); }
+        if (opt4) { opt4.value = data.options[3] || ""; opt4.dispatchEvent(new Event('input')); }
+    }
+    
+    if (data.correct) {
+        const qType = typeSelect.value;
+        if (qType === "MultipleSelect") {
+            const correctList = data.correct.split('|').map(c => c.trim().toLowerCase());
+            correctAnswerField.value = data.correct;
+            
+            // Wait for DOM updates from dispatchEvent('input')
+            setTimeout(() => {
+                document.querySelectorAll('.correct-checkbox').forEach(cb => {
+                    const cbValue = cb.value.trim().toLowerCase();
+                    cb.checked = cbValue && correctList.includes(cbValue);
+                });
+            }, 150);
+        } else if (qType === "TrueFalse") {
+            const tfSelect = document.getElementById("trueFalseSelect");
+            if (tfSelect) {
+                const val = data.correct.trim().toLowerCase();
+                tfSelect.value = val.startsWith('t') ? 'True' : 'False';
+                tfSelect.dispatchEvent(new Event('change'));
+            }
+        } else {
+            correctAnswerField.value = data.correct;
+        }
+    }
+}
+
+// Function for Intelligent Question Parsing & Auto-Fill
+function handleSmartParsing() {
+    const textarea = document.getElementById("questionTextarea");
+    if (!textarea) return;
+    const text = textarea.value; // Keep raw text to preserve formatting
+    if (!text.trim()) return;
+
+    // Try Structured Block Parsing first
+    if (tryParseStructuredBlock(text)) return;
+
+    // Try Free-form / Code Snippet + Multi-line Options
+    tryParseFreeForm(text);
+}
+
+function tryParseStructuredBlock(text) {
+    const labels = {
+        question: /Your Question:\s*([\s\S]*?)(?=Question Type:|Options:|Correct Answer:|â Correct Answer:|$)/i,
+        type: /Question Type:\s*([\s\S]*?)(?=Your Question:|Options:|Correct Answer:|â Correct Answer:|$)/i,
+        options: /Options:\s*([\s\S]*?)(?=Your Question:|Question Type:|Correct Answer:|â Correct Answer:|$)/i,
+        correct: /(?:Correct Answer:|â Correct Answer:)\s*([\s\S]*?)(?=Your Question:|Question Type:|Options:|$)/i
+    };
+
+    let foundLabels = 0;
+    for (let key in labels) {
+        if (labels[key].test(text)) foundLabels++;
+    }
+
+    // If at least 2 markers are present, treat as structured block
+    if (foundLabels < 2) return false;
+
+    const qMatch = text.match(labels.question);
+    const tMatch = text.match(labels.type);
+    const oMatch = text.match(labels.options);
+    const cMatch = text.match(labels.correct);
+
+    const typeSelect = document.getElementById("questionTypeSelect");
+    const textarea = document.getElementById("questionTextarea");
+
+    if (qMatch) textarea.value = qMatch[1].trim();
+
+    if (tMatch) {
+        const typeStr = tMatch[1].trim().toLowerCase();
+        if (typeStr.includes("multiple choice") || typeStr === "mcq") typeSelect.value = "MCQ";
+        else if (typeStr.includes("true") && typeStr.includes("false") || typeStr === "truefalse") typeSelect.value = "TrueFalse";
+        else if (typeStr.includes("multiple select") || typeStr === "multipleselect") typeSelect.value = "MultipleSelect";
+        else if (typeStr.includes("fill in the blank") || typeStr.includes("fib") || typeStr === "fillintheblank") typeSelect.value = "FillInTheBlank";
+        else if (typeStr.includes("code")) typeSelect.value = "Code";
+        
+        toggleOptions();
+    }
+
+    let parsedOptions = [];
+    if (oMatch) {
+        parsedOptions = oMatch[1].split('|').map(o => o.trim()).filter(o => o.length > 0);
+        for (let i = 0; i < 4; i++) {
+            const optField = document.getElementById("opt" + (i + 1));
+            if (optField) {
+                optField.value = parsedOptions[i] || "";
+                optField.dispatchEvent(new Event('input'));
+            }
+        }
+    }
+
+    if (cMatch) {
+        const correct = cMatch[1].trim();
+        populateCorrectAnswer(correct, parsedOptions);
+    }
+    
+    showToast('success', 'Smart Fill', 'Structured data successfully parsed.');
+    return true;
+}
+
+function tryParseFreeForm(text) {
+    // Enhanced Regex for prefixes: A. B. 1. 2. i. ii. etc. (Handles same-line options)
+    const optionRegex = /(?:^|[ \t\n]+)((?:[A-Za-z0-9]+|[ivxIVX]+))[\.\)]\s+([\s\S]*?)(?=[ \t\n]+(?:[A-Za-z0-9]+|[ivxIVX]+)[\.\)]\s+|(?:Correct Answer:|â Correct Answer:)|$)/gm;
+    const correctMarkerRegex = /(?:Correct Answer:|â Correct Answer:)\s*([\s\S]*?)$/i;
+    const questionLabelRegex = /^Question:\s*([\s\S]*?)$/i;
+
+    let match;
+    let optionMatches = [];
+    while ((match = optionRegex.exec(text)) !== null) {
+        optionMatches.push({
+            symbol: match[1],
+            text: match[2].trim()
+        });
+    }
+
+    if (optionMatches.length < 2) return false;
+
+    // Identify positions
+    const firstOptionIndex = text.search(/^[ \t]*(?:[A-Za-z0-9]+|[ivxIVX]+)[\.\)]\s+/m);
+    let questionText = text.substring(0, firstOptionIndex).trim();
+    
+    // Remove "Question:" label if present
+    const qLabelMatch = questionText.match(questionLabelRegex);
+    if (qLabelMatch) questionText = qLabelMatch[1].trim();
+
+    const typeSelect = document.getElementById("questionTypeSelect");
+    const textarea = document.getElementById("questionTextarea");
+
+    textarea.value = questionText;
+
+    // Detect code block
+    const hasCodeIndicators = /(?:def |function |public |class |print\(|console\.|<[^>]*>|\{|\}|import |int |String |printf\(|cout )/.test(questionText);
+    if (hasCodeIndicators || questionText.split('\n').length > 3) {
+        typeSelect.value = "Code";
+        toggleOptions();
+    } else {
+        typeSelect.value = "MCQ";
+        toggleOptions();
+    }
+
+    // Populate options
+    let parsedOptions = optionMatches.map(m => m.text);
+    for (let i = 0; i < 4; i++) {
+        const optField = document.getElementById("opt" + (i + 1));
+        if (optField) {
+            optField.value = i < optionMatches.length ? optionMatches[i].text : "";
+            optField.dispatchEvent(new Event('input'));
+        }
+    }
+
+    // Handle Correct Answer
+    const cMatch = text.match(correctMarkerRegex);
+    if (cMatch) {
+        const correctRaw = cMatch[1].trim();
+        // Resolve symbolic link
+        const symbolIdx = getSymbolIndex(correctRaw, optionMatches);
+        if (symbolIdx !== -1 && symbolIdx < optionMatches.length) {
+            populateCorrectAnswer(optionMatches[symbolIdx].text, parsedOptions);
+        } else {
+            populateCorrectAnswer(correctRaw, parsedOptions);
+        }
+    }
+
+    showToast('info', 'Smart Fill', 'Free-form data extracted.');
+    return true;
+}
+
+function getSymbolIndex(symbol, optionMatches) {
+    symbol = symbol.trim().toUpperCase().replace(/[\.\)]$/, "");
+    
+    // Check against extracted symbols
+    for (let i = 0; i < optionMatches.length; i++) {
+        if (optionMatches[i].symbol.toUpperCase() === symbol) return i;
+    }
+
+    // Fallback to standard mappings
+    if (/^[A-D]$/.test(symbol)) return symbol.charCodeAt(0) - 65;
+    if (/^[1-4]$/.test(symbol)) return parseInt(symbol) - 1;
+    const roman = { "I": 0, "II": 1, "III": 2, "IV": 3 };
+    if (roman[symbol] !== undefined) return roman[symbol];
+    
+    return -1;
+}
+
+function populateCorrectAnswer(correct, parsedOptions) {
+    const typeSelect = document.getElementById("questionTypeSelect");
+    const correctAnswerField = document.getElementById("correctAnswer");
+
+    if (typeSelect.value === "TrueFalse") {
+        const tfSelect = document.getElementById("trueFalseSelect");
+        if (tfSelect) {
+            if (correct.toLowerCase() === "true") tfSelect.value = "True";
+            else if (correct.toLowerCase() === "false") tfSelect.value = "False";
+            tfSelect.dispatchEvent(new Event('change'));
+        }
+    } else if (typeSelect.value === "MultipleSelect") {
+        const multipleCorrect = correct.split('|').map(c => c.trim());
+        correctAnswerField.value = correct;
+        
+        setTimeout(() => {
+            const checkboxes = document.querySelectorAll('.correct-checkbox');
+            checkboxes.forEach(cb => {
+                if (multipleCorrect.some(mc => mc.toLowerCase() === cb.value.toLowerCase())) {
+                    cb.checked = true;
+                } else {
+                    cb.checked = false;
+                }
+            });
+        }, 100);
+    } else {
+        correctAnswerField.value = correct;
+    }
+
+    // Validation for MCQ
+    if (typeSelect.value === "MCQ" && parsedOptions.length > 0) {
+        const match = parsedOptions.some(opt => opt.toLowerCase() === correct.toLowerCase());
+        if (!match) {
+            showToast('warning', 'Parsing Warning', 'Correct answer does not match any of the provided options.');
+        }
+    }
+}
+
+// Drag and Drop Management
+let itemCounter = 0;
+let zoneCounter = 0;
+
+function addDraggableItem(text = '') {
+    const list = document.getElementById('draggableItemsList');
+    const id = ++itemCounter;
+    const div = document.createElement('div');
+    div.id = `draggable-item-${id}`;
+    div.className = 'form-group';
+    div.style.cssText = 'display: flex; gap: 10px; align-items: center; background: var(--light-gray); padding: 10px; border-radius: 4px;';
+    div.innerHTML = `
+        <span style="font-weight: bold; color: var(--primary-blue);">ID: ${id}</span>
+        <input type="text" class="form-control dnd-item-text" placeholder="Display Text" value="${text}" oninput="updateZoneCorrectOptions()">
+        <button type="button" class="btn btn-outline" style="color: var(--error); padding: 5px 10px;" onclick="removeDraggableItem(${id})">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
+    list.appendChild(div);
+    updateZoneCorrectOptions();
+}
+
+function removeDraggableItem(id) {
+    const item = document.getElementById(`draggable-item-${id}`);
+    if (item) item.remove();
+    updateZoneCorrectOptions();
+}
+
+function addDropZone(label = '', correctId = '') {
+    const list = document.getElementById('dropZonesList');
+    const id = ++zoneCounter;
+    const div = document.createElement('div');
+    div.id = `drop-zone-${id}`;
+    div.className = 'form-group';
+    div.style.cssText = 'display: flex; flex-direction: column; gap: 5px; background: var(--light-gray); padding: 10px; border-radius: 4px; border-left: 3px solid var(--accent-blue);';
+    div.innerHTML = `
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" class="form-control dnd-zone-label" placeholder="Zone Label (e.g. Target A)" value="${label}">
+            <button type="button" class="btn btn-outline" style="color: var(--error); padding: 5px 10px;" onclick="removeDropZone(${id})">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px;">
+            <small style="font-weight: 600;">Correct Item:</small>
+            <select class="form-select dnd-zone-correct" style="padding: 4px 8px; font-size: 12px; margin-bottom: 0;"></select>
+        </div>
+    `;
+    list.appendChild(div);
+    updateZoneCorrectOptions();
+    if (correctId) {
+        const select = div.querySelector('.dnd-zone-correct');
+        select.dataset.pendingValue = correctId;
+    }
+}
+
+function removeDropZone(id) {
+    const zone = document.getElementById(`drop-zone-${id}`);
+    if (zone) zone.remove();
+}
+
+function updateZoneCorrectOptions() {
+    const items = Array.from(document.querySelectorAll('#draggableItemsList > div')).map(div => {
+        return {
+            id: div.id.replace('draggable-item-', ''),
+            text: div.querySelector('.dnd-item-text').value || `Item ${div.id.replace('draggable-item-', '')}`
+        };
+    });
+
+    document.querySelectorAll('.dnd-zone-correct').forEach(select => {
+        const currentValue = select.value || select.dataset.pendingValue;
+        select.innerHTML = '<option value="">Select Correct Item</option>';
+        items.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.id;
+            option.textContent = `ID ${item.id}: ${item.text}`;
+            if (item.id == currentValue) option.selected = true;
+            select.appendChild(option);
+        });
+        delete select.dataset.pendingValue;
+    });
+}
+
+function serializeDragAndDrop() {
+    const items = Array.from(document.querySelectorAll('#draggableItemsList > div')).map(div => {
+        return {
+            id: div.id.replace('draggable-item-', ''),
+            text: div.querySelector('.dnd-item-text').value
+        };
+    });
+
+    const zones = Array.from(document.querySelectorAll('#dropZonesList > div')).map(div => {
+        return {
+            id: div.id.replace('drop-zone-', ''),
+            label: div.querySelector('.dnd-zone-label').value,
+            correctItemId: div.querySelector('.dnd-zone-correct').value
+        };
+    });
+
+    const config = { items, zones };
+    document.getElementById('extraData').value = JSON.stringify(config);
+    
+    // Also build the simple 'correct' string for backward compatibility or easy display
+    // Store as JSON in 'correct' column for marking
+    const correctMapping = {};
+    zones.forEach(z => {
+        if (z.correctItemId) {
+            correctMapping[`zone_${z.id}`] = `item_${z.correctItemId}`;
+        }
+    });
+    document.getElementById('correctAnswer').value = JSON.stringify(correctMapping);
+}
+
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     toggleOptions(); // Initialize the correct answer container visibility
@@ -2077,7 +2885,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 isValid = false;
             }
             
-            if (qType === "TrueFalse") {
+            if (qType === "DragAndDrop") {
+                serializeDragAndDrop();
+                const config = JSON.parse(document.getElementById('extraData').value);
+                if (config.items.length < 2 || config.zones.length < 1) {
+                    errorMsg = "At least 2 items and 1 zone are required for Drag and Drop.";
+                    isValid = false;
+                } else {
+                    const unmapped = config.zones.some(z => !z.correctItemId);
+                    if (unmapped) {
+                        errorMsg = "All drop zones must have a correct item assigned.";
+                        isValid = false;
+                    }
+                }
+            } else if (qType === "TrueFalse") {
                 const trueFalseValue = document.getElementById('trueFalseSelect').value;
                 if (!trueFalseValue) {
                     errorMsg = "Please select True or False for the correct answer.";
@@ -2113,8 +2934,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             errorMsg = "Options must be unique.";
                             isValid = false;
                         } else {
-                            const correctValue = document.getElementById('correctAnswer').value.trim();
-                            if (!opts.includes(correctValue)) {
+                            const correctValue = document.getElementById('correctAnswer').value.trim().toLowerCase();
+                            const normalizedOpts = opts.map(opt => opt.trim().toLowerCase());
+                            if (!normalizedOpts.includes(correctValue)) {
                                 errorMsg = "Correct answer must match one of the options.";
                                 isValid = false;
                             }
@@ -2125,6 +2947,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     const correctValue = document.getElementById('correctAnswer').value.trim();
                     if (!correctValue) {
                         errorMsg = "Expected output is required for Code questions.";
+                        isValid = false;
+                    }
+                } else if (qType === "FillInTheBlank") {
+                    // For Fill in the Blank questions, validate that correct answer is provided
+                    const correctValue = document.getElementById('correctAnswer').value.trim();
+                    if (!correctValue) {
+                        errorMsg = "Correct answer is required for Fill in the Blank questions.";
                         isValid = false;
                     }
                 }

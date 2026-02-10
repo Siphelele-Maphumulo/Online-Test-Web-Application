@@ -280,7 +280,176 @@ public class Email {
             "</body>" +
             "</html>";
     }
-
+        
+    public static void sendLecturerRequestEmail(String firstNames, String surname, String staffNumber, String email, String course, String contact, String code) throws MessagingException {
+        sendLecturerRequestEmailTemplate(firstNames, surname, staffNumber, email, course, contact, code, "Lecturer Registration Request - Code SA Institute");
+    }
+        
+    private static void sendLecturerRequestEmailTemplate(String firstNames, String surname, String staffNumber, String email, String course, String contact, String code, String subject) throws MessagingException {
+        // Validate mail properties are loaded
+        if (mailProperties == null || mailProperties.isEmpty()) {
+            System.err.println("ERROR: Mail properties not loaded!");
+            throw new MessagingException("Mail properties not loaded. Check if mail.properties file exists.");
+        }
+            
+        System.out.println("Mail properties loaded successfully");
+            
+        final String username = mailProperties.getProperty("EMAIL_USER");
+        final String password = mailProperties.getProperty("EMAIL_PASS");
+        final String smtpHost = mailProperties.getProperty("SMTP_HOST");
+        final String smtpPort = mailProperties.getProperty("SMTP_PORT");
+        final String emailFrom = mailProperties.getProperty("EMAIL_FROM");
+            
+        System.out.println("EMAIL_USER: " + username);
+        System.out.println("SMTP_HOST: " + smtpHost);
+        System.out.println("SMTP_PORT: " + smtpPort);
+        System.out.println("Sending to: " + email);
+            
+        // Validate all required properties are present
+        if (username == null || username.trim().isEmpty()) {
+            throw new MessagingException("EMAIL_USER property is missing or empty");
+        }
+        if (password == null || password.trim().isEmpty()) {
+            throw new MessagingException("EMAIL_PASS property is missing or empty");
+        }
+        if (smtpHost == null || smtpHost.trim().isEmpty()) {
+            throw new MessagingException("SMTP_HOST property is missing or empty");
+        }
+        if (smtpPort == null || smtpPort.trim().isEmpty()) {
+            throw new MessagingException("SMTP_PORT property is missing or empty");
+        }
+        if (emailFrom == null || emailFrom.trim().isEmpty()) {
+            throw new MessagingException("EMAIL_FROM property is missing or empty");
+        }
+    
+        Properties props = new Properties();
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.starttls.required", "true");
+        props.put("mail.smtp.host", smtpHost);
+        props.put("mail.smtp.port", smtpPort);
+        props.put("mail.smtp.ssl.trust", smtpHost);
+        props.put("mail.smtp.ssl.protocols", "TLSv1.2");
+        props.put("mail.debug", "true"); // Enable debug output
+    
+        System.out.println("Creating email session...");
+            
+        Session session = Session.getInstance(props, new Authenticator() {
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(username, password);
+            }
+        });
+            
+        // Enable debug mode
+        session.setDebug(true);
+    
+        System.out.println("Creating message...");
+            
+        Message message = new MimeMessage(session);
+        message.setFrom(new InternetAddress(emailFrom));
+        message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(email));
+        message.setSubject(subject);
+            
+        // Create HTML content for lecturer request
+        String emailContent = getLecturerRequestEmailHtml(firstNames, surname, staffNumber, email, course, contact, code);
+            
+        message.setContent(emailContent, "text/html; charset=utf-8");
+            
+        System.out.println("Sending email...");
+        Transport.send(message);
+        System.out.println("Email sent successfully!");
+    }
+        
+    private static String getLecturerRequestEmailHtml(String firstNames, String surname, String staffNumber, String email, String course, String contact, String code) {
+        return "<!DOCTYPE html>" +
+            "<html lang='en'>" +
+            "<head>" +
+            "    <meta charset='UTF-8'>" +
+            "    <meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+            "    <title>Lecturer Registration Request</title>" +
+            "    <style>" +
+            "        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }" +
+            "        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }" +
+            "        .header { text-align: center; border-bottom: 2px solid #09294D; padding-bottom: 20px; margin-bottom: 20px; }" +
+            "        .header h1 { color: #09294D; margin: 0; font-size: 24px; }" +
+            "        .header p { color: #555; font-size: 16px; margin-top: 5px; }" +
+            "        .content { color: #333; line-height: 1.6; font-size: 16px; }" +
+            "        .content h2 { color: #09294D; font-size: 20px; margin-bottom: 15px; }" +
+            "        .info-box { background-color: #f8f9fa; border-left: 4px solid #09294D; padding: 15px; margin: 15px 0; }" +
+            "        .info-row { display: flex; margin-bottom: 10px; }" +
+            "        .info-label { font-weight: bold; width: 150px; }" +
+            "        .info-value { flex: 1; }" +
+            "        .code-container { text-align: center; margin: 25px 0; }" +
+            "        .code { font-size: 24px; font-weight: bold; color: #ffffff; background-color: #09294D; padding: 10px 20px; border-radius: 8px; display: inline-block; letter-spacing: 2px; font-family: monospace; }" +
+            "        .instructions { margin: 20px 0; }" +
+            "        .instructions ol { padding-left: 20px; }" +
+            "        .instructions li { margin-bottom: 10px; font-size: 15px; }" +
+            "        .important { background-color: #FFF3CD; border-left: 5px solid #FFC107; padding: 15px; margin-top: 20px; border-radius: 5px; }" +
+            "        .important p, .important ul { margin: 0; }" +
+            "        .important ul { padding-left: 20px; }" +
+            "        .important li { margin-bottom: 5px; font-size: 14px; }" +
+            "        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 14px; color: #777; }" +
+            "        a { color: #09294D; text-decoration: none; font-weight: bold; }" +
+            "        a:hover { text-decoration: underline; }" +
+            "    </style>" +
+            "</head>" +
+            "<body>" +
+            "    <div class='container'>" +
+            "        <div class='header'>" +
+            "            <h1>Lecturer Registration Request</h1>" +
+            "            <p>Code SA Institute Online System</p>" +
+            "        </div>" +
+            "        <div class='content'>" +
+            "            <h2>Hello Administrator,</h2>" +
+            "            <p>A new lecturer has submitted a registration request. Here are the details:</p>" +
+            "            <div class='info-box'>" +
+            "                <div class='info-row'>" +
+            "                    <div class='info-label'>Full Name:</div>" +
+            "                    <div class='info-value'>" + firstNames + " " + surname + "</div>" +
+            "                </div>" +
+            "                <div class='info-row'>" +
+            "                    <div class='info-label'>Staff Number:</div>" +
+            "                    <div class='info-value'>" + staffNumber + "</div>" +
+            "                </div>" +
+            "                <div class='info-row'>" +
+            "                    <div class='info-label'>Email:</div>" +
+            "                    <div class='info-value'>" + email + "</div>" +
+            "                </div>" +
+            "                <div class='info-row'>" +
+            "                    <div class='info-label'>Course:</div>" +
+            "                    <div class='info-value'>" + course + "</div>" +
+            "                </div>" +
+            "                <div class='info-row'>" +
+            "                    <div class='info-label'>Contact:</div>" +
+            "                    <div class='info-value'>" + contact + "</div>" +
+            "                </div>" +
+            "            </div>" +
+            "            <p>To approve this registration, please provide the lecturer with the following signup code:</p>" +
+            "            <div class='code-container'>" +
+            "                <div class='code'>" + code + "</div>" +
+            "            </div>" +
+            "            <p>The lecturer can use this code to complete their registration process.</p>" +
+            "            <div class='important'>" +
+            "                <p><strong>Important Information:</strong></p>" +
+            "                <ul>" +
+            "                    <li>This code should only be shared with the requested lecturer</li>" +
+            "                    <li>Code: <strong>" + code + "</strong></li>" +
+            "                    <li>The code is valid for a single use</li>" +
+            "                </ul>" +
+            "            </div>" +
+            "        </div>" +
+            "        <div class='footer'>" +
+            "            <p><strong>Code SA Institute Pty Ltd</strong><br>" +
+            "            New Germany, South Africa<br>" +
+            "            Unit 8E trio Industrial Park, 8 Shepstone Road, The Wolds | Tel: +27 633137391<br>" +
+            "            Email: info@codingmadeeasy.org | Website: https://codingmadeeasy.org/</p>" +
+            "            <p><em>This is an automated email. Please do not reply.</em></p>" +
+            "        </div>" +
+            "    </div>" +
+            "</body>" +
+            "</html>";
+    }
+        
     private static String getPasswordResetEmailHtml(String firstName, String code) {
         return "<!DOCTYPE html>" +
             "<html lang='en'>" +

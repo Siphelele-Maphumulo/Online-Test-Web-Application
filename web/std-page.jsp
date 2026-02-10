@@ -815,15 +815,15 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         }
     };
 
-    // Page Loader - Show for exactly 2 seconds
+    // Page Loader - Show for exactly 2 seconds OR until page is fully loaded
     (function() {
         var loader = document.getElementById('pageLoader');
         if (loader) {
             // Ensure loader is visible immediately
             loader.style.display = 'flex';
             
-            // Hide loader after 2 seconds
-            setTimeout(function() {
+            // Hide loader after 2 seconds OR when page is fully loaded
+            var hideLoader = function() {
                 if (loader && loader.classList) {
                     loader.classList.add('hidden');
                     setTimeout(function() {
@@ -832,7 +832,19 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                         }
                     }, 300); // Wait for fade-out transition
                 }
-            }, 2000); // 2 seconds
+            };
+            
+            // Set timeout to hide loader after 2 seconds
+            setTimeout(hideLoader, 2000);
+            
+            // Also hide loader when page is fully loaded
+            window.addEventListener('load', hideLoader);
+            
+            // Fallback: hide loader after 10 seconds maximum (in case of errors)
+            setTimeout(hideLoader, 10000);
+            
+            // Additional safety: hide loader if there are any JavaScript errors
+            window.addEventListener('error', hideLoader);
         }
     })();
 </script>

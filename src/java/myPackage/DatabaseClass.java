@@ -9,6 +9,7 @@ import java.text.SimpleDateFormat;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import myPackage.classes.Answers;
+import myPackage.classes.Courses;
 import myPackage.classes.Exams;
 import myPackage.classes.Questions;
 import myPackage.classes.User;
@@ -25,6 +26,9 @@ import java.util.ArrayList;
 import java.sql.Types;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Iterator;
+import org.json.JSONObject;
+import org.json.JSONArray;
 // Add these imports at the top of your DatabaseClass.java
 import myPackage.classes.Result;
 
@@ -1159,24 +1163,29 @@ public boolean addNewCourse(String courseName, int tMarks, String time, String e
     
     
 public void addNewQuestion(String questionText, String opt1, String opt2, String opt3, String opt4, String correctAnswer, String courseName, String questionType) {
-    addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null);
+    addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null, null);
 }
 
 public void addNewQuestion(String questionText, String opt1, String opt2, String opt3, String opt4, String correctAnswer, String courseName, String questionType, String imagePath) {
+    addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, imagePath, null);
+}
+
+public boolean addNewQuestion(String questionText, String opt1, String opt2, String opt3, String opt4, String correctAnswer, String courseName, String questionType, String imagePath, String extraData) {
     try {
         ensureConnection();
     } catch (SQLException e) {
         LOGGER.log(Level.SEVERE, "Connection error in addNewQuestion", e);
-        return;
+        return false;
     }
     
+    boolean success = false;
     try {
         String sql;
         PreparedStatement pstm;
 
         // If it's a True/False question, only use two options.
         if ("TrueFalse".equalsIgnoreCase(questionType)) {
-            sql = "INSERT INTO questions (question, opt1, opt2, correct, course_name, question_type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO questions (question, opt1, opt2, correct, course_name, question_type, image_path, extra_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql);
             pstm.setString(1, questionText);
             pstm.setString(2, "True");  // Hardcoded options for True/False
@@ -1185,9 +1194,10 @@ public void addNewQuestion(String questionText, String opt1, String opt2, String
             pstm.setString(5, courseName);
             pstm.setString(6, questionType);
             pstm.setString(7, imagePath);
+            pstm.setString(8, extraData);
         } else {
             // Otherwise, handle multiple-choice questions
-            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path, extra_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql);
             pstm.setString(1, questionText);
             pstm.setString(2, opt1);
@@ -1198,17 +1208,30 @@ public void addNewQuestion(String questionText, String opt1, String opt2, String
             pstm.setString(7, courseName);
             pstm.setString(8, questionType);
             pstm.setString(9, imagePath);
+            pstm.setString(10, extraData);
         }
 
         // Execute the update
-        pstm.executeUpdate();
+        int rowsAffected = pstm.executeUpdate();
         pstm.close();
-        System.out.println("Question inserted successfully: " + questionText);
+        
+        success = rowsAffected > 0;
+        
+        if (success) {
+            System.out.println("Question inserted successfully: " + questionText + " (Rows affected: " + rowsAffected + ")");
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.INFO, "Question inserted successfully: " + questionText);
+        } else {
+            System.err.println("ERROR: No rows were affected by the insert operation for question: " + questionText);
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "No rows affected when inserting question: " + questionText);
+        }
 
     } catch (SQLException ex) {
-        System.out.println("Error inserting question: " + ex.getMessage());
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        System.err.println("ERROR inserting question: " + ex.getMessage());
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Database error inserting question: " + questionText, ex);
+        success = false;
     }
+    
+    return success;
 }  
     
 public Questions getQuestionById(int questionId) {
@@ -1245,6 +1268,7 @@ public Questions getQuestionById(int questionId) {
             question.setCourseName(rs.getString("course_name"));
             question.setQuestionType(rs.getString("question_type"));
             question.setImagePath(rs.getString("image_path"));
+            question.setExtraData(rs.getString("extra_data"));
         }
     } catch (SQLException e) {
         e.printStackTrace();
@@ -1272,7 +1296,7 @@ public boolean updateQuestion(Questions question) {
         return false;
     }
     
-    String sql = "UPDATE questions SET question=?, opt1=?, opt2=?, opt3=?, opt4=?, correct=?, course_name=?, question_type=?, image_path=? WHERE question_id=?";
+    String sql = "UPDATE questions SET question=?, opt1=?, opt2=?, opt3=?, opt4=?, correct=?, course_name=?, question_type=?, image_path=?, extra_data=? WHERE question_id=?";
     try (PreparedStatement pstm = conn.prepareStatement(sql)) {
         pstm.setString(1, question.getQuestion());
         pstm.setString(2, question.getOpt1());
@@ -1283,7 +1307,8 @@ public boolean updateQuestion(Questions question) {
         pstm.setString(7, question.getCourseName());
         pstm.setString(8, question.getQuestionType());
         pstm.setString(9, question.getImagePath());
-        pstm.setInt(10, question.getQuestionId());
+        pstm.setString(10, question.getExtraData());
+        pstm.setInt(11, question.getQuestionId());
 
         int rowsAffected = pstm.executeUpdate();
         return rowsAffected > 0;
@@ -1692,6 +1717,10 @@ public void deleteLecturer(int userId) {
 
     
 public void addQuestion(String cName, String question, String opt1, String opt2, String opt3, String opt4, String correct, String questionType, String imagePath) {
+    addQuestion(cName, question, opt1, opt2, opt3, opt4, correct, questionType, imagePath, null);
+}
+
+public void addQuestion(String cName, String question, String opt1, String opt2, String opt3, String opt4, String correct, String questionType, String imagePath, String extraData) {
     try {
         ensureConnection();
     } catch (SQLException e) {
@@ -1704,8 +1733,8 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
         PreparedStatement pstm;
 
         // If the question type is True/False, only use two options (True/False)
-        if (questionType.equals("TrueFalse")) {
-            sql = "INSERT INTO questions (question, opt1, opt2, correct, course_name, question_type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        if ("TrueFalse".equalsIgnoreCase(questionType)) {
+            sql = "INSERT INTO questions (question, opt1, opt2, correct, course_name, question_type, image_path, extra_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql);
             pstm.setString(1, question);
             pstm.setString(2, "True");  // True as the first option
@@ -1714,9 +1743,10 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
             pstm.setString(5, cName); // Set the course name
             pstm.setString(6, questionType);
             pstm.setString(7, imagePath); // Set the image path
+            pstm.setString(8, extraData);
         } else {
             // Multiple Choice Question logic
-            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path, extra_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql);
             pstm.setString(1, question);
             pstm.setString(2, opt1);
@@ -1727,6 +1757,7 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
             pstm.setString(7, cName); // Set the course name
             pstm.setString(8, questionType);
             pstm.setString(9, imagePath); // Set the image path
+            pstm.setString(10, extraData);
         }
 
         // Execute the update
@@ -1776,7 +1807,8 @@ public ArrayList getQuestions(String courseName, int questions) {
                 rs.getString("correct"),
                 rs.getString("course_name"),
                 rs.getString("question_type"),
-                rs.getString("image_path")
+                rs.getString("image_path"),
+                rs.getString("extra_data")
             );
             list.add(question);
         }
@@ -1827,14 +1859,21 @@ public ArrayList getQuestions(String courseName, int questions) {
             pstm.setString(7, "incomplete");       // Set initial status
             pstm.setNull(8, Types.VARCHAR);         // result_status is NULL initially
 
-            pstm.executeUpdate();
-
-            try (ResultSet keys = pstm.getGeneratedKeys()) {
-                if (keys.next()) {
-                    examId = keys.getInt(1);
-                    logExamStart(sId, examId, cName);
+            int rowsAffected = pstm.executeUpdate();
+            
+            if (rowsAffected > 0) {
+                try (ResultSet keys = pstm.getGeneratedKeys()) {
+                    if (keys.next()) {
+                        examId = keys.getInt(1);
+                        logExamStart(sId, examId, cName);
+                    }
                 }
+            } else {
+                throw new SQLException("Failed to insert exam record");
             }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error creating exam record", e);
+            throw new SQLException("Failed to start exam: " + e.getMessage());
         }
         return examId;
     }
@@ -1994,7 +2033,8 @@ public ArrayList getAllQuestions(String courseName) {
                 rs.getString("correct"),
                 rs.getString("course_name"),
                 rs.getString("question_type"),
-                rs.getString("image_path")
+                rs.getString("image_path"),
+                rs.getString("extra_data")
             );
             list.add(question);
         }
@@ -2094,18 +2134,30 @@ public ArrayList getAllQuestions(String courseName) {
     }
     
     
-public void insertAnswer(int eId, int qid, String question, String ans) {
+public boolean insertAnswer(int eId, int qid, String question, String ans) {
     try {
         ensureConnection();
     } catch (SQLException e) {
         LOGGER.log(Level.SEVERE, "Connection error in insertAnswer", e);
-        return;
+        return false;
     }
     
     PreparedStatement pstm = null;
     try {
-        String correct = getCorrectAnswer(qid);
-        String status = getAnswerStatus(ans, correct);
+        // Get correct answer and question type
+        String correct = "";
+        String questionType = "";
+        try (PreparedStatement psQ = conn.prepareStatement("SELECT correct, question_type FROM questions WHERE question_id=?")) {
+            psQ.setInt(1, qid);
+            try (ResultSet rsQ = psQ.executeQuery()) {
+                if (rsQ.next()) {
+                    correct = rsQ.getString("correct");
+                    questionType = rsQ.getString("question_type");
+                }
+            }
+        }
+        
+        String status = getAnswerStatus(ans, correct, questionType);
         
         String userAnswerForDb = (ans != null && !ans.trim().isEmpty()) ? ans.trim() : "N/A";
 
@@ -2120,8 +2172,11 @@ public void insertAnswer(int eId, int qid, String question, String ans) {
         pstm.setString(6, status);
         pstm.executeUpdate();
         
+        return true;
+        
     } catch (SQLException ex) {
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        return false;
     } finally {
         if (pstm != null) {
             try {
@@ -2311,7 +2366,7 @@ public int deleteQuestions(int[] questionIds) {
 }
 
 
-private String getAnswerStatus(String ans, String correct) {
+private String getAnswerStatus(String ans, String correct, String questionType) {
     // 1. Normalize inputs: handle nulls and trim whitespace
     String userAnswer = (ans != null) ? ans.trim() : "";
     String correctAnswer = (correct != null) ? correct.trim() : "";
@@ -2321,8 +2376,35 @@ private String getAnswerStatus(String ans, String correct) {
         return "incorrect";
     }
 
-    // 3. Compare based on question type (multi-select or single)
-    if (correctAnswer.contains("|")) {
+    // 3. Handle Drag and Drop
+    if ("DragAndDrop".equalsIgnoreCase(questionType)) {
+        try {
+            JSONObject userObj = new JSONObject(userAnswer);
+            JSONObject correctObj = new JSONObject(correctAnswer);
+            
+            int total = correctObj.length();
+            if (total == 0) return "incorrect";
+            
+            int matched = 0;
+            Iterator<String> keys = correctObj.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                if (userObj.has(key) && String.valueOf(userObj.get(key)).equals(String.valueOf(correctObj.get(key)))) {
+                    matched++;
+                }
+            }
+            
+            if (matched == total) return "correct";
+            if (matched == 0) return "incorrect";
+            return "partial:" + ((float)matched / total);
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error parsing DragAndDrop JSON", e);
+            return userAnswer.equalsIgnoreCase(correctAnswer) ? "correct" : "incorrect";
+        }
+    }
+
+    // 4. Compare based on question type (multi-select or single)
+    if (correctAnswer.contains("|") || "MultipleSelect".equalsIgnoreCase(questionType)) {
         // Normalize multi-select answers by splitting, trimming, sorting, and rejoining
         String[] ansParts = userAnswer.split("\\|");
         for (int i = 0; i < ansParts.length; i++) {
@@ -2988,11 +3070,19 @@ private int getObtMarks(int examId, int tMarks, int size) {
             String status = rs.getString("status");
             String questionType = rs.getString("question_type");
             
-            float weight = "MultipleSelect".equalsIgnoreCase(questionType) ? 2.0f : 1.0f;
+            float weight = "MultipleSelect".equalsIgnoreCase(questionType) ? 2.0f : 
+                          "DragAndDrop".equalsIgnoreCase(questionType) ? 4.0f : 1.0f;
             totalWeight += weight;
 
             if ("correct".equals(status)) {
                 correctWeight += weight;
+            } else if (status != null && status.startsWith("partial:")) {
+                try {
+                    float ratio = Float.parseFloat(status.substring(8));
+                    correctWeight += (weight * ratio);
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Error parsing partial score: " + status, e);
+                }
             }
         }
         
@@ -3010,12 +3100,12 @@ private int getObtMarks(int examId, int tMarks, int size) {
     }
 }
 
-public void calculateResult(int eid, int tMarks, String endTime, int size) {
+public boolean calculateResult(int eid, int tMarks, String endTime, int size) {
     try {
         ensureConnection();
     } catch (SQLException e) {
         LOGGER.log(Level.SEVERE, "Connection error in calculateResult", e);
-        return;
+        return false;
     }
     
     try {
@@ -3054,9 +3144,12 @@ public void calculateResult(int eid, int tMarks, String endTime, int size) {
 
         logExamCompletion(eid);
         
+        return true;
+        
     } catch (SQLException ex) {
         System.err.println("ERROR in calculateResult: " + ex.getMessage());
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        return false;
     }
 }
 
@@ -3154,9 +3247,8 @@ public boolean registerExamCompletion(int studentId, int examId, String endTime)
     
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
         ps.setString(1, endTime.trim());
-        ps.setString(2, endTime.trim());
-        ps.setInt(3, studentId);
-        ps.setInt(4, examId);
+        ps.setInt(2, studentId);
+        ps.setInt(3, examId);
         
         return ps.executeUpdate() > 0;
     }
@@ -4006,6 +4098,233 @@ public boolean checkStaffEmailExists(String email) {
             LOGGER.log(Level.SEVERE, "Error checking user existence", e);
         }
         return false;
+    }
+
+    public boolean storeSignupCode(String firstNames, String surname, String email, String code) {
+        Connection conn = null;
+        PreparedStatement ps = null;
+
+        try {
+            conn = getConnection();
+
+            String deleteSql = "DELETE FROM signup_codes WHERE email_address = ?";
+            try (PreparedStatement deletePs = conn.prepareStatement(deleteSql)) {
+                deletePs.setString(1, email);
+                deletePs.executeUpdate();
+            }
+
+            String sql = "INSERT INTO signup_codes (first_names, surname, email_address, code) VALUES (?, ?, ?, ?)";
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, firstNames);
+            ps.setString(2, surname);
+            ps.setString(3, email);
+            ps.setString(4, code);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error storing signup code for: " + email, e);
+            return false;
+        } finally {
+            try {
+                if (ps != null) ps.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+    }
+
+    public boolean signupCodeEmailExists(String email) {
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+
+        try {
+            conn = getConnection();
+            String sql = "SELECT id FROM signup_codes WHERE email_address = ? LIMIT 1";
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, email);
+            rs = ps.executeQuery();
+            return rs.next();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error checking signup_codes for: " + email, e);
+            return false;
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (ps != null) ps.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+    }
+
+    public boolean verifySignupCode(String email, String code) {
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+
+        try {
+            conn = getConnection();
+            String sql = "SELECT id FROM signup_codes WHERE email_address = ? AND code = ? LIMIT 1";
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, email);
+            ps.setString(2, code);
+            rs = ps.executeQuery();
+            return rs.next();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error verifying signup code for: " + email, e);
+            return false;
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (ps != null) ps.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+    }
+
+    public boolean deleteSignupCodesByEmail(String email) {
+        Connection conn = null;
+        PreparedStatement ps = null;
+
+        try {
+            conn = getConnection();
+            String sql = "DELETE FROM signup_codes WHERE email_address = ?";
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, email);
+            ps.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error deleting signup code(s) for: " + email, e);
+            return false;
+        } finally {
+            try {
+                if (ps != null) ps.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+    }
+
+    public boolean registerLecturerFromSignupCode(String fName, String lName, String uName, String email, String pass,
+            String contact, String city, String address, String code) {
+        Connection localConn = null;
+        PreparedStatement pstmUsers = null;
+        PreparedStatement pstmLectures = null;
+        PreparedStatement pstmStaff = null;
+        PreparedStatement pstmDeleteCode = null;
+        ResultSet rsUserId = null;
+
+        try {
+            if (!verifySignupCode(email, code)) {
+                return false;
+            }
+
+            localConn = getConnection();
+            localConn.setAutoCommit(false);
+
+            String checkSql = "SELECT COUNT(*) as count FROM users WHERE email = ?";
+            try (PreparedStatement checkStmt = localConn.prepareStatement(checkSql)) {
+                checkStmt.setString(1, email);
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next() && rs.getInt("count") > 0) {
+                        throw new RuntimeException("Email already registered: " + email);
+                    }
+                }
+            }
+
+            checkSql = "SELECT COUNT(*) as count FROM users WHERE user_name = ?";
+            try (PreparedStatement checkStmt = localConn.prepareStatement(checkSql)) {
+                checkStmt.setString(1, uName);
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next() && rs.getInt("count") > 0) {
+                        throw new RuntimeException("Username already exists: " + uName);
+                    }
+                }
+            }
+
+            String sqlUsers = "INSERT INTO users (first_name, last_name, user_name, email, password, user_type, contact_no, city, address) " +
+                              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            pstmUsers = localConn.prepareStatement(sqlUsers, Statement.RETURN_GENERATED_KEYS);
+            pstmUsers.setString(1, fName);
+            pstmUsers.setString(2, lName);
+            pstmUsers.setString(3, uName);
+            pstmUsers.setString(4, email);
+            pstmUsers.setString(5, pass);
+            pstmUsers.setString(6, "lecture");
+            pstmUsers.setString(7, contact);
+            pstmUsers.setString(8, city);
+            pstmUsers.setString(9, address);
+            pstmUsers.executeUpdate();
+
+            rsUserId = pstmUsers.getGeneratedKeys();
+            if (!rsUserId.next()) {
+                throw new SQLException("Failed to retrieve generated user_id for " + email);
+            }
+            int userId = rsUserId.getInt(1);
+
+            String sqlLectures = "INSERT INTO lectures (user_id, first_name, last_name, user_name, email, password, user_type, contact_no, city, address, course_name) " +
+                                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            pstmLectures = localConn.prepareStatement(sqlLectures);
+            pstmLectures.setInt(1, userId);
+            pstmLectures.setString(2, fName);
+            pstmLectures.setString(3, lName);
+            pstmLectures.setString(4, uName);
+            pstmLectures.setString(5, email);
+            pstmLectures.setString(6, pass);
+            pstmLectures.setString(7, "lecture");
+            pstmLectures.setString(8, contact);
+            pstmLectures.setString(9, city);
+            pstmLectures.setString(10, address);
+            pstmLectures.setString(11, "");
+            pstmLectures.executeUpdate();
+
+            // Insert into staff table using staff_number as staffNum and full name as fullNames
+            String sqlStaff = "INSERT INTO staff (staffNum, email, fullNames, course_name) VALUES (?, ?, ?, ?)";
+            pstmStaff = localConn.prepareStatement(sqlStaff);
+            pstmStaff.setString(1, uName); // Using user_name (staff_number) as staffNum
+            pstmStaff.setString(2, email);
+            pstmStaff.setString(3, fName + " " + lName); // Combine first and last name
+            pstmStaff.setString(4, ""); // Empty course_name as per user requirement
+            pstmStaff.executeUpdate();
+
+            String deleteSql = "DELETE FROM signup_codes WHERE email_address = ?";
+            pstmDeleteCode = localConn.prepareStatement(deleteSql);
+            pstmDeleteCode.setString(1, email);
+            pstmDeleteCode.executeUpdate();
+
+            localConn.commit();
+            return true;
+        } catch (SQLException | RuntimeException ex) {
+            try {
+                if (localConn != null) localConn.rollback();
+            } catch (SQLException rollbackEx) {
+                LOGGER.log(Level.SEVERE, "Rollback failed", rollbackEx);
+            }
+            if (ex instanceof RuntimeException) {
+                throw (RuntimeException) ex;
+            }
+            LOGGER.log(Level.SEVERE, "Error registering lecturer from signup code", ex);
+            return false;
+        } finally {
+            try {
+                if (rsUserId != null) rsUserId.close();
+                if (pstmDeleteCode != null) pstmDeleteCode.close();
+                if (pstmStaff != null) pstmStaff.close();
+                if (pstmLectures != null) pstmLectures.close();
+                if (pstmUsers != null) pstmUsers.close();
+                if (localConn != null) {
+                    localConn.setAutoCommit(true);
+                    localConn.close();
+                }
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
     }
 
     // ==================== FORGOT PASSWORD METHODS ====================
