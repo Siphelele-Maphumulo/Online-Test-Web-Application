@@ -2,6 +2,9 @@
 <%@page import="myPackage.classes.Exams"%>
 <%@page import="myPackage.classes.Questions"%>
 <%@page import="java.util.ArrayList"%>
+<%@page import="java.util.Map"%>
+<%@page import="java.util.HashMap"%>
+<%@page import="java.util.Iterator"%>
 <%@page import="org.json.JSONObject"%>
 <%@page import="org.json.JSONArray"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
@@ -1388,8 +1391,12 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
           <span>Results</span>
         </a>
         <a class="nav-item" href="std-page.jsp?pgprt=3">
-          <i class="fas fa-chart-line"></i>
-          <span>Daily Register</span>
+          <i class="fas fa-calendar-check"></i>
+          <span>Register</span>
+        </a>
+        <a class="nav-item" href="std-page.jsp?pgprt=4">
+          <i class="fas fa-eye"></i>
+          <span>Attendance</span>
         </a>
       </div>
     </nav>
