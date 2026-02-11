@@ -3,24 +3,20 @@ let dragItems = [];
 let dropTargets = [];
 let correctPairings = {};
 
-// Global variables to hold JSP data
-let dragItemsJson = '[]';
-let dropTargetsJson = '[]';
-let dragCorrectTargetsJson = '[]';
-
 function initializeDragDrop() {
-    console.log('Initializing drag-drop with relational data...');
+    console.log('Initializing drag-drop with JSON data...');
     
     try {
-        // Get the raw JSON strings from the server (passed from JSP)
-        console.log('Raw dragItems:', dragItemsJson);
-        console.log('Raw dropTargets:', dropTargetsJson);
-        console.log('Raw correctTargets:', dragCorrectTargetsJson);
+        // Get the raw JSON arrays from the server (passed from JSP)
+        console.log('Raw dragItemsFromDB:', window.dragItemsFromDB);
+        console.log('Raw dropTargetsFromDB:', window.dropTargetsFromDB);
+        console.log('Raw correctTargetsFromDB:', window.correctTargetsFromDB);
+        console.log('Raw totalMarksFromDB:', window.totalMarksFromDB);
         
         // Parse the JSON arrays
-        const dragItemsArray = JSON.parse(dragItemsJson);
-        const dropTargetsArray = JSON.parse(dropTargetsJson);
-        const correctTargetsArray = JSON.parse(dragCorrectTargetsJson);
+        const dragItemsArray = JSON.parse(window.dragItemsFromDB || '[]');
+        const dropTargetsArray = JSON.parse(window.dropTargetsFromDB || '[]');
+        const correctTargetsArray = JSON.parse(window.correctTargetsFromDB || '[]');
         
         // Convert drag items from string array to object array
         dragItems = dragItemsArray.map((text, index) => {
@@ -71,6 +67,11 @@ function initializeDragDrop() {
             });
         }
         
+        // Set total marks if available
+        if (window.totalMarksFromDB && document.getElementById('totalMarksInput')) {
+            document.getElementById('totalMarksInput').value = window.totalMarksFromDB;
+        }
+        
         console.log('Parsed dragItems:', dragItems);
         console.log('Parsed dropTargets:', dropTargets);
         console.log('Parsed correctPairings:', correctPairings);
@@ -108,14 +109,12 @@ function addDropTarget() {
     const id = Date.now();
     dropTargets.push({ id, text: '' });
     renderDropTargets();
-    renderPairings();
 }
 
 function removeDragItem(id) {
     dragItems = dragItems.filter(item => item.id !== id);
     delete correctPairings[id];
     renderDragItems();
-    renderPairings();
 }
 
 function removeDropTarget(id) {
@@ -126,7 +125,6 @@ function removeDropTarget(id) {
         }
     });
     renderDropTargets();
-    renderPairings();
 }
 
 function updateDragItem(id, text) {
@@ -144,16 +142,24 @@ function updateDropTarget(id, text) {
 }
 
 function renderDragItems() {
-    const container = document.getElementById('dragItemsList');
+    const container = document.getElementById('draggableItemsList');
+    if (!container) {
+        console.error('draggableItemsList container not found');
+        return;
+    }
     container.innerHTML = '';
     
     dragItems.forEach(item => {
         const div = document.createElement('div');
-        div.className = 'drag-item';
-        div.innerHTML = '<i class="fas fa-grip-lines drag-handle"></i>' +
-            '<input type="text" value="' + escapeHtml(item.text) + '" placeholder="Enter drag item text" ' +
-                   'onchange="updateDragItem(' + item.id + ', this.value)">' +
-            '<button type="button" class="remove-btn" onclick="removeDragItem(' + item.id + ')">×</button>';
+        div.className = 'form-group';
+        div.style.cssText = 'display: flex; gap: 10px; align-items: center; background: var(--light-gray); padding: 10px; border-radius: 4px;';
+        div.innerHTML = `
+            <span style="font-weight: bold; color: var(--primary-blue);">ID: ${item.id}</span>
+            <input type="text" class="form-control dnd-item-text" placeholder="Display Text" value="${escapeHtml(item.text)}" oninput="updateDragItem(${item.id}, this.value)">
+            <button type="button" class="btn btn-outline" style="color: var(--error); padding: 5px 10px;" onclick="removeDragItem(${item.id})">
+                <i class="fas fa-trash"></i>
+            </button>
+        `;
         container.appendChild(div);
     });
     
@@ -161,16 +167,35 @@ function renderDragItems() {
 }
 
 function renderDropTargets() {
-    const container = document.getElementById('dropTargetsList');
+    const container = document.getElementById('dropZonesList');
+    if (!container) {
+        console.error('dropZonesList container not found');
+        return;
+    }
     container.innerHTML = '';
     
     dropTargets.forEach(target => {
         const div = document.createElement('div');
-        div.className = 'drop-target';
-        div.innerHTML = '<i class="fas fa-bullseye"></i>' +
-            '<input type="text" value="' + escapeHtml(target.text) + '" placeholder="Enter drop target text" ' +
-                   'onchange="updateDropTarget(' + target.id + ', this.value)">' +
-            '<button type="button" class="remove-btn" onclick="removeDropTarget(' + target.id + ')">×</button>';
+        div.className = 'form-group';
+        div.style.cssText = 'display: flex; flex-direction: column; gap: 5px; background: var(--light-gray); padding: 10px; border-radius: 4px; border-left: 3px solid var(--accent-blue);';
+        div.innerHTML = `
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" class="form-control dnd-zone-label" placeholder="Zone Label (e.g. Target A)" value="${escapeHtml(target.text)}" onchange="updateDropTarget(${target.id}, this.value)">
+                <button type="button" class="btn btn-outline" style="color: var(--error); padding: 5px 10px;" onclick="removeDropTarget(${target.id})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px;">
+                <small style="font-weight: 600;">Correct Item:</small>
+                <select class="form-select dnd-zone-correct" style="padding: 4px 8px; font-size: 12px; margin-bottom: 0;" onchange="updatePairingForTarget(${target.id}, this.value)">
+                    <option value="">Select Correct Item</option>
+                    ${dragItems.map(item => {
+                        const isSelected = correctPairings[item.id] === target.id ? 'selected' : '';
+                        return `<option value="${item.id}" ${isSelected}>ID ${item.id}: ${escapeHtml(item.text)}</option>`;
+                    }).join('')}
+                </select>
+            </div>
+        `;
         container.appendChild(div);
     });
     
@@ -178,47 +203,23 @@ function renderDropTargets() {
 }
 
 function renderPairings() {
-    const container = document.getElementById('pairingsList');
-    container.innerHTML = '';
-    
-    dropTargets.forEach(target => {
-        const div = document.createElement('div');
-        div.className = 'pairing-item';
-        
-        // Find which drag item is paired with this target
-        let pairedDragId = null;
-        for (const [dragId, targetId] of Object.entries(correctPairings)) {
-            if (targetId === target.id) {
-                pairedDragId = parseInt(dragId);
-                break;
-            }
-        }
-        
-        div.innerHTML = '<i class="fas fa-link"></i>' +
-            '<span>' + escapeHtml(target.text || 'Target ' + target.id) + '</span>' +
-            '<select class="pairing-select" onchange="updatePairingForTarget(' + target.id + ', this.value)">' +
-                '<option value="">None</option>' +
-                dragItems.map(item => {
-                    const selected = (pairedDragId === item.id) ? ' selected' : '';
-                    return '<option value="' + item.id + '"' + selected + '>' + 
-                           escapeHtml(item.text || 'Item ' + item.id) + '</option>';
-                }).join('') +
-            '</select>';
-        container.appendChild(div);
-    });
+    // Since the current UI structure handles pairings within the drop targets,
+    // this function can be simplified or removed
+    // The pairings are already rendered in renderDropTargets()
+    console.log('Pairings are rendered within drop targets');
 }
 
 function updatePairingForTarget(targetId, dragItemId) {
     // Remove any existing pairing for this target
     Object.keys(correctPairings).forEach(key => {
-        if (correctPairings[key] === targetId) {
+        if (correctPairings[key] === parseInt(targetId)) {
             delete correctPairings[key];
         }
     });
     
     // Add the new pairing if a drag item was selected
     if (dragItemId) {
-        correctPairings[dragItemId] = parseInt(targetId);
+        correctPairings[parseInt(dragItemId)] = parseInt(targetId);
     }
     
     updateHiddenFields();
@@ -239,10 +240,14 @@ function updateHiddenFields() {
         return '';
     });
     
-    // Store as JSON strings
-    document.getElementById('dragItemsData').value = JSON.stringify(dragItemTexts);
-    document.getElementById('dropTargetsData').value = JSON.stringify(dropTargetTexts);
-    document.getElementById('dragCorrectTargetsData').value = JSON.stringify(correctTargetTexts);
+    // Store as JSON strings in the hidden fields
+    const dragItemsHidden = document.getElementById('dragItemsData');
+    const dropTargetsHidden = document.getElementById('dropTargetsData');
+    const correctTargetsHidden = document.getElementById('dragCorrectTargetsData');
+    
+    if (dragItemsHidden) dragItemsHidden.value = JSON.stringify(dragItemTexts);
+    if (dropTargetsHidden) dropTargetsHidden.value = JSON.stringify(dropTargetTexts);
+    if (correctTargetsHidden) correctTargetsHidden.value = JSON.stringify(correctTargetTexts);
     
     console.log('Storing drag items:', dragItemTexts);
     console.log('Storing drop targets:', dropTargetTexts);

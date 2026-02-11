@@ -1209,22 +1209,22 @@
             .event-future { background-color: #e9ecef; }
             
             /* Scroll-to-top button */
-            .scroll-to-top {
-                position: fixed;
-                bottom: 140px;
-                right: 20px;
-                z-index: 999;
-                display: none;
-                background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
-                color: white;
-                border: none;
-                border-radius: 50%;
-                width: 50px;
-                height: 50px;
-                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-                cursor: pointer;
-                transition: all 0.3s ease;
-            }
+    .scroll-to-top {
+        position: fixed;
+        bottom: 30px;
+        right: 20px;
+        z-index: 999;
+        display: none;
+        background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+        color: white;
+        border: none;
+        border-radius: 40%;
+        width: 40px;
+        height: 40px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
             
             .scroll-to-top:hover {
                 transform: translateY(-3px);

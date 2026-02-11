@@ -1,11 +1,10 @@
-
 package myPackage.classes;
 
 import java.util.List;
 
 public class Questions {
     private int questionId;
-    private String question,opt1,opt2,opt3,opt4,correct,courseName, questionType, imagePath;
+    private String question,opt1,opt2,opt3,opt4,correct,courseName, questionType, imagePath, extraData;
     private int totalMarks;
     private List<DragItem> dragItems;
     private List<DropTarget> dropTargets;
@@ -36,6 +35,20 @@ public class Questions {
         this.courseName = courseName;
         this.questionType = questionType;
         this.imagePath = imagePath;
+    }
+
+    public Questions(int questionId, String question, String opt1, String opt2, String opt3, String opt4, String correct, String courseName, String questionType, String imagePath, String extraData) {
+        this.questionId = questionId;
+        this.question = question;
+        this.opt1 = opt1;
+        this.opt2 = opt2;
+        this.opt3 = opt3;
+        this.opt4 = opt4;
+        this.correct = correct;
+        this.courseName = courseName;
+        this.questionType = questionType;
+        this.imagePath = imagePath;
+        this.extraData = extraData;
     }
 
     public String getQuestionType() {
@@ -116,6 +129,14 @@ public class Questions {
     
     public void setImagePath(String imagePath) {
         this.imagePath = imagePath;
+    }
+
+    public String getExtraData() {
+        return extraData;
+    }
+
+    public void setExtraData(String extraData) {
+        this.extraData = extraData;
     }
     
     public int getTotalMarks() {

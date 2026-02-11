@@ -601,11 +601,16 @@
                                     dataDate = sqlDate.toLocalDate().toString();
                                 }
                         %>
-                        <tr id="course-row-<%= i %>">
+                        <%
+                        String courseNameDisplay = (courseName != null) ? courseName : "NULL";
+                        String courseNameAttr = (courseName != null) ? courseName.replace("\"", "&quot;") : "NO_COURSE_NAME";
+                        String originalNameAttr = (courseName != null) ? courseName.replace("\"", "&quot;") : "";
+                        %>
+                        <tr id="course-row-<%= i %>" data-debug-course="<%= courseNameDisplay %>">
                             <td>
                                 <div class="course-name">
                                     <i class="fas fa-book" style="color: var(--accent-blue); margin-right: 8px;"></i>
-                                    <span id="course-name-<%= i %>"><%= courseName %></span>
+                                    <span id="course-name-<%= i %>" data-original-name="<%= originalNameAttr %>"><%= courseName %></span>
                                 </div>
                             </td>
                             <td><span class="badge badge-success" id="total-marks-<%= i %>"><%= list.get(i + 1) %> Marks</span></td>
@@ -631,7 +636,7 @@
                                 <div class="action-buttons">
                                     <button class="btn btn-primary edit-btn" 
                                             data-index="<%= i %>"
-                                            data-course-name="<%= courseName %>"
+                                            data-course-name="<%= courseNameAttr %>"
                                             data-total-marks="<%= list.get(i + 1) %>" 
                                             data-time="<%= list.get(i + 2) %>"
                                             data-exam-date="<%= dataDate %>">
@@ -772,18 +777,74 @@
     let isEditing = false;
     let originalCourseName = null;
     let currentIndex = null;
+    
+    // Debug function to check variable states
+    function debugVariables() {
+        console.log('=== Debug Variables ===');
+        console.log('isEditing:', isEditing);
+        console.log('originalCourseName:', originalCourseName);
+        console.log('currentIndex:', currentIndex);
+        console.log('courseName field value:', document.getElementById('courseName')?.value);
+        console.log('original-course-name field value:', document.getElementById('original-course-name')?.value);
+        console.log('=======================');
+    }
+    
+    // Debug function to check page data on load
+    function debugPageData() {
+        console.log('=== PAGE DATA DEBUG ===');
+        
+        // Check all course rows
+        const courseRows = document.querySelectorAll('tr[id^="course-row-"]');
+        console.log('Found course rows:', courseRows.length);
+        
+        courseRows.forEach((row, index) => {
+            console.log(`Row ${index}:`, row.id);
+            console.log(`Row ${index} debug-course:`, row.dataset.debugCourse);
+            
+            const courseNameSpan = row.querySelector('[data-original-name]');
+            if (courseNameSpan) {
+                console.log(`Row ${index} course name:`, '"' + courseNameSpan.textContent + '"');
+                console.log(`Row ${index} data-original-name:`, '"' + courseNameSpan.dataset.originalName + '"');
+            }
+            
+            const editButton = row.querySelector('.edit-btn');
+            if (editButton) {
+                console.log(`Row ${index} edit button course-name:`, '"' + editButton.dataset.courseName + '"');
+            }
+        });
+        
+        console.log('=======================');
+    }
 
     // Function to handle edit button click
     function handleEditButtonClick() {
-        console.log('Edit button clicked:', this.dataset);
+        console.log('=== EDIT BUTTON CLICKED ===');
+        
+        // Use both dataset and getAttribute for maximum reliability
+        const btn = this;
+        const dataset = btn.dataset || {};
+        const courseNameFromData = dataset.courseName || btn.getAttribute('data-course-name');
         
         isEditing = true;
-        currentIndex = this.dataset.index;
-        originalCourseName = this.dataset.courseName;
+        currentIndex = dataset.index || btn.getAttribute('data-index');
+        originalCourseName = courseNameFromData;
+        
+        console.log('Extracted values:');
+        console.log('- currentIndex:', currentIndex);
+        console.log('- originalCourseName:', originalCourseName);
+        
+        // Debug variables
+        debugVariables();
+        
+        // Check if course name is present
+        if (!courseNameFromData) {
+            console.error('ERROR: courseName is missing from element dataset!');
+            return;
+        }
         
         // Populate form fields
         document.getElementById('original-course-name').value = originalCourseName;
-        document.getElementById('courseName').value = this.dataset.courseName || '';
+        document.getElementById('courseName').value = courseNameFromData || '';
         document.getElementById('totalMarks').value = this.dataset.totalMarks || '';
         document.getElementById('time').value = this.dataset.time || '';
         
@@ -905,7 +966,8 @@
         const modalBody = document.getElementById('deleteModalBody');
         const confirmBtn = document.getElementById('confirm-delete-btn');
 
-        const decodedCourseName = decodeURIComponent(courseName);
+        // Decode the course name properly
+        const decodedCourseName = decodeURIComponent(courseName.replace(/\+/g, ' '));
 
         // Create centered, professional content
         const container = document.createElement('div');
@@ -1034,11 +1096,21 @@
 
     // Initialize when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('=== PAGE LOADED ===');
         console.log('Course management page loaded');
+        
+        // Debug all course data on page load
+        debugPageData();
         
         // Attach event listeners to edit buttons
         const editButtons = document.querySelectorAll('.edit-btn');
         console.log('Found edit buttons:', editButtons.length);
+        
+        editButtons.forEach((button, index) => {
+            console.log(`Button ${index}:`, button);
+            console.log(`Button ${index} dataset:`, button.dataset);
+            console.log(`Button ${index} course-name:`, '"' + button.dataset.courseName + '"');
+        });
         
         editButtons.forEach(button => {
             button.addEventListener('click', handleEditButtonClick);
@@ -1079,6 +1151,30 @@
                 const submitBtn = this.querySelector('#submit-btn');
                 const newCourseName = document.getElementById('courseName').value.trim();
                 const originalCourseNameFromInput = document.getElementById('original-course-name').value;
+                
+                console.log('=== FORM SUBMISSION DEBUG ===');
+                console.log('Raw values:');
+                console.log('- courseName field value:', '"' + document.getElementById('courseName').value + '"');
+                console.log('- original-course-name field value:', '"' + originalCourseNameFromInput + '"');
+                console.log('- newCourseName (trimmed):', '"' + newCourseName + '"');
+                console.log('- isEditing:', isEditing);
+                console.log('- originalCourseName (global):', '"' + originalCourseName + '"');
+                
+                // Debug variables
+                debugVariables();
+                
+                // Check for empty values
+                if (!newCourseName) {
+                    console.error('ERROR: New course name is empty!');
+                    alert('Please enter a course name.');
+                    return;
+                }
+                
+                if (!originalCourseNameFromInput && isEditing) {
+                    console.error('ERROR: Original course name is empty during edit!');
+                    alert('Error: Could not determine original course name.');
+                    return;
+                }
 
                 if (isEditing && newCourseName !== originalCourseNameFromInput) {
                     // Show confirmation modal
@@ -1092,6 +1188,35 @@
                     padding: 24px;
                 `;
                 
+                // Debug the values being used
+                console.log('=== MODAL CONTENT GENERATION ===');
+                console.log('Values received:');
+                console.log('- originalCourseNameFromInput:', '"' + originalCourseNameFromInput + '"');
+                console.log('- newCourseName:', '"' + newCourseName + '"');
+                console.log('- originalCourseName (global):', '"' + originalCourseName + '"');
+                
+                // Use the same values that were used in the condition check
+                const originalName = originalCourseNameFromInput;
+                const finalNewName = newCourseName;
+                
+                // Safety check - ensure both values exist, are not empty, and not just whitespace
+                if (!originalName || !finalNewName || originalName.length === 0 || finalNewName.length === 0) {
+                    console.log('Safety check failed: originalName="' + originalName + '", finalNewName="' + finalNewName + '"');
+                    alert("Course name data is missing or invalid. Original: '" + originalName + "', New: '" + finalNewName + "'");
+                    return;
+                }
+                
+                console.log('Processed values for modal:');
+                console.log('- originalName:', '"' + originalName + '"');
+                console.log('- finalNewName:', '"' + finalNewName + '"');
+                
+                // Debug the template literal values
+                console.log('About to set modal content with values:', {
+                    originalName: originalName,
+                    finalNewName: finalNewName,
+                    templateLiteral: `You are about to rename the course.`
+                });
+                
                 // Course rename information
                 const renameInfo = document.createElement('div');
                 renameInfo.style.cssText = `
@@ -1099,10 +1224,9 @@
                     font-size: 16px;
                     color: var(--text-dark);
                 `;
+                
                 renameInfo.innerHTML = `
-                    You are about to rename the course from 
-                    <strong style="color: var(--primary-blue);">"${originalCourseNameFromInput}"</strong> 
-                    to <strong style="color: var(--primary-blue);">"${newCourseName}"</strong>.
+                    You are about to rename the course '` + originalCourseName + ` to '` + newCourseName + `'.
                 `;
                 
                 // Warning message
@@ -1171,14 +1295,6 @@
         console.log('Course management initialized successfully');
     });
 
-    // Also initialize if DOM is already loaded
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        setTimeout(() => {
-            document.querySelectorAll('.edit-btn').forEach(button => {
-                button.addEventListener('click', handleEditButtonClick);
-            });
-        }, 100);
-    }
     
     // Close modal when clicking outside (if you have modals)
     window.addEventListener('click', function(event) {
