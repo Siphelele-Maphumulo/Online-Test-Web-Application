@@ -1474,6 +1474,22 @@ try {
 /* =========================
    EXAMS - START EXAM
    ========================= */
+} else if ("saveAnswer".equalsIgnoreCase(pageParam)) {
+    // Handle async answer saving during exam
+    try {
+        int qid = Integer.parseInt(nz(request.getParameter("qid"), "0"));
+        String question = nz(request.getParameter("question"), "");
+        String ans = nz(request.getParameter("ans"), "");
+
+        Object examIdObj = session.getAttribute("examId");
+        if (examIdObj != null && qid > 0) {
+            int examId = Integer.parseInt(examIdObj.toString());
+            pDAO.insertAnswer(examId, qid, question, ans);
+            // application.log("Async save: QID " + qid + " -> " + ans);
+        }
+    } catch (Exception e) {
+        application.log("Error in saveAnswer: " + e.getMessage());
+    }
 } else if ("exams".equalsIgnoreCase(pageParam)) {
     String operation = nz(request.getParameter("operation"), "");
     
@@ -1572,42 +1588,18 @@ try {
                         ans = multiSelectAns; // Use the multi-select answer instead
                     }
                     
-                    // Handle drag-drop questions
+                    // Handle drag-drop questions - PHASE 5 Integration
                     if ("dragdrop".equals(qtype)) {
-                        // Collect all drag-drop matches for this question
-                        java.util.Map<Integer, Integer> dragDropMatches = new java.util.HashMap<Integer, Integer>();
-                        java.util.Enumeration<String> paramNames = request.getParameterNames();
-                        
-                        while (paramNames.hasMoreElements()) {
-                            String paramName = paramNames.nextElement();
-                            if (paramName.startsWith("match_" + i + "_")) {
-                                String targetIdStr = paramName.substring(("match_" + i + "_").length());
-                                String dragItemIdStr = nz(request.getParameter(paramName), "");
-                                
-                                try {
-                                    int targetId = Integer.parseInt(targetIdStr);
-                                    int dragItemId = Integer.parseInt(dragItemIdStr);
-                                    dragDropMatches.put(dragItemId, targetId);
-                                } catch (NumberFormatException e) {
-                                    // Skip invalid parameters
-                                }
-                            }
-                        }
-                        
-                        // Submit drag-drop answers and get marks
-                        if (!dragDropMatches.isEmpty() && userId > 0) {
+                        if (ans != null && !ans.trim().isEmpty() && ans.startsWith("{")) {
                             try {
-                                float marksObtained = pDAO.submitDragDropAnswers(eId, qid, String.valueOf(userId), dragDropMatches);
-                                // Store JSON of matches for detailed display in results
-                                org.json.JSONObject matchesJson = new org.json.JSONObject();
-                                for (java.util.Map.Entry<Integer, Integer> entry : dragDropMatches.entrySet()) {
-                                    // format: zone_{target_id} -> item_{drag_item_id}
-                                    matchesJson.put("zone_" + entry.getValue(), "item_" + entry.getKey());
+                                myPackage.DragDropService ddService = new myPackage.DragDropService();
+                                java.util.Map<Integer, Integer> dragDropMatches = ddService.parseUserMappings(ans);
+
+                                if (!dragDropMatches.isEmpty() && userId > 0) {
+                                    pDAO.submitDragDropAnswers(eId, qid, String.valueOf(userId), dragDropMatches);
                                 }
-                                ans = matchesJson.toString();
                             } catch (Exception e) {
-                                LOGGER.log(Level.SEVERE, "Error submitting drag-drop answers for question " + qid, e);
-                                ans = "{}";
+                                application.log("Error processing drag-drop JSON: " + e.getMessage());
                             }
                         }
                     }
