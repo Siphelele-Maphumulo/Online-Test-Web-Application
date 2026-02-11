@@ -2647,21 +2647,33 @@
                     const dragDropQuestions = document.querySelectorAll('.drag-drop-question');
                     
                     dragDropQuestions.forEach(questionContainer => {
-                        const questionIndex = questionContainer.closest('.question-card').getAttribute('data-qindex');
-                        const dragItemsContainer = document.getElementById(`dragItems_${questionIndex}`);
-                        const dropTargetsContainer = document.getElementById(`dropTargets_${questionIndex}`);
-                        
-                        // Get JSON data from data attributes
-                        let itemsData = [];
-                        let targetsData = [];
                         try {
-                            itemsData = JSON.parse(questionContainer.getAttribute('data-items-json') || '[]');
-                            targetsData = JSON.parse(questionContainer.getAttribute('data-targets-json') || '[]');
-                        } catch (e) {
-                            console.error('Error parsing drag-drop JSON:', e);
-                        }
+                            const card = questionContainer.closest('.question-card');
+                            if (!card) return;
 
-                        loadDragDropData(questionIndex, dragItemsContainer, dropTargetsContainer, itemsData, targetsData);
+                            const questionIndex = card.getAttribute('data-qindex');
+                            const dragItemsContainer = document.getElementById(`dragItems_${questionIndex}`);
+                            const dropTargetsContainer = document.getElementById(`dropTargets_${questionIndex}`);
+
+                            if (!dragItemsContainer || !dropTargetsContainer) {
+                                console.warn(`Containers not found for question index ${questionIndex}`);
+                                return;
+                            }
+
+                            // Get JSON data from data attributes
+                            let itemsData = [];
+                            let targetsData = [];
+                            try {
+                                itemsData = JSON.parse(questionContainer.getAttribute('data-items-json') || '[]');
+                                targetsData = JSON.parse(questionContainer.getAttribute('data-targets-json') || '[]');
+                            } catch (e) {
+                                console.error('Error parsing drag-drop JSON:', e);
+                            }
+
+                            loadDragDropData(questionIndex, dragItemsContainer, dropTargetsContainer, itemsData, targetsData);
+                        } catch (err) {
+                            console.error('Error initializing drag-drop question:', err);
+                        }
                     });
                 }
                 

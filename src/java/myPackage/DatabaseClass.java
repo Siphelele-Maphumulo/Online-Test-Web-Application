@@ -2217,21 +2217,15 @@ public ArrayList getQuestions(String courseName, int questions) {
                 rs.getString("image_path")
             );
 
-            // Populate advanced fields
+            // Populate advanced fields from current row
             try {
                 question.setExtraData(rs.getString("extra_data"));
                 question.setDragItemsJson(rs.getString("drag_items"));
                 question.setDropTargetsJson(rs.getString("drop_targets"));
                 question.setCorrectTargetsJson(rs.getString("drag_correct_targets"));
                 question.setTotalMarks(rs.getInt("marks"));
-
-                if ("DRAG_AND_DROP".equalsIgnoreCase(question.getQuestionType())) {
-                    question.setDragItems(getDragItemsByQuestionIdOld(question.getQuestionId()));
-                    question.setDropTargets(getDropTargetsByQuestionIdOld(question.getQuestionId()));
-                }
             } catch (SQLException sqle) {
-                // Columns might not exist yet in all environments
-                LOGGER.log(Level.WARNING, "Advanced question columns not found: {0}", sqle.getMessage());
+                // Columns might not exist yet
             }
 
             list.add(question);
@@ -2239,12 +2233,20 @@ public ArrayList getQuestions(String courseName, int questions) {
     } catch (SQLException ex) {
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error in getQuestions", ex);
     } finally {
-        // Ensure resources are closed to prevent leaks
         try {
             if (rs != null) rs.close();
             if (pstm != null) pstm.close();
         } catch (SQLException e) {
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in getQuestions", e);
+        }
+    }
+
+    // Now populate nested relational data AFTER closing the main ResultSet
+    for (Object obj : list) {
+        Questions q = (Questions) obj;
+        if ("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType())) {
+            q.setDragItems(getDragItemsByQuestionIdOld(q.getQuestionId()));
+            q.setDropTargets(getDropTargetsByQuestionIdOld(q.getQuestionId()));
         }
     }
     return list;
@@ -2452,18 +2454,13 @@ public ArrayList getAllQuestions(String courseName) {
                 rs.getString("image_path")
             );
 
-            // Populate advanced fields
+            // Populate advanced fields from current row
             try {
                 question.setExtraData(rs.getString("extra_data"));
                 question.setDragItemsJson(rs.getString("drag_items"));
                 question.setDropTargetsJson(rs.getString("drop_targets"));
                 question.setCorrectTargetsJson(rs.getString("drag_correct_targets"));
                 question.setTotalMarks(rs.getInt("marks"));
-
-                if ("DRAG_AND_DROP".equalsIgnoreCase(question.getQuestionType())) {
-                    question.setDragItems(getDragItemsByQuestionIdOld(question.getQuestionId()));
-                    question.setDropTargets(getDropTargetsByQuestionIdOld(question.getQuestionId()));
-                }
             } catch (SQLException sqle) {
                 // Columns might not exist yet
             }
@@ -2473,12 +2470,20 @@ public ArrayList getAllQuestions(String courseName) {
     } catch (SQLException ex) {
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error in getAllQuestions", ex);
     } finally {
-        // Ensure resources are closed to prevent leaks
         try {
             if (rs != null) rs.close();
             if (pstm != null) pstm.close();
         } catch (SQLException e) {
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in getAllQuestions", e);
+        }
+    }
+
+    // Now populate nested relational data AFTER closing the main ResultSet
+    for (Object obj : list) {
+        Questions q = (Questions) obj;
+        if ("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType())) {
+            q.setDragItems(getDragItemsByQuestionIdOld(q.getQuestionId()));
+            q.setDropTargets(getDropTargetsByQuestionIdOld(q.getQuestionId()));
         }
     }
     return list;
@@ -3491,14 +3496,31 @@ private int getObtMarks(int examId, int tMarks, int size) {
         pstm.setInt(1, examId);
         ResultSet rs = pstm.executeQuery();
 
+        // 1. Collect all data from the first ResultSet
+        java.util.List<java.util.Map<String, Object>> answerData = new java.util.ArrayList<>();
         while (rs.next()) {
-            String status = rs.getString("status");
-            String questionType = rs.getString("question_type");
-            int qid = rs.getInt("question_id");
-            int qMarks = rs.getInt("marks");
-            
+            java.util.Map<String, Object> data = new java.util.HashMap<>();
+            data.put("status", rs.getString("status"));
+            data.put("question_type", rs.getString("question_type"));
+            data.put("question_id", rs.getInt("question_id"));
+            data.put("marks", rs.getInt("marks"));
+            answerData.add(data);
+        }
+
+        // Close resources early
+        rs.close();
+        pstm.close();
+        rs = null;
+        pstm = null;
+
+        // 2. Process collected data, performing sub-queries as needed
+        for (java.util.Map<String, Object> data : answerData) {
+            String status = (String) data.get("status");
+            String questionType = (String) data.get("question_type");
+            int qid = (Integer) data.get("question_id");
+            int qMarks = (Integer) data.get("marks");
+
             if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
-                // For drag and drop, we use the marks stored in drag_drop_answers
                 float obtainedForQ = 0;
                 String ddSql = "SELECT SUM(marks_obtained) FROM drag_drop_answers WHERE exam_id = ? AND question_id = ?";
                 try (PreparedStatement ddPstm = conn.prepareStatement(ddSql)) {
