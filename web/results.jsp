@@ -2,6 +2,11 @@
 <%@page import="myPackage.classes.Exams"%>
 <%@page import="myPackage.classes.Questions"%>
 <%@page import="java.util.ArrayList"%>
+<%@page import="java.util.Map"%>
+<%@page import="java.util.HashMap"%>
+<%@page import="java.util.Iterator"%>
+<%@page import="org.json.JSONObject"%>
+<%@page import="org.json.JSONArray"%>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
  
 <%! 
@@ -19,6 +24,10 @@ public String escapeHtml(String input) {
 <%
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
+// Add timeout handling for database operations
+long startTime = System.currentTimeMillis();
+long maxExecutionTime = 15000; // 15 seconds max
+
 // Get user ID from session
 Integer userId = null;
 if (session.getAttribute("userId") != null) {
@@ -33,6 +42,9 @@ double avgPercentage = 0.0;
 
 // Variable to store latest exam ID
 int latestExamId = 0;
+
+// Check if we've exceeded maximum execution time
+boolean isTimedOut = (System.currentTimeMillis() - startTime) > maxExecutionTime;
 
 if (userId != null) {
     examList = pDAO.getResultsFromExams(userId);
@@ -1379,8 +1391,12 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
           <span>Results</span>
         </a>
         <a class="nav-item" href="std-page.jsp?pgprt=3">
-          <i class="fas fa-chart-line"></i>
-          <span>Daily Register</span>
+          <i class="fas fa-calendar-check"></i>
+          <span>Register</span>
+        </a>
+        <a class="nav-item" href="std-page.jsp?pgprt=4">
+          <i class="fas fa-eye"></i>
+          <span>Attendance</span>
         </a>
       </div>
     </nav>
@@ -1630,6 +1646,64 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                 </div>
               </div>
               
+              <% if (a.getAnswer() != null && a.getAnswer().startsWith("{") && a.getCorrectAnswer().startsWith("{")) { 
+                  try {
+                      org.json.JSONObject userObj = new org.json.JSONObject(a.getAnswer());
+                      org.json.JSONObject correctObj = new org.json.JSONObject(a.getCorrectAnswer());
+                      
+                      // Get config for labels
+                      String extraData = "";
+                      Questions qObj = pDAO.getQuestionById(a.getQuestionId());
+                      if (qObj != null) extraData = qObj.getExtraData();
+                      org.json.JSONObject questionConfig = new org.json.JSONObject(extraData);
+                      org.json.JSONArray items = questionConfig.getJSONArray("items");
+                      org.json.JSONArray zones = questionConfig.getJSONArray("zones");
+                      
+                      java.util.Map<String, String> itemMap = new java.util.HashMap<>();
+                      for(int j=0; j<items.length(); j++) {
+                          org.json.JSONObject item = items.getJSONObject(j);
+                          itemMap.put("item_" + item.get("id"), item.getString("text"));
+                      }
+                      
+                      java.util.Map<String, String> zoneMap = new java.util.HashMap<>();
+                      for(int j=0; j<zones.length(); j++) {
+                          org.json.JSONObject zone = zones.getJSONObject(j);
+                          zoneMap.put("zone_" + zone.get("id"), zone.getString("label"));
+                      }
+              %>
+                <div style="padding: var(--spacing-md);">
+                    <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 10px; font-size: 13px;">
+                        <i class="fas fa-hand-rock"></i> Drag and Drop Matches:
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px;">
+                        <% 
+                        java.util.Iterator<String> keys = correctObj.keys();
+                        while(keys.hasNext()) {
+                            String zoneKey = keys.next();
+                            String correctItemKey = correctObj.getString(zoneKey);
+                            String userItemKey = userObj.optString(zoneKey, "");
+                            boolean match = correctItemKey.equals(userItemKey);
+                        %>
+                            <div style="padding: 10px; border-radius: 6px; border: 1px solid <%= match ? "var(--success)" : "var(--error)" %>; background: <%= match ? "var(--success-light)" : "var(--error-light)" %>;">
+                                <div style="font-weight: 600; font-size: 12px; color: var(--dark-gray);"><%= zoneMap.getOrDefault(zoneKey, zoneKey) %></div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                                    <span style="font-weight: 500;"><%= itemMap.getOrDefault(userItemKey, "Not Answered") %></span>
+                                    <i class="fas <%= match ? "fa-check-circle" : "fa-times-circle" %>" style="color: <%= match ? "var(--success)" : "var(--error)" %>;"></i>
+                                </div>
+                                <% if (!match) { %>
+                                    <div style="margin-top: 5px; font-size: 11px; color: var(--success); font-weight: 600;">
+                                        Correct: <%= itemMap.getOrDefault(correctItemKey, correctItemKey) %>
+                                    </div>
+                                <% } %>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+              <% 
+                  } catch (Exception e) { 
+                      out.println("<p>Error displaying matching details.</p>");
+                  }
+              } else { %>
               <div class="answer-grid">
                 <div>
                   <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 4px; font-size: 13px;">
@@ -1649,6 +1723,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                   </div>
                 </div>
               </div>
+              <% } %>
             </div>
             <% 
               } // End for loop

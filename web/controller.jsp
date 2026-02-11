@@ -19,7 +19,17 @@
 <%@ page import="myPackage.classes.User" %>
 <%@ page import="myPackage.classes.Questions" %>
 <%@ page import="myPackage.classes.Courses" %>
+<<<<<<< HEAD
+=======
+<%@ page import="myPackage.classes.DragDropItem" %>
+<%@ page import="myPackage.classes.DragDropZone" %>
+<%@ page import="myPackage.classes.DragDropSubmission" %>
+>>>>>>> 785ce98247cfd24fe2780613ffa7506689f57ec0
 <%@ page import="org.mindrot.jbcrypt.BCrypt" %>
+<%
+
+<%@ page import="myPackage.Email" %>
+<%@ page import="myPackage.OpenRouterClient" %>
 <%@ page import="org.json.JSONObject" %>
 <%@ page import="org.json.JSONArray" %>
 <%@ page import="org.json.JSONException" %>
@@ -42,6 +52,152 @@ private String nz(String v, String fallback){
 
 <%
 try {
+    String actionParamEarly = request.getParameter("action");
+    if (actionParamEarly != null && "check_signup_code_email".equalsIgnoreCase(actionParamEarly)) {
+        response.setContentType("application/json");
+        PrintWriter outJSON = response.getWriter();
+        JSONObject res = new JSONObject();
+
+        String email = nz(request.getParameter("email"), "");
+        if (email.isEmpty()) {
+            res.put("exists", false);
+            outJSON.print(res.toString());
+            return;
+        }
+
+        boolean exists = pDAO.signupCodeEmailExists(email);
+        res.put("exists", exists);
+        outJSON.print(res.toString());
+        return;
+    }
+
+    if (actionParamEarly != null && "verify_signup_code_and_register_lecture".equalsIgnoreCase(actionParamEarly)) {
+        response.setContentType("application/json");
+        PrintWriter outJSON = response.getWriter();
+        JSONObject res = new JSONObject();
+
+        String fName     = nz(request.getParameter("fname"), "");
+        String lName     = nz(request.getParameter("lname"), "");
+        String uName     = nz(request.getParameter("uname"), "");
+        String email     = nz(request.getParameter("email"), "");
+        String pass      = nz(request.getParameter("pass"), "");
+        String contactNo = nz(request.getParameter("contactno"), "");
+        String city      = nz(request.getParameter("city"), "");
+        String address   = nz(request.getParameter("address"), "");
+        String code      = nz(request.getParameter("code"), "");
+
+        if (fName.isEmpty() || lName.isEmpty() || uName.isEmpty() || email.isEmpty() || pass.isEmpty() || code.isEmpty()) {
+            res.put("success", false);
+            res.put("message", "Missing required fields.");
+            outJSON.print(res.toString());
+            return;
+        }
+        if (!uName.matches("\\d{8}")) {
+            res.put("success", false);
+            res.put("message", "ID number must be exactly 8 digits.");
+            outJSON.print(res.toString());
+            return;
+        }
+
+        try {
+            String hashedPass = PasswordUtils.bcryptHashPassword(pass);
+            boolean ok = pDAO.registerLecturerFromSignupCode(fName, lName, uName, email, hashedPass, contactNo, city, address, code);
+            if (ok) {
+                res.put("success", true);
+                res.put("message", "Lecturer registration successful! Please login.");
+            } else {
+                res.put("success", false);
+                res.put("message", "Invalid signup code.");
+            }
+            outJSON.print(res.toString());
+            return;
+        } catch (RuntimeException ex) {
+            LOGGER.log(Level.SEVERE, "Error registering lecturer from signup code", ex);
+            res.put("success", false);
+            res.put("message", "Registration failed. " + ex.getMessage());
+            outJSON.print(res.toString());
+            return;
+        } catch (Exception ex) {
+            LOGGER.log(Level.SEVERE, "Error hashing password/processing lecturer signup", ex);
+            res.put("success", false);
+            res.put("message", "Registration failed.");
+            outJSON.print(res.toString());
+            return;
+        }
+    }
+
+    if (actionParamEarly != null && "lecturer_request".equalsIgnoreCase(actionParamEarly)) {
+        response.setContentType("application/json");
+        PrintWriter outJSON = response.getWriter();
+        JSONObject res = new JSONObject();
+
+        String firstNames = nz(request.getParameter("firstNames"), "");
+        String surname = nz(request.getParameter("surname"), "");
+        String lecturerLegacy = nz(request.getParameter("lecturer"), "");
+        String staffNumber = nz(request.getParameter("staffNumber"), "");
+        String email = nz(request.getParameter("email"), "");
+        String course = nz(request.getParameter("course"), "");
+        String contact = nz(request.getParameter("contact"), "");
+
+        if ((firstNames.isEmpty() || surname.isEmpty()) && !lecturerLegacy.isEmpty()) {
+            String[] parts = lecturerLegacy.trim().split("\\s+", 2);
+            if (firstNames.isEmpty() && parts.length > 0) firstNames = parts[0];
+            if (surname.isEmpty() && parts.length > 1) surname = parts[1];
+        }
+        if (firstNames.isEmpty() && !lecturerLegacy.isEmpty()) {
+            firstNames = lecturerLegacy;
+        }
+
+        if (firstNames.isEmpty() || surname.isEmpty() || staffNumber.isEmpty() || email.isEmpty() || course.isEmpty() || contact.isEmpty()) {
+            res.put("success", false);
+            res.put("message", "Please fill in all fields.");
+            outJSON.print(res.toString());
+            return;
+        }
+        if (!staffNumber.matches("\\d{6}")) {
+            res.put("success", false);
+            res.put("message", "Staff Number must be exactly 6 digits.");
+            outJSON.print(res.toString());
+            return;
+        }
+        if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+            res.put("success", false);
+            res.put("message", "Please enter a valid email address.");
+            outJSON.print(res.toString());
+            return;
+        }
+
+        String alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        java.security.SecureRandom rnd = new java.security.SecureRandom();
+        StringBuilder sb = new StringBuilder(6);
+        for (int i = 0; i < 6; i++) {
+            sb.append(alphabet.charAt(rnd.nextInt(alphabet.length())));
+        }
+        String signupCode = sb.toString();
+
+        try {
+            boolean stored = pDAO.storeSignupCode(firstNames, surname, email, signupCode);
+            if (!stored) {
+                res.put("success", false);
+                res.put("message", "Could not store signup code. Please try again later.");
+                outJSON.print(res.toString());
+                return;
+            }
+
+            Email.sendLecturerRequestEmail(firstNames, surname, staffNumber, email, course, contact, signupCode);
+            res.put("success", true);
+            res.put("message", "Request sent successfully.");
+            outJSON.print(res.toString());
+            return;
+        } catch (Throwable mailErr) {
+            LOGGER.log(Level.SEVERE, "Failed to send lecturer request email", mailErr);
+            res.put("success", false);
+            res.put("message", "Could not send request email. Please try again later.");
+            outJSON.print(res.toString());
+            return;
+        }
+    }
+
     String pageParam = request.getParameter("page");
     
     // Special handling for multipart form submissions
@@ -402,6 +558,7 @@ try {
                 return;
             }
 
+<<<<<<< HEAD
             Courses course = pDAO.getCourseByName(courseName);
             if (course == null) {
                 JSONObject error = new JSONObject();
@@ -419,6 +576,46 @@ try {
             json.put("examDate", course.getExamDate());
             out.print(json.toString());
             return;
+=======
+            // Fetch directly from DB here to avoid requiring a rebuilt DatabaseClass on the server classpath.
+            try {
+                Connection conn = pDAO.getConnection();
+                PreparedStatement ps = conn.prepareStatement(
+                    "SELECT course_name, total_marks, time, exam_date FROM courses WHERE course_name = ?"
+                );
+                ps.setString(1, courseName);
+                ResultSet rs = ps.executeQuery();
+
+                if (!rs.next()) {
+                    JSONObject error = new JSONObject();
+                    error.put("success", false);
+                    error.put("message", "Course not found");
+                    out.print(error.toString());
+                    rs.close();
+                    ps.close();
+                    return;
+                }
+
+                JSONObject json = new JSONObject();
+                json.put("success", true);
+                json.put("courseName", rs.getString("course_name"));
+                json.put("totalMarks", rs.getInt("total_marks"));
+                json.put("time", rs.getString("time"));
+                json.put("examDate", rs.getString("exam_date"));
+                out.print(json.toString());
+
+                rs.close();
+                ps.close();
+                return;
+            } catch (Exception ex) {
+                LOGGER.log(Level.SEVERE, "getCourseData failed", ex);
+                JSONObject error = new JSONObject();
+                error.put("success", false);
+                error.put("message", "Server error: " + ex.getMessage());
+                out.print(error.toString());
+                return;
+            }
+>>>>>>> 785ce98247cfd24fe2780613ffa7506689f57ec0
         }
 
         if ("addnew".equalsIgnoreCase(operation)) {
@@ -727,6 +924,7 @@ try {
                         String correctAnswer = "";
                         String courseName = "";
                         String questionType = "";
+                        String extraData = "";
                         String currentImagePath = "";
                         boolean removeImage = false;
                         String imagePath = null;
@@ -753,6 +951,8 @@ try {
                                     courseName = nz(fieldValue, "");
                                 } else if ("questionType".equals(fieldName)) {
                                     questionType = nz(fieldValue, "");
+                                } else if ("extraData".equals(fieldName)) {
+                                    extraData = nz(fieldValue, "");
                                 } else if ("currentImagePath".equals(fieldName)) {
                                     currentImagePath = nz(fieldValue, "");
                                 } else if ("removeImage".equals(fieldName)) {
@@ -822,6 +1022,7 @@ try {
                         question.setCorrect(correctAnswer);
                         question.setCourseName(courseName);
                         question.setQuestionType(questionType);
+                        question.setExtraData(extraData);
                         
                         // Handle image logic
                         if (removeImage) {
@@ -900,6 +1101,8 @@ try {
                     // Also get and set question type for regular forms
                     String questionType = nz(request.getParameter("questionType"), "");
                     question.setQuestionType(questionType);
+                    String extraData = nz(request.getParameter("extraData"), "");
+                    question.setExtraData(extraData);
                     
                     // Handle image removal for regular forms
                     String removeImageParam = nz(request.getParameter("removeImage"), "");
@@ -994,6 +1197,7 @@ try {
                 String correctAnswer = "";
                 String courseName = "";
                 String questionType = "";
+                String extraData = "";
                 String correctMultiple = "";
                 String imagePath = null;
                 
@@ -1019,6 +1223,8 @@ try {
                             courseName = nz(fieldValue, "");
                         } else if ("questionType".equals(fieldName)) {
                             questionType = nz(fieldValue, "");
+                        } else if ("extraData".equals(fieldName)) {
+                            extraData = nz(fieldValue, "");
                         } else if ("correctMultiple".equals(fieldName)) {
                             correctMultiple = nz(fieldValue, "");
                         }
@@ -1080,8 +1286,12 @@ try {
                     if (!correctMultiple.isEmpty()) correctAnswer = correctMultiple;
                 }
                 
-                pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, imagePath);
-                session.setAttribute("message","Question added successfully");
+                boolean questionAdded = pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, imagePath, extraData);
+                if (questionAdded) {
+                    session.setAttribute("message","Question added successfully");
+                } else {
+                    session.setAttribute("error","Failed to add question. Please check the server logs for details.");
+                }
                 
                 // Save last selections to session
                 session.setAttribute("last_course_name", courseName);
@@ -1116,14 +1326,19 @@ try {
             String correctAnswer = nz(request.getParameter("correct"), "");
             String courseName    = nz(request.getParameter("coursename"), "");
             String questionType  = nz(request.getParameter("questionType"), "");
+            String extraData     = nz(request.getParameter("extraData"), "");
             
             if ("MultipleSelect".equalsIgnoreCase(questionType)) {
                 String correctMultiple = nz(request.getParameter("correctMultiple"), "");
                 if (!correctMultiple.isEmpty()) correctAnswer = correctMultiple;
             }
             
-            pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null);
-            session.setAttribute("message","Question added successfully");
+            boolean questionAdded = pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null, extraData);
+            if (questionAdded) {
+                session.setAttribute("message","Question added successfully");
+            } else {
+                session.setAttribute("error","Failed to add question. Please check the server logs for details.");
+            }
             
             // Save last selections to session
             session.setAttribute("last_course_name", courseName);
@@ -1195,9 +1410,29 @@ try {
                             byte[] pdfBytes = item.get();
                             PDDocument document = null;
                             try {
+<<<<<<< HEAD
                                 // Always use PDDocument.load(byte[]) to avoid invoking PDFBox Loader.loadPDF(),
                                 // which can throw NoSuchMethodError when PDFBox jars are mismatched.
                                 document = PDDocument.load(pdfBytes);
+=======
+                                // Load PDF via reflection to support multiple PDFBox versions.
+                                // This avoids compile errors when certain overloads do not exist.
+                                try {
+                                    java.lang.reflect.Method m = PDDocument.class.getMethod("load", byte[].class);
+                                    document = (PDDocument) m.invoke(null, pdfBytes);
+                                } catch (NoSuchMethodException noByteArrayLoad) {
+                                    try {
+                                        java.io.InputStream in = new java.io.ByteArrayInputStream(pdfBytes);
+                                        java.lang.reflect.Method m = PDDocument.class.getMethod("load", java.io.InputStream.class);
+                                        document = (PDDocument) m.invoke(null, in);
+                                    } catch (NoSuchMethodException noStreamLoad) {
+                                        // Last resort: Loader.loadPDF (may still fail if PDFBox jars are inconsistent)
+                                        Class<?> loaderClass = Class.forName("org.apache.pdfbox.Loader");
+                                        java.lang.reflect.Method loadMethod = loaderClass.getMethod("loadPDF", byte[].class);
+                                        document = (PDDocument) loadMethod.invoke(null, pdfBytes);
+                                    }
+                                }
+>>>>>>> 785ce98247cfd24fe2780613ffa7506689f57ec0
 
                                 PDFTextStripper stripper = new PDFTextStripper();
                                 extractedText = stripper.getText(document);
@@ -1208,10 +1443,32 @@ try {
                                 }
                             }
                         } catch (Throwable loadError) {
+<<<<<<< HEAD
                             LOGGER.log(Level.WARNING, "Error loading PDF: " + loadError.getMessage(), loadError);
                             JSONObject err = new JSONObject();
                             err.put("success", false);
                             err.put("message", "Error loading PDF: " + loadError.getMessage());
+=======
+                            Throwable root = loadError;
+                            if (root instanceof java.lang.reflect.InvocationTargetException) {
+                                Throwable target = ((java.lang.reflect.InvocationTargetException) root).getTargetException();
+                                if (target != null) root = target;
+                            }
+                            while (root.getCause() != null && root.getCause() != root) {
+                                root = root.getCause();
+                            }
+
+                            String technical = String.valueOf(root);
+                            String message = "Error loading PDF: " + technical;
+                            if (technical.contains("IOUtils.createMemoryOnlyStreamCache")) {
+                                message = "PDFBox libraries are incompatible/mismatched (mixed versions in WEB-INF/lib). Please keep a single consistent PDFBox version set (e.g. pdfbox-3.0.6 + pdfbox-io-3.0.6 + fontbox-3.0.6) and remove older pdfbox-app/pdfbox-tools jars.";
+                            }
+
+                            LOGGER.log(Level.WARNING, message, loadError);
+                            JSONObject err = new JSONObject();
+                            err.put("success", false);
+                            err.put("message", message);
+>>>>>>> 785ce98247cfd24fe2780613ffa7506689f57ec0
                             outJSON.print(err.toString());
                             return;
                         }
@@ -1536,10 +1793,20 @@ try {
                     }
                     
                     int qid         = Integer.parseInt(nz(request.getParameter("qid"+i), "0"));
-                    pDAO.insertAnswer(eId, qid, question, ans);
+                    boolean answerInserted = pDAO.insertAnswer(eId, qid, question, ans);
+                    if (!answerInserted) {
+                        session.setAttribute("error","Failed to insert answer for question " + (i+1));
+                        response.sendRedirect("std-page.jsp");
+                        return;
+                    }
                 }
 
-                pDAO.calculateResult(eId, tMarks, endTime, size);
+                boolean resultCalculated = pDAO.calculateResult(eId, tMarks, endTime, size);
+                if (!resultCalculated) {
+                    session.setAttribute("error","Failed to calculate exam result");
+                    response.sendRedirect("std-page.jsp");
+                    return;
+                }
                 
                 // REGISTER EXAM COMPLETION
                 if (userId > 0) {
@@ -1923,6 +2190,170 @@ try {
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Error in verify_and_register action", e);
                 response.getWriter().write("error: " + e.getMessage());
+            }
+            return;
+        }
+        
+    /* =========================
+       DRAG AND DROP HANDLERS
+       ========================= */
+    } else if ("questions".equalsIgnoreCase(pageParam)) {
+        String operation = nz(request.getParameter("operation"), "");
+        
+        if ("adddragdrop".equalsIgnoreCase(operation)) {
+            // Handle drag-drop question creation
+            try {
+                // Verify CSRF token
+                String csrfToken = request.getParameter("csrf_token");
+                String sessionToken = (String) session.getAttribute("csrf_token");
+                
+                if (csrfToken == null || !csrfToken.equals(sessionToken)) {
+                    response.getWriter().write("{\"status\":\"error\",\"message\":\"Invalid CSRF token\"}");
+                    return;
+                }
+                
+                // Parse form data
+                String courseName = request.getParameter("coursename");
+                String questionText = request.getParameter("question");
+                String marksStr = request.getParameter("marks");
+                String extraData = request.getParameter("extraData");
+                
+                // Validate required fields
+                if (courseName == null || courseName.trim().isEmpty() || 
+                    questionText == null || questionText.trim().isEmpty() || 
+                    marksStr == null || marksStr.trim().isEmpty() || 
+                    extraData == null || extraData.trim().isEmpty()) {
+                    
+                    response.getWriter().write("{\"status\":\"error\",\"message\":\"Missing required fields\"}");
+                    return;
+                }
+                
+                // Parse marks
+                double marks = 0;
+                try {
+                    marks = Double.parseDouble(marksStr);
+                } catch (NumberFormatException e) {
+                    response.getWriter().write("{\"status\":\"error\",\"message\":\"Invalid marks value\"}");
+                    return;
+                }
+                
+                // Parse JSON extra data
+                JSONObject config = new JSONObject(extraData);
+                JSONArray itemsArray = config.getJSONArray("items");
+                JSONArray zonesArray = config.getJSONArray("zones");
+                
+                // Create DragDropItem and DragDropZone lists
+                ArrayList<DragDropItem> items = new ArrayList<>();
+                ArrayList<DragDropZone> zones = new ArrayList<>();
+                
+                // Parse items
+                for (int i = 0; i < itemsArray.length(); i++) {
+                    JSONObject itemObj = itemsArray.getJSONObject(i);
+                    DragDropItem item = new DragDropItem();
+                    item.setItemText(itemObj.getString("text"));
+                    item.setItemValue(itemObj.getString("value"));
+                    item.setItemOrder(i + 1);
+                    items.add(item);
+                }
+                
+                // Parse zones
+                for (int i = 0; i < zonesArray.length(); i++) {
+                    JSONObject zoneObj = zonesArray.getJSONObject(i);
+                    DragDropZone zone = new DragDropZone();
+                    zone.setZoneLabel(zoneObj.getString("label"));
+                    zone.setCorrectItemId(zoneObj.getInt("correctItemId"));
+                    zone.setZoneOrder(i + 1);
+                    zones.add(zone);
+                }
+                
+                // Create the drag-drop question
+                boolean success = pDAO.createDragDropQuestion(courseName, questionText, marks, items, zones);
+                
+                if (success) {
+                    response.getWriter().write("{\"status\":\"success\",\"message\":\"Drag and drop question created successfully\"}");
+                } else {
+                    response.getWriter().write("{\"status\":\"error\",\"message\":\"Failed to create drag and drop question\"}");
+                }
+                
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error creating drag-drop question", e);
+                response.getWriter().write("{\"status\":\"error\",\"message\":\"Database error: " + e.getMessage() + "\"}");
+            }
+            return;
+        }
+        
+    } else if ("exam".equalsIgnoreCase(pageParam)) {
+        String operation = nz(request.getParameter("operation"), "");
+        
+        if ("submit_drag_drop".equalsIgnoreCase(operation)) {
+            // Handle drag-drop answer submission
+            try {
+                // Verify CSRF token
+                String csrfToken = request.getParameter("csrf_token");
+                String sessionToken = (String) session.getAttribute("csrf_token");
+                
+                if (csrfToken == null || !csrfToken.equals(sessionToken)) {
+                    response.getWriter().write("{\"status\":\"error\",\"message\":\"Invalid CSRF token\"}");
+                    return;
+                }
+                
+                // Parse submission data
+                String examIdStr = request.getParameter("examId");
+                String questionIdStr = request.getParameter("questionId");
+                String studentId = request.getParameter("studentId");
+                String answersJson = request.getParameter("answers");
+                
+                // Validate required fields
+                if (examIdStr == null || questionIdStr == null || studentId == null || answersJson == null) {
+                    response.getWriter().write("{\"status\":\"error\",\"message\":\"Missing required fields\"}");
+                    return;
+                }
+                
+                int examId = Integer.parseInt(examIdStr);
+                int questionId = Integer.parseInt(questionIdStr);
+                
+                // Parse answers JSON
+                JSONObject answers = new JSONObject(answersJson);
+                double totalMarks = 0;
+                int correctCount = 0;
+                int totalCount = answers.length();
+                
+                // Process each answer
+                for (String zoneKey : answers.keySet()) {
+                    String itemId = answers.getString(zoneKey);
+                    
+                    // Extract zone ID and item ID from keys
+                    int zoneId = Integer.parseInt(zoneKey.replace("zone_", ""));
+                    int droppedItemId = Integer.parseInt(itemId.replace("item_", ""));
+                    
+                    // Check correctness
+                    boolean isCorrect = pDAO.checkDragDropCorrectness(droppedItemId, zoneId, questionId);
+                    
+                    // Calculate marks (equal distribution)
+                    double marksPerItem = 10.0 / totalCount; // Assuming 10 marks total
+                    double obtainedMarks = isCorrect ? marksPerItem : 0;
+                    
+                    // Submit answer
+                    pDAO.submitDragDropAnswer(examId, questionId, studentId, droppedItemId, zoneId, isCorrect, 
+                                            java.math.BigDecimal.valueOf(obtainedMarks));
+                    
+                    totalMarks += obtainedMarks;
+                    if (isCorrect) correctCount++;
+                }
+                
+                // Return results
+                JSONObject result = new JSONObject();
+                result.put("status", "success");
+                result.put("totalMarks", totalMarks);
+                result.put("correctCount", correctCount);
+                result.put("totalCount", totalCount);
+                result.put("percentage", (totalMarks / 10.0) * 100); // Assuming 10 marks total
+                
+                response.getWriter().write(result.toString());
+                
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error submitting drag-drop answers", e);
+                response.getWriter().write("{\"status\":\"error\",\"message\":\"Database error: " + e.getMessage() + "\"}");
             }
             return;
         }
