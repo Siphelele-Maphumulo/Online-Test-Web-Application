@@ -74,6 +74,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Online Examination System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- DragDropTouch polyfill for mobile support -->
+    <script src="https://cdn.jsdelivr.net/npm/drag-drop-touch@1.1.0/DragDropTouch.js"></script>
     <style>
         :root {
             --primary-blue: #09294d;
@@ -399,6 +401,96 @@
             margin: 15px 0;
             display: block;
         }
+
+        /* Drag and Drop Styles */
+        .dnd-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f1f5f9;
+            border-radius: 12px;
+        }
+
+        .items-pool {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px;
+            background: #fff;
+            border: 2px dashed var(--medium-gray);
+            border-radius: 8px;
+            min-height: 60px;
+        }
+
+        .draggable-item {
+            padding: 10px 20px;
+            background: var(--primary-blue);
+            color: white;
+            border-radius: 6px;
+            cursor: grab;
+            user-select: none;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .draggable-item:active {
+            cursor: grabbing;
+        }
+
+        .draggable-item.dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+
+        .drop-zones-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .drop-zone {
+            background: #fff;
+            border: 2px solid var(--medium-gray);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .drop-zone.drag-over {
+            border-color: var(--accent-blue);
+            background: rgba(59, 130, 246, 0.05);
+            transform: scale(1.02);
+        }
+
+        .zone-label {
+            font-weight: 600;
+            color: var(--dark-gray);
+            font-size: 0.9rem;
+        }
+
+        .zone-target {
+            min-height: 50px;
+            border: 2px dashed var(--medium-gray);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
+            color: var(--dark-gray);
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        .zone-target .draggable-item {
+            width: 100%;
+            text-align: center;
+        }
         
         @media (max-width: 768px) {
             .sidebar {
@@ -479,16 +571,10 @@
 
                         <% for (int i = 0; i < totalQ; i++) {
                             Questions q = questionsList.get(i);
-                            ArrayList<String> opts = new ArrayList<>();
-                            if(q.getOpt1() != null && !q.getOpt1().trim().isEmpty()) opts.add(q.getOpt1());
-                            if(q.getOpt2() != null && !q.getOpt2().trim().isEmpty()) opts.add(q.getOpt2());
-                            if(q.getOpt3() != null && !q.getOpt3().trim().isEmpty()) opts.add(q.getOpt3());
-                            if(q.getOpt4() != null && !q.getOpt4().trim().isEmpty()) opts.add(q.getOpt4());
-                            
-                            java.util.Collections.shuffle(opts);
+                            String qType = q.getQuestionType();
                         %>
                         
-                        <div class="question-card">
+                        <div class="question-card" data-qtype="<%= qType %>">
                             <div class="question-header">
                                 <div class="question-number"><%= i+1 %></div>
                                 <div class="question-text"><%= q.getQuestion() %></div>
@@ -500,17 +586,70 @@
                                 </div>
                             <% } %>
                             
-                            <div>
-                                <% for(int oi = 0; oi < opts.size(); oi++) {
-                                    String optVal = opts.get(oi);
-                                    String inputId = "q" + i + "o" + (oi+1);
-                                %>
-                                    <div class="option">
-                                        <input type="radio" id="<%= inputId %>" name="ans<%= i %>" value="<%= optVal %>">
-                                        <label for="<%= inputId %>"><%= optVal %></label>
+                            <% if ("DragAndDrop".equalsIgnoreCase(qType) || "Drag and Drop".equalsIgnoreCase(qType)) {
+                                try {
+                                    JSONObject config = new JSONObject(q.getExtraData());
+                                    JSONArray items = config.getJSONArray("items");
+                                    JSONArray zones = config.getJSONArray("zones");
+
+                                    ArrayList<JSONObject> itemsList = new ArrayList<>();
+                                    for(int j=0; j<items.length(); j++) itemsList.add(items.getJSONObject(j));
+                                    java.util.Collections.shuffle(itemsList);
+                            %>
+                                <div class="dnd-container" id="dnd-container-<%= i %>">
+                                    <div class="items-pool" id="pool-<%= i %>" ondrop="drop(event)" ondragover="allowDrop(event)">
+                                        <% for(JSONObject item : itemsList) { %>
+                                            <div class="draggable-item"
+                                                 id="q<%= i %>_item_<%= item.get("id") %>"
+                                                 draggable="true"
+                                                 ondragstart="drag(event)">
+                                                <%= item.getString("text") %>
+                                            </div>
+                                        <% } %>
                                     </div>
-                                <% } %>
-                            </div>
+
+                                    <div class="drop-zones-container">
+                                        <% for(int j=0; j<zones.length(); j++) {
+                                            JSONObject zone = zones.getJSONObject(j);
+                                        %>
+                                            <div class="drop-zone">
+                                                <div class="zone-label"><%= zone.getString("label") %></div>
+                                                <div class="zone-target"
+                                                     id="q<%= i %>_zone_<%= zone.get("id") %>"
+                                                     ondrop="drop(event)"
+                                                     ondragover="allowDrop(event)">
+                                                    Drop here
+                                                </div>
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                    <input type="hidden" name="ans<%= i %>" id="ans<%= i %>" value="">
+                                </div>
+                            <%
+                                } catch (Exception e) {
+                                    out.println("<p style='color: var(--error);'>Error loading Drag and Drop question.</p>");
+                                }
+                            } else {
+                                ArrayList<String> opts = new ArrayList<>();
+                                if(q.getOpt1() != null && !q.getOpt1().trim().isEmpty()) opts.add(q.getOpt1());
+                                if(q.getOpt2() != null && !q.getOpt2().trim().isEmpty()) opts.add(q.getOpt2());
+                                if(q.getOpt3() != null && !q.getOpt3().trim().isEmpty()) opts.add(q.getOpt3());
+                                if(q.getOpt4() != null && !q.getOpt4().trim().isEmpty()) opts.add(q.getOpt4());
+
+                                java.util.Collections.shuffle(opts);
+                            %>
+                                <div>
+                                    <% for(int oi = 0; oi < opts.size(); oi++) {
+                                        String optVal = opts.get(oi);
+                                        String inputId = "q" + i + "o" + (oi+1);
+                                    %>
+                                        <div class="option">
+                                            <input type="radio" id="<%= inputId %>" name="ans<%= i %>" value="<%= optVal %>">
+                                            <label for="<%= inputId %>"><%= optVal %></label>
+                                        </div>
+                                    <% } %>
+                                </div>
+                            <% } %>
                             <input type="hidden" name="question<%= i %>" value="<%= q.getQuestion() %>">
                             <input type="hidden" name="qid<%= i %>" value="<%= q.getQuestionId() %>">
                         </div>
@@ -752,21 +891,102 @@ String percentageValue = String.format("%.1f", (exam.getObtMarks() * 100.0 / exa
             }, 1000);
         }
 
+        function allowDrop(ev) {
+            ev.preventDefault();
+            if (ev.currentTarget.classList.contains('zone-target') || ev.currentTarget.classList.contains('items-pool')) {
+                ev.currentTarget.classList.add('drag-over');
+            }
+        }
+
+        function drag(ev) {
+            ev.dataTransfer.setData("text", ev.target.id);
+            ev.target.classList.add('dragging');
+        }
+
+        function drop(ev) {
+            ev.preventDefault();
+            var target = ev.currentTarget;
+            target.classList.remove('drag-over');
+
+            var data = ev.dataTransfer.getData("text");
+            var draggedEl = document.getElementById(data);
+            if (!draggedEl) return;
+
+            var source = draggedEl.parentNode;
+            draggedEl.classList.remove('dragging');
+
+            var questionIndex = draggedEl.id.split('_')[0].substring(1);
+
+            if (target.classList.contains('zone-target')) {
+                // If dropping into a zone and it already has an item, move that item back to pool
+                if (target.children.length > 0 && target.children[0].classList.contains('draggable-item')) {
+                    var existingItem = target.children[0];
+                    document.getElementById('pool-' + questionIndex).appendChild(existingItem);
+                }
+                target.innerHTML = '';
+                target.appendChild(draggedEl);
+            } else if (target.classList.contains('items-pool')) {
+                target.appendChild(draggedEl);
+            }
+
+            // If the source was a zone and now it's empty, restore the hint
+            if (source.classList.contains('zone-target') && source.children.length === 0) {
+                source.innerHTML = 'Drop here';
+            }
+
+            updateDnDAnswer(questionIndex);
+        }
+
+        function updateDnDAnswer(qIndex) {
+            var container = document.getElementById('dnd-container-' + qIndex);
+            if (!container) return;
+
+            var zones = container.querySelectorAll('.zone-target');
+            var answer = {};
+            var hasAny = false;
+
+            zones.forEach(function(zone) {
+                var zoneId = zone.id.split('_zone_')[1];
+                if (zone.children.length > 0 && zone.children[0].classList.contains('draggable-item')) {
+                    var itemId = zone.children[0].id.split('_item_')[1];
+                    answer['zone_' + zoneId] = 'item_' + itemId;
+                    hasAny = true;
+                }
+            });
+
+            document.getElementById('ans' + qIndex).value = hasAny ? JSON.stringify(answer) : "";
+        }
+
+        // Add event listeners for dragleave to remove highlight
+        document.addEventListener('dragleave', function(ev) {
+            if (ev.target.classList.contains('zone-target') || ev.target.classList.contains('items-pool')) {
+                ev.target.classList.remove('drag-over');
+            }
+        });
+
         function submitExam() {
             var answeredCount = 0;
-            var radios = document.querySelectorAll('input[type="radio"]');
-            
-            // Count total questions and answered ones
             var questions = document.querySelectorAll('.question-card');
-            var totalQ = questions.length;
             
-            // Count answered questions
-            for (var i = 0; i < radios.length; i++) {
-                if (radios[i].checked) {
-                    answeredCount++;
+            questions.forEach(function(card, index) {
+                var qType = card.getAttribute('data-qtype');
+                if (qType === 'DragAndDrop' || qType === 'Drag and Drop') {
+                    var ansInput = document.getElementById('ans' + index);
+                    if (ansInput && ansInput.value && ansInput.value !== '{}') {
+                        answeredCount++;
+                    }
+                } else {
+                    var radios = card.querySelectorAll('input[type="radio"]');
+                    for (var i = 0; i < radios.length; i++) {
+                        if (radios[i].checked) {
+                            answeredCount++;
+                            break;
+                        }
+                    }
                 }
-            }
+            });
             
+            var totalQ = questions.length;
             var unanswered = totalQ - answeredCount;
             
             if (unanswered > 0) {

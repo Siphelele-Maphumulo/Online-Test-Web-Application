@@ -2215,23 +2215,32 @@ try {
                     JSONObject itemObj = itemsArray.getJSONObject(i);
                     DragDropItem item = new DragDropItem();
                     item.setItemText(itemObj.getString("text"));
-                    item.setItemValue(itemObj.getString("value"));
+                    // Use text as value if value is not provided
+                    item.setItemValue(itemObj.optString("value", itemObj.getString("text")));
                     item.setItemOrder(i + 1);
                     items.add(item);
                 }
                 
+                // Build correctAnswer mapping for JSON storage
+                JSONObject correctMapping = new JSONObject();
+
                 // Parse zones
                 for (int i = 0; i < zonesArray.length(); i++) {
                     JSONObject zoneObj = zonesArray.getJSONObject(i);
                     DragDropZone zone = new DragDropZone();
                     zone.setZoneLabel(zoneObj.getString("label"));
-                    zone.setCorrectItemId(zoneObj.getInt("correctItemId"));
+                    int correctItemId = zoneObj.getInt("correctItemId");
+                    zone.setCorrectItemId(correctItemId);
                     zone.setZoneOrder(i + 1);
                     zones.add(zone);
+
+                    // Match the format used in results.jsp: zone_{id} -> item_{correctItemId}
+                    String zId = zoneObj.getString("id");
+                    correctMapping.put("zone_" + zId, "item_" + correctItemId);
                 }
                 
-                // Create the drag-drop question
-                boolean success = pDAO.createDragDropQuestion(courseName, questionText, marks, items, zones);
+                // Create the drag-drop question with JSON data for compatibility with getAnswerStatus and results.jsp
+                boolean success = pDAO.createDragDropQuestion(courseName, questionText, marks, items, zones, extraData, correctMapping.toString());
                 
                 if (success) {
                     response.getWriter().write("{\"status\":\"success\",\"message\":\"Drag and drop question created successfully\"}");
