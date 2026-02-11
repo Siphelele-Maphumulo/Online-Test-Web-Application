@@ -1575,8 +1575,8 @@ try {
                     // Handle drag-drop questions
                     if ("dragdrop".equals(qtype)) {
                         // Collect all drag-drop matches for this question
-                        Map<Integer, Integer> dragDropMatches = new HashMap<>();
-                        Enumeration<String> paramNames = request.getParameterNames();
+                        java.util.Map<Integer, Integer> dragDropMatches = new java.util.HashMap<Integer, Integer>();
+                        java.util.Enumeration<String> paramNames = request.getParameterNames();
                         
                         while (paramNames.hasMoreElements()) {
                             String paramName = paramNames.nextElement();
@@ -1598,11 +1598,16 @@ try {
                         if (!dragDropMatches.isEmpty() && userId > 0) {
                             try {
                                 float marksObtained = pDAO.submitDragDropAnswers(eId, qid, String.valueOf(userId), dragDropMatches);
-                                // Store a summary answer for display purposes
-                                ans = "Drag-Drop: " + dragDropMatches.size() + " items matched";
+                                // Store JSON of matches for detailed display in results
+                                org.json.JSONObject matchesJson = new org.json.JSONObject();
+                                for (java.util.Map.Entry<Integer, Integer> entry : dragDropMatches.entrySet()) {
+                                    // format: zone_{target_id} -> item_{drag_item_id}
+                                    matchesJson.put("zone_" + entry.getValue(), "item_" + entry.getKey());
+                                }
+                                ans = matchesJson.toString();
                             } catch (Exception e) {
                                 LOGGER.log(Level.SEVERE, "Error submitting drag-drop answers for question " + qid, e);
-                                ans = "Drag-Drop: Error";
+                                ans = "{}";
                             }
                         }
                     }

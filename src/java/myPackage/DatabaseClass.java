@@ -99,7 +99,6 @@ public class DatabaseClass {
             LOGGER.log(Level.SEVERE, "Error updating questions drag-drop columns: " + e.getMessage(), e);
         } finally {
             try { if (pstm != null) pstm.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing statement", e); }
-            try { if (conn != null) conn.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing connection", e); }
         }
     }
 
@@ -132,7 +131,6 @@ public class DatabaseClass {
             LOGGER.log(Level.SEVERE, "Error updating questions drag-drop JSON: " + e.getMessage(), e);
         } finally {
             try { if (pstm != null) pstm.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing statement", e); }
-            try { if (conn != null) conn.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing connection", e); }
         }
     }
 
@@ -159,6 +157,44 @@ public class DatabaseClass {
                 .replace("\r", "\\r")
                 .replace("\n", "\\n")
                 .replace("\t", "\\t");
+    }
+
+    // Get drag and drop data for a specific question
+    public java.util.Map<String, String> getDragDropData(int questionId) {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Connection error in getDragDropData", e);
+            return null;
+        }
+        
+        java.util.Map<String, String> dragDropData = new java.util.HashMap<>();
+        PreparedStatement pstm = null;
+        ResultSet rs = null;
+
+        try {
+            String sql = "SELECT drag_items, drop_targets, drag_correct_targets FROM questions WHERE question_id = ?";
+            pstm = conn.prepareStatement(sql);
+            pstm.setInt(1, questionId);
+            rs = pstm.executeQuery();
+
+            if (rs.next()) {
+                dragDropData.put("drag_items", rs.getString("drag_items"));
+                dragDropData.put("drop_targets", rs.getString("drop_targets"));
+                dragDropData.put("drag_correct_targets", rs.getString("drag_correct_targets"));
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting drag drop data for questionId=" + questionId, e);
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstm != null) pstm.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources in getDragDropData", e);
+            }
+        }
+
+        return dragDropData;
     }
 
     // Get the connection with lazy initialization
@@ -1396,7 +1432,6 @@ public int addNewQuestionReturnId(String questionText, String opt1, String opt2,
             try {
                 if (pstmDrag != null) pstmDrag.close();
                 if (pstmTarget != null) pstmTarget.close();
-                if (conn != null) conn.close();
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
             }
@@ -1425,7 +1460,6 @@ public int addNewQuestionReturnId(String questionText, String opt1, String opt2,
             LOGGER.log(Level.SEVERE, "Error clearing drag-drop data for questionId=" + questionId + ": " + e.getMessage(), e);
         } finally {
             try { if (pstm != null) pstm.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing statement", e); }
-            try { if (conn != null) conn.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing connection", e); }
         }
     }
 
@@ -1458,7 +1492,6 @@ public java.util.List<java.util.Map<String, Object>> getDragItemsByQuestionId(in
         try {
             if (rs != null) rs.close();
             if (pstm != null) pstm.close();
-            if (conn != null) conn.close();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error closing resources", e);
         }
@@ -1495,7 +1528,6 @@ public java.util.List<java.util.Map<String, Object>> getDropTargetsByQuestionId(
         try {
             if (rs != null) rs.close();
             if (pstm != null) pstm.close();
-            if (conn != null) conn.close();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error closing resources", e);
         }
@@ -1590,7 +1622,6 @@ public int getLastInsertedQuestionId() {
         try {
             if (rs != null) rs.close();
             if (stmt != null) stmt.close();
-            if (conn != null) conn.close();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error closing resources", e);
         }
@@ -1599,38 +1630,38 @@ public int getLastInsertedQuestionId() {
     return -1;
 }
 
-// Get drag drop data from the questions table
-public Map<String, String> getDragDropData(int questionId) {
-    Map<String, String> data = new HashMap<>();
-    
-    try {
-        ensureConnection();
-    } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Connection error in getDragDropData", e);
-        return data;
-    }
-    
-    try {
-        String sql = "SELECT drag_items, drop_targets, drag_correct_targets FROM questions WHERE question_id = ?";
-        PreparedStatement pstm = conn.prepareStatement(sql);
-        pstm.setInt(1, questionId);
-        ResultSet rs = pstm.executeQuery();
-        
-        if (rs.next()) {
-            data.put("drag_items", rs.getString("drag_items") != null ? rs.getString("drag_items") : "[]");
-            data.put("drop_targets", rs.getString("drop_targets") != null ? rs.getString("drop_targets") : "[]");
-            data.put("drag_correct_targets", rs.getString("drag_correct_targets") != null ? rs.getString("drag_correct_targets") : "[]");
-        }
-        
-        rs.close();
-        pstm.close();
-        
-    } catch (SQLException ex) {
-        LOGGER.log(Level.SEVERE, "Error getting drag drop data: " + ex.getMessage(), ex);
-    }
-    
-    return data;
-}
+//// Get drag drop data from the questions table
+//public Map<String, String> getDragDropData(int questionId) {
+//    Map<String, String> data = new HashMap<>();
+//    
+//    try {
+//        ensureConnection();
+//    } catch (SQLException e) {
+//        LOGGER.log(Level.SEVERE, "Connection error in getDragDropData", e);
+//        return data;
+//    }
+//    
+//    try {
+//        String sql = "SELECT drag_items, drop_targets, drag_correct_targets FROM questions WHERE question_id = ?";
+//        PreparedStatement pstm = conn.prepareStatement(sql);
+//        pstm.setInt(1, questionId);
+//        ResultSet rs = pstm.executeQuery();
+//        
+//        if (rs.next()) {
+//            data.put("drag_items", rs.getString("drag_items") != null ? rs.getString("drag_items") : "[]");
+//            data.put("drop_targets", rs.getString("drop_targets") != null ? rs.getString("drop_targets") : "[]");
+//            data.put("drag_correct_targets", rs.getString("drag_correct_targets") != null ? rs.getString("drag_correct_targets") : "[]");
+//        }
+//        
+//        rs.close();
+//        pstm.close();
+//        
+//    } catch (SQLException ex) {
+//        LOGGER.log(Level.SEVERE, "Error getting drag drop data: " + ex.getMessage(), ex);
+//    }
+//    
+//    return data;
+//}
     
 public Questions getQuestionById(int questionId) {
     try {
@@ -1666,6 +1697,22 @@ public Questions getQuestionById(int questionId) {
             question.setCourseName(rs.getString("course_name"));
             question.setQuestionType(rs.getString("question_type"));
             question.setImagePath(rs.getString("image_path"));
+            
+            // Populate advanced fields
+            try {
+                question.setExtraData(rs.getString("extra_data"));
+                question.setDragItemsJson(rs.getString("drag_items"));
+                question.setDropTargetsJson(rs.getString("drop_targets"));
+                question.setCorrectTargetsJson(rs.getString("drag_correct_targets"));
+                question.setTotalMarks(rs.getInt("marks"));
+                
+                if ("DRAG_AND_DROP".equalsIgnoreCase(question.getQuestionType())) {
+                    question.setDragItems(getDragItemsByQuestionIdOld(question.getQuestionId()));
+                    question.setDropTargets(getDropTargetsByQuestionIdOld(question.getQuestionId()));
+                }
+            } catch (SQLException sqle) {
+                // Columns might not exist yet
+            }
         }
     } catch (SQLException e) {
         e.printStackTrace();
@@ -2207,17 +2254,37 @@ public ArrayList getQuestions(String courseName, int questions) {
                 rs.getString("question_type"),
                 rs.getString("image_path")
             );
+            
+            // Populate advanced fields from current row
+            try {
+                question.setExtraData(rs.getString("extra_data"));
+                question.setDragItemsJson(rs.getString("drag_items"));
+                question.setDropTargetsJson(rs.getString("drop_targets"));
+                question.setCorrectTargetsJson(rs.getString("drag_correct_targets"));
+                question.setTotalMarks(rs.getInt("marks"));
+            } catch (SQLException sqle) {
+                // Columns might not exist yet
+            }
+            
             list.add(question);
         }
     } catch (SQLException ex) {
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error in getQuestions", ex);
     } finally {
-        // Ensure resources are closed to prevent leaks
         try {
             if (rs != null) rs.close();
             if (pstm != null) pstm.close();
         } catch (SQLException e) {
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in getQuestions", e);
+        }
+    }
+
+    // Now populate nested relational data AFTER closing the main ResultSet
+    for (Object obj : list) {
+        Questions q = (Questions) obj;
+        if ("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType())) {
+            q.setDragItems(getDragItemsByQuestionIdOld(q.getQuestionId()));
+            q.setDropTargets(getDropTargetsByQuestionIdOld(q.getQuestionId()));
         }
     }
     return list;
@@ -2424,17 +2491,37 @@ public ArrayList getAllQuestions(String courseName) {
                 rs.getString("question_type"),
                 rs.getString("image_path")
             );
+            
+            // Populate advanced fields from current row
+            try {
+                question.setExtraData(rs.getString("extra_data"));
+                question.setDragItemsJson(rs.getString("drag_items"));
+                question.setDropTargetsJson(rs.getString("drop_targets"));
+                question.setCorrectTargetsJson(rs.getString("drag_correct_targets"));
+                question.setTotalMarks(rs.getInt("marks"));
+            } catch (SQLException sqle) {
+                // Columns might not exist yet
+            }
+            
             list.add(question);
         }
     } catch (SQLException ex) {
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error in getAllQuestions", ex);
     } finally {
-        // Ensure resources are closed to prevent leaks
         try {
             if (rs != null) rs.close();
             if (pstm != null) pstm.close();
         } catch (SQLException e) {
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in getAllQuestions", e);
+        }
+    }
+
+    // Now populate nested relational data AFTER closing the main ResultSet
+    for (Object obj : list) {
+        Questions q = (Questions) obj;
+        if ("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType())) {
+            q.setDragItems(getDragItemsByQuestionIdOld(q.getQuestionId()));
+            q.setDropTargets(getDropTargetsByQuestionIdOld(q.getQuestionId()));
         }
     }
     return list;
@@ -2582,6 +2669,22 @@ private String getCorrectAnswer(int qid) {
         if (rs.next()) {
             String result = rs.getString("correct");
             String questionType = rs.getString("question_type");
+            
+            // For Drag and Drop, return the correct targets JSON
+            if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
+                org.json.JSONObject correctJson = new org.json.JSONObject();
+                try {
+                    ArrayList<myPackage.classes.DragItem> dragItems = getDragItemsByQuestionIdOld(qid);
+                    for (myPackage.classes.DragItem di : dragItems) {
+                        if (di.getCorrectTargetId() != null && di.getCorrectTargetId() > 0) {
+                            correctJson.put("zone_" + di.getCorrectTargetId(), "item_" + di.getId());
+                        }
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Error building drag drop correct targets JSON: " + e.getMessage());
+                }
+                return correctJson.toString();
+            }
             
             // Handle null from DB and trim whitespace
             if (result != null) {
@@ -2748,7 +2851,29 @@ private String getAnswerStatus(String ans, String correct) {
         return "incorrect";
     }
 
-    // 3. Compare based on question type (multi-select or single)
+    // 3. Compare based on question type (drag-drop, multi-select or single)
+    if (userAnswer.startsWith("{") && correctAnswer.startsWith("{")) {
+        if (userAnswer.equals(correctAnswer)) return "correct";
+        
+        // If not exactly equal, check if there are any matches at all
+        try {
+            org.json.JSONObject userObj = new org.json.JSONObject(userAnswer);
+            org.json.JSONObject correctObj = new org.json.JSONObject(correctAnswer);
+            java.util.Iterator<String> keys = correctObj.keys();
+            boolean anyMatch = false;
+            while(keys.hasNext()) {
+                String key = keys.next();
+                if (userObj.has(key) && userObj.get(key).equals(correctObj.get(key))) {
+                    anyMatch = true;
+                    break;
+                }
+            }
+            return anyMatch ? "partial" : "incorrect";
+        } catch (Exception e) {
+            return "incorrect";
+        }
+    }
+    
     if (correctAnswer.contains("|")) {
         // Normalize multi-select answers by splitting, trimming, sorting, and rejoining
         String[] ansParts = userAnswer.split("\\|");
@@ -3184,7 +3309,6 @@ public boolean deleteExamResult(int examId) {
             if (psExam != null) psExam.close();
             if (conn != null) {
                 conn.setAutoCommit(true);
-                conn.close();
             }
         } catch (SQLException ex) {
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources", ex);
@@ -3402,7 +3526,7 @@ private int getObtMarks(int examId, int tMarks, int size) {
     float correctWeight = 0;
 
     try {
-        String sql = "SELECT a.status, q.question_type " +
+        String sql = "SELECT a.status, q.question_type, q.question_id, q.marks " +
                      "FROM answers a " +
                      "JOIN questions q ON a.question_id = q.question_id " +
                      "WHERE a.exam_id = ?";
@@ -3410,15 +3534,57 @@ private int getObtMarks(int examId, int tMarks, int size) {
         pstm.setInt(1, examId);
         ResultSet rs = pstm.executeQuery();
 
+        // 1. Collect all data from the first ResultSet
+        java.util.List<java.util.Map<String, Object>> answerData = new java.util.ArrayList<>();
         while (rs.next()) {
-            String status = rs.getString("status");
-            String questionType = rs.getString("question_type");
-            
-            float weight = "MultipleSelect".equalsIgnoreCase(questionType) ? 2.0f : 1.0f;
-            totalWeight += weight;
+            java.util.Map<String, Object> data = new java.util.HashMap<>();
+            data.put("status", rs.getString("status"));
+            data.put("question_type", rs.getString("question_type"));
+            data.put("question_id", rs.getInt("question_id"));
+            data.put("marks", rs.getInt("marks"));
+            answerData.add(data);
+        }
+        
+        // Close resources early
+        rs.close();
+        pstm.close();
+        rs = null;
+        pstm = null;
 
-            if ("correct".equals(status)) {
-                correctWeight += weight;
+        // 2. Process collected data, performing sub-queries as needed
+        for (java.util.Map<String, Object> data : answerData) {
+            String status = (String) data.get("status");
+            String questionType = (String) data.get("question_type");
+            int qid = (Integer) data.get("question_id");
+            int qMarks = (Integer) data.get("marks");
+            
+            if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
+                float obtainedForQ = 0;
+                String ddSql = "SELECT SUM(marks_obtained) FROM drag_drop_answers WHERE exam_id = ? AND question_id = ?";
+                try (PreparedStatement ddPstm = conn.prepareStatement(ddSql)) {
+                    ddPstm.setInt(1, examId);
+                    ddPstm.setInt(2, qid);
+                    try (ResultSet ddRs = ddPstm.executeQuery()) {
+                        if (ddRs.next()) {
+                            obtainedForQ = ddRs.getFloat(1);
+                        }
+                    }
+                } catch (SQLException e) {
+                    LOGGER.log(Level.WARNING, "Error fetching drag drop marks: " + e.getMessage());
+                }
+                
+                float qWeight = qMarks > 0 ? (float)qMarks : 1.0f;
+                totalWeight += qWeight;
+                correctWeight += obtainedForQ;
+                
+            } else {
+                float weight = "MultipleSelect".equalsIgnoreCase(questionType) ? 2.0f : 1.0f;
+                if (qMarks > 0) weight = (float)qMarks;
+                
+                totalWeight += weight;
+                if ("correct".equals(status)) {
+                    correctWeight += weight;
+                }
             }
         }
         
@@ -4288,7 +4454,6 @@ public ArrayList<String> getCourseList() {
         // Close all resources properly
         try { if (rs != null) rs.close(); } catch (SQLException e) {}
         try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
-        try { if (conn != null) conn.close(); } catch (SQLException e) {}
     }
     
     json.append("]");
@@ -4323,7 +4488,6 @@ public boolean checkUsernameExists(String username) {
         try {
             if (rs != null) rs.close();
             if (ps != null) ps.close();
-            if (conn != null) conn.close();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error closing resources", e);
         }
@@ -4351,7 +4515,6 @@ public boolean checkEmailExists(String email) {
         try {
             if (rs != null) rs.close();
             if (ps != null) ps.close();
-            if (conn != null) conn.close();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error closing resources", e);
         }
@@ -4379,7 +4542,6 @@ public boolean checkContactNoExists(String contactNo) {
         try {
             if (rs != null) rs.close();
             if (ps != null) ps.close();
-            if (conn != null) conn.close();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error closing resources", e);
         }
@@ -4407,7 +4569,6 @@ public boolean checkStaffEmailExists(String email) {
         try {
             if (rs != null) rs.close();
             if (ps != null) ps.close();
-            if (conn != null) conn.close();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error closing resources", e);
         }
@@ -4471,7 +4632,6 @@ public boolean checkStaffEmailExists(String email) {
         } finally {
             try {
                 if (ps != null) ps.close();
-                if (conn != null) conn.close();
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
             }
@@ -4512,7 +4672,6 @@ public boolean checkStaffEmailExists(String email) {
             try {
                 if (rs != null) rs.close();
                 if (ps != null) ps.close();
-                if (conn != null) conn.close();
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
             }
@@ -4593,7 +4752,6 @@ public boolean checkStaffEmailExists(String email) {
                 if (psDelete != null) psDelete.close();
                 if (conn != null) {
                     conn.setAutoCommit(true); // Reset auto-commit
-                    conn.close();
                 }
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
@@ -4628,7 +4786,6 @@ public boolean checkStaffEmailExists(String email) {
             try {
                 if (rs != null) rs.close();
                 if (ps != null) ps.close();
-                if (conn != null) conn.close();
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
             }
@@ -4663,7 +4820,6 @@ public boolean checkStaffEmailExists(String email) {
             try {
                 if (rs != null) rs.close();
                 if (ps != null) ps.close();
-                if (conn != null) conn.close();
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
             }
@@ -4704,7 +4860,6 @@ public boolean checkStaffEmailExists(String email) {
         } finally {
             try {
                 if (ps != null) ps.close();
-                if (conn != null) conn.close();
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
             }
@@ -5014,7 +5169,6 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
                 if (pstmDropTarget != null) pstmDropTarget.close();
                 if (conn != null) {
                     conn.setAutoCommit(true);
-                    conn.close();
                 }
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
@@ -5102,7 +5256,6 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
                 if (pstm != null) pstm.close();
                 if (conn != null) {
                     conn.setAutoCommit(true);
-                    conn.close();
                 }
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
@@ -5149,7 +5302,6 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             try {
                 if (rs != null) rs.close();
                 if (pstm != null) pstm.close();
-                if (conn != null) conn.close();
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
             }
