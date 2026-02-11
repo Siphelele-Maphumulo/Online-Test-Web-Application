@@ -31,6 +31,9 @@ import org.json.JSONObject;
 import org.json.JSONArray;
 // Add these imports at the top of your DatabaseClass.java
 import myPackage.classes.Result;
+import myPackage.classes.DragDropItem;
+import myPackage.classes.DragDropZone;
+import myPackage.classes.DragDropSubmission;
 
 
 public class DatabaseClass {
@@ -752,7 +755,10 @@ public boolean isUsernameTaken(String username) {
         return examId;
     }
 
-    // In DatabaseClass.java
+    /**
+     * Get active course names
+     * @return ArrayList of active course names
+     */
     public ArrayList<String> getActiveCourseNames() {
         try {
             ensureConnection();
@@ -1977,6 +1983,11 @@ public ArrayList getQuestions(String courseName, int questions) {
     }
     
     
+    /**
+     * Get total marks by course name
+     * @param cName the course name
+     * @return total marks for the course, or 0 if not found
+     */
     public int getTotalMarksByName(String cName){
         try {
             ensureConnection();
@@ -2553,7 +2564,12 @@ public ArrayList<Exams> getResultsFromExams(Integer stdId) {
         }
     }
 
-public int getExamDuration(String courseName) {
+    /**
+     * Get exam duration by course name
+     * @param courseName the course name
+     * @return exam duration in minutes, or 120 as default
+     */
+    public int getExamDuration(String courseName) {
     try {
         ensureConnection();
     } catch (SQLException e) {
@@ -2615,7 +2631,11 @@ public int getExamDuration(String courseName) {
     return duration;
 }
 
-// Method to get an Exam by Exam ID
+/**
+ * Get exam by ID - FIXED VERSION
+ * @param examId the exam ID to retrieve
+ * @return Exams object containing exam information, or null if not found
+ */
 public Exams getResultByExamId(int examId) {
     try {
         ensureConnection();
@@ -4826,8 +4846,305 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error closing resources", e);
         }
     }
+    
+    
+    // ==================== DRAG AND DROP QUESTION METHODS ====================
+    
+    /**
+     * Creates a new drag and drop question
+     * @param courseName the course name for the question
+     * @param questionText the question text
+     * @param marks the marks allocated for this question
+     * @param items list of draggable items
+     * @param zones list of drop zones
+     * @return true if question was created successfully, false otherwise
+     */
+    public boolean createDragDropQuestion(String courseName, String questionText, double marks,
+            ArrayList<DragDropItem> items, ArrayList<DragDropZone> zones) {
+        Connection conn = null;
+        PreparedStatement pstmQuestion = null;
+        PreparedStatement pstmItem = null;
+        PreparedStatement pstmZone = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = getConnection();
+            conn.setAutoCommit(false);
+            
+            // Insert the question
+            String sqlQuestion = "INSERT INTO questions (course_name, question, question_type, marks) VALUES (?, ?, 'Drag and Drop', ?)";
+            pstmQuestion = conn.prepareStatement(sqlQuestion, Statement.RETURN_GENERATED_KEYS);
+            pstmQuestion.setString(1, courseName);
+            pstmQuestion.setString(2, questionText);
+            pstmQuestion.setDouble(3, marks);
+            pstmQuestion.executeUpdate();
+            
+            // Get the generated question ID
+            rs = pstmQuestion.getGeneratedKeys();
+            if (!rs.next()) {
+                throw new SQLException("Failed to retrieve generated question_id");
+            }
+            int questionId = rs.getInt(1);
+            
+            // Insert draggable items
+            String sqlItem = "INSERT INTO drag_drop_items (question_id, item_text, item_value, item_order) VALUES (?, ?, ?, ?)";
+            pstmItem = conn.prepareStatement(sqlItem);
+            for (DragDropItem item : items) {
+                pstmItem.setInt(1, questionId);
+                pstmItem.setString(2, item.getItemText());
+                pstmItem.setString(3, item.getItemValue());
+                pstmItem.setInt(4, item.getItemOrder());
+                pstmItem.addBatch();
+            }
+            pstmItem.executeBatch();
+            
+            // Insert drop zones
+            String sqlZone = "INSERT INTO drag_drop_zones (question_id, zone_label, correct_item_id, zone_order) VALUES (?, ?, ?, ?)";
+            pstmZone = conn.prepareStatement(sqlZone);
+            for (DragDropZone zone : zones) {
+                pstmZone.setInt(1, questionId);
+                pstmZone.setString(2, zone.getZoneLabel());
+                pstmZone.setInt(3, zone.getCorrectItemId());
+                pstmZone.setInt(4, zone.getZoneOrder());
+                pstmZone.addBatch();
+            }
+            pstmZone.executeBatch();
+            
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException rollbackEx) {
+                LOGGER.log(Level.SEVERE, "Rollback failed", rollbackEx);
+            }
+            LOGGER.log(Level.SEVERE, "Error creating drag-drop question", e);
+            return false;
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstmZone != null) pstmZone.close();
+                if (pstmItem != null) pstmItem.close();
+                if (pstmQuestion != null) pstmQuestion.close();
+                if (conn != null) {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+    }
+    
+    /**
+     * Gets all draggable items for a question
+     * @param questionId the question ID
+     * @return ArrayList of DragDropItem objects
+     */
+    public ArrayList<DragDropItem> getDragDropItems(int questionId) {
+        ArrayList<DragDropItem> items = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement pstm = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = getConnection();
+            String sql = "SELECT item_id, question_id, item_text, item_value, item_order FROM drag_drop_items WHERE question_id = ? ORDER BY item_order";
+            pstm = conn.prepareStatement(sql);
+            pstm.setInt(1, questionId);
+            rs = pstm.executeQuery();
+            
+            while (rs.next()) {
+                DragDropItem item = new DragDropItem();
+                item.setItemId(rs.getInt("item_id"));
+                item.setQuestionId(rs.getInt("question_id"));
+                item.setItemText(rs.getString("item_text"));
+                item.setItemValue(rs.getString("item_value"));
+                item.setItemOrder(rs.getInt("item_order"));
+                items.add(item);
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting drag-drop items", e);
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstm != null) pstm.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+        return items;
+    }
+    
+    /**
+     * Gets all drop zones for a question
+     * @param questionId the question ID
+     * @return ArrayList of DragDropZone objects
+     */
+    public ArrayList<DragDropZone> getDragDropZones(int questionId) {
+        ArrayList<DragDropZone> zones = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement pstm = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = getConnection();
+            String sql = "SELECT zone_id, question_id, zone_label, correct_item_id, zone_order FROM drag_drop_zones WHERE question_id = ? ORDER BY zone_order";
+            pstm = conn.prepareStatement(sql);
+            pstm.setInt(1, questionId);
+            rs = pstm.executeQuery();
+            
+            while (rs.next()) {
+                DragDropZone zone = new DragDropZone();
+                zone.setZoneId(rs.getInt("zone_id"));
+                zone.setQuestionId(rs.getInt("question_id"));
+                zone.setZoneLabel(rs.getString("zone_label"));
+                zone.setCorrectItemId(rs.getInt("correct_item_id"));
+                zone.setZoneOrder(rs.getInt("zone_order"));
+                zones.add(zone);
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting drag-drop zones", e);
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstm != null) pstm.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+        return zones;
+    }
+    
+    /**
+     * Submits drag-drop answer and calculates marks
+     * @param examId the exam ID
+     * @param questionId the question ID
+     * @param studentId the student ID
+     * @param droppedItemId the ID of the dropped item
+     * @param dropZoneId the ID of the drop zone
+     * @param isCorrect whether the answer is correct
+     * @param marksObtained the marks obtained
+     * @return true if submission was successful, false otherwise
+     */
+    public boolean submitDragDropAnswer(int examId, int questionId, String studentId, 
+            int droppedItemId, int dropZoneId, boolean isCorrect, java.math.BigDecimal marksObtained) {
+        Connection conn = null;
+        PreparedStatement pstm = null;
+        
+        try {
+            conn = getConnection();
+            String sql = "INSERT INTO drag_drop_submissions (exam_id, question_id, student_id, dropped_item_id, drop_zone_id, is_correct, marks_obtained, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            pstm = conn.prepareStatement(sql);
+            pstm.setInt(1, examId);
+            pstm.setInt(2, questionId);
+            pstm.setString(3, studentId);
+            pstm.setInt(4, droppedItemId);
+            pstm.setInt(5, dropZoneId);
+            pstm.setBoolean(6, isCorrect);
+            pstm.setBigDecimal(7, marksObtained);
+            pstm.setTimestamp(8, new java.sql.Timestamp(System.currentTimeMillis()));
+            
+            int rowsAffected = pstm.executeUpdate();
+            return rowsAffected > 0;
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error submitting drag-drop answer", e);
+            return false;
+        } finally {
+            try {
+                if (pstm != null) pstm.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+    }
+    
+    /**
+     * Helper method to check if a dropped item is correct for a zone
+     * @param droppedItemId the ID of the dropped item
+     * @param dropZoneId the ID of the drop zone
+     * @param questionId the question ID
+     * @return true if the dropped item matches the correct item for the zone, false otherwise
+     */
+    public boolean checkDragDropCorrectness(int droppedItemId, int dropZoneId, int questionId) {
+        Connection conn = null;
+        PreparedStatement pstm = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = getConnection();
+            String sql = "SELECT correct_item_id FROM drag_drop_zones WHERE zone_id = ? AND question_id = ?";
+            pstm = conn.prepareStatement(sql);
+            pstm.setInt(1, dropZoneId);
+            pstm.setInt(2, questionId);
+            rs = pstm.executeQuery();
+            
+            if (rs.next()) {
+                int correctItemId = rs.getInt("correct_item_id");
+                return correctItemId == droppedItemId;
+            }
+            return false;
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error checking drag-drop correctness", e);
+            return false;
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstm != null) pstm.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+    }
+    
+    /**
+     * Gets drag-drop submissions for a student
+     * @param examId the exam ID
+     * @param studentId the student ID
+     * @return ArrayList of DragDropSubmission objects
+     */
+    public ArrayList<DragDropSubmission> getDragDropSubmissions(int examId, String studentId) {
+        ArrayList<DragDropSubmission> submissions = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement pstm = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = getConnection();
+            String sql = "SELECT submission_id, exam_id, question_id, student_id, dropped_item_id, drop_zone_id, is_correct, marks_obtained, submitted_at FROM drag_drop_submissions WHERE exam_id = ? AND student_id = ?";
+            pstm = conn.prepareStatement(sql);
+            pstm.setInt(1, examId);
+            pstm.setString(2, studentId);
+            rs = pstm.executeQuery();
+            
+            while (rs.next()) {
+                DragDropSubmission submission = new DragDropSubmission();
+                submission.setSubmissionId(rs.getInt("submission_id"));
+                submission.setExamId(rs.getInt("exam_id"));
+                submission.setQuestionId(rs.getInt("question_id"));
+                submission.setStudentId(rs.getString("student_id"));
+                submission.setDroppedItemId(rs.getInt("dropped_item_id"));
+                submission.setDropZoneId(rs.getInt("drop_zone_id"));
+                submission.setCorrect(rs.getBoolean("is_correct"));
+                submission.setMarksObtained(rs.getBigDecimal("marks_obtained"));
+                submission.setSubmittedAt(rs.getTimestamp("submitted_at"));
+                submissions.add(submission);
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting drag-drop submissions", e);
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstm != null) pstm.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+        return submissions;
     }
 }
-    
-
-

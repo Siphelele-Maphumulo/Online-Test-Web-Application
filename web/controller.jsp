@@ -19,7 +19,12 @@
 <%@ page import="myPackage.classes.User" %>
 <%@ page import="myPackage.classes.Questions" %>
 <%@ page import="myPackage.classes.Courses" %>
+<%@ page import="myPackage.classes.DragDropItem" %>
+<%@ page import="myPackage.classes.DragDropZone" %>
+<%@ page import="myPackage.classes.DragDropSubmission" %>
 <%@ page import="org.mindrot.jbcrypt.BCrypt" %>
+<%
+
 <%@ page import="myPackage.Email" %>
 <%@ page import="myPackage.OpenRouterClient" %>
 <%@ page import="org.json.JSONObject" %>
@@ -2149,6 +2154,170 @@ try {
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Error in verify_and_register action", e);
                 response.getWriter().write("error: " + e.getMessage());
+            }
+            return;
+        }
+        
+    /* =========================
+       DRAG AND DROP HANDLERS
+       ========================= */
+    } else if ("questions".equalsIgnoreCase(pageParam)) {
+        String operation = nz(request.getParameter("operation"), "");
+        
+        if ("adddragdrop".equalsIgnoreCase(operation)) {
+            // Handle drag-drop question creation
+            try {
+                // Verify CSRF token
+                String csrfToken = request.getParameter("csrf_token");
+                String sessionToken = (String) session.getAttribute("csrf_token");
+                
+                if (csrfToken == null || !csrfToken.equals(sessionToken)) {
+                    response.getWriter().write("{\"status\":\"error\",\"message\":\"Invalid CSRF token\"}");
+                    return;
+                }
+                
+                // Parse form data
+                String courseName = request.getParameter("coursename");
+                String questionText = request.getParameter("question");
+                String marksStr = request.getParameter("marks");
+                String extraData = request.getParameter("extraData");
+                
+                // Validate required fields
+                if (courseName == null || courseName.trim().isEmpty() || 
+                    questionText == null || questionText.trim().isEmpty() || 
+                    marksStr == null || marksStr.trim().isEmpty() || 
+                    extraData == null || extraData.trim().isEmpty()) {
+                    
+                    response.getWriter().write("{\"status\":\"error\",\"message\":\"Missing required fields\"}");
+                    return;
+                }
+                
+                // Parse marks
+                double marks = 0;
+                try {
+                    marks = Double.parseDouble(marksStr);
+                } catch (NumberFormatException e) {
+                    response.getWriter().write("{\"status\":\"error\",\"message\":\"Invalid marks value\"}");
+                    return;
+                }
+                
+                // Parse JSON extra data
+                JSONObject config = new JSONObject(extraData);
+                JSONArray itemsArray = config.getJSONArray("items");
+                JSONArray zonesArray = config.getJSONArray("zones");
+                
+                // Create DragDropItem and DragDropZone lists
+                ArrayList<DragDropItem> items = new ArrayList<>();
+                ArrayList<DragDropZone> zones = new ArrayList<>();
+                
+                // Parse items
+                for (int i = 0; i < itemsArray.length(); i++) {
+                    JSONObject itemObj = itemsArray.getJSONObject(i);
+                    DragDropItem item = new DragDropItem();
+                    item.setItemText(itemObj.getString("text"));
+                    item.setItemValue(itemObj.getString("value"));
+                    item.setItemOrder(i + 1);
+                    items.add(item);
+                }
+                
+                // Parse zones
+                for (int i = 0; i < zonesArray.length(); i++) {
+                    JSONObject zoneObj = zonesArray.getJSONObject(i);
+                    DragDropZone zone = new DragDropZone();
+                    zone.setZoneLabel(zoneObj.getString("label"));
+                    zone.setCorrectItemId(zoneObj.getInt("correctItemId"));
+                    zone.setZoneOrder(i + 1);
+                    zones.add(zone);
+                }
+                
+                // Create the drag-drop question
+                boolean success = pDAO.createDragDropQuestion(courseName, questionText, marks, items, zones);
+                
+                if (success) {
+                    response.getWriter().write("{\"status\":\"success\",\"message\":\"Drag and drop question created successfully\"}");
+                } else {
+                    response.getWriter().write("{\"status\":\"error\",\"message\":\"Failed to create drag and drop question\"}");
+                }
+                
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error creating drag-drop question", e);
+                response.getWriter().write("{\"status\":\"error\",\"message\":\"Database error: " + e.getMessage() + "\"}");
+            }
+            return;
+        }
+        
+    } else if ("exam".equalsIgnoreCase(pageParam)) {
+        String operation = nz(request.getParameter("operation"), "");
+        
+        if ("submit_drag_drop".equalsIgnoreCase(operation)) {
+            // Handle drag-drop answer submission
+            try {
+                // Verify CSRF token
+                String csrfToken = request.getParameter("csrf_token");
+                String sessionToken = (String) session.getAttribute("csrf_token");
+                
+                if (csrfToken == null || !csrfToken.equals(sessionToken)) {
+                    response.getWriter().write("{\"status\":\"error\",\"message\":\"Invalid CSRF token\"}");
+                    return;
+                }
+                
+                // Parse submission data
+                String examIdStr = request.getParameter("examId");
+                String questionIdStr = request.getParameter("questionId");
+                String studentId = request.getParameter("studentId");
+                String answersJson = request.getParameter("answers");
+                
+                // Validate required fields
+                if (examIdStr == null || questionIdStr == null || studentId == null || answersJson == null) {
+                    response.getWriter().write("{\"status\":\"error\",\"message\":\"Missing required fields\"}");
+                    return;
+                }
+                
+                int examId = Integer.parseInt(examIdStr);
+                int questionId = Integer.parseInt(questionIdStr);
+                
+                // Parse answers JSON
+                JSONObject answers = new JSONObject(answersJson);
+                double totalMarks = 0;
+                int correctCount = 0;
+                int totalCount = answers.length();
+                
+                // Process each answer
+                for (String zoneKey : answers.keySet()) {
+                    String itemId = answers.getString(zoneKey);
+                    
+                    // Extract zone ID and item ID from keys
+                    int zoneId = Integer.parseInt(zoneKey.replace("zone_", ""));
+                    int droppedItemId = Integer.parseInt(itemId.replace("item_", ""));
+                    
+                    // Check correctness
+                    boolean isCorrect = pDAO.checkDragDropCorrectness(droppedItemId, zoneId, questionId);
+                    
+                    // Calculate marks (equal distribution)
+                    double marksPerItem = 10.0 / totalCount; // Assuming 10 marks total
+                    double obtainedMarks = isCorrect ? marksPerItem : 0;
+                    
+                    // Submit answer
+                    pDAO.submitDragDropAnswer(examId, questionId, studentId, droppedItemId, zoneId, isCorrect, 
+                                            java.math.BigDecimal.valueOf(obtainedMarks));
+                    
+                    totalMarks += obtainedMarks;
+                    if (isCorrect) correctCount++;
+                }
+                
+                // Return results
+                JSONObject result = new JSONObject();
+                result.put("status", "success");
+                result.put("totalMarks", totalMarks);
+                result.put("correctCount", correctCount);
+                result.put("totalCount", totalCount);
+                result.put("percentage", (totalMarks / 10.0) * 100); // Assuming 10 marks total
+                
+                response.getWriter().write(result.toString());
+                
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error submitting drag-drop answers", e);
+                response.getWriter().write("{\"status\":\"error\",\"message\":\"Database error: " + e.getMessage() + "\"}");
             }
             return;
         }

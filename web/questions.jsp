@@ -2963,8 +2963,83 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!isValid) {
                 e.preventDefault();
                 showToast('error', 'Validation Error', errorMsg);
+                return;
+            }
+            
+            // Handle drag-drop questions via AJAX
+            if (qType === "DragAndDrop") {
+                e.preventDefault();
+                submitDragDropQuestion();
+                return;
             }
         });
+        
+        // Function to submit drag-drop questions via AJAX
+        function submitDragDropQuestion() {
+            const formData = new FormData();
+            
+            // Get form data
+            const courseName = document.getElementById('courseSelectAddNew').value;
+            const questionText = document.getElementById('questionTextarea').value.trim();
+            const marks = document.getElementById('marks').value;
+            const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+            
+            // Get drag-drop configuration
+            const config = JSON.parse(document.getElementById('extraData').value);
+            
+            // Build form data for AJAX request
+            const params = new URLSearchParams();
+            params.append('page', 'questions');
+            params.append('operation', 'adddragdrop');
+            params.append('csrf_token', csrfToken);
+            params.append('coursename', courseName);
+            params.append('question', questionText);
+            params.append('marks', marks);
+            params.append('extraData', JSON.stringify(config));
+            
+            // Show loading state
+            const submitBtn = document.querySelector('#addQuestionForm button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+            submitBtn.disabled = true;
+            
+            // Send AJAX request
+            fetch('controller.jsp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: params.toString()
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showToast('success', 'Success', data.message);
+                    // Reset form
+                    document.getElementById('addQuestionForm').reset();
+                    // Clear drag-drop UI
+                    document.getElementById('draggableItemsList').innerHTML = '';
+                    document.getElementById('dropZonesList').innerHTML = '';
+                    document.getElementById('extraData').value = '';
+                    itemCounter = 0;
+                    zoneCounter = 0;
+                    // Hide drag-drop container
+                    document.getElementById('dragAndDropContainer').style.display = 'none';
+                } else {
+                    showToast('error', 'Error', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('error', 'Error', 'Failed to create drag-drop question');
+            })
+            .finally(() => {
+                // Restore button state
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
+        }
     }
     
     // Close modal when clicking outside
