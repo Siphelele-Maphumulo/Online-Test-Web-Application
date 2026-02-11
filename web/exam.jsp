@@ -1,5 +1,7 @@
 <!-- Font Awesome for Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<!-- DragDropTouch Polyfill for Mobile Support -->
+<script src="https://cdn.jsdelivr.net/gh/Bernardo-Castilho/dragdroptouch@master/DragDropTouch.js"></script>
 <%@page import="java.util.ArrayList"%>
 <%@page import="myPackage.classes.Questions"%>
 <%@page import="myPackage.classes.Exams"%>
@@ -30,6 +32,16 @@
 %>
 
 <%!
+    // Function to escape HTML characters for safe display in attributes
+    public String escapeHtmlAttr(String input) {
+        if (input == null) return "";
+        return input.replace("&", "&amp;")
+                   .replace("<", "&lt;")
+                   .replace(">", "&gt;")
+                   .replace("\"", "&quot;")
+                   .replace("'", "&#x27;");
+    }
+
     // Helper method to format duration in minutes to readable format
     private String formatDuration(int minutes) {
         if (minutes < 60) {
@@ -1789,13 +1801,18 @@
         grid-template-columns: 1fr 1fr;
         gap: var(--spacing-lg);
         margin-top: var(--spacing-md);
+        padding: 10px;
+        background: #f1f5f9;
+        border-radius: var(--radius-md);
     }
     
     .drag-items-section, .drop-targets-section {
         background: var(--white);
         border-radius: var(--radius-md);
         padding: var(--spacing-md);
-        border: 1px solid var(--medium-gray);
+        border: 2px solid #cbd5e1;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        min-height: 300px;
     }
     
     .drag-items-section h4, .drop-targets-section h4 {
@@ -2036,8 +2053,8 @@
                                 }
                             %>
                                 <div class="drag-drop-question"
-                                     data-items-json='<%= itemsArray.toString() %>'
-                                     data-targets-json='<%= targetsArray.toString() %>'>
+                                     data-items-json="<%= escapeHtmlAttr(itemsArray.toString()) %>"
+                                     data-targets-json="<%= escapeHtmlAttr(targetsArray.toString()) %>">
                                     <div class="drag-drop-instructions">
                                         <i class="fas fa-hand-rock"></i>
                                         <strong>Drag and Drop Question</strong>

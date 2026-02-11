@@ -99,7 +99,6 @@ public class DatabaseClass {
             LOGGER.log(Level.SEVERE, "Error updating questions drag-drop columns: " + e.getMessage(), e);
         } finally {
             try { if (pstm != null) pstm.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing statement", e); }
-            try { if (conn != null) conn.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing connection", e); }
         }
     }
 
@@ -132,7 +131,6 @@ public class DatabaseClass {
             LOGGER.log(Level.SEVERE, "Error updating questions drag-drop JSON: " + e.getMessage(), e);
         } finally {
             try { if (pstm != null) pstm.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing statement", e); }
-            try { if (conn != null) conn.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing connection", e); }
         }
     }
 
@@ -1396,7 +1394,6 @@ public int addNewQuestionReturnId(String questionText, String opt1, String opt2,
             try {
                 if (pstmDrag != null) pstmDrag.close();
                 if (pstmTarget != null) pstmTarget.close();
-                if (conn != null) conn.close();
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
             }
@@ -1425,7 +1422,6 @@ public int addNewQuestionReturnId(String questionText, String opt1, String opt2,
             LOGGER.log(Level.SEVERE, "Error clearing drag-drop data for questionId=" + questionId + ": " + e.getMessage(), e);
         } finally {
             try { if (pstm != null) pstm.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing statement", e); }
-            try { if (conn != null) conn.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing connection", e); }
         }
     }
 
@@ -1458,7 +1454,6 @@ public java.util.List<java.util.Map<String, Object>> getDragItemsByQuestionId(in
         try {
             if (rs != null) rs.close();
             if (pstm != null) pstm.close();
-            if (conn != null) conn.close();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error closing resources", e);
         }
@@ -1495,7 +1490,6 @@ public java.util.List<java.util.Map<String, Object>> getDropTargetsByQuestionId(
         try {
             if (rs != null) rs.close();
             if (pstm != null) pstm.close();
-            if (conn != null) conn.close();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error closing resources", e);
         }
@@ -1590,7 +1584,6 @@ public int getLastInsertedQuestionId() {
         try {
             if (rs != null) rs.close();
             if (stmt != null) stmt.close();
-            if (conn != null) conn.close();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error closing resources", e);
         }
@@ -3273,7 +3266,6 @@ public boolean deleteExamResult(int examId) {
             if (psExam != null) psExam.close();
             if (conn != null) {
                 conn.setAutoCommit(true);
-                conn.close();
             }
         } catch (SQLException ex) {
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources", ex);
@@ -4402,7 +4394,6 @@ public ArrayList<String> getCourseList() {
         // Close all resources properly
         try { if (rs != null) rs.close(); } catch (SQLException e) {}
         try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
-        try { if (conn != null) conn.close(); } catch (SQLException e) {}
     }
     
     json.append("]");
@@ -4437,7 +4428,6 @@ public boolean checkUsernameExists(String username) {
         try {
             if (rs != null) rs.close();
             if (ps != null) ps.close();
-            if (conn != null) conn.close();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error closing resources", e);
         }
@@ -4465,7 +4455,6 @@ public boolean checkEmailExists(String email) {
         try {
             if (rs != null) rs.close();
             if (ps != null) ps.close();
-            if (conn != null) conn.close();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error closing resources", e);
         }
@@ -4493,7 +4482,6 @@ public boolean checkContactNoExists(String contactNo) {
         try {
             if (rs != null) rs.close();
             if (ps != null) ps.close();
-            if (conn != null) conn.close();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error closing resources", e);
         }
@@ -4521,7 +4509,6 @@ public boolean checkStaffEmailExists(String email) {
         try {
             if (rs != null) rs.close();
             if (ps != null) ps.close();
-            if (conn != null) conn.close();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error closing resources", e);
         }
@@ -4585,7 +4572,6 @@ public boolean checkStaffEmailExists(String email) {
         } finally {
             try {
                 if (ps != null) ps.close();
-                if (conn != null) conn.close();
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
             }
@@ -4626,7 +4612,6 @@ public boolean checkStaffEmailExists(String email) {
             try {
                 if (rs != null) rs.close();
                 if (ps != null) ps.close();
-                if (conn != null) conn.close();
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
             }
@@ -4707,7 +4692,6 @@ public boolean checkStaffEmailExists(String email) {
                 if (psDelete != null) psDelete.close();
                 if (conn != null) {
                     conn.setAutoCommit(true); // Reset auto-commit
-                    conn.close();
                 }
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
@@ -4742,7 +4726,6 @@ public boolean checkStaffEmailExists(String email) {
             try {
                 if (rs != null) rs.close();
                 if (ps != null) ps.close();
-                if (conn != null) conn.close();
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
             }
@@ -4777,7 +4760,6 @@ public boolean checkStaffEmailExists(String email) {
             try {
                 if (rs != null) rs.close();
                 if (ps != null) ps.close();
-                if (conn != null) conn.close();
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
             }
@@ -4818,7 +4800,6 @@ public boolean checkStaffEmailExists(String email) {
         } finally {
             try {
                 if (ps != null) ps.close();
-                if (conn != null) conn.close();
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
             }
@@ -5128,7 +5109,6 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
                 if (pstmDropTarget != null) pstmDropTarget.close();
                 if (conn != null) {
                     conn.setAutoCommit(true);
-                    conn.close();
                 }
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
@@ -5216,7 +5196,6 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
                 if (pstm != null) pstm.close();
                 if (conn != null) {
                     conn.setAutoCommit(true);
-                    conn.close();
                 }
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
@@ -5263,7 +5242,6 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             try {
                 if (rs != null) rs.close();
                 if (pstm != null) pstm.close();
-                if (conn != null) conn.close();
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
             }
