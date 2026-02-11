@@ -23,7 +23,6 @@
 <%@ page import="myPackage.classes.DragDropZone" %>
 <%@ page import="myPackage.classes.DragDropSubmission" %>
 <%@ page import="org.mindrot.jbcrypt.BCrypt" %>
-<%
 
 <%@ page import="myPackage.Email" %>
 <%@ page import="myPackage.OpenRouterClient" %>
@@ -2202,9 +2201,9 @@ try {
                 }
                 
                 // Parse JSON extra data
-                JSONObject config = new JSONObject(extraData);
-                JSONArray itemsArray = config.getJSONArray("items");
-                JSONArray zonesArray = config.getJSONArray("zones");
+                JSONObject dndConfig = new JSONObject(extraData);
+                JSONArray itemsArray = dndConfig.getJSONArray("items");
+                JSONArray zonesArray = dndConfig.getJSONArray("zones");
                 
                 // Create DragDropItem and DragDropZone lists
                 ArrayList<DragDropItem> items = new ArrayList<>();
