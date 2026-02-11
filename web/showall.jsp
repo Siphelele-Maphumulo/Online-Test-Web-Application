@@ -3,6 +3,11 @@
 <%@page import="java.util.ArrayList"%>
 <%@page import="java.util.Map"%>
 
+<!-- Font Awesome Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <%!
     private String[] parseSimpleJsonArray(String json) {
         if (json == null) return new String[0];
@@ -55,6 +60,7 @@ String courseName = request.getParameter("coursename");
 ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName) : new ArrayList();
 %>
 
+<!-- Your existing CSS -->
 <style>
     :root {
         --primary-blue: #09294d;
@@ -210,13 +216,13 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName) : new A
     .btn-delete:hover { background: #fecaca; }
 
     .floating-back {
-        position: fixed; bottom: 30px; left: 230px;
+        position: fixed; bottom: 30px; right: 0px;
         background: var(--white); border: 1px solid var(--medium-gray);
         padding: 10px 20px; border-radius: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         text-decoration: none; color: var(--text-dark); font-weight: 500;
         display: flex; align-items: center; gap: 8px; z-index: 100;
     }
-    .floating-back:hover { background: var(--light-gray); transform: translateY(-2px); }
+    .floating-back:hover { background: #476287; color: #e0f2fe;}
 
     .no-data {
         text-align: center; padding: 60px; background: white; border-radius: var(--radius-md);
@@ -343,7 +349,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName) : new A
                                     <a href="edit_question.jsp?qid=<%= q.getQuestionId() %>&coursename=<%= courseName %>" class="btn-icon btn-edit" title="Edit Question">
                                         <i class="fas fa-pen"></i>
                                     </a>
-                                    <button class="btn-icon btn-delete" onclick="showDeleteModal(<%= q.getQuestionId() %>, '<%= courseName %>')" title="Delete Question">
+                                    <button class="btn-icon btn-delete" data-qid="<%= q.getQuestionId() %>" data-course="<%= courseName %>" onclick="showDeleteModalFromData(this)" title="Delete Question">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -436,7 +442,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName) : new A
 </div>
 
 <a href="adm-page.jsp?pgprt=3" class="floating-back">
-    <i class="fas fa-chevron-left"></i> Back to Courses
+    <i class="fas fa-chevron-left" ></i> Back to Courses
 </a>
 
 <!-- Delete Confirmation Modal -->
@@ -461,6 +467,12 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName) : new A
         questionToDelete = qid;
         courseToDeleteFrom = cname;
         document.getElementById('deleteModal').style.display = 'flex';
+    }
+    
+    function showDeleteModalFromData(button) {
+        const qid = button.getAttribute('data-qid');
+        const cname = button.getAttribute('data-course');
+        showDeleteModal(qid, cname);
     }
 
     function hideDeleteModal() {
