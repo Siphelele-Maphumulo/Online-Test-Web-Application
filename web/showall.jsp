@@ -1,6 +1,36 @@
 <%@page import="myPackage.classes.Questions"%>
 <%@page import="java.util.ArrayList"%>
-<%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
+<%@page import="java.util.Map"%>
+
+<%!
+    private String[] parseSimpleJsonArray(String json) {
+        if (json == null) return new String[0];
+        json = json.trim();
+        if (json.length() < 2) return new String[0];
+        if ("[]".equals(json)) return new String[0];
+        if (json.startsWith("[") && json.endsWith("]")) {
+            json = json.substring(1, json.length() - 1).trim();
+        }
+        if (json.isEmpty()) return new String[0];
+
+        // Expecting a simple JSON array of strings produced by DatabaseClass.toJsonArray
+        // Example: ["A","B"]
+        if (json.startsWith("\"") && json.endsWith("\"")) {
+            json = json.substring(1, json.length() - 1);
+        }
+        String[] parts = json.split("\\\",\\\"", -1);
+        for (int i = 0; i < parts.length; i++) {
+            String s = parts[i];
+            s = s.replace("\\\\\"", "\"");
+            s = s.replace("\\\\n", "\n");
+            s = s.replace("\\\\r", "\r");
+            s = s.replace("\\\\t", "\t");
+            s = s.replace("\\\\\\\\", "\\");
+            parts[i] = s;
+        }
+        return parts;
+    }
+%>
 
 <%
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
@@ -941,15 +971,66 @@ session.setAttribute("csrf_token", csrfToken);
                             Edit
                         </a>
 
-                        <button type="button" class="btn btn-error single-delete-btn" style="font-size: 13px; padding: 8px 16px;" data-qid="<%= question.getQuestionId() %>" data-coursename="<%= courseName %>">
+                        <a href="controller.jsp?page=questions&operation=del&qid=<%= question.getQuestionId() %>&coursename=<%= courseName %>&csrf_token=<%= csrfToken %>"
+                           onclick="return confirm('Are you sure you want to delete this question?')"
+                           class="btn btn-error" style="font-size: 13px; padding: 8px 16px;">
                             <i class="fas fa-trash"></i>
                             Delete
-                        </button>
+                        </a>
                     </div>
                 </div>
                 
-                <div class="question-content">
-                    <div class="options-grid">
+                <!-- Options Section -->
+                <div class="options-container">
+                    <% if ("DRAG_AND_DROP".equals(questionType)) { %>
+                        <!-- Special display for Drag and Drop questions -->
+                        <div class="drag-drop-display">
+                            <div class="drag-items-section">
+                                <h4><i class="fas fa-hand-rock"></i> Draggable Items:</h4>
+                                <div class="drag-items-list">
+                                    <%
+                                    Map<String, String> dd = pDAO.getDragDropData(Integer.parseInt(questionId));
+                                    String[] dragItems = parseSimpleJsonArray(dd.get("drag_items"));
+                                    String[] dropTargets = parseSimpleJsonArray(dd.get("drop_targets"));
+                                    String[] correctTargets = parseSimpleJsonArray(dd.get("drag_correct_targets"));
+                                    
+                                    for (int j = 0; j < dragItems.length; j++) {
+                                        String item = dragItems[j].trim();
+                                        if (!item.isEmpty()) {
+                                            String targetLabel = (j < correctTargets.length) ? correctTargets[j].trim() : "?";
+                                    %>
+                                    <div class="drag-item-display">
+                                        <span class="item-text"><%= item %></span>
+                                        <span class="arrow">→</span>
+                                        <span class="target-text"><%= targetLabel %></span>
+                                    </div>
+                                    <%
+                                        }
+                                    }
+                                    %>
+                                </div>
+                            </div>
+                            
+                            <div class="drop-targets-section">
+                                <h4><i class="fas fa-bullseye"></i> Drop Targets:</h4>
+                                <div class="drop-targets-list">
+                                    <%
+                                    for (String target : dropTargets) {
+                                        String targetLabel = target.trim();
+                                        if (!targetLabel.isEmpty()) {
+                                    %>
+                                    <div class="drop-target-display">
+                                        <span class="target-label"><%= targetLabel %></span>
+                                    </div>
+                                    <%
+                                        }
+                                    }
+                                    %>
+                                </div>
+                            </div>
+                        </div>
+                    <% } else { %>
+                        <!-- Regular options display for other question types -->
                         <!-- Option A -->
                         <div class="option-item <%= isMultipleSelect ? 
                               (containsAnswer(correctAnswers, opt1) ? "option-correct-multiple" : "") : 
@@ -985,7 +1066,8 @@ session.setAttribute("csrf_token", csrfToken);
                             <div class="option-text"><%= opt4 %></div>
                         </div>
                         <% } %>
-                    </div>
+                    <% } %>  
+                </div>
                     
                     <div class="question-meta">
                         <div class="meta-item">
@@ -1136,6 +1218,103 @@ session.setAttribute("csrf_token", csrfToken);
     from { opacity: 0; }
     to { opacity: 1; }
 }
+
+/* Drag and Drop Display Styles */
+.drag-drop-display {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid #e9ecef;
+}
+
+.drag-items-section, .drop-targets-section {
+    margin-bottom: 20px;
+}
+
+.drag-items-section h4, .drop-targets-section h4 {
+    color: #495057;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.drag-items-list, .drop-targets-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.drag-item-display {
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    border-radius: 6px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s ease;
+}
+
+.drag-item-display:hover {
+    background: #bbdefb;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.item-text {
+    background: #2196f3;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 13px;
+    min-width: 80px;
+    text-align: center;
+}
+
+.arrow {
+    color: #666;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.target-text {
+    background: #4caf50;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 13px;
+    min-width: 80px;
+    text-align: center;
+}
+
+.drop-target-display {
+    background: #f3e5f5;
+    border: 1px solid #e1bee7;
+    border-radius: 6px;
+    padding: 10px 16px;
+    transition: all 0.2s ease;
+}
+
+.drop-target-display:hover {
+    background: #e1bee7;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.target-label {
+    background: #9c27b0;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 13px;
+    display: inline-block;
+}
 </style>
 
 <!-- Font Awesome for Icons -->
@@ -1253,11 +1432,20 @@ session.setAttribute("csrf_token", csrfToken);
         
         // Add event listener to single delete buttons
         setTimeout(function() {
-            document.querySelectorAll('.single-delete-btn').forEach(button => {
+            console.log('Setting up delete buttons...');
+            const deleteButtons = document.querySelectorAll('.single-delete-btn');
+            console.log('Found delete buttons:', deleteButtons.length);
+            
+            deleteButtons.forEach((button, index) => {
+                const qid = button.getAttribute('data-qid');
+                const coursename = button.getAttribute('data-coursename');
+                console.log(`Button ${index}: qid=${qid}, coursename=${coursename}`);
+                
                 button.addEventListener('click', function(e) {
                     e.preventDefault();
                     const qid = this.getAttribute('data-qid');
                     const coursename = this.getAttribute('data-coursename');
+                    console.log('Delete clicked for qid:', qid, 'coursename:', coursename);
                     
                     // Store the parameters for later use in confirmAction
                     window.currentDeleteParams = {
@@ -1289,6 +1477,39 @@ session.setAttribute("csrf_token", csrfToken);
     // Also initialize after a short delay to catch any timing issues
     setTimeout(initPage, 100);
     setTimeout(initPage, 500);
+    setTimeout(initPage, 1000); // Additional delay for included pages
+    
+    // Fallback: Setup delete buttons immediately if DOM is ready
+    if (document.readyState === 'interactive' || document.readyState === 'complete') {
+        setTimeout(function() {
+            const deleteButtons = document.querySelectorAll('.single-delete-btn');
+            if (deleteButtons.length > 0) {
+                console.log('Fallback: Setting up delete buttons immediately...');
+                deleteButtons.forEach((button, index) => {
+                    const qid = button.getAttribute('data-qid');
+                    const coursename = button.getAttribute('data-coursename');
+                    
+                    // Remove existing listeners to avoid duplicates
+                    button.replaceWith(button.cloneNode(true));
+                    const newButton = document.querySelectorAll('.single-delete-btn')[index];
+                    
+                    newButton.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const qid = this.getAttribute('data-qid');
+                        const coursename = this.getAttribute('data-coursename');
+                        console.log('Fallback delete clicked for qid:', qid, 'coursename:', coursename);
+                        
+                        window.currentDeleteParams = {
+                            qid: qid,
+                            coursename: coursename
+                        };
+                        
+                        showModal(`Are you sure you want to delete question ID ${qid}? This action cannot be undone.`);
+                    });
+                });
+            }
+        }, 50);
+    }
     
     // Add scroll to top functionality
     const scrollToTopBtn = document.getElementById('scrollToTopBtn');
@@ -1326,10 +1547,34 @@ session.setAttribute("csrf_token", csrfToken);
     }
     
     function confirmAction() {
+        console.log('=== confirmAction called ===');
+        console.log('Current delete params:', window.currentDeleteParams);
+        console.log('Is bulk delete?', window.isBulkDelete);
+        
         clearTimeout(modalTimer);
         
         // If we have stored delete parameters (single delete), submit delete request
         if (window.currentDeleteParams && !window.isBulkDelete) {
+            console.log('Processing single delete for:', window.currentDeleteParams.qid);
+            
+            // Get CSRF token - try multiple sources
+            let csrfToken = '';
+            const csrfInput = document.querySelector('input[name="csrf_token"]');
+            if (csrfInput) {
+                csrfToken = csrfInput.value;
+                console.log('Found CSRF token from input:', csrfToken);
+            } else {
+                // Fallback to session token if available
+                csrfToken = '<%= session.getAttribute("csrf_token") %>';
+                console.log('Using session CSRF token:', csrfToken);
+            }
+            
+            if (!csrfToken || csrfToken === 'null') {
+                alert('CSRF token missing. Please refresh the page and try again.');
+                hideModal();
+                return;
+            }
+            
             console.log('Submitting single delete request for question ID:', window.currentDeleteParams.qid);
             
             // Create a temporary form to submit the delete request
@@ -1338,42 +1583,28 @@ session.setAttribute("csrf_token", csrfToken);
             form.action = 'controller.jsp';
             form.style.display = 'none';
             
-            // Add parameters for single delete
-            const pageInput = document.createElement('input');
-            pageInput.type = 'hidden';
-            pageInput.name = 'page';
-            pageInput.value = 'questions';
-            form.appendChild(pageInput);
+            const fields = {
+                'page': 'questions',
+                'operation': 'del',
+                'qid': window.currentDeleteParams.qid,
+                'coursename': window.currentDeleteParams.coursename,
+                'csrf_token': csrfToken
+            };
             
-            const operationInput = document.createElement('input');
-            operationInput.type = 'hidden';
-            operationInput.name = 'operation';
-            operationInput.value = 'del';
-            form.appendChild(operationInput);
+            console.log('Form fields:', fields);
             
-            const qidInput = document.createElement('input');
-            qidInput.type = 'hidden';
-            qidInput.name = 'qid';
-            qidInput.value = window.currentDeleteParams.qid;
-            form.appendChild(qidInput);
-            
-            const coursenameInput = document.createElement('input');
-            coursenameInput.type = 'hidden';
-            coursenameInput.name = 'coursename';
-            coursenameInput.value = window.currentDeleteParams.coursename;
-            form.appendChild(coursenameInput);
-            
-            // Get fresh CSRF token from the form on the page
-            const mainForm = document.querySelector('form[action="controller.jsp"]');
-            const csrfToken = mainForm ? mainForm.querySelector('input[name="csrf_token"]').value : '';
-            
-            const csrfInput = document.createElement('input');
-            csrfInput.type = 'hidden';
-            csrfInput.name = 'csrf_token';
-            csrfInput.value = csrfToken;
-            form.appendChild(csrfInput);
+            for (const [name, value] of Object.entries(fields)) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = value;
+                form.appendChild(input);
+            }
             
             document.body.appendChild(form);
+            console.log('Form created and submitted');
+            console.log('Form action:', form.action);
+            console.log('Form method:', form.method);
             form.submit();
         } else {
             // Perform bulk delete

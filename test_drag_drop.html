@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Drag and Drop Form</title>
+</head>
+<body>
+    <h2>Test Drag and Drop Question Submission</h2>
+    
+    <form action="controller.jsp" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="page" value="questions">
+        <input type="hidden" name="operation" value="addnew">
+        
+        <label>Course Name:</label><br>
+        <input type="text" name="coursename" value="Test Course"><br><br>
+        
+        <label>Question Type:</label><br>
+        <select name="questionType">
+            <option value="DRAG_AND_DROP" selected>Drag and Drop</option>
+        </select><br><br>
+        
+        <label>Question:</label><br>
+        <textarea name="question" rows="3">Test drag and drop question</textarea><br><br>
+        
+        <h3>Drag Items:</h3>
+        <input type="text" name="dragItem_text_0" value="Apple" placeholder="Drag item 1">
+        <select name="dragItem_target_0">
+            <option value="0">Fruit</option>
+        </select><br>
+        
+        <input type="text" name="dragItem_text_1" value="Carrot" placeholder="Drag item 2">
+        <select name="dragItem_target_1">
+            <option value="1">Vegetable</option>
+        </select><br>
+        
+        <h3>Drop Targets:</h3>
+        <input type="text" name="dropTarget_0" value="Fruit" placeholder="Target 1"><br>
+        <input type="text" name="dropTarget_1" value="Vegetable" placeholder="Target 2"><br>
+        
+        <label>Correct Answer (dummy):</label><br>
+        <input type="text" name="correct" value="test"><br><br>
+        
+        <button type="submit">Submit Drag and Drop Question</button>
+    </form>
+    
+    <hr>
+    
+    <h3>Test Instructions:</h3>
+    <ol>
+        <li>Fill in the form above with drag and drop data</li>
+        <li>Click "Submit Drag and Drop Question"</li>
+        <li>Check the server logs for debug output</li>
+        <li>Verify the database shows the JSON data in the drag_items, drop_targets, and drag_correct_targets columns</li>
+    </ol>
+    
+    <h3>Expected Database Result:</h3>
+    <ul>
+        <li>drag_items: ["Apple", "Carrot"]</li>
+        <li>drop_targets: ["Fruit", "Vegetable"]</li>
+        <li>drag_correct_targets: ["0", "1"]</li>
+    </ul>
+</body>
+</html>

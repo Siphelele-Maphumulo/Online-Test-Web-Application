@@ -558,23 +558,43 @@ try {
             // For non-multipart requests, get qid from regular parameter
             qid = nz(request.getParameter("qid"), "");
         }
+        
+        // Debug logging
+        LOGGER.info("DELETE QUESTION - qid: " + qid);
+        
         if (!qid.isEmpty()) {
-            boolean success = pDAO.deleteQuestion(Integer.parseInt(qid));
-            if (success) {
-                session.setAttribute("message","Question deleted successfully");
-                // Force full page refresh by redirecting to showall.jsp
-                String courseName = nz(request.getParameter("coursename"), "");
-                String timestamp = String.valueOf(new Date().getTime());
-                if (!courseName.isEmpty()) {
-                    // Add cache-busting parameter to ensure fresh page load
-                    response.sendRedirect("showall.jsp?coursename=" + courseName + "&_=" + timestamp);
+            try {
+                int questionId = Integer.parseInt(qid);
+                boolean success = pDAO.deleteQuestion(questionId);
+                
+                // Debug logging
+                LOGGER.info("DELETE QUESTION - success for ID " + questionId + ": " + success);
+                
+                if (success) {
+                    session.setAttribute("message","Question deleted successfully");
+                    // Force full page refresh by redirecting to showall.jsp
+                    String courseName = nz(request.getParameter("coursename"), "");
+                    String timestamp = String.valueOf(new Date().getTime());
+                    if (!courseName.isEmpty()) {
+                        // Add cache-busting parameter to ensure fresh page load
+                        response.sendRedirect("showall.jsp?coursename=" + courseName + "&_=" + timestamp);
+                    } else {
+                        response.sendRedirect("showall.jsp?_=" + timestamp);
+                    }
+                    return;
                 } else {
-                    response.sendRedirect("showall.jsp?_=" + timestamp);
+                    session.setAttribute("error", "Failed to delete question ID: " + qid);
                 }
-                return;
-            } else {
-                session.setAttribute("error", "Failed to delete question ID: " + qid);
+            } catch (NumberFormatException e) {
+                LOGGER.warning("DELETE QUESTION - Invalid qid format: " + qid);
+                session.setAttribute("error", "Invalid question ID format: " + qid);
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "DELETE QUESTION - Exception for qid " + qid, e);
+                session.setAttribute("error", "Error deleting question: " + e.getMessage());
             }
+        } else {
+            LOGGER.warning("DELETE QUESTION - Empty qid parameter");
+            session.setAttribute("error", "Question ID is required for deletion");
         }
         // Redirect to showall.jsp even if no question ID was provided
         String courseName = nz(request.getParameter("coursename"), "");
@@ -724,32 +744,35 @@ try {
                                 String fileName = item.getName();
                                 
                                 if (fieldName.equals("imageFile") && fileName != null && !fileName.isEmpty()) {
-                                    // Check file extension
-                                    String fileExtension = "";
-                                    int dotIndex = fileName.lastIndexOf('.');
-                                    if (dotIndex > 0) {
-                                        fileExtension = fileName.substring(dotIndex).toLowerCase();
-                                    }
-                                    
-                                    // List of allowed image extensions
-                                    String[] allowedExtensions = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"};
-                                    boolean isImage = false;
-                                    for (String ext : allowedExtensions) {
-                                        if (fileExtension.equals(ext)) {
-                                            isImage = true;
-                                            break;
+                                    // Skip image validation for drag and drop questions
+                                    if (!"DRAG_AND_DROP".equals(questionType)) {
+                                        // Check file extension
+                                        String fileExtension = "";
+                                        int dotIndex = fileName.lastIndexOf('.');
+                                        if (dotIndex > 0) {
+                                            fileExtension = fileName.substring(dotIndex).toLowerCase();
                                         }
-                                    }
-                                    
-                                    if (!isImage) {
-                                        session.setAttribute("error", "Only image files are allowed (JPG, JPEG, PNG, GIF, WEBP, BMP).");
-                                        String redirectCourse = nz(request.getParameter("coursename"), "");
-                                        if (!redirectCourse.isEmpty()) {
-                                            response.sendRedirect("showall.jsp?coursename=" + redirectCourse);
-                                        } else {
-                                            response.sendRedirect("showall.jsp");
+                                        
+                                        // List of allowed image extensions
+                                        String[] allowedExtensions = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"};
+                                        boolean isImage = false;
+                                        for (String ext : allowedExtensions) {
+                                            if (fileExtension.equals(ext)) {
+                                                isImage = true;
+                                                break;
+                                            }
                                         }
-                                        return;
+                                        
+                                        if (!isImage) {
+                                            session.setAttribute("error", "Only image files are allowed (JPG, JPEG, PNG, GIF, WEBP, BMP).");
+                                            String redirectCourse = nz(request.getParameter("coursename"), "");
+                                            if (!redirectCourse.isEmpty()) {
+                                                response.sendRedirect("showall.jsp?coursename=" + redirectCourse);
+                                            } else {
+                                                response.sendRedirect("showall.jsp");
+                                            }
+                                            return;
+                                        }
                                     }
                                     
                                     // Create uploads directory if it doesn't exist
@@ -819,7 +842,167 @@ try {
                             }
                         }
                         
+                        // Process drag and drop data if this is a DRAG_AND_DROP question
+                        java.util.List<String> dragItemsList = new java.util.ArrayList<>();
+                        java.util.List<String> dropTargetsList = new java.util.ArrayList<>();
+                        java.util.List<String> dragCorrectTargetsList = new java.util.ArrayList<>();
+                        Integer totalMarks = null;
+                        
+                        if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
+                            application.log("=== EDIT DRAG DROP PROCESSING START ===");
+                            application.log("Question type: " + questionType);
+                            
+                            // Parse JSON data from hidden fields
+                            String dragItemsJson = "";
+                            String dropTargetsJson = "";
+                            String dragCorrectTargetsJson = "";
+                            
+                            for (FileItem item : items) {
+                                if (item.isFormField()) {
+                                    String fieldName = item.getFieldName();
+                                    String fieldValue = item.getString("UTF-8");
+                                    
+                                    application.log("Processing field: " + fieldName + " = " + fieldValue);
+                                    
+                                    if ("totalMarks".equals(fieldName)) {
+                                        try {
+                                            if (fieldValue != null && !fieldValue.trim().isEmpty()) {
+                                                totalMarks = Integer.parseInt(fieldValue.trim());
+                                            }
+                                        } catch (NumberFormatException e) {
+                                            application.log("Invalid totalMarks value: " + fieldValue + ", using null");
+                                        }
+                                    }
+                                    
+                                    // Collect JSON data
+                                    if ("dragItems".equals(fieldName)) {
+                                        dragItemsJson = fieldValue;
+                                    } else if ("dropTargets".equals(fieldName)) {
+                                        dropTargetsJson = fieldValue;
+                                    } else if ("dragCorrectTargets".equals(fieldName)) {
+                                        dragCorrectTargetsJson = fieldValue;
+                                    }
+                                }
+                            }
+                            
+                            // Parse JSON arrays
+                            try {
+                                if (dragItemsJson != null && !dragItemsJson.trim().isEmpty() && !"[]".equals(dragItemsJson)) {
+                                    // Parse drag items JSON - convert objects to string array
+                                    javax.json.JsonReader reader = javax.json.Json.createReader(new java.io.StringReader(dragItemsJson));
+                                    javax.json.JsonArray dragArray = reader.readArray();
+                                    for (javax.json.JsonValue value : dragArray) {
+                                        if (value.getValueType() == javax.json.JsonValue.ValueType.OBJECT) {
+                                            javax.json.JsonObject obj = (javax.json.JsonObject) value;
+                                            String text = obj.getString("text", "");
+                                            if (!text.trim().isEmpty()) {
+                                                dragItemsList.add(text);
+                                            }
+                                        } else if (value.getValueType() == javax.json.JsonValue.ValueType.STRING) {
+                                            // Handle case where it's already a string array
+                                            String text = ((javax.json.JsonString) value).getString();
+                                            if (!text.trim().isEmpty()) {
+                                                dragItemsList.add(text);
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                if (dropTargetsJson != null && !dropTargetsJson.trim().isEmpty() && !"[]".equals(dropTargetsJson)) {
+                                    // Parse drop targets JSON - convert objects to string array
+                                    javax.json.JsonReader reader = javax.json.Json.createReader(new java.io.StringReader(dropTargetsJson));
+                                    javax.json.JsonArray dropArray = reader.readArray();
+                                    for (javax.json.JsonValue value : dropArray) {
+                                        if (value.getValueType() == javax.json.JsonValue.ValueType.OBJECT) {
+                                            javax.json.JsonObject obj = (javax.json.JsonObject) value;
+                                            String text = obj.getString("text", "");
+                                            if (!text.trim().isEmpty()) {
+                                                dropTargetsList.add(text);
+                                            }
+                                        } else if (value.getValueType() == javax.json.JsonValue.ValueType.STRING) {
+                                            // Handle case where it's already a string array
+                                            String text = ((javax.json.JsonString) value).getString();
+                                            if (!text.trim().isEmpty()) {
+                                                dropTargetsList.add(text);
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                if (dragCorrectTargetsJson != null && !dragCorrectTargetsJson.trim().isEmpty() && !"{}".equals(dragCorrectTargetsJson)) {
+                                    // Parse correct pairings JSON - convert object mapping to string array
+                                    javax.json.JsonReader reader = javax.json.Json.createReader(new java.io.StringReader(dragCorrectTargetsJson));
+                                    javax.json.JsonObject pairingsObj = reader.readObject();
+                                    
+                                    // Create a list of target texts matching drag items order
+                                    for (int i = 0; i < dragItemsList.size(); i++) {
+                                        dragCorrectTargetsList.add(""); // Default to no target
+                                    }
+                                    
+                                    // Map pairings to drag items order
+                                    int dragIndex = 0;
+                                    for (String dragItemId : pairingsObj.keySet()) {
+                                        if (dragIndex < dragItemsList.size()) {
+                                            String targetId = pairingsObj.getString(dragItemId);
+                                            // Find the target text by matching the target ID
+                                            try {
+                                                int targetIdNum = Integer.parseInt(targetId);
+                                                // Find target with matching ID (target IDs are 1-based in our JS)
+                                                javax.json.JsonReader targetReader = javax.json.Json.createReader(new java.io.StringReader(dropTargetsJson));
+                                                javax.json.JsonArray targetArray = targetReader.readArray();
+                                                for (int i = 0; i < targetArray.size(); i++) {
+                                                    javax.json.JsonValue targetValue = targetArray.get(i);
+                                                    String targetText = "";
+                                                    
+                                                    if (targetValue.getValueType() == javax.json.JsonValue.ValueType.OBJECT) {
+                                                        javax.json.JsonObject targetObj = (javax.json.JsonObject) targetValue;
+                                                        if (targetObj.getInt("id") == targetIdNum) {
+                                                            targetText = targetObj.getString("text", "");
+                                                        }
+                                                    } else if (targetValue.getValueType() == javax.json.JsonValue.ValueType.STRING) {
+                                                        // For simple arrays, use index + 1 as ID
+                                                        if (i + 1 == targetIdNum) {
+                                                            targetText = ((javax.json.JsonString) targetValue).getString();
+                                                        }
+                                                    }
+                                                    
+                                                    if (!targetText.isEmpty()) {
+                                                        dragCorrectTargetsList.set(dragIndex, targetText);
+                                                        break;
+                                                    }
+                                                }
+                                            } catch (Exception e) {
+                                                application.log("Error parsing target mapping: " + e.getMessage());
+                                            }
+                                        }
+                                        dragIndex++;
+                                    }
+                                }
+                            } catch (Exception e) {
+                                application.log("Error parsing JSON drag-drop data: " + e.getMessage());
+                                e.printStackTrace();
+                            }
+                            
+                            application.log("Final counts - DragItems: " + dragItemsList.size() + ", DropTargets: " + dropTargetsList.size() + ", CorrectTargets: " + dragCorrectTargetsList.size());
+                            application.log("=== EDIT DRAG DROP PROCESSING END ===");
+
+                            // For drag-drop questions, keep opts/correct empty (not used) to satisfy NOT NULL constraints.
+                            question.setOpt1("");
+                            question.setOpt2("");
+                            question.setOpt3("");
+                            question.setOpt4("");
+                            question.setCorrect("");
+                        }
+                        
                         pDAO.updateQuestion(question);
+
+                        if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
+                            // Refresh relational drag/drop tables and JSON columns
+                            pDAO.clearDragDropQuestionData(question.getQuestionId());
+                            pDAO.addDragDropData(question.getQuestionId(), dragItemsList, dropTargetsList, dragCorrectTargetsList);
+                            pDAO.updateDragDropQuestionColumns(question.getQuestionId(), dragItemsList, dropTargetsList, dragCorrectTargetsList, totalMarks);
+                        }
+
                         session.setAttribute("message","Question updated successfully");
                         
                         // Clean up multipart items attribute to prevent reuse
@@ -988,31 +1171,34 @@ try {
                         String fileName = item.getName();
                         
                         if (fieldName.equals("imageFile") && fileName != null && !fileName.isEmpty()) {
-                            // Check file extension
-                            String fileExtension = "";
-                            int dotIndex = fileName.lastIndexOf('.');
-                            if (dotIndex > 0) {
-                                fileExtension = fileName.substring(dotIndex).toLowerCase();
-                            }
-                            
-                            // List of allowed image extensions
-                            String[] allowedExtensions = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"};
-                            boolean isImage = false;
-                            for (String ext : allowedExtensions) {
-                                if (fileExtension.equals(ext)) {
-                                    isImage = true;
-                                    break;
+                            // Skip image validation for drag and drop questions
+                            if (!"DRAG_AND_DROP".equals(questionType)) {
+                                // Check file extension
+                                String fileExtension = "";
+                                int dotIndex = fileName.lastIndexOf('.');
+                                if (dotIndex > 0) {
+                                    fileExtension = fileName.substring(dotIndex).toLowerCase();
                                 }
-                            }
-                            
-                            if (!isImage) {
-                                session.setAttribute("error", "Only image files are allowed (JPG, JPEG, PNG, GIF, WEBP, BMP).");
-                                if (!courseName.isEmpty()) {
-                                    response.sendRedirect("showall.jsp?coursename=" + courseName);
-                                } else {
-                                    response.sendRedirect("showall.jsp");
+                                
+                                // List of allowed image extensions
+                                String[] allowedExtensions = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"};
+                                boolean isImage = false;
+                                for (String ext : allowedExtensions) {
+                                    if (fileExtension.equals(ext)) {
+                                        isImage = true;
+                                        break;
+                                    }
                                 }
-                                return;
+                                
+                                if (!isImage) {
+                                    session.setAttribute("error", "Only image files are allowed (JPG, JPEG, PNG, GIF, WEBP, BMP).");
+                                    if (!courseName.isEmpty()) {
+                                        response.sendRedirect("showall.jsp?coursename=" + courseName);
+                                    } else {
+                                        response.sendRedirect("showall.jsp");
+                                    }
+                                    return;
+                                }
                             }
                             
                             // Create uploads directory if it doesn't exist
@@ -1040,7 +1226,107 @@ try {
                     if (!correctMultiple.isEmpty()) correctAnswer = correctMultiple;
                 }
                 
-                pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, imagePath);
+                // Insert question FIRST and capture new question ID
+                int newQuestionIdInserted = pDAO.addNewQuestionReturnId(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, imagePath);
+                
+                application.log("=== AFTER QUESTION INSERT ===");
+                application.log("Question Type: " + questionType);
+                application.log("Is DRAG_AND_DROP: " + "DRAG_AND_DROP".equalsIgnoreCase(questionType));
+                
+                // NOW process drag and drop data AFTER question insert for DRAG_AND_DROP type
+                if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
+                    application.log("=== ENTERING DRAG DROP SECTION ===");
+                    try {
+                        int newQuestionId = newQuestionIdInserted;
+                        application.log("New Question ID for drag drop: " + newQuestionId);
+                        
+                        // CRITICAL: Validate the question ID before proceeding
+                        if (newQuestionId <= 0) {
+                            application.log("ERROR: Invalid question ID returned: " + newQuestionId);
+                            throw new Exception("Failed to get valid question ID");
+                        }
+                        
+                        // Verify the question actually exists
+                        if (!pDAO.questionExists(newQuestionId)) {
+                            application.log("ERROR: Question ID " + newQuestionId + " does not exist in questions table!");
+                            throw new Exception("Question ID " + newQuestionId + " not found");
+                        }
+                        
+                        application.log("Verified question ID " + newQuestionId + " exists in questions table");
+                        
+                        // NOW extract drag and drop data from FileItems (AFTER question insert)
+                        java.util.List<String> dragItemsList = new java.util.ArrayList<>();
+                        java.util.List<String> dropTargetsList = new java.util.ArrayList<>();
+                        java.util.List<String> dragCorrectTargetsList = new java.util.ArrayList<>();
+                        Integer totalMarks = null;
+                        
+                        application.log("=== DRAG DROP PROCESSING START ===");
+                        application.log("Question type: " + questionType);
+                        application.log("Total FileItems processed: " + items.size());
+                        
+                        for (FileItem item : items) {
+                            if (item.isFormField()) {
+                                String fieldName = item.getFieldName();
+                                String fieldValue = item.getString("UTF-8");
+                                
+                                application.log("Processing field: " + fieldName + " = " + fieldValue);
+
+                                if ("totalMarks".equals(fieldName)) {
+                                    try {
+                                        if (fieldValue != null && !fieldValue.trim().isEmpty()) {
+                                            totalMarks = Integer.parseInt(fieldValue.trim());
+                                        }
+                                    } catch (NumberFormatException nfe) {
+                                        application.log("Invalid totalMarks value: " + fieldValue);
+                                    }
+                                }
+                                
+                                if (fieldName.startsWith("dragItem_text_")) {
+                                    String targetParam = fieldName.replace("dragItem_text_", "dragItem_target_");
+                                    String targetValue = "";
+                                    
+                                    // Find the corresponding target value
+                                    for (FileItem targetItem : items) {
+                                        if (targetItem.isFormField() && targetItem.getFieldName().equals(targetParam)) {
+                                            targetValue = targetItem.getString("UTF-8");
+                                            break;
+                                        }
+                                    }
+                                    
+                                    application.log("Found drag item: '" + fieldValue + "' -> target: '" + targetValue + "'");
+                                    
+                                    if (!fieldValue.trim().isEmpty()) {
+                                        dragItemsList.add(fieldValue);
+                                        dragCorrectTargetsList.add(targetValue);
+                                    }
+                                } else if (fieldName.startsWith("dropTarget_")) {
+                                    application.log("Found drop target: '" + fieldValue + "'");
+                                    if (!fieldValue.trim().isEmpty()) {
+                                        dropTargetsList.add(fieldValue.trim());
+                                    }
+                                }
+                            }
+                        }
+                        
+                        application.log("Drag items count: " + dragItemsList.size());
+                        application.log("Drop targets count: " + dropTargetsList.size());
+                        application.log("Correct targets count: " + dragCorrectTargetsList.size());
+                        
+                        // Use the new clean relational method
+                        pDAO.addDragDropData(newQuestionId, dragItemsList, dropTargetsList, dragCorrectTargetsList);
+
+                        // Also persist a copy into questions table columns for visibility/debugging
+                        pDAO.updateDragDropQuestionColumns(newQuestionId, dragItemsList, dropTargetsList, dragCorrectTargetsList, totalMarks);
+                        
+                        application.log("=== DRAG DROP DATA SAVED USING RELATIONAL TABLES ===");
+                        
+                    } catch (Exception e) {
+                        LOGGER.log(Level.SEVERE, "Error saving drag drop data", e);
+                        session.setAttribute("error", "Question saved but drag drop data had errors: " + e.getMessage());
+                        application.log("Error saving drag drop data: " + e.getMessage());
+                    }
+                }
+                
                 session.setAttribute("message","Question added successfully");
                 
                 // Save last selections to session
@@ -1082,7 +1368,76 @@ try {
                 if (!correctMultiple.isEmpty()) correctAnswer = correctMultiple;
             }
             
-            pDAO.addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null);
+            int newQuestionIdInserted = pDAO.addNewQuestionReturnId(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null);
+            
+            // Save drag and drop data using proper relational tables for DRAG_AND_DROP type
+            if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
+                try {
+                    int newQuestionId = newQuestionIdInserted;
+                    
+                    // Get total marks from request parameter
+                    int totalMarks = 1; // default
+                    String totalMarksParam = request.getParameter("totalMarks");
+                    if (totalMarksParam != null && !totalMarksParam.trim().isEmpty()) {
+                        try {
+                            totalMarks = Integer.parseInt(totalMarksParam.trim());
+                        } catch (NumberFormatException e) {
+                            application.log("Invalid totalMarks value: " + totalMarksParam + ", using default 1");
+                        }
+                    }
+                    
+                    // Collect drag items and targets
+                    java.util.List<String> dragItemsList = new java.util.ArrayList<>();
+                    java.util.List<String> dropTargetsList = new java.util.ArrayList<>();
+                    java.util.List<String> dragCorrectTargetsList = new java.util.ArrayList<>();
+                    
+                    // Get drag items and their correct targets
+                    Enumeration<String> paramNames = request.getParameterNames();
+                    while (paramNames.hasMoreElements()) {
+                        String paramName = paramNames.nextElement();
+                        if (paramName.startsWith("dragItem_text_")) {
+                            String itemText = nz(request.getParameter(paramName), "");
+                            String targetParam = paramName.replace("dragItem_text_", "dragItem_target_");
+                            String targetValue = nz(request.getParameter(targetParam), "");
+                            
+                            if (!itemText.trim().isEmpty()) {
+                                dragItemsList.add(itemText);
+                                dragCorrectTargetsList.add(targetValue);
+                            }
+                        }
+                    }
+                    
+                    // Get drop targets
+                    paramNames = request.getParameterNames();
+                    while (paramNames.hasMoreElements()) {
+                        String paramName = paramNames.nextElement();
+                        if (paramName.startsWith("dropTarget_")) {
+                            String targetLabel = nz(request.getParameter(paramName), "");
+                            if (!targetLabel.trim().isEmpty()) {
+                                dropTargetsList.add(targetLabel.trim());
+                            }
+                        }
+                    }
+                    
+                    application.log("Regular form - Total marks for drag-drop: " + totalMarks);
+                    application.log("Regular form - Drag items count: " + dragItemsList.size());
+                    application.log("Regular form - Drop targets count: " + dropTargetsList.size());
+                    application.log("Regular form - Correct targets count: " + dragCorrectTargetsList.size());
+
+                    // Use the new clean relational method
+                    pDAO.addDragDropData(newQuestionId, dragItemsList, dropTargetsList, dragCorrectTargetsList);
+
+                    // Also persist a copy into questions table columns for visibility/debugging
+                    pDAO.updateDragDropQuestionColumns(newQuestionId, dragItemsList, dropTargetsList, dragCorrectTargetsList, totalMarks);
+
+                    application.log("=== DRAG DROP DATA SAVED USING RELATIONAL TABLES (REGULAR FORM) ===");
+
+                } catch (Exception e) {
+                    LOGGER.log(Level.SEVERE, "Error saving drag drop data", e);
+                    session.setAttribute("error", "Question saved but drag drop data had errors: " + e.getMessage());
+                }
+            }
+            
             session.setAttribute("message","Question added successfully");
             
             // Save last selections to session
@@ -1095,23 +1450,57 @@ try {
             } else {
                 response.sendRedirect("showall.jsp");
             }
+            return;
         }
-    } else if ("save_selection".equalsIgnoreCase(operation)) {
-        // Save last course name and question type to session
-        String lastCourseName = nz(request.getParameter("last_course_name"), "");
-        String lastQuestionType = nz(request.getParameter("last_question_type"), "");
+    } else if ("submit_drag_drop".equalsIgnoreCase(operation)) {
+        // Handle drag-drop answer submission
+        String examIdStr = nz(request.getParameter("examId"), "");
+        String questionIdStr = nz(request.getParameter("questionId"), "");
+        String studentId = nz(request.getParameter("studentId"), "");
         
-        if (!lastCourseName.isEmpty()) {
-            session.setAttribute("last_course_name", lastCourseName);
-        }
-        if (!lastQuestionType.isEmpty()) {
-            session.setAttribute("last_question_type", lastQuestionType);
+        if (examIdStr.isEmpty() || questionIdStr.isEmpty() || studentId.isEmpty()) {
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\": false, \"message\": \"Missing required parameters\"}");
+            return;
         }
         
-        // Return success response for AJAX
-        response.setContentType("application/json");
-        response.getWriter().write("{\"success\": true}");
-        return;
+        try {
+            int examId = Integer.parseInt(examIdStr);
+            int questionId = Integer.parseInt(questionIdStr);
+            
+            // Parse the selected matches
+            Map<Integer, Integer> selectedMatches = new HashMap<>();
+            Enumeration<String> paramNames = request.getParameterNames();
+            
+            while (paramNames.hasMoreElements()) {
+                String paramName = paramNames.nextElement();
+                if (paramName.startsWith("match_")) {
+                    String dragItemIdStr = paramName.substring(6); // Remove "match_" prefix
+                    String targetIdStr = nz(request.getParameter(paramName), "");
+                    
+                    try {
+                        int dragItemId = Integer.parseInt(dragItemIdStr);
+                        int targetId = Integer.parseInt(targetIdStr);
+                        selectedMatches.put(dragItemId, targetId);
+                    } catch (NumberFormatException e) {
+                        // Skip invalid parameters
+                    }
+                }
+            }
+            
+            // Submit answers and get marks
+            float marksObtained = pDAO.submitDragDropAnswers(examId, questionId, studentId, selectedMatches);
+            
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\": true, \"marksObtained\": " + marksObtained + "}");
+            return;
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error submitting drag-drop answers", e);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\": false, \"message\": \"Failed to submit answers\"}");
+            return;
+        }
     } else {
         session.setAttribute("error", "Invalid operation for questions");
         String courseName = nz(request.getParameter("coursename"), "");
@@ -1125,72 +1514,72 @@ try {
    RESULTS
    ========================= */
 } else if ("results".equalsIgnoreCase(pageParam)) {
-    String operation = nz(request.getParameter("operation"), "");
-    
-    if ("edit".equalsIgnoreCase(operation)) {
-        int examId = Integer.parseInt(nz(request.getParameter("eid"), "0"));
-        int obtMarks = Integer.parseInt(nz(request.getParameter("obtMarks"), "0"));
-        int totalMarks = Integer.parseInt(nz(request.getParameter("totalMarks"), "0"));
-        String status = nz(request.getParameter("status"), "");
+        String operation = nz(request.getParameter("operation"), "");
         
-        // Calculate percentage
-        double percentage = 0;
-        if (totalMarks > 0) {
-            percentage = ((double) obtMarks / totalMarks) * 100;
-        }
-        
-        // Update result status based on percentage if not manually set
-        if (status.isEmpty()) {
-            status = (percentage >= 45.0) ? "Pass" : "Fail";
-        }
-        
-        // Update the exam in database
-        try {
-            Connection conn = pDAO.getConnection();
-            String sql = "UPDATE exams SET obt_marks=?, result_status=? WHERE exam_id=?";
-            PreparedStatement pstm = conn.prepareStatement(sql);
-            pstm.setInt(1, obtMarks);
-            pstm.setString(2, status);
-            pstm.setInt(3, examId);
-            pstm.executeUpdate();
-            pstm.close();
+        if ("edit".equalsIgnoreCase(operation)) {
+            int examId = Integer.parseInt(nz(request.getParameter("eid"), "0"));
+            int obtMarks = Integer.parseInt(nz(request.getParameter("obtMarks"), "0"));
+            int totalMarks = Integer.parseInt(nz(request.getParameter("totalMarks"), "0"));
+            String status = nz(request.getParameter("status"), "");
             
-            session.setAttribute("message", "Result updated successfully!");
-        } catch (SQLException ex) {
-            session.setAttribute("error", "Error updating result: " + ex.getMessage());
-        }
-        response.sendRedirect("adm-page.jsp?pgprt=5");
-        
-    } else if ("delete".equalsIgnoreCase(operation)) {
-        // Handle both single and bulk delete operations
-        String[] examIds = request.getParameterValues("eids"); // For bulk delete
-        String singleExamId = request.getParameter("eid");  // For single delete
-        
-        if (examIds != null && examIds.length > 0) {
-            // Bulk delete
-            pDAO.deleteExamResults(examIds);
-            session.setAttribute("message", "Selected exam results deleted successfully!");
-        } else if (singleExamId != null && !singleExamId.isEmpty()) {
-            // Single delete
-            try {
-                int examId = Integer.parseInt(singleExamId);
-                boolean success = pDAO.deleteExamResult(examId);
-                if (success) {
-                    session.setAttribute("message", "Exam result deleted successfully!");
-                } else {
-                    session.setAttribute("error", "Failed to delete exam result.");
-                }
-            } catch (NumberFormatException e) {
-                session.setAttribute("error", "Invalid Exam ID format.");
+            // Calculate percentage
+            double percentage = 0;
+            if (totalMarks > 0) {
+                percentage = ((double) obtMarks / totalMarks) * 100;
             }
+            
+            // Update result status based on percentage if not manually set
+            if (status.isEmpty()) {
+                status = (percentage >= 45.0) ? "Pass" : "Fail";
+            }
+            
+            // Update the exam in database
+            try {
+                Connection conn = pDAO.getConnection();
+                String sql = "UPDATE exams SET obt_marks=?, result_status=? WHERE exam_id=?";
+                PreparedStatement pstm = conn.prepareStatement(sql);
+                pstm.setInt(1, obtMarks);
+                pstm.setString(2, status);
+                pstm.setInt(3, examId);
+                pstm.executeUpdate();
+                pstm.close();
+                
+                session.setAttribute("message", "Result updated successfully!");
+            } catch (SQLException ex) {
+                session.setAttribute("error", "Error updating result: " + ex.getMessage());
+            }
+            response.sendRedirect("adm-page.jsp?pgprt=5");
+            
+        } else if ("delete".equalsIgnoreCase(operation)) {
+            // Handle both single and bulk delete operations
+            String[] examIds = request.getParameterValues("eids"); // For bulk delete
+            String singleExamId = request.getParameter("eid");  // For single delete
+            
+            if (examIds != null && examIds.length > 0) {
+                // Bulk delete
+                pDAO.deleteExamResults(examIds);
+                session.setAttribute("message", "Selected exam results deleted successfully!");
+            } else if (singleExamId != null && !singleExamId.isEmpty()) {
+                // Single delete
+                try {
+                    int examId = Integer.parseInt(singleExamId);
+                    boolean success = pDAO.deleteExamResult(examId);
+                    if (success) {
+                        session.setAttribute("message", "Exam result deleted successfully!");
+                    } else {
+                        session.setAttribute("error", "Failed to delete exam result.");
+                    }
+                } catch (NumberFormatException e) {
+                    session.setAttribute("error", "Invalid Exam ID format.");
+                }
+            } else {
+                session.setAttribute("error", "No exam result selected for deletion.");
+            }
+            response.sendRedirect("adm-page.jsp?pgprt=5");
         } else {
-            session.setAttribute("error", "No exam result selected for deletion.");
+            session.setAttribute("error", "Invalid operation for results");
+            response.sendRedirect("adm-page.jsp?pgprt=5");
         }
-        response.sendRedirect("adm-page.jsp?pgprt=5");
-    } else {
-        session.setAttribute("error", "Invalid operation for results");
-        response.sendRedirect("adm-page.jsp?pgprt=5");
-    }
 
 /* =========================
    EXAMS - START EXAM
@@ -1284,6 +1673,8 @@ try {
                 for (int i=0;i<size;i++){
                     String question = nz(request.getParameter("question"+i), "");
                     String ans      = nz(request.getParameter("ans"+i), "");
+                    String qtype     = nz(request.getParameter("qtype"+i), "");
+                    int qid         = Integer.parseInt(nz(request.getParameter("qid"+i), "0"));
                     
                     // Check if this is a multiple select question and get the hidden field value
                     String multiSelectAns = nz(request.getParameter("ans"+i+"-hidden"), "");
@@ -1291,7 +1682,41 @@ try {
                         ans = multiSelectAns; // Use the multi-select answer instead
                     }
                     
-                    int qid         = Integer.parseInt(nz(request.getParameter("qid"+i), "0"));
+                    // Handle drag-drop questions
+                    if ("dragdrop".equals(qtype)) {
+                        // Collect all drag-drop matches for this question
+                        Map<Integer, Integer> dragDropMatches = new HashMap<>();
+                        Enumeration<String> paramNames = request.getParameterNames();
+                        
+                        while (paramNames.hasMoreElements()) {
+                            String paramName = paramNames.nextElement();
+                            if (paramName.startsWith("match_" + i + "_")) {
+                                String targetIdStr = paramName.substring(("match_" + i + "_").length());
+                                String dragItemIdStr = nz(request.getParameter(paramName), "");
+                                
+                                try {
+                                    int targetId = Integer.parseInt(targetIdStr);
+                                    int dragItemId = Integer.parseInt(dragItemIdStr);
+                                    dragDropMatches.put(dragItemId, targetId);
+                                } catch (NumberFormatException e) {
+                                    // Skip invalid parameters
+                                }
+                            }
+                        }
+                        
+                        // Submit drag-drop answers and get marks
+                        if (!dragDropMatches.isEmpty() && userId > 0) {
+                            try {
+                                float marksObtained = pDAO.submitDragDropAnswers(eId, qid, String.valueOf(userId), dragDropMatches);
+                                // Store a summary answer for display purposes
+                                ans = "Drag-Drop: " + dragDropMatches.size() + " items matched";
+                            } catch (Exception e) {
+                                LOGGER.log(Level.SEVERE, "Error submitting drag-drop answers for question " + qid, e);
+                                ans = "Drag-Drop: Error";
+                            }
+                        }
+                    }
+                    
                     pDAO.insertAnswer(eId, qid, question, ans);
                 }
 

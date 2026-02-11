@@ -6,12 +6,16 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.text.SimpleDateFormat;
+import java.math.BigDecimal;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import myPackage.classes.Answers;
 import myPackage.classes.Exams;
 import myPackage.classes.Questions;
 import myPackage.classes.User;
+import myPackage.classes.DragItem;
+import myPackage.classes.DropTarget;
+import myPackage.classes.DragDropAnswer;
 import org.mindrot.jbcrypt.BCrypt;
 import java.sql.Connection;
 import java.sql.Date;
@@ -66,6 +70,64 @@ public class DatabaseClass {
         }
     }
 
+    public void updateDragDropQuestionColumns(int questionId,
+            java.util.List<String> dragItems,
+            java.util.List<String> dropTargets,
+            java.util.List<String> correctTargets,
+            Integer totalMarks) {
+
+        Connection conn = null;
+        PreparedStatement pstm = null;
+
+        try {
+            conn = getConnection();
+            String sql = "UPDATE questions SET drag_items=?, drop_targets=?, drag_correct_targets=?, marks=? WHERE question_id=?";
+            pstm = conn.prepareStatement(sql);
+            pstm.setString(1, toJsonArray(dragItems));
+            pstm.setString(2, toJsonArray(dropTargets));
+            pstm.setString(3, toJsonArray(correctTargets));
+            if (totalMarks != null) {
+                pstm.setBigDecimal(4, new BigDecimal(totalMarks));
+            } else {
+                pstm.setNull(4, Types.DECIMAL);
+            }
+            pstm.setInt(5, questionId);
+
+            int updated = pstm.executeUpdate();
+            LOGGER.log(Level.INFO, "Updated questions drag-drop columns for questionId={0}, rows={1}", new Object[]{questionId, updated});
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error updating questions drag-drop columns: " + e.getMessage(), e);
+        } finally {
+            try { if (pstm != null) pstm.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing statement", e); }
+            try { if (conn != null) conn.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing connection", e); }
+        }
+    }
+
+    private String toJsonArray(java.util.List<String> values) {
+        if (values == null) {
+            return "[]";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append('[');
+        for (int i = 0; i < values.size(); i++) {
+            if (i > 0) sb.append(',');
+            sb.append('"').append(escapeJson(values.get(i))).append('"');
+        }
+        sb.append(']');
+        return sb.toString();
+    }
+
+    private String escapeJson(String s) {
+        if (s == null) {
+            return "";
+        }
+        return s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n")
+                .replace("\t", "\\t");
+    }
+
     // Get the connection with lazy initialization
     public Connection getConnection() throws SQLException {
         try {
@@ -108,8 +170,7 @@ public class DatabaseClass {
             return false;
         }
         
-        System.out.println("Here");
-        boolean exists = false;
+                boolean exists = false;
         try {
             String sql = "SELECT * FROM staff WHERE email = ?";  // Assuming you have a column 'email' in 'staff' table
             PreparedStatement pstm = conn.prepareStatement(sql);
@@ -118,10 +179,8 @@ public class DatabaseClass {
             if (rs.next()) {
                 exists = true;
                 user_Type = "lecture";
-                System.out.println("Lecturer with email " + email + " found.");
             } else {
                 user_Type = "student";
-                System.out.println("Lecturer with email " + email + " not found.");
             }
             pstm.close();
         } catch (SQLException ex) {
@@ -168,13 +227,13 @@ public ArrayList<User> getAllStudents() {
             list.add(user);
         }
     } catch (SQLException ex) {
-        System.out.println("Error fetching students: " + ex.getMessage());
+        LOGGER.log(Level.SEVERE, "Error fetching students: " + ex.getMessage(), ex);
     } finally {
         try {
             if (rs != null) rs.close();
             if (pstm != null) pstm.close();
         } catch (SQLException e) {
-            System.out.println("Error closing resources: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Error closing resources: " + e.getMessage(), e);
         }
     }
 
@@ -220,13 +279,13 @@ public ArrayList<User> getAllLecturers() {
             list.add(user);
         }
     } catch (SQLException ex) {
-        System.out.println("Error fetching lecturers: " + ex.getMessage());
+        LOGGER.log(Level.SEVERE, "Error fetching lecturers: " + ex.getMessage(), ex);
     } finally {
         try {
             if (rs != null) rs.close();
             if (pstm != null) pstm.close();
         } catch (SQLException e) {
-            System.out.println("Error closing resources: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Error closing resources: " + e.getMessage(), e);
         }
     }
 
@@ -254,7 +313,7 @@ public ArrayList<User> getAllLecturers() {
                 str= rs.getString("user_type");
             }
         } catch (SQLException ex) {
-            System.out.println(ex.getMessage());
+            LOGGER.log(Level.SEVERE, ex.getMessage(), ex);
             str= "error";
         }
         return str;
@@ -278,7 +337,7 @@ public ArrayList<User> getAllLecturers() {
                 str= rs.getInt("user_id");
             }
         } catch (SQLException ex) {
-            System.out.println(ex.getMessage());
+            LOGGER.log(Level.SEVERE, ex.getMessage(), ex);
             
         }
         return str;
@@ -1159,25 +1218,43 @@ public boolean addNewCourse(String courseName, int tMarks, String time, String e
     
     
 public void addNewQuestion(String questionText, String opt1, String opt2, String opt3, String opt4, String correctAnswer, String courseName, String questionType) {
-    addNewQuestion(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null);
+    addNewQuestionReturnId(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null);
 }
 
 public void addNewQuestion(String questionText, String opt1, String opt2, String opt3, String opt4, String correctAnswer, String courseName, String questionType, String imagePath) {
+    addNewQuestionReturnId(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, imagePath);
+}
+
+public int addNewQuestionReturnId(String questionText, String opt1, String opt2, String opt3, String opt4, String correctAnswer, String courseName, String questionType, String imagePath) {
     try {
         ensureConnection();
     } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Connection error in addNewQuestion", e);
-        return;
+        LOGGER.log(Level.SEVERE, "Connection error in addNewQuestionReturnId", e);
+        return -1;
     }
-    
+     
+    PreparedStatement pstm = null;
+    ResultSet rsKeys = null;
     try {
         String sql;
-        PreparedStatement pstm;
 
-        // If it's a True/False question, only use two options.
-        if ("TrueFalse".equalsIgnoreCase(questionType)) {
+        // Handle different question types
+        if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
+            // For drag-and-drop questions, insert empty strings for opt fields since they're required
+            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            pstm = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            pstm.setString(1, questionText);
+            pstm.setString(2, ""); // opt1 - empty for drag-drop
+            pstm.setString(3, ""); // opt2 - empty for drag-drop
+            pstm.setString(4, ""); // opt3 - empty for drag-drop
+            pstm.setString(5, ""); // opt4 - empty for drag-drop
+            pstm.setString(6, ""); // correct - empty for drag-drop
+            pstm.setString(7, courseName);
+            pstm.setString(8, questionType);
+            pstm.setString(9, imagePath);
+        } else if ("TrueFalse".equalsIgnoreCase(questionType)) {
             sql = "INSERT INTO questions (question, opt1, opt2, correct, course_name, question_type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?)";
-            pstm = conn.prepareStatement(sql);
+            pstm = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             pstm.setString(1, questionText);
             pstm.setString(2, "True");  // Hardcoded options for True/False
             pstm.setString(3, "False");
@@ -1188,7 +1265,7 @@ public void addNewQuestion(String questionText, String opt1, String opt2, String
         } else {
             // Otherwise, handle multiple-choice questions
             sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            pstm = conn.prepareStatement(sql);
+            pstm = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             pstm.setString(1, questionText);
             pstm.setString(2, opt1);
             pstm.setString(3, opt2);
@@ -1202,14 +1279,325 @@ public void addNewQuestion(String questionText, String opt1, String opt2, String
 
         // Execute the update
         pstm.executeUpdate();
-        pstm.close();
-        System.out.println("Question inserted successfully: " + questionText);
-
+        rsKeys = pstm.getGeneratedKeys();
+        if (rsKeys != null && rsKeys.next()) {
+            return rsKeys.getInt(1);
+        }
+        return -1;
     } catch (SQLException ex) {
-        System.out.println("Error inserting question: " + ex.getMessage());
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        LOGGER.log(Level.SEVERE, "Error inserting question: " + ex.getMessage(), ex);
+        return -1;
+    } finally {
+        try { if (rsKeys != null) rsKeys.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing generated keys", e); }
+        try { if (pstm != null) pstm.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing statement", e); }
     }
 }  
+    
+    // Method to properly insert drag-and-drop data using relational tables
+    public void addDragDropData(int questionId, java.util.List<String> dragItems, 
+                                java.util.List<String> dropTargets, java.util.List<String> correctTargets) {
+        LOGGER.log(Level.INFO, "addDragDropData called for question ID: {0}", questionId);
+        
+        Connection conn = null;
+        PreparedStatement pstmDrag = null;
+        PreparedStatement pstmTarget = null;
+        
+        try {
+            conn = getConnection();
+            
+            // First, insert drop targets and get their IDs
+            java.util.Map<String, Integer> targetLabelToId = new java.util.HashMap<>();
+            String sqlTarget = "INSERT INTO drop_targets (question_id, target_label, target_order) VALUES (?, ?, ?)";
+            pstmTarget = conn.prepareStatement(sqlTarget, Statement.RETURN_GENERATED_KEYS);
+            
+            for (int i = 0; i < dropTargets.size(); i++) {
+                pstmTarget.setInt(1, questionId);
+                String targetLabel = dropTargets.get(i) != null ? dropTargets.get(i).trim() : "";
+                pstmTarget.setString(2, targetLabel);
+                pstmTarget.setInt(3, i + 1);
+                int rowsAffected = pstmTarget.executeUpdate();
+                LOGGER.log(Level.INFO, "Drop target insert rows affected: {0}", rowsAffected);
+                
+                ResultSet rs = pstmTarget.getGeneratedKeys();
+                if (rs.next()) {
+                    int targetId = rs.getInt(1);
+                    targetLabelToId.put(targetLabel, targetId);
+                    LOGGER.log(Level.INFO, "Generated target ID: {0} for label: {1}", new Object[]{targetId, targetLabel});
+                }
+                rs.close();
+            }
+            
+            // Then insert drag items with correct target mappings
+            String sqlDrag = "INSERT INTO drag_items (question_id, item_text, correct_target_id, item_order) VALUES (?, ?, ?, ?)";
+            pstmDrag = conn.prepareStatement(sqlDrag);
+            
+            for (int i = 0; i < dragItems.size(); i++) {
+                pstmDrag.setInt(1, questionId);
+                pstmDrag.setString(2, dragItems.get(i));
+                
+                // Map the correct target if available
+                if (i < correctTargets.size() && correctTargets.get(i) != null && !correctTargets.get(i).trim().isEmpty()) {
+                    String correctTargetLabel = correctTargets.get(i).trim();
+                    Integer correctTargetId = targetLabelToId.get(correctTargetLabel);
+                    if (correctTargetId != null) {
+                        pstmDrag.setInt(3, correctTargetId);
+                        LOGGER.log(Level.INFO, "Mapping drag item ''{0}'' to target label ''{1}'' (ID: {2})", new Object[]{dragItems.get(i), correctTargetLabel, correctTargetId});
+                    } else {
+                        pstmDrag.setNull(3, Types.INTEGER);
+                    }
+                } else {
+                    pstmDrag.setNull(3, Types.INTEGER);
+                }
+                
+                pstmDrag.setInt(4, i + 1);
+                int rowsAffected = pstmDrag.executeUpdate();
+                LOGGER.log(Level.INFO, "Drag item insert rows affected: {0}", rowsAffected);
+            }
+            
+            LOGGER.log(Level.INFO, "Drag-drop data saved successfully for question ID: {0}", questionId);
+            
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error inserting drag-drop data: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to save drag-drop data: " + e.getMessage(), e);
+        } finally {
+            try {
+                if (pstmDrag != null) pstmDrag.close();
+                if (pstmTarget != null) pstmTarget.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+    }
+
+    public void clearDragDropQuestionData(int questionId) {
+        Connection conn = null;
+        PreparedStatement pstm = null;
+        try {
+            conn = getConnection();
+
+            // drag_items references drop_targets via correct_target_id, so delete drag_items first.
+            pstm = conn.prepareStatement("DELETE FROM drag_items WHERE question_id = ?");
+            pstm.setInt(1, questionId);
+            int deletedDragItems = pstm.executeUpdate();
+            LOGGER.log(Level.INFO, "Cleared drag_items for questionId={0}, rows={1}", new Object[]{questionId, deletedDragItems});
+            pstm.close();
+            pstm = null;
+
+            pstm = conn.prepareStatement("DELETE FROM drop_targets WHERE question_id = ?");
+            pstm.setInt(1, questionId);
+            int deletedTargets = pstm.executeUpdate();
+            LOGGER.log(Level.INFO, "Cleared drop_targets for questionId={0}, rows={1}", new Object[]{questionId, deletedTargets});
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error clearing drag-drop data for questionId=" + questionId + ": " + e.getMessage(), e);
+        } finally {
+            try { if (pstm != null) pstm.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing statement", e); }
+            try { if (conn != null) conn.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing connection", e); }
+        }
+    }
+
+// Get drag items for a question
+public java.util.List<java.util.Map<String, Object>> getDragItemsByQuestionId(int questionId) {
+    java.util.List<java.util.Map<String, Object>> dragItems = new java.util.ArrayList<>();
+    Connection conn = null;
+    PreparedStatement pstm = null;
+    ResultSet rs = null;
+    
+    try {
+        conn = getConnection();
+        String sql = "SELECT id, item_text, correct_target_id, item_order FROM drag_items WHERE question_id = ? ORDER BY item_order";
+        pstm = conn.prepareStatement(sql);
+        pstm.setInt(1, questionId);
+        rs = pstm.executeQuery();
+        
+        while (rs.next()) {
+            java.util.Map<String, Object> item = new java.util.HashMap<>();
+            item.put("id", rs.getInt("id"));
+            item.put("text", rs.getString("item_text"));
+            item.put("correct_target_id", rs.getObject("correct_target_id"));
+            item.put("order", rs.getInt("item_order"));
+            dragItems.add(item);
+        }
+        
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Error getting drag items", e);
+    } finally {
+        try {
+            if (rs != null) rs.close();
+            if (pstm != null) pstm.close();
+            if (conn != null) conn.close();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error closing resources", e);
+        }
+    }
+    
+    return dragItems;
+}
+
+// Get drop targets for a question
+public java.util.List<java.util.Map<String, Object>> getDropTargetsByQuestionId(int questionId) {
+    java.util.List<java.util.Map<String, Object>> dropTargets = new java.util.ArrayList<>();
+    Connection conn = null;
+    PreparedStatement pstm = null;
+    ResultSet rs = null;
+    
+    try {
+        conn = getConnection();
+        String sql = "SELECT id, target_label, target_order FROM drop_targets WHERE question_id = ? ORDER BY target_order";
+        pstm = conn.prepareStatement(sql);
+        pstm.setInt(1, questionId);
+        rs = pstm.executeQuery();
+        
+        while (rs.next()) {
+            java.util.Map<String, Object> target = new java.util.HashMap<>();
+            target.put("id", rs.getInt("id"));
+            target.put("label", rs.getString("target_label"));
+            target.put("order", rs.getInt("target_order"));
+            dropTargets.add(target);
+        }
+        
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Error getting drop targets", e);
+    } finally {
+        try {
+            if (rs != null) rs.close();
+            if (pstm != null) pstm.close();
+            if (conn != null) conn.close();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error closing resources", e);
+        }
+    }
+    
+    return dropTargets;
+}
+
+// Wrapper method to convert Map list to DragItem list (for backward compatibility)
+public ArrayList<DragItem> getDragItemsByQuestionIdOld(int questionId) {
+    ArrayList<DragItem> dragItems = new ArrayList<>();
+    java.util.List<java.util.Map<String, Object>> mapList = getDragItemsByQuestionId(questionId);
+    
+    for (java.util.Map<String, Object> map : mapList) {
+        DragItem item = new DragItem();
+        item.setId((Integer) map.get("id"));
+        item.setItemText((String) map.get("text"));
+        item.setCorrectTargetId((Integer) map.get("correct_target_id"));
+        item.setItemOrder((Integer) map.get("order"));
+        dragItems.add(item);
+    }
+    
+    return dragItems;
+}
+
+// Wrapper method to convert Map list to DropTarget list (for backward compatibility)
+public ArrayList<DropTarget> getDropTargetsByQuestionIdOld(int questionId) {
+    ArrayList<DropTarget> dropTargets = new ArrayList<>();
+    java.util.List<java.util.Map<String, Object>> mapList = getDropTargetsByQuestionId(questionId);
+    
+    for (java.util.Map<String, Object> map : mapList) {
+        DropTarget target = new DropTarget();
+        target.setId((Integer) map.get("id"));
+        target.setTargetLabel((String) map.get("label"));
+        target.setTargetOrder((Integer) map.get("order"));
+        dropTargets.add(target);
+    }
+    
+    return dropTargets;
+}
+
+// Check if a question exists in the questions table
+public boolean questionExists(int questionId) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in questionExists", e);
+        return false;
+    }
+    
+    try {
+        String sql = "SELECT COUNT(*) FROM questions WHERE question_id = ?";
+        PreparedStatement pstm = conn.prepareStatement(sql);
+        pstm.setInt(1, questionId);
+        ResultSet rs = pstm.executeQuery();
+        
+        boolean exists = false;
+        if (rs.next()) {
+            exists = rs.getInt(1) > 0;
+        }
+        
+        rs.close();
+        pstm.close();
+        return exists;
+        
+    } catch (SQLException ex) {
+        LOGGER.log(Level.SEVERE, "Error checking if question exists: " + ex.getMessage(), ex);
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        return false;
+    }
+}
+
+// Get the last inserted question ID
+public int getLastInsertedQuestionId() {
+    Connection conn = null;
+    Statement stmt = null;
+    ResultSet rs = null;
+    
+    try {
+        conn = getConnection();
+        stmt = conn.createStatement();
+        rs = stmt.executeQuery("SELECT LAST_INSERT_ID()");
+        
+        if (rs.next()) {
+            int lastId = rs.getInt(1);
+            LOGGER.log(Level.INFO, "Last inserted question ID: {0}", lastId);
+            return lastId;
+        }
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Error getting last inserted question ID: " + e.getMessage(), e);
+    } finally {
+        try {
+            if (rs != null) rs.close();
+            if (stmt != null) stmt.close();
+            if (conn != null) conn.close();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error closing resources", e);
+        }
+    }
+    
+    return -1;
+}
+
+// Get drag drop data from the questions table
+public Map<String, String> getDragDropData(int questionId) {
+    Map<String, String> data = new HashMap<>();
+    
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getDragDropData", e);
+        return data;
+    }
+    
+    try {
+        String sql = "SELECT drag_items, drop_targets, drag_correct_targets FROM questions WHERE question_id = ?";
+        PreparedStatement pstm = conn.prepareStatement(sql);
+        pstm.setInt(1, questionId);
+        ResultSet rs = pstm.executeQuery();
+        
+        if (rs.next()) {
+            data.put("drag_items", rs.getString("drag_items") != null ? rs.getString("drag_items") : "[]");
+            data.put("drop_targets", rs.getString("drop_targets") != null ? rs.getString("drop_targets") : "[]");
+            data.put("drag_correct_targets", rs.getString("drag_correct_targets") != null ? rs.getString("drag_correct_targets") : "[]");
+        }
+        
+        rs.close();
+        pstm.close();
+        
+    } catch (SQLException ex) {
+        LOGGER.log(Level.SEVERE, "Error getting drag drop data: " + ex.getMessage(), ex);
+    }
+    
+    return data;
+}
     
 public Questions getQuestionById(int questionId) {
     try {
@@ -1322,11 +1710,14 @@ public void delQuestion(int qId) {
 }
 
 public boolean deleteQuestion(int questionId) {
+    LOGGER.info("deleteQuestion called with ID: " + questionId);
+    
     boolean autoCommit = true;
     try {
         ensureConnection();
         autoCommit = conn.getAutoCommit();
         conn.setAutoCommit(false);
+        LOGGER.info("Database connection established, auto-commit disabled");
     } catch (SQLException e) {
         LOGGER.log(Level.SEVERE, "Connection error in deleteQuestion", e);
         return false;
@@ -1368,15 +1759,19 @@ public boolean deleteQuestion(int questionId) {
         pstmt = conn.prepareStatement(deleteQuestionSql);
         pstmt.setInt(1, questionId);
         
+        LOGGER.info("Executing DELETE: " + deleteQuestionSql + " with ID: " + questionId);
+        
         // Execute the statement and get number of affected rows
         int rowsAffected = pstmt.executeUpdate();
         LOGGER.info("Deleted " + rowsAffected + " question record(s) with ID: " + questionId);
         
         // Commit the transaction
         conn.commit();
+        LOGGER.info("Transaction committed successfully");
         
         return rowsAffected > 0;
     } catch (SQLException ex) {
+        LOGGER.log(Level.SEVERE, "SQLException in deleteQuestion: " + ex.getMessage(), ex);
         try {
             conn.rollback();
             LOGGER.log(Level.SEVERE, "Transaction rolled back due to error deleting question ID: " + questionId, ex);
@@ -1390,8 +1785,9 @@ public boolean deleteQuestion(int questionId) {
             if (pstmt != null) pstmt.close();
             if (pstmtAnswers != null) pstmtAnswers.close();
             conn.setAutoCommit(autoCommit); // Restore original autocommit setting
-        } catch (SQLException e) {
-            LOGGER.log(Level.WARNING, "Error closing resources", e);
+            LOGGER.info("Connection auto-commit restored to: " + autoCommit);
+        } catch (SQLException ex) {
+            LOGGER.log(Level.SEVERE, "Error closing resources", ex);
         }
     }
 }
@@ -1412,7 +1808,7 @@ public void deleteUserCascade(int userId) {
         conn.setAutoCommit(false);
 
         String userType = getUserType(String.valueOf(userId));
-        System.out.println("Deleting user ID: " + userId + ", Type: " + userType);
+        LOGGER.log(Level.INFO, "Deleting user ID: {0}, Type: {1}", new Object[]{userId, userType});
 
         if ("student".equalsIgnoreCase(userType)) {
             // Step 1: Get all exam_ids for the student
@@ -1458,7 +1854,7 @@ public void deleteUserCascade(int userId) {
                 try (ResultSet rsInfo = pstmtInfo.executeQuery()) {
                     if (rsInfo.next()) {
                         String courseName = rsInfo.getString("course_name");
-                        System.out.println("Deleting lecturer for course: " + courseName);
+                        LOGGER.log(Level.INFO, "Deleting lecturer for course: {0}", courseName);
                     }
                 }
             }
@@ -1474,7 +1870,7 @@ public void deleteUserCascade(int userId) {
                 try (ResultSet rsCheck = pstmtCheck.executeQuery()) {
                     if (rsCheck.next()) {
                         hasMultipleLecturers = true;
-                        System.out.println("Other lecturers teach the same course(s)");
+                        LOGGER.log(Level.INFO, "Other lecturers teach the same course(s)");
                     }
                 }
             }
@@ -1484,22 +1880,22 @@ public void deleteUserCascade(int userId) {
 
             // Step 4: Optionally remove course assignments if no other lecturers
             if (!hasMultipleLecturers) {
-                System.out.println("No other lecturers for this course - course remains active");
+                LOGGER.log(Level.INFO, "No other lecturers for this course - course remains active");
             }
 
         } else if ("admin".equalsIgnoreCase(userType)) {
             // For admin users, we might want to prevent deletion or handle differently
-            System.out.println("Warning: Attempting to delete admin user ID: " + userId);
+            LOGGER.log(Level.WARNING, "Warning: Attempting to delete admin user ID: {0}", userId);
             // Option: throw an exception or log a warning
             // throw new SQLException("Cannot delete admin users");
         }
 
         // Step 5: Finally, delete from the main users table for all user types
         int deletedFromUsers = deleteUser(userId);
-        System.out.println("Deleted " + deletedFromUsers + " row(s) from users table");
+        LOGGER.log(Level.INFO, "Deleted {0} row(s) from users table", deletedFromUsers);
 
         conn.commit();
-        System.out.println("User deletion completed successfully for ID: " + userId);
+        LOGGER.log(Level.INFO, "User deletion completed successfully for ID: {0}", userId);
         
     } catch (SQLException ex) {
         System.err.println("Error deleting user cascade for ID: " + userId);
@@ -1507,7 +1903,7 @@ public void deleteUserCascade(int userId) {
         try {
             if (conn != null) {
                 conn.rollback();
-                System.out.println("Transaction rolled back due to error");
+                LOGGER.log(Level.WARNING, "Transaction rolled back due to error");
             }
         } catch (SQLException rollbackEx) {
             System.err.println("Rollback failed: " + rollbackEx.getMessage());
@@ -1732,10 +2128,10 @@ public void addQuestion(String cName, String question, String opt1, String opt2,
         // Execute the update
         pstm.executeUpdate();
         pstm.close();
-        System.out.println("Question inserted successfully: " + question);
+        LOGGER.log(Level.INFO, "Question inserted successfully: {0}", question);
 
     } catch (SQLException ex) {
-        System.out.println("Error inserting question: " + ex.getMessage());
+        LOGGER.log(Level.SEVERE, "Error inserting question: " + ex.getMessage(), ex);
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
     }
 }
@@ -1953,7 +2349,6 @@ public ArrayList getQuestions(String courseName, int questions) {
             ResultSet rs=pstm.executeQuery();
             while(rs.next()){
                 marks=rs.getInt(1);
-                System.out.println(rs.getInt(1));
             }
             pstm.close();
         }catch(Exception e){
@@ -2089,7 +2484,6 @@ public ArrayList getAllQuestions(String courseName) {
         } catch (SQLException ex) {
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
         }
-        System.out.println(time);
         return time;
     }
     
@@ -2496,7 +2890,7 @@ public int getExamDuration(String courseName) {
                 try {
                     // Try to parse as just minutes
                     duration = Integer.parseInt(timeStr);
-                    System.out.println("Parsed as minutes: " + duration + " for course: " + courseName);
+                    LOGGER.log(Level.INFO, "Parsed as minutes: {0} for course: {1}", new Object[]{duration, courseName});
                 } catch (NumberFormatException e1) {
                     // Case 2: Try to parse as "hh:mm" format
                     if (timeStr.contains(":")) {
@@ -2508,18 +2902,18 @@ public int getExamDuration(String courseName) {
                             hours = Integer.parseInt(parts[0].trim());
                             minutes = Integer.parseInt(parts[1].trim());
                             duration = (hours * 60) + minutes;
-                            System.out.println("Parsed as hh:mm: " + duration + " minutes for course: " + courseName);
+                            LOGGER.log(Level.INFO, "Parsed as hh:mm: {0} minutes for course: {1}", new Object[]{duration, courseName});
                         } catch (NumberFormatException e2) {
-                            System.out.println("Error parsing time format: " + timeStr);
+                            LOGGER.log(Level.WARNING, "Error parsing time format: {0}", timeStr);
                         }
                     } else {
                         // Case 3: Try to parse as decimal hours (e.g., "1.5" = 1.5 hours)
                         try {
                             double decimalHours = Double.parseDouble(timeStr);
                             duration = (int) Math.round(decimalHours * 60);
-                            System.out.println("Parsed as decimal hours: " + duration + " minutes for course: " + courseName);
+                            LOGGER.log(Level.INFO, "Parsed as decimal hours: {0} minutes for course: {1}", new Object[]{duration, courseName});
                         } catch (NumberFormatException e3) {
-                            System.out.println("Could not parse time format: " + timeStr);
+                            LOGGER.log(Level.WARNING, "Could not parse time format: {0}", timeStr);
                         }
                     }
                 }
@@ -2528,7 +2922,7 @@ public int getExamDuration(String courseName) {
         rs.close();
         pstm.close();
     } catch (SQLException ex) {
-        System.out.println("Error getting exam duration: " + ex.getMessage());
+        LOGGER.log(Level.SEVERE, "Error getting exam duration: " + ex.getMessage(), ex);
     }
     return duration;
 }
@@ -2738,8 +3132,7 @@ public boolean deleteExamResult(int examId) {
         
         // Log the deletion
         if (success) {
-            System.out.println("Successfully deleted exam result ID: " + examId + 
-                             " and " + answersDeleted + " related answers");
+            LOGGER.log(Level.INFO, "Successfully deleted exam result ID: {0} and {1} related answers", new Object[]{examId, answersDeleted});
         }
         
     } catch (SQLException ex) {
@@ -3032,11 +3425,11 @@ public void calculateResult(int eid, int tMarks, String endTime, int size) {
         String resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
         
         // DEBUG LOGGING
-        System.out.println("=== DEBUG calculateResult ===");
-        System.out.println("Exam ID: " + eid);
-        System.out.println("Marks: " + obt + "/" + tMarks);
-        System.out.println("Percentage: " + percentage + "%");
-        System.out.println("Result Status: " + resultStatus);
+        LOGGER.log(Level.FINE, "=== DEBUG calculateResult ===");
+        LOGGER.log(Level.FINE, "Exam ID: {0}", eid);
+        LOGGER.log(Level.FINE, "Marks: {0}/{1}", new Object[]{obt, tMarks});
+        LOGGER.log(Level.FINE, "Percentage: {0}%", percentage);
+        LOGGER.log(Level.FINE, "Result Status: {0}", resultStatus);
         
         // Update the exams table with both status and result_status
         String sql = "UPDATE exams SET obt_marks=?, end_time=?, status=?, result_status=? WHERE exam_id=?";
@@ -3048,7 +3441,7 @@ public void calculateResult(int eid, int tMarks, String endTime, int size) {
         pstm.setInt(5, eid);
         
         int rowsUpdated = pstm.executeUpdate();
-        System.out.println("Rows updated: " + rowsUpdated);
+        LOGGER.log(Level.FINE, "Rows updated: {0}", rowsUpdated);
         
         pstm.close();
 
@@ -3763,7 +4156,7 @@ public ArrayList<String> getCourseList() {
         LocalDate startDate = today.minusMonths(2).withDayOfMonth(1);
         LocalDate endDate = today.plusMonths(1).withDayOfMonth(today.plusMonths(1).lengthOfMonth());
         
-        System.out.println("Calendar Period: " + startDate + " to " + endDate); // Debug
+        LOGGER.log(Level.FINE, "Calendar Period: {0} to {1}", new Object[]{startDate, endDate});
 
         // 2. Fetch all attendance records within this 3-month period
         String attendanceSql = "SELECT DATE(registration_date) as reg_date, TIME(registration_time) as reg_time " +
@@ -3791,11 +4184,11 @@ public ArrayList<String> getCourseList() {
                     );
                 }
             } catch (Exception e) {
-                System.out.println("Error processing record: " + e.getMessage());
+                LOGGER.log(Level.WARNING, "Error processing record: " + e.getMessage(), e);
             }
         }
         
-        System.out.println("Found " + attendanceMap.size() + " attendance records"); // Debug
+        LOGGER.log(Level.FINE, "Found {0} attendance records", attendanceMap.size());
 
         // 3. Generate JSON for each day in the 3-month period
         boolean first = true;
@@ -3846,7 +4239,7 @@ public ArrayList<String> getCourseList() {
             
             // Debug output for first few days
             if (currentDate.getDayOfMonth() <= 3) {
-                System.out.println("Day " + dateStr + ": " + eventClass);
+                LOGGER.log(Level.FINE, "Day {0}: {1}", new Object[]{dateStr, eventClass});
             }
             
             currentDate = currentDate.plusDays(1);
@@ -3854,11 +4247,9 @@ public ArrayList<String> getCourseList() {
 
     } catch (SQLException ex) {
         LOGGER.log(Level.SEVERE, "Error in getAttendanceCalendarData", ex);
-        System.out.println("SQL Error: " + ex.getMessage());
         return "[]"; 
     } catch (Exception ex) {
         LOGGER.log(Level.SEVERE, "Unexpected error in getAttendanceCalendarData", ex);
-        System.out.println("Unexpected Error: " + ex.getMessage());
         return "[]";
     } finally {
         // Close all resources properly
@@ -3870,8 +4261,8 @@ public ArrayList<String> getCourseList() {
     json.append("]");
     
     String result = json.toString();
-    System.out.println("Generated JSON length: " + result.length()); // Debug
-    System.out.println("First 200 chars of JSON: " + result.substring(0, Math.min(result.length(), 200))); // Debug
+    // System.out.println("Generated JSON length: " + result.length()); // Debug
+    // System.out.println("First 200 chars of JSON: " + result.substring(0, Math.min(result.length(), 200))); // Debug
     
     return result;
 }
@@ -4507,6 +4898,231 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error closing resources", e);
         }
     }
+    }
+    
+    // ==================== DRAG AND DROP QUESTION METHODS ====================
+    
+    /**
+     * Creates a new drag-and-drop question with its items and targets
+     */
+    public int createDragDropQuestion(String questionText, String courseName, int totalMarks, 
+                                   ArrayList<DragItem> dragItems, ArrayList<DropTarget> dropTargets) {
+        Connection conn = null;
+        PreparedStatement pstmQuestion = null;
+        PreparedStatement pstmDragItem = null;
+        PreparedStatement pstmDropTarget = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = getConnection();
+            conn.setAutoCommit(false);
+            
+            // Insert the question
+            String sqlQuestion = "INSERT INTO questions (question, course_name, question_type, total_marks, opt1, opt2, opt3, opt4, correct) VALUES (?, ?, 'DRAG_AND_DROP', ?, '', '', '', '', '')";
+            pstmQuestion = conn.prepareStatement(sqlQuestion, Statement.RETURN_GENERATED_KEYS);
+            pstmQuestion.setString(1, questionText);
+            pstmQuestion.setString(2, courseName);
+            pstmQuestion.setInt(3, totalMarks);
+            pstmQuestion.executeUpdate();
+            
+            // Get the generated question ID
+            int questionId = 0;
+            rs = pstmQuestion.getGeneratedKeys();
+            if (rs.next()) {
+                questionId = rs.getInt(1);
+            }
+            
+            // Insert drag items
+            String sqlDragItem = "INSERT INTO drag_items (question_id, item_text, correct_target_id, item_order) VALUES (?, ?, ?, ?)";
+            pstmDragItem = conn.prepareStatement(sqlDragItem);
+            
+            for (DragItem item : dragItems) {
+                pstmDragItem.setInt(1, questionId);
+                pstmDragItem.setString(2, item.getItemText());
+                if (item.getCorrectTargetId() != null) {
+                    pstmDragItem.setInt(3, item.getCorrectTargetId());
+                } else {
+                    pstmDragItem.setNull(3, Types.INTEGER);
+                }
+                pstmDragItem.setInt(4, item.getItemOrder());
+                pstmDragItem.addBatch();
+            }
+            pstmDragItem.executeBatch();
+            
+            // Insert drop targets
+            String sqlDropTarget = "INSERT INTO drop_targets (question_id, target_label, target_order) VALUES (?, ?, ?)";
+            pstmDropTarget = conn.prepareStatement(sqlDropTarget);
+            
+            for (DropTarget target : dropTargets) {
+                pstmDropTarget.setInt(1, questionId);
+                pstmDropTarget.setString(2, target.getTargetLabel());
+                pstmDropTarget.setInt(3, target.getTargetOrder());
+                pstmDropTarget.addBatch();
+            }
+            pstmDropTarget.executeBatch();
+            
+            conn.commit();
+            LOGGER.info("Drag-drop question created successfully with ID: " + questionId);
+            return questionId;
+            
+        } catch (SQLException e) {
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException rollbackEx) {
+                LOGGER.log(Level.SEVERE, "Rollback failed", rollbackEx);
+            }
+            LOGGER.log(Level.SEVERE, "Error creating drag-drop question", e);
+            throw new RuntimeException("Failed to create drag-drop question: " + e.getMessage(), e);
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstmQuestion != null) pstmQuestion.close();
+                if (pstmDragItem != null) pstmDragItem.close();
+                if (pstmDropTarget != null) pstmDropTarget.close();
+                if (conn != null) {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+    }
+    
+    /**
+     * Gets a complete drag-drop question with all items and targets
+     */
+    public Questions getDragDropQuestionById(int questionId) {
+        Questions question = getQuestionById(questionId);
+        if (question != null && "DRAG_AND_DROP".equals(question.getQuestionType())) {
+            question.setDragItems(getDragItemsByQuestionIdOld(questionId));
+            question.setDropTargets(getDropTargetsByQuestionIdOld(questionId));
+        }
+        return question;
+    }
+    
+    /**
+     * Submits drag-drop answers and calculates marks
+     */
+    public float submitDragDropAnswers(int examId, int questionId, String studentId, 
+                                      Map<Integer, Integer> selectedMatches) {
+        Connection conn = null;
+        PreparedStatement pstm = null;
+        ResultSet rs = null;
+        float totalMarks = 0;
+        
+        try {
+            conn = getConnection();
+            conn.setAutoCommit(false);
+            
+            // Get the question's total marks
+            Questions question = getQuestionById(questionId);
+            float marksPerCorrectMatch = (float) question.getTotalMarks() / question.getDragItems().size();
+            
+            // Get drag items to check correct answers
+            ArrayList<DragItem> dragItems = getDragItemsByQuestionIdOld(questionId);
+            
+            // Delete any existing answers for this question
+            String deleteSql = "DELETE FROM drag_drop_answers WHERE exam_id = ? AND question_id = ? AND student_id = ?";
+            pstm = conn.prepareStatement(deleteSql);
+            pstm.setInt(1, examId);
+            pstm.setInt(2, questionId);
+            pstm.setString(3, studentId);
+            pstm.executeUpdate();
+            
+            // Insert new answers
+            String insertSql = "INSERT INTO drag_drop_answers (exam_id, question_id, student_id, drag_item_id, drop_target_id, is_correct, marks_obtained) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            pstm = conn.prepareStatement(insertSql);
+            
+            for (DragItem item : dragItems) {
+                Integer selectedTargetId = selectedMatches.get(item.getId());
+                boolean isCorrect = (selectedTargetId != null && selectedTargetId.equals(item.getCorrectTargetId()));
+                float marksObtained = isCorrect ? marksPerCorrectMatch : 0;
+                
+                pstm.setInt(1, examId);
+                pstm.setInt(2, questionId);
+                pstm.setString(3, studentId);
+                pstm.setInt(4, item.getId());
+                pstm.setInt(5, selectedTargetId != null ? selectedTargetId : 0);
+                pstm.setBoolean(6, isCorrect);
+                pstm.setFloat(7, marksObtained);
+                pstm.addBatch();
+                
+                totalMarks += marksObtained;
+            }
+            pstm.executeBatch();
+            
+            conn.commit();
+            LOGGER.info("Drag-drop answers submitted for exam: " + examId + ", question: " + questionId + ", student: " + studentId);
+            
+        } catch (SQLException e) {
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException rollbackEx) {
+                LOGGER.log(Level.SEVERE, "Rollback failed", rollbackEx);
+            }
+            LOGGER.log(Level.SEVERE, "Error submitting drag-drop answers", e);
+            throw new RuntimeException("Failed to submit drag-drop answers: " + e.getMessage(), e);
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstm != null) pstm.close();
+                if (conn != null) {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+        
+        return totalMarks;
+    }
+    
+    /**
+     * Gets student's drag-drop answers for a question
+     */
+    public ArrayList<DragDropAnswer> getStudentDragDropAnswers(int examId, int questionId, String studentId) {
+        ArrayList<DragDropAnswer> answers = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement pstm = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = getConnection();
+            String sql = "SELECT id, exam_id, question_id, student_id, drag_item_id, drop_target_id, is_correct, marks_obtained FROM drag_drop_answers WHERE exam_id = ? AND question_id = ? AND student_id = ?";
+            pstm = conn.prepareStatement(sql);
+            pstm.setInt(1, examId);
+            pstm.setInt(2, questionId);
+            pstm.setString(3, studentId);
+            rs = pstm.executeQuery();
+            
+            while (rs.next()) {
+                DragDropAnswer answer = new DragDropAnswer();
+                answer.setId(rs.getInt("id"));
+                answer.setExamId(rs.getInt("exam_id"));
+                answer.setQuestionId(rs.getInt("question_id"));
+                answer.setStudentId(rs.getString("student_id"));
+                answer.setDragItemId(rs.getInt("drag_item_id"));
+                answer.setDropTargetId(rs.getInt("drop_target_id"));
+                answer.setCorrect(rs.getBoolean("is_correct"));
+                answer.setMarksObtained(rs.getFloat("marks_obtained"));
+                answers.add(answer);
+            }
+            
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting drag-drop answers", e);
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstm != null) pstm.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+        
+        return answers;
     }
 }
     

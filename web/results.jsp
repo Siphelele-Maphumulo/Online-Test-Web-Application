@@ -1524,6 +1524,19 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                 Answers a = answersList.get(i);
                 boolean isCorrect = a.getStatus().equals("correct");
                 
+                // Check if this is a drag-drop question
+                boolean isDragDrop = a.getAnswer() != null && a.getAnswer().startsWith("Drag-Drop:");
+                
+                // Get question details to check question type
+                Questions questionObj = null;
+                String questionType = "MCQ";
+                if (a.getQuestionId() > 0) {
+                    questionObj = pDAO.getQuestionById(a.getQuestionId());
+                    if (questionObj != null && questionObj.getQuestionType() != null) {
+                        questionType = questionObj.getQuestionType();
+                    }
+                }
+                
                 // Extract and format question text with code snippets
                 String fullQuestion = a.getQuestion();
                 String questionPart = "";
@@ -1571,9 +1584,9 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                     String imagePath = "";
                     int questionId = a.getQuestionId();
                     if (questionId > 0) {
-                        Questions questionObj = pDAO.getQuestionById(questionId);
-                        if (questionObj != null && questionObj.getImagePath() != null && !questionObj.getImagePath().isEmpty()) {
-                            imagePath = questionObj.getImagePath();
+                        Questions questionDetailsObj = pDAO.getQuestionById(questionId);
+                        if (questionDetailsObj != null && questionDetailsObj.getImagePath() != null && !questionDetailsObj.getImagePath().isEmpty()) {
+                            imagePath = questionDetailsObj.getImagePath();
                         }
                     }
                     if (!imagePath.isEmpty()) { 
@@ -1598,23 +1611,115 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
               </div>
               
               <div class="answer-grid">
-                <div>
-                  <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 4px; font-size: 13px;">
-                    <i class="fas fa-user-edit"></i> Your Answer
+                <% if (isDragDrop) { %>
+                  <!-- Drag-Drop Question Answer Display -->
+                  <div style="grid-column: 1 / -1;">
+                    <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 12px; font-size: 13px;">
+                      <i class="fas fa-hand-rock"></i> Drag and Drop Question
+                    </div>
+                    
+                    <div style="background: var(--light-gray); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--medium-gray);">
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <!-- Student's Answers -->
+                        <div>
+                          <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 8px; font-size: 12px;">
+                            <i class="fas fa-user-edit"></i> Your Matches
+                          </div>
+                          <div style="background: var(--white); padding: 12px; border-radius: var(--radius-sm); border: 1px solid <%= isCorrect ? "var(--success)" : "var(--error)" %>;">
+                            <%
+                              // Get student's drag-drop answers
+                              ArrayList<myPackage.classes.DragDropAnswer> studentAnswers = new ArrayList<>();
+                              try {
+                                  studentAnswers = pDAO.getStudentDragDropAnswers(examDetails.getExamId(), a.getQuestionId(), String.valueOf(userId));
+                              } catch (Exception e) {
+                                  // Handle error gracefully
+                              }
+                              
+                              if (studentAnswers.isEmpty()) {
+                            %>
+                                <div style="color: var(--dark-gray); font-style: italic;">No matches made</div>
+                            <%
+                              } else {
+                                for (myPackage.classes.DragDropAnswer answer : studentAnswers) {
+                            %>
+                                <div style="margin-bottom: 8px; padding: 6px; background: <%= answer.isCorrect() ? "rgba(5, 150, 105, 0.1)" : "rgba(220, 38, 38, 0.1)" %>; border-radius: 4px; font-size: 12px;">
+                                  <i class="fas <%= answer.isCorrect() ? "fa-check" : "fa-times" %>" style="color: <%= answer.isCorrect() ? "var(--success)" : "var(--error)" %>;"></i>
+                                  Item → Target <%= answer.isCorrect() ? "(Correct)" : "(Incorrect)" %>
+                                </div>
+                            <%
+                                }
+                              }
+                            %>
+                          </div>
+                        </div>
+                        
+                        <!-- Correct Answers -->
+                        <div>
+                          <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 8px; font-size: 12px;">
+                            <i class="fas fa-check-circle"></i> Correct Matches
+                          </div>
+                          <div style="background: var(--white); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--success);">
+                            <%
+                              // Get correct drag-drop answers
+                              ArrayList<myPackage.classes.DragDropAnswer> correctDragDropAnswers = new ArrayList<>();
+                              try {
+                                  correctDragDropAnswers = pDAO.getStudentDragDropAnswers(examDetails.getExamId(), a.getQuestionId(), "correct");
+                              } catch (Exception e) {
+                                  // Handle error gracefully
+                              }
+                              
+                              if (correctDragDropAnswers.isEmpty()) {
+                            %>
+                                <div style="color: var(--dark-gray); font-style: italic;">No correct matches available</div>
+                            <%
+                              } else {
+                                for (myPackage.classes.DragDropAnswer answer : correctDragDropAnswers) {
+                            %>
+                                <div style="margin-bottom: 8px; padding: 6px; background: rgba(5, 150, 105, 0.1); border-radius: 4px; font-size: 12px;">
+                                  <i class="fas fa-check" style="color: var(--success);"></i>
+                                  Item → Target (Correct)
+                                </div>
+                            <%
+                                }
+                              }
+                            %>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- Score Display -->
+                      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--medium-gray);">
+                        <div style="text-align: center;">
+                          <div style="font-size: 14px; font-weight: 600; color: <%= isCorrect ? "var(--success)" : "var(--error)" %>;">
+                            <%= isCorrect ? "Full Score" : "Partial Score" %>
+                          </div>
+                          <div style="font-size: 12px; color: var(--dark-gray); margin-top: 4px;">
+                            <%= a.getAnswer() %>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div style="color: <%= isCorrect ? "var(--success)" : "var(--error)" %>; font-weight: 600; background: var(--white); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid <%= isCorrect ? "var(--success)" : "var(--error)" %>;">
-                    <%= escapeHtml(a.getAnswer() != null ? a.getAnswer() : "No Answer") %>
+                <% } else { %>
+                  <!-- Regular Question Answer Display -->
+                  <div>
+                    <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 4px; font-size: 13px;">
+                      <i class="fas fa-user-edit"></i> Your Answer
+                    </div>
+                    <div style="color: <%= isCorrect ? "var(--success)" : "var(--error)" %>; font-weight: 600; background: var(--white); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid <%= isCorrect ? "var(--success)" : "var(--error)" %>;">
+                      <%= escapeHtml(a.getAnswer() != null ? a.getAnswer() : "No Answer") %>
+                    </div>
                   </div>
-                </div>
-                
-                <div>
-                  <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 4px; font-size: 13px;">
-                    <i class="fas fa-check-circle"></i> Correct Answer
+                  
+                  <div>
+                    <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 4px; font-size: 13px;">
+                      <i class="fas fa-check-circle"></i> Correct Answer
+                    </div>
+                    <div style="color: var(--success); font-weight: 600; background: var(--white); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--success);">
+                      <%= escapeHtml(a.getCorrectAnswer() != null ? a.getCorrectAnswer() : "N/A") %>
+                    </div>
                   </div>
-                  <div style="color: var(--success); font-weight: 600; background: var(--white); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--success);">
-                    <%= escapeHtml(a.getCorrectAnswer() != null ? a.getCorrectAnswer() : "N/A") %>
-                  </div>
-                </div>
+                <% } %>
               </div>
             </div>
             <% 

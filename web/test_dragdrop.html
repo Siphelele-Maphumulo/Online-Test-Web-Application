@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Drag-Drop Data Parsing</title>
+</head>
+<body>
+    <h1>Test Drag-Drop Data Parsing</h1>
+    
+    <script>
+        // Simulate the data from database
+        const dragItemsJson = '["\\"Hello World\\"","42"]';
+        const dropTargetsJson = '["String","Integer"]';
+        const correctTargetsJson = '["String","Integer"]';
+        
+        console.log('Raw dragItems:', dragItemsJson);
+        console.log('Raw dropTargets:', dropTargetsJson);
+        console.log('Raw correctTargets:', correctTargetsJson);
+        
+        // Parse drag items - convert string array to object array
+        const dragItemsArray = JSON.parse(dragItemsJson);
+        const dragItems = dragItemsArray.map((text, index) => ({
+            id: index + 1,
+            text: text.replace(/^"|"$/g, '') // Remove surrounding quotes
+        }));
+        
+        // Parse drop targets - convert string array to object array
+        const dropTargetsArray = JSON.parse(dropTargetsJson);
+        const dropTargets = dropTargetsArray.map((text, index) => ({
+            id: index + 1,
+            text: text.replace(/^"|"$/g, '') // Remove surrounding quotes
+        }));
+        
+        // Parse correct pairings - convert array to object mapping
+        const correctTargetsArray = JSON.parse(correctTargetsJson);
+        const correctPairings = {};
+        correctTargetsArray.forEach((targetText, index) => {
+            if (index < dragItems.length && targetText) {
+                // Find the target ID that matches this target text
+                const targetIndex = dropTargets.findIndex(t => t.text === targetText.replace(/^"|"$/g, ''));
+                if (targetIndex !== -1) {
+                    correctPairings[dragItems[index].id] = dropTargets[targetIndex].id;
+                }
+            }
+        });
+        
+        console.log('Parsed dragItems:', dragItems);
+        console.log('Parsed dropTargets:', dropTargets);
+        console.log('Parsed correctPairings:', correctPairings);
+        
+        // Display results
+        document.body.innerHTML += '<h2>Results:</h2>';
+        document.body.innerHTML += '<h3>Drag Items:</h3><pre>' + JSON.stringify(dragItems, null, 2) + '</pre>';
+        document.body.innerHTML += '<h3>Drop Targets:</h3><pre>' + JSON.stringify(dropTargets, null, 2) + '</pre>';
+        document.body.innerHTML += '<h3>Correct Pairings:</h3><pre>' + JSON.stringify(correctPairings, null, 2) + '</pre>';
+    </script>
+</body>
+</html>

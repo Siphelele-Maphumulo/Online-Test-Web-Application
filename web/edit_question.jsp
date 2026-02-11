@@ -49,6 +49,8 @@
             rs.getString("image_path")      // 10th parameter
         );
             questionType = rs.getString("question_type") != null ? rs.getString("question_type") : "MCQ";
+            // Set totalMarks separately since constructor doesn't include it
+            questionToEdit.setTotalMarks(rs.getInt("marks"));
         }
         rs.close();
         pstm.close();
@@ -66,6 +68,35 @@
     String currentCourseName = "";
     if (questionToEdit != null && questionToEdit.getCourseName() != null) {
         currentCourseName = questionToEdit.getCourseName();
+    }
+    
+    // Drag and Drop data for editing
+    int totalMarks = 1;
+    String dragItemsJson = "[]";
+    String dropTargetsJson = "[]";
+    String dragCorrectTargetsJson = "[]";
+
+    if ("DRAG_AND_DROP".equals(questionType) && questionToEdit != null) {
+        try {
+            // Get marks from the question object
+            if (questionToEdit.getTotalMarks() > 0) {
+                totalMarks = questionToEdit.getTotalMarks();
+            }
+            
+            // Get drag-drop data from the JSON columns
+            java.util.Map<String, String> dragDropData = pDAO.getDragDropData(questionId);
+            if (dragDropData != null) {
+                dragItemsJson = dragDropData.get("drag_items") != null ? dragDropData.get("drag_items") : "[]";
+                dropTargetsJson = dragDropData.get("drop_targets") != null ? dragDropData.get("drop_targets") : "[]";
+                dragCorrectTargetsJson = dragDropData.get("drag_correct_targets") != null ? dragDropData.get("drag_correct_targets") : "[]";
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Initialize with empty data if there's an error
+            dragItemsJson = "[]";
+            dropTargetsJson = "[]";
+            dragCorrectTargetsJson = "[]";
+        }
     }
 
 %>
@@ -679,6 +710,84 @@
     z-index:1000;
     box-shadow:0 6px 20px rgba(0,0,0,.3);
 }
+
+/* Drag and Drop Styles */
+.drag-items-list, .drop-targets-list, .pairings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 100px;
+    padding: 10px;
+    background: var(--light-gray);
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--radius-sm);
+}
+
+.drag-item, .drop-target, .pairing-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--white);
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.drag-item:hover, .drop-target:hover, .pairing-item:hover {
+    border-color: var(--accent-blue);
+    box-shadow: var(--shadow-sm);
+}
+
+.drag-item i, .drop-target i, .pairing-item i {
+    color: var(--primary-blue);
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.drag-item input, .drop-target input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 14px;
+}
+
+.pairing-item span {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text-dark);
+}
+
+.pairing-select {
+    flex: 1;
+    padding: 4px 8px;
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    background: var(--white);
+}
+
+.remove-btn {
+    background: var(--error);
+    color: var(--white);
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.remove-btn:hover {
+    background: #b91c1c;
+    transform: scale(1.1);
+}
 </style>
 
 <div class="dashboard-container">
@@ -777,6 +886,7 @@
                                 <option value="MultipleSelect" <%= "MultipleSelect".equals(questionType) ? "selected" : "" %>>Multiple Select (Choose Two)</option>
                                 <option value="TrueFalse" <%= "TrueFalse".equals(questionType) ? "selected" : "" %>>True / False</option>
                                 <option value="Code" <%= "Code".equals(questionType) ? "selected" : "" %>>Code Snippet</option>
+                                <option value="DRAG_AND_DROP" <%= "DRAG_AND_DROP".equals(questionType) ? "selected" : "" %>>Drag and Drop</option>
                             </select>
                         </div>
                     </div>
@@ -846,6 +956,51 @@
                         </div>
                     </div>
                     
+                    <!-- Drag and Drop Section -->
+                    <div id="editDragDropOptions" style="display: none;">
+                        <div class="form-group">
+                            <label class="form-label"><i class="fas fa-grip-lines" style="color: var(--accent-blue);"></i>Drag and Drop Options</label>
+                            <div id="dragDropEditor" style="display: none; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 15px;">
+                                <!-- Draggable Items Column -->
+                                <div>
+                                    <h4 style="margin-bottom: 10px; color: var(--primary-blue);"><i class="fas fa-grip-vertical"></i> Draggable Items</h4>
+                                    <div id="dragItemsList" class="drag-items-list"></div>
+                                    <button type="button" class="btn btn-outline" onclick="addDragItem()" style="margin-top: 10px; width: 100%;">
+                                        <i class="fas fa-plus"></i> Add Item
+                                    </button>
+                                </div>
+                                
+                                <!-- Drop Targets Column -->
+                                <div>
+                                    <h4 style="margin-bottom: 10px; color: var(--success);"><i class="fas fa-bullseye"></i> Drop Targets</h4>
+                                    <div id="dropTargetsList" class="drop-targets-list"></div>
+                                    <button type="button" class="btn btn-outline" onclick="addDropTarget()" style="margin-top: 10px; width: 100%;">
+                                        <i class="fas fa-plus"></i> Add Target
+                                    </button>
+                                </div>
+                                
+                                <!-- Correct Pairings Column -->
+                                <div>
+                                    <h4 style="margin-bottom: 10px; color: var(--warning);"><i class="fas fa-link"></i> Correct Pairings</h4>
+                                    <p style="font-size: 13px; color: var(--dark-gray); margin-bottom: 10px;">Select which drag item matches each drop target</p>
+                                    <div id="pairingsList" class="pairings-list"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Total Marks Field -->
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label"><i class="fas fa-star" style="color: var(--warning);"></i>Total Marks</label>
+                            <input type="number" id="totalMarks" name="totalMarks" class="form-control" value="<%= totalMarks %>" min="1" max="100" required>
+                            <small class="form-hint">Total marks for this drag-and-drop question</small>
+                        </div>
+                        
+                        <!-- Hidden fields for data storage -->
+                        <input type="hidden" id="dragItemsData" name="dragItems" value="">
+                        <input type="hidden" id="dropTargetsData" name="dropTargets" value="">
+                        <input type="hidden" id="dragCorrectTargetsData" name="dragCorrectTargets" value="">
+                    </div>
+                    
                     <!-- Image Upload Section -->
                     <div class="form-group">
                         <label class="form-label"><i class="fas fa-image" style="color: var(--info);"></i> Upload Question Image (Optional)</label>
@@ -899,6 +1054,7 @@
 </div>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<script src="drag_drop_edit.js"></script>
 
 <script>
     function updateEditCorrectOptionLabels() {
@@ -918,6 +1074,8 @@
         const single = document.getElementById("editCorrectAnswerContainer");
         const multiple = document.getElementById("editMultipleCorrectContainer");
         const trueFalse = document.getElementById("editTrueFalseContainer");
+        const dragDrop = document.getElementById("editDragDropOptions");
+        const dragDropEditor = document.getElementById("dragDropEditor");
         const correct = document.getElementById("editCorrectAnswer");
         const trueFalseSelect = document.getElementById("editTrueFalseSelect");
         
@@ -927,6 +1085,8 @@
         single.style.display = "none";
         multiple.style.display = "none";
         trueFalse.style.display = "none";
+        dragDrop.style.display = "none";
+        dragDropEditor.style.display = "none";
         
         // Remove required attributes from all elements
         correct.required = false;
@@ -940,6 +1100,17 @@
             document.getElementById('editOpt2').required = false;
             document.getElementById('editOpt3').required = false;
             document.getElementById('editOpt4').required = false;
+        } else if (qType === "DRAG_AND_DROP") {
+            dragDrop.style.display = "block";
+            dragDropEditor.style.display = "grid";
+            // Don't require options for drag/drop questions
+            document.getElementById('editOpt1').required = false;
+            document.getElementById('editOpt2').required = false;
+            document.getElementById('editOpt3').required = false;
+            document.getElementById('editOpt4').required = false;
+            correct.required = false;
+            // Initialize drag-drop if switching to it
+            initializeDragDrop();
         } else {
             mcq.style.display = "block";
             if (qType === "MultipleSelect") {
@@ -1289,5 +1460,60 @@ window.addEventListener('DOMContentLoaded', function() {
         
         // Initialize image upload functionality
         initEditImageUpload();
+        
+        // Initialize drag-drop if current question type is DRAG_AND_DROP
+        if ('<%= questionType %>' === 'DRAG_AND_DROP') {
+            // Set the JSP data variables for the external JS file
+            if (typeof dragItemsJson !== 'undefined') {
+                dragItemsJson = '<%= dragItemsJson %>';
+            }
+            if (typeof dropTargetsJson !== 'undefined') {
+                dropTargetsJson = '<%= dropTargetsJson %>';
+            }
+            if (typeof dragCorrectTargetsJson !== 'undefined') {
+                dragCorrectTargetsJson = '<%= dragCorrectTargetsJson %>';
+            }
+            initializeDragDrop();
+        }
+        
+        // Add validation wrapper for drag-drop
+        const originalValidateAndSubmit = validateAndSubmit;
+        validateAndSubmit = function(event) {
+            const qType = document.getElementById("questionTypeSelect").value;
+            
+            if (qType === "DRAG_AND_DROP") {
+                if (dragItems.length === 0) {
+                    alert("Please add at least one draggable item.");
+                    return false;
+                }
+                
+                if (dropTargets.length === 0) {
+                    alert("Please add at least one drop target.");
+                    return false;
+                }
+                
+                const emptyItems = dragItems.filter(item => !item.text.trim());
+                if (emptyItems.length > 0) {
+                    alert("Please fill in text for all draggable items.");
+                    return false;
+                }
+                
+                const emptyTargets = dropTargets.filter(target => !target.text.trim());
+                if (emptyTargets.length > 0) {
+                    alert("Please fill in text for all drop targets.");
+                    return false;
+                }
+                
+                const unpairedItems = dragItems.filter(item => !correctPairings[item.id]);
+                if (unpairedItems.length > 0) {
+                    alert("Please assign a correct target for all draggable items.");
+                    return false;
+                }
+                
+                updateHiddenFields();
+            }
+            
+            return originalValidateAndSubmit.call(this, event);
+        };
     });
 </script>

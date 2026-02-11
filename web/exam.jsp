@@ -1750,6 +1750,149 @@
         }
     }
     
+    /* Drag and Drop Question Styles */
+    .drag-drop-question {
+        background: var(--light-gray);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-lg);
+        margin: var(--spacing-md) 0;
+    }
+    
+    .drag-drop-instructions {
+        text-align: center;
+        margin-bottom: var(--spacing-lg);
+        padding: var(--spacing-md);
+        background: var(--white);
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--medium-gray);
+    }
+    
+    .drag-drop-instructions i {
+        font-size: 24px;
+        color: var(--accent-blue);
+        margin-bottom: var(--spacing-sm);
+    }
+    
+    .drag-drop-instructions strong {
+        display: block;
+        margin-bottom: var(--spacing-sm);
+        color: var(--text-dark);
+    }
+    
+    .drag-drop-instructions p {
+        margin: 0;
+        color: var(--dark-gray);
+    }
+    
+    .drag-drop-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-lg);
+        margin-top: var(--spacing-md);
+    }
+    
+    .drag-items-section, .drop-targets-section {
+        background: var(--white);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-md);
+        border: 1px solid var(--medium-gray);
+    }
+    
+    .drag-items-section h4, .drop-targets-section h4 {
+        margin-bottom: var(--spacing-md);
+        color: var(--text-dark);
+        font-size: 14px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+    }
+    
+    .drag-items-list, .drop-targets-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+    
+    .drag-item {
+        background: var(--accent-blue);
+        color: var(--white);
+        padding: var(--spacing-sm) var(--spacing-md);
+        border-radius: var(--radius-sm);
+        cursor: move;
+        transition: all var(--transition-normal);
+        font-size: 13px;
+        text-align: center;
+        user-select: none;
+        border: 2px solid transparent;
+    }
+    
+    .drag-item:hover {
+        background: var(--primary-blue);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .drag-item.dragging {
+        opacity: 0.5;
+        transform: rotate(5deg);
+    }
+    
+    .drop-target {
+        background: var(--white);
+        border: 2px dashed var(--medium-gray);
+        border-radius: var(--radius-sm);
+        padding: var(--spacing-md);
+        min-height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all var(--transition-normal);
+        position: relative;
+        font-size: 13px;
+        color: var(--dark-gray);
+        text-align: center;
+    }
+    
+    .drop-target.drag-over {
+        background: rgba(74, 144, 226, 0.1);
+        border-color: var(--accent-blue);
+        transform: scale(1.02);
+    }
+    
+    .drop-target.has-item {
+        border-style: solid;
+        border-color: var(--success);
+        background: rgba(5, 150, 105, 0.1);
+    }
+    
+    .drop-target.has-item .placeholder {
+        display: none;
+    }
+    
+    .drop-target .placeholder {
+        font-style: italic;
+    }
+    
+    .drop-target .drag-item {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        margin: 0;
+        z-index: 10;
+    }
+    
+    @media (max-width: 768px) {
+        .drag-drop-container {
+            grid-template-columns: 1fr;
+        }
+        
+        .drag-items-section, .drop-targets-section {
+            margin-bottom: var(--spacing-md);
+        }
+    }
+    
     @media (min-width: 1440px) {
         .content-area {
             max-width: calc(100% - 250px);
@@ -1797,6 +1940,7 @@
                 <% for (int i=0; i<totalQ; i++){
                     Questions q = questionsList.get(i);
                     boolean isMultiTwo = false;
+                    boolean isDragDrop = false;
                     try{
                         String qt = q.getQuestion().toLowerCase();
                         String questionType = q.getQuestionType();
@@ -1805,7 +1949,11 @@
                                     qt.contains("pick two") || qt.contains("multiple answers") || 
                                     qt.contains("two options") || qt.contains("multiple select") ||
                                     qt.contains("select multiple") || qt.contains("choose multiple");
-                    } catch(Exception e) { isMultiTwo = false; }
+                        isDragDrop = "DRAG_AND_DROP".equalsIgnoreCase(questionType);
+                    } catch(Exception e) { 
+                        isMultiTwo = false; 
+                        isDragDrop = false;
+                    }
 
                     String fullQuestion = q.getQuestion(), questionPart = "", codePart = "";
                     if(fullQuestion.contains("```")){
@@ -1865,30 +2013,59 @@
                             </div>
                         </div>
                         <div class="answers" data-max-select="<%= isMultiTwo?"2":"1" %>">
-                            <% if(isMultiTwo){ %>
-                                <div class="multi-select-note"><i class="fas fa-check-double"></i><strong>Choose up to 2 answers</strong></div>
-                            <% } %>
-                            <% for(int oi=0; oi<opts.size(); oi++){
-                                String optVal = opts.get(oi);
-                                String inputId = "q"+i+"o"+(oi+1);
-                            %>
-                                <div class="form-check">
-                                    <input class="form-check-input answer-input <%= isMultiTwo?"multi":"single" %>" 
-                                        type="<%= isMultiTwo?"checkbox":"radio" %>" 
-                                        id="<%= inputId %>" 
-                                        name="<%= isMultiTwo ? ("ans"+i+"_"+oi) : ("ans"+i) %>" 
-                                        value="<%= optVal %>" 
-                                        data-qindex="<%= i %>">
-                                    <label class="form-check-label" for="<%= inputId %>"><%= optVal %></label>
+                            <% if(isDragDrop){ %>
+                                <div class="drag-drop-question">
+                                    <div class="drag-drop-instructions">
+                                        <i class="fas fa-hand-rock"></i>
+                                        <strong>Drag and Drop Question</strong>
+                                        <p>Drag the items to their correct targets below</p>
+                                    </div>
+                                    
+                                    <div class="drag-drop-container">
+                                        <div class="drag-items-section">
+                                            <h4><i class="fas fa-grip-vertical"></i> Draggable Items</h4>
+                                            <div class="drag-items-list" id="dragItems_<%= i %>">
+                                                <!-- Drag items will be loaded here -->
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="drop-targets-section">
+                                            <h4><i class="fas fa-bullseye"></i> Drop Targets</h4>
+                                            <div class="drop-targets-list" id="dropTargets_<%= i %>">
+                                                <!-- Drop targets will be loaded here -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <input type="hidden" name="dragDropQuestion_<%= i %>" value="true">
+                                    <input type="hidden" name="qid<%= i %>" value="<%= q.getQuestionId() %>">
                                 </div>
-                            <% } %>
-                            <% if(isMultiTwo){ %>
-                                <input type="hidden" id="ans<%= i %>-hidden" name="ans<%= i %>" value="">
+                            <% } else { %>
+                                <% if(isMultiTwo){ %>
+                                    <div class="multi-select-note"><i class="fas fa-check-double"></i><strong>Choose up to 2 answers</strong></div>
+                                <% } %>
+                                <% for(int oi=0; oi<opts.size(); oi++){
+                                    String optVal = opts.get(oi);
+                                    String inputId = "q"+i+"o"+(oi+1);
+                                %>
+                                    <div class="form-check">
+                                        <input class="form-check-input answer-input <%= isMultiTwo?"multi":"single" %>" 
+                                            type="<%= isMultiTwo?"checkbox":"radio" %>" 
+                                            id="<%= inputId %>" 
+                                            name="<%= isMultiTwo ? ("ans"+i+"_"+oi) : ("ans"+i) %>" 
+                                            value="<%= optVal %>" 
+                                            data-qindex="<%= i %>">
+                                        <label class="form-check-label" for="<%= inputId %>"><%= optVal %></label>
+                                    </div>
+                                <% } %>
+                                <% if(isMultiTwo){ %>
+                                    <input type="hidden" id="ans<%= i %>-hidden" name="ans<%= i %>" value="">
+                                <% } %>
                             <% } %>
                         </div>
                         <input type="hidden" name="question<%= i %>" value="<%= q.getQuestion() %>">
                         <input type="hidden" name="qid<%= i %>" value="<%= q.getQuestionId() %>">
-                        <input type="hidden" name="qtype<%= i %>" value="<%= isMultiTwo?"multi2":"single" %>">
+                        <input type="hidden" name="qtype<%= i %>" value="<%= isDragDrop?"dragdrop":(isMultiTwo?"multi2":"single") %>">
                     </div>
                 <% } %>
                 </div>
@@ -2393,6 +2570,213 @@
                         }
                     });
                 });
+                
+                /* --- DRAG AND DROP FUNCTIONALITY --- */
+                function initializeDragDropQuestions() {
+                    const dragDropQuestions = document.querySelectorAll('.drag-drop-question');
+                    
+                    dragDropQuestions.forEach(questionContainer => {
+                        const questionIndex = questionContainer.closest('.question-card').getAttribute('data-qindex');
+                        const dragItemsContainer = document.getElementById(`dragItems_${questionIndex}`);
+                        const dropTargetsContainer = document.getElementById(`dropTargets_${questionIndex}`);
+                        
+                        // Load drag-drop data (this would normally come from the database)
+                        loadDragDropData(questionIndex, dragItemsContainer, dropTargetsContainer);
+                    });
+                }
+                
+                function loadDragDropData(questionIndex, dragItemsContainer, dropTargetsContainer) {
+                    // This would normally load from the database via AJAX
+                    // For now, we'll create sample data
+                    const sampleDragItems = [
+                        { id: `drag_${questionIndex}_1`, text: 'Apple' },
+                        { id: `drag_${questionIndex}_2`, text: 'Banana' },
+                        { id: `drag_${questionIndex}_3`, text: 'Orange' }
+                    ];
+                    
+                    const sampleDropTargets = [
+                        { id: `target_${questionIndex}_1`, label: 'Fruit' },
+                        { id: `target_${questionIndex}_2`, label: 'Vegetable' },
+                        { id: `target_${questionIndex}_3`, label: 'Color' }
+                    ];
+                    
+                    // Create drag items
+                    dragItemsContainer.innerHTML = '';
+                    sampleDragItems.forEach(item => {
+                        const dragElement = document.createElement('div');
+                        dragElement.className = 'drag-item';
+                        dragElement.draggable = true;
+                        dragElement.setAttribute('data-item-id', item.id);
+                        dragElement.textContent = item.text;
+                        dragItemsContainer.appendChild(dragElement);
+                    });
+                    
+                    // Create drop targets
+                    dropTargetsContainer.innerHTML = '';
+                    sampleDropTargets.forEach(target => {
+                        const dropElement = document.createElement('div');
+                        dropElement.className = 'drop-target';
+                        dropElement.setAttribute('data-target-id', target.id);
+                        dropElement.innerHTML = `<span class="placeholder">${target.label}</span>`;
+                        dropTargetsContainer.appendChild(dropElement);
+                    });
+                    
+                    // Set up drag and drop events
+                    setupDragAndDropEvents(dragItemsContainer, dropTargetsContainer);
+                }
+                
+                function setupDragAndDropEvents(dragContainer, dropContainer) {
+                    const dragItems = dragContainer.querySelectorAll('.drag-item');
+                    const dropTargets = dropContainer.querySelectorAll('.drop-target');
+                    
+                    // Drag events
+                    dragItems.forEach(item => {
+                        item.addEventListener('dragstart', handleDragStart);
+                        item.addEventListener('dragend', handleDragEnd);
+                    });
+                    
+                    // Drop events
+                    dropTargets.forEach(target => {
+                        target.addEventListener('dragover', handleDragOver);
+                        target.addEventListener('drop', handleDrop);
+                        target.addEventListener('dragleave', handleDragLeave);
+                    });
+                }
+                
+                function handleDragStart(e) {
+                    e.target.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', e.target.getAttribute('data-item-id'));
+                    e.dataTransfer.setData('text/html', e.target.outerHTML);
+                }
+                
+                function handleDragEnd(e) {
+                    e.target.classList.remove('dragging');
+                }
+                
+                function handleDragOver(e) {
+                    e.preventDefault();
+                    e.currentTarget.classList.add('drag-over');
+                }
+                
+                function handleDragLeave(e) {
+                    e.currentTarget.classList.remove('drag-over');
+                }
+                
+                function handleDrop(e) {
+                    e.preventDefault();
+                    const target = e.currentTarget;
+                    target.classList.remove('drag-over');
+                    
+                    // Get the dragged element data
+                    const itemId = e.dataTransfer.getData('text/plain');
+                    const itemHTML = e.dataTransfer.getData('text/html');
+                    
+                    // Remove existing item if any
+                    const existingItem = target.querySelector('.drag-item');
+                    if (existingItem) {
+                        existingItem.remove();
+                    }
+                    
+                    // Create new item in the drop target
+                    const newItem = document.createElement('div');
+                    newItem.innerHTML = itemHTML;
+                    newItem.className = 'drag-item';
+                    newItem.draggable = true;
+                    newItem.setAttribute('data-item-id', itemId);
+                    
+                    // Set up events for the new item
+                    newItem.addEventListener('dragstart', handleDragStart);
+                    newItem.addEventListener('dragend', handleDragEnd);
+                    
+                    target.appendChild(newItem);
+                    target.classList.add('has-item');
+                    
+                    // Update progress
+                    updateProgress();
+                }
+                
+                function getDragDropAnswers() {
+                    const answers = {};
+                    const dragDropQuestions = document.querySelectorAll('.drag-drop-question');
+                    
+                    dragDropQuestions.forEach(questionContainer => {
+                        const questionIndex = questionContainer.closest('.question-card').getAttribute('data-qindex');
+                        const dropTargets = questionContainer.querySelectorAll('.drop-target');
+                        const questionAnswers = {};
+                        
+                        dropTargets.forEach(target => {
+                            const targetId = target.getAttribute('data-target-id');
+                            const dragItem = target.querySelector('.drag-item');
+                            
+                            if (dragItem) {
+                                const itemId = dragItem.getAttribute('data-item-id');
+                                questionAnswers[targetId] = itemId;
+                            }
+                        });
+                        
+                        answers[questionIndex] = questionAnswers;
+                    });
+                    
+                    return answers;
+                }
+                
+                // Override the submit function to handle drag-drop answers
+                const originalSubmitExam = window.submitExam;
+                window.submitExam = function() {
+                    // Get regular answers
+                    const regularAnswers = {};
+                    const answerInputs = document.querySelectorAll('.answer-input:checked');
+                    
+                    answerInputs.forEach(input => {
+                        const qindex = input.getAttribute('data-qindex');
+                        if (!regularAnswers[qindex]) {
+                            regularAnswers[qindex] = [];
+                        }
+                        regularAnswers[qindex].push(input.value);
+                    });
+                    
+                    // Get drag-drop answers
+                    const dragDropAnswers = getDragDropAnswers();
+                    
+                    // Combine answers
+                    const allAnswers = { ...regularAnswers, ...dragDropAnswers };
+                    
+                    // Store answers in hidden fields for form submission
+                    Object.keys(allAnswers).forEach(qindex => {
+                        const answers = allAnswers[qindex];
+                        if (Array.isArray(answers)) {
+                            // Regular question answers
+                            answers.forEach((answer, index) => {
+                                const hiddenField = document.createElement('input');
+                                hiddenField.type = 'hidden';
+                                hiddenField.name = `match_${qindex}_${answers[index].id}`;
+                                hiddenField.value = answers[index].id;
+                                document.querySelector('form').appendChild(hiddenField);
+                            });
+                        } else {
+                            // Drag-drop question answers
+                            Object.keys(answers).forEach(targetId => {
+                                const itemId = answers[targetId];
+                                const hiddenField = document.createElement('input');
+                                hiddenField.type = 'hidden';
+                                hiddenField.name = `match_${qindex}_${targetId}`;
+                                hiddenField.value = itemId;
+                                document.querySelector('form').appendChild(hiddenField);
+                            });
+                        }
+                    });
+                    
+                    // Call original submit function
+                    return originalSubmitExam();
+                };
+                
+                // Initialize drag-drop questions when DOM is ready
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', initializeDragDropQuestions);
+                } else {
+                    initializeDragDropQuestions();
+                }
             </script>
 
             <% } else if ("1".equals(request.getParameter("showresult"))) {

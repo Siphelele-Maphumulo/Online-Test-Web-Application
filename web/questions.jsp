@@ -936,6 +936,139 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
     color: #a71d2a;
 }
 
+/* Drag and Drop Interface Styles */
+.drag-item-row, .drop-target-row {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+    margin-bottom: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background: var(--light-gray);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--medium-gray);
+}
+
+.drag-item-row:hover, .drop-target-row:hover {
+    background: var(--white);
+    border-color: var(--accent-blue);
+}
+
+.drag-item-row input, .drop-target-row input {
+    flex: 1;
+}
+
+.drag-item-row select {
+    flex: 1;
+    min-width: 200px;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: var(--radius-sm);
+}
+
+.drag-drop-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-md);
+}
+
+.drag-items-section, .drop-targets-section {
+    background: var(--light-gray);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--medium-gray);
+}
+
+.drag-items-section h4, .drop-targets-section h4 {
+    margin-bottom: var(--spacing-md);
+    color: var(--text-dark);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.drag-item-example, .drop-target-example {
+    background: var(--white);
+    border: 2px dashed var(--accent-blue);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    text-align: center;
+    color: var(--dark-gray);
+    font-size: 13px;
+}
+
+.drag-item-example {
+    cursor: move;
+    transition: all var(--transition-normal);
+}
+
+.drag-item-example:hover {
+    background: rgba(74, 144, 226, 0.05);
+    border-color: var(--primary-blue);
+}
+
+.drop-target-example {
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.drop-target-example.drag-over {
+    background: rgba(74, 144, 226, 0.1);
+    border-color: var(--primary-blue);
+    transform: scale(1.02);
+}
+
+.drag-drop-preview {
+    background: var(--white);
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    margin-top: var(--spacing-md);
+}
+
+.drag-drop-preview h5 {
+    margin-bottom: var(--spacing-md);
+    color: var(--text-dark);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.preview-items, .preview-targets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.preview-item {
+    background: var(--accent-blue);
+    color: var(--white);
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    cursor: move;
+}
+
+.preview-target {
+    background: var(--success);
+    color: var(--white);
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    min-width: 100px;
+    text-align: center;
+}
+
+.preview-target.drag-over {
+    background: var(--primary-blue);
+    transform: scale(1.05);
+}
+
 </style>
 
 <!-- Dashboard Layout -->
@@ -1123,6 +1256,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                 <option value="TrueFalse" <%="TrueFalse".equals(lastQuestionType) ? "selected" : ""%>>True/False</option>
                                 <option value="MultipleSelect" <%="MultipleSelect".equals(lastQuestionType) ? "selected" : ""%>>Multiple Select (2 correct)</option>
                                 <option value="Code" <%="Code".equals(lastQuestionType) ? "selected" : ""%>>Code Snippet</option>
+                                <option value="DRAG_AND_DROP" <%="DRAG_AND_DROP".equals(lastQuestionType) ? "selected" : ""%>>Drag and Drop</option>
                             </select>
                             <input type="hidden" id="questionTypeHidden" name="questionType" value="<%=lastQuestionType%>">
                         </div>
@@ -1186,6 +1320,53 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                     <div class="error-message" id="opt4Error">Fourth option is required</div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Drag and Drop Options -->
+                    <div id="dragDropOptions" style="display:none;">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-arrows-alt" style="color: var(--accent-blue);"></i>
+                                Total Marks
+                            </label>
+                            <input type="number" name="totalMarks" class="form-control" value="1" min="1" max="100" required>
+                            <small class="form-hint">Total marks for this question</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-hand-rock" style="color: var(--info);"></i>
+                                Draggable Items
+                            </label>
+                            <div id="dragItemsContainer">
+                                <div class="drag-item-row" data-item-index="0">
+                                    <input type="text" name="dragItem_text_0" class="form-control" placeholder="Enter draggable item text">
+                                    <select name="dragItem_target_0" class="form-select">
+                                        <option value="">Select correct target</option>
+                                    </select>
+                                    <button type="button" class="btn btn-outline btn-sm" onclick="removeDragItem(this)">Remove</button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="addDragItem()">
+                                <i class="fas fa-plus"></i> Add Item
+                            </button>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-bullseye" style="color: var(--success);"></i>
+                                Drop Targets
+                            </label>
+                            <div id="dropTargetsContainer">
+                                <div class="drop-target-row" data-target-index="0">
+                                    <input type="text" name="dropTarget_0" class="form-control" placeholder="Enter drop target label">
+                                    <button type="button" class="btn btn-outline btn-sm" onclick="removeDropTarget(this)">Remove</button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="addDropTarget()">
+                                <i class="fas fa-plus"></i> Add Target
+                            </button>
                         </div>
                     </div>
                     
@@ -1840,6 +2021,7 @@ function toggleOptions() {
     const single = document.getElementById("correctAnswerContainer");
     const trueFalse = document.getElementById("trueFalseContainer");
     const multiple = document.getElementById("multipleCorrectContainer");
+    const dragDrop = document.getElementById("dragDropOptions");
     const correct = document.getElementById("correctAnswer");
     const trueFalseSelect = document.getElementById("trueFalseSelect");
     
@@ -1856,6 +2038,7 @@ function toggleOptions() {
     single.style.display = "none";
     trueFalse.style.display = "none";
     multiple.style.display = "none";
+    dragDrop.style.display = "none";
     
     // Remove required attributes from all elements
     correct.required = false;
@@ -1899,6 +2082,34 @@ function toggleOptions() {
                 correctAnswerField.value = trueFalseSelect.value;
             }
         }
+    } else if (qType === "DRAG_AND_DROP") {
+        dragDrop.style.display = "block";
+        // Don't require options for drag-drop questions
+        if (opt1) opt1.required = false;
+        if (opt2) opt2.required = false;
+        if (opt3) opt3.required = false;
+        if (opt4) opt4.required = false;
+        
+        // Clear and disable option fields for drag-drop questions
+        if (opt1) {
+            opt1.value = '';
+            opt1.disabled = true;
+        }
+        if (opt2) {
+            opt2.value = '';
+            opt2.disabled = true;
+        }
+        if (opt3) {
+            opt3.value = '';
+            opt3.disabled = true;
+        }
+        if (opt4) {
+            opt4.value = '';
+            opt4.disabled = true;
+        }
+        
+        // Initialize drag-drop interface
+        updateDragDropTargetOptions();
     } else {
         mcq.style.display = "block";
         if (opt1) opt1.required = true;
@@ -2061,6 +2272,13 @@ document.addEventListener('DOMContentLoaded', function() {
     syncCourseDropdowns();
     initializeTrueFalseSelection(); // Initialize True/False dropdown event handler
     
+    // Initialize drop target input event listeners for immediate updates
+    const existingDropTargetInputs = document.querySelectorAll('#dropTargetsContainer input[type="text"]');
+    existingDropTargetInputs.forEach(input => {
+        input.addEventListener('input', updateDragDropTargetOptions);
+        input.addEventListener('change', updateDragDropTargetOptions);
+    });
+    
     // Add form submission handler
     const addQuestionForm = document.getElementById('addQuestionForm');
     if (addQuestionForm) {
@@ -2127,6 +2345,26 @@ document.addEventListener('DOMContentLoaded', function() {
                         errorMsg = "Expected output is required for Code questions.";
                         isValid = false;
                     }
+                } else if (qType === "DRAG_AND_DROP") {
+                    // For Drag and Drop questions, validate that drag items and drop targets are provided
+                    const dragItems = document.querySelectorAll('#dragItemsContainer input[type="text"]');
+                    const dropTargets = document.querySelectorAll('#dropTargetsContainer input[type="text"]');
+                    
+                    let hasValidDragItem = false;
+                    let hasValidDropTarget = false;
+                    
+                    dragItems.forEach(input => {
+                        if (input.value.trim()) hasValidDragItem = true;
+                    });
+                    
+                    dropTargets.forEach(input => {
+                        if (input.value.trim()) hasValidDropTarget = true;
+                    });
+                    
+                    if (!hasValidDragItem || !hasValidDropTarget) {
+                        errorMsg = "Please add at least one draggable item and one drop target.";
+                        isValid = false;
+                    }
                 }
                 // True/False validation is handled separately above
             }
@@ -2182,4 +2420,93 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Drag and Drop Interface Functions
+let dragItemIndex = 0;
+let dropTargetIndex = 0;
+
+function addDragItem() {
+    const container = document.getElementById('dragItemsContainer');
+    const newIndex = ++dragItemIndex;
+    
+    const itemRow = document.createElement('div');
+    itemRow.className = 'drag-item-row';
+    itemRow.setAttribute('data-item-index', newIndex);
+    
+    itemRow.innerHTML = `
+        <input type="text" name="dragItem_text_${newIndex}" class="form-control" placeholder="Enter draggable item text">
+        <select name="dragItem_target_${newIndex}" class="form-select">
+            <option value="">Select correct target</option>
+        </select>
+        <button type="button" class="btn btn-outline btn-sm" onclick="removeDragItem(this)">Remove</button>
+    `;
+    
+    container.appendChild(itemRow);
+    updateDragDropTargetOptions();
+}
+
+function removeDragItem(button) {
+    const itemRow = button.closest('.drag-item-row');
+    itemRow.remove();
+    updateDragDropTargetOptions();
+}
+
+function addDropTarget() {
+    const container = document.getElementById('dropTargetsContainer');
+    const newIndex = ++dropTargetIndex;
+    
+    const targetRow = document.createElement('div');
+    targetRow.className = 'drop-target-row';
+    targetRow.setAttribute('data-target-index', newIndex);
+    
+    targetRow.innerHTML = `
+        <input type="text" name="dropTarget_${newIndex}" class="form-control" placeholder="Enter drop target label">
+        <button type="button" class="btn btn-outline btn-sm" onclick="removeDropTarget(this)">Remove</button>
+    `;
+    
+    container.appendChild(targetRow);
+    
+    // Add change event listener to the new input to update drag item options immediately
+    const newInput = targetRow.querySelector('input[type="text"]');
+    newInput.addEventListener('input', updateDragDropTargetOptions);
+    newInput.addEventListener('change', updateDragDropTargetOptions);
+    
+    updateDragDropTargetOptions();
+}
+
+function removeDropTarget(button) {
+    const targetRow = button.closest('.drop-target-row');
+    targetRow.remove();
+    updateDragDropTargetOptions();
+}
+
+function updateDragDropTargetOptions() {
+    const targetInputs = document.querySelectorAll('#dropTargetsContainer input[type="text"]');
+    const targetOptions = [];
+    
+    targetInputs.forEach(input => {
+        const value = input.value.trim();
+        if (value) {
+            targetOptions.push({ value: value, text: value });
+        }
+    });
+    
+    const dragSelects = document.querySelectorAll('#dragItemsContainer select');
+    dragSelects.forEach(select => {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Select correct target</option>';
+        
+        targetOptions.forEach(option => {
+            const optionElement = document.createElement('option');
+            optionElement.value = option.value;
+            optionElement.textContent = option.text;
+            if (option.value === currentValue) {
+                optionElement.selected = true;
+            }
+            select.appendChild(optionElement);
+        });
+    });
+}
+
+// Initialize when DOM is loaded (this will be called after the above DOMContentLoaded event)
 </script>
