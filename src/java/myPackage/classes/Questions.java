@@ -5,6 +5,9 @@ package myPackage.classes;
 public class Questions {
     private int questionId;
     private String question,opt1,opt2,opt3,opt4,correct,courseName, questionType, imagePath;
+    private java.util.List<DraggableItem> draggableItems;
+    private java.util.List<DropZone> dropZones;
+
 
     public Questions() {
     }
@@ -112,6 +115,22 @@ public class Questions {
     
     public void setImagePath(String imagePath) {
         this.imagePath = imagePath;
+    }
+
+    public java.util.List<DraggableItem> getDraggableItems() {
+        return draggableItems;
+    }
+
+    public void setDraggableItems(java.util.List<DraggableItem> draggableItems) {
+        this.draggableItems = draggableItems;
+    }
+
+    public java.util.List<DropZone> getDropZones() {
+        return dropZones;
+    }
+
+    public void setDropZones(java.util.List<DropZone> dropZones) {
+        this.dropZones = dropZones;
     }
     
     

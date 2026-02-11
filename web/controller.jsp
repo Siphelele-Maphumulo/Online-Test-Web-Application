@@ -42,152 +42,6 @@ private String nz(String v, String fallback){
 
 <%
 try {
-    String actionParamEarly = request.getParameter("action");
-    if (actionParamEarly != null && "check_signup_code_email".equalsIgnoreCase(actionParamEarly)) {
-        response.setContentType("application/json");
-        PrintWriter outJSON = response.getWriter();
-        JSONObject res = new JSONObject();
-
-        String email = nz(request.getParameter("email"), "");
-        if (email.isEmpty()) {
-            res.put("exists", false);
-            outJSON.print(res.toString());
-            return;
-        }
-
-        boolean exists = pDAO.signupCodeEmailExists(email);
-        res.put("exists", exists);
-        outJSON.print(res.toString());
-        return;
-    }
-
-    if (actionParamEarly != null && "verify_signup_code_and_register_lecture".equalsIgnoreCase(actionParamEarly)) {
-        response.setContentType("application/json");
-        PrintWriter outJSON = response.getWriter();
-        JSONObject res = new JSONObject();
-
-        String fName     = nz(request.getParameter("fname"), "");
-        String lName     = nz(request.getParameter("lname"), "");
-        String uName     = nz(request.getParameter("uname"), "");
-        String email     = nz(request.getParameter("email"), "");
-        String pass      = nz(request.getParameter("pass"), "");
-        String contactNo = nz(request.getParameter("contactno"), "");
-        String city      = nz(request.getParameter("city"), "");
-        String address   = nz(request.getParameter("address"), "");
-        String code      = nz(request.getParameter("code"), "");
-
-        if (fName.isEmpty() || lName.isEmpty() || uName.isEmpty() || email.isEmpty() || pass.isEmpty() || code.isEmpty()) {
-            res.put("success", false);
-            res.put("message", "Missing required fields.");
-            outJSON.print(res.toString());
-            return;
-        }
-        if (!uName.matches("\\d{8}")) {
-            res.put("success", false);
-            res.put("message", "ID number must be exactly 8 digits.");
-            outJSON.print(res.toString());
-            return;
-        }
-
-        try {
-            String hashedPass = PasswordUtils.bcryptHashPassword(pass);
-            boolean ok = pDAO.registerLecturerFromSignupCode(fName, lName, uName, email, hashedPass, contactNo, city, address, code);
-            if (ok) {
-                res.put("success", true);
-                res.put("message", "Lecturer registration successful! Please login.");
-            } else {
-                res.put("success", false);
-                res.put("message", "Invalid signup code.");
-            }
-            outJSON.print(res.toString());
-            return;
-        } catch (RuntimeException ex) {
-            LOGGER.log(Level.SEVERE, "Error registering lecturer from signup code", ex);
-            res.put("success", false);
-            res.put("message", "Registration failed. " + ex.getMessage());
-            outJSON.print(res.toString());
-            return;
-        } catch (Exception ex) {
-            LOGGER.log(Level.SEVERE, "Error hashing password/processing lecturer signup", ex);
-            res.put("success", false);
-            res.put("message", "Registration failed.");
-            outJSON.print(res.toString());
-            return;
-        }
-    }
-
-    if (actionParamEarly != null && "lecturer_request".equalsIgnoreCase(actionParamEarly)) {
-        response.setContentType("application/json");
-        PrintWriter outJSON = response.getWriter();
-        JSONObject res = new JSONObject();
-
-        String firstNames = nz(request.getParameter("firstNames"), "");
-        String surname = nz(request.getParameter("surname"), "");
-        String lecturerLegacy = nz(request.getParameter("lecturer"), "");
-        String staffNumber = nz(request.getParameter("staffNumber"), "");
-        String email = nz(request.getParameter("email"), "");
-        String course = nz(request.getParameter("course"), "");
-        String contact = nz(request.getParameter("contact"), "");
-
-        if ((firstNames.isEmpty() || surname.isEmpty()) && !lecturerLegacy.isEmpty()) {
-            String[] parts = lecturerLegacy.trim().split("\\s+", 2);
-            if (firstNames.isEmpty() && parts.length > 0) firstNames = parts[0];
-            if (surname.isEmpty() && parts.length > 1) surname = parts[1];
-        }
-        if (firstNames.isEmpty() && !lecturerLegacy.isEmpty()) {
-            firstNames = lecturerLegacy;
-        }
-
-        if (firstNames.isEmpty() || surname.isEmpty() || staffNumber.isEmpty() || email.isEmpty() || course.isEmpty() || contact.isEmpty()) {
-            res.put("success", false);
-            res.put("message", "Please fill in all fields.");
-            outJSON.print(res.toString());
-            return;
-        }
-        if (!staffNumber.matches("\\d{6}")) {
-            res.put("success", false);
-            res.put("message", "Staff Number must be exactly 6 digits.");
-            outJSON.print(res.toString());
-            return;
-        }
-        if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
-            res.put("success", false);
-            res.put("message", "Please enter a valid email address.");
-            outJSON.print(res.toString());
-            return;
-        }
-
-        String alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        java.security.SecureRandom rnd = new java.security.SecureRandom();
-        StringBuilder sb = new StringBuilder(6);
-        for (int i = 0; i < 6; i++) {
-            sb.append(alphabet.charAt(rnd.nextInt(alphabet.length())));
-        }
-        String signupCode = sb.toString();
-
-        try {
-            boolean stored = pDAO.storeSignupCode(firstNames, surname, email, signupCode);
-            if (!stored) {
-                res.put("success", false);
-                res.put("message", "Could not store signup code. Please try again later.");
-                outJSON.print(res.toString());
-                return;
-            }
-
-            Email.sendLecturerRequestEmail(firstNames, surname, staffNumber, email, course, contact, signupCode);
-            res.put("success", true);
-            res.put("message", "Request sent successfully.");
-            outJSON.print(res.toString());
-            return;
-        } catch (Throwable mailErr) {
-            LOGGER.log(Level.SEVERE, "Failed to send lecturer request email", mailErr);
-            res.put("success", false);
-            res.put("message", "Could not send request email. Please try again later.");
-            outJSON.print(res.toString());
-            return;
-        }
-    }
-
     String pageParam = request.getParameter("page");
     
     // Special handling for multipart form submissions
@@ -548,44 +402,23 @@ try {
                 return;
             }
 
-            // Fetch directly from DB here to avoid requiring a rebuilt DatabaseClass on the server classpath.
-            try {
-                Connection conn = pDAO.getConnection();
-                PreparedStatement ps = conn.prepareStatement(
-                    "SELECT course_name, total_marks, time, exam_date FROM courses WHERE course_name = ?"
-                );
-                ps.setString(1, courseName);
-                ResultSet rs = ps.executeQuery();
-
-                if (!rs.next()) {
-                    JSONObject error = new JSONObject();
-                    error.put("success", false);
-                    error.put("message", "Course not found");
-                    out.print(error.toString());
-                    rs.close();
-                    ps.close();
-                    return;
-                }
-
-                JSONObject json = new JSONObject();
-                json.put("success", true);
-                json.put("courseName", rs.getString("course_name"));
-                json.put("totalMarks", rs.getInt("total_marks"));
-                json.put("time", rs.getString("time"));
-                json.put("examDate", rs.getString("exam_date"));
-                out.print(json.toString());
-
-                rs.close();
-                ps.close();
-                return;
-            } catch (Exception ex) {
-                LOGGER.log(Level.SEVERE, "getCourseData failed", ex);
+            Courses course = pDAO.getCourseByName(courseName);
+            if (course == null) {
                 JSONObject error = new JSONObject();
                 error.put("success", false);
-                error.put("message", "Server error: " + ex.getMessage());
+                error.put("message", "Course not found");
                 out.print(error.toString());
                 return;
             }
+
+            JSONObject json = new JSONObject();
+            json.put("success", true);
+            json.put("courseName", course.getcName());
+            json.put("totalMarks", course.gettMarks());
+            json.put("time", course.getTime());
+            json.put("examDate", course.getExamDate());
+            out.print(json.toString());
+            return;
         }
 
         if ("addnew".equalsIgnoreCase(operation)) {
@@ -1362,23 +1195,9 @@ try {
                             byte[] pdfBytes = item.get();
                             PDDocument document = null;
                             try {
-                                // Load PDF via reflection to support multiple PDFBox versions.
-                                // This avoids compile errors when certain overloads do not exist.
-                                try {
-                                    java.lang.reflect.Method m = PDDocument.class.getMethod("load", byte[].class);
-                                    document = (PDDocument) m.invoke(null, pdfBytes);
-                                } catch (NoSuchMethodException noByteArrayLoad) {
-                                    try {
-                                        java.io.InputStream in = new java.io.ByteArrayInputStream(pdfBytes);
-                                        java.lang.reflect.Method m = PDDocument.class.getMethod("load", java.io.InputStream.class);
-                                        document = (PDDocument) m.invoke(null, in);
-                                    } catch (NoSuchMethodException noStreamLoad) {
-                                        // Last resort: Loader.loadPDF (may still fail if PDFBox jars are inconsistent)
-                                        Class<?> loaderClass = Class.forName("org.apache.pdfbox.Loader");
-                                        java.lang.reflect.Method loadMethod = loaderClass.getMethod("loadPDF", byte[].class);
-                                        document = (PDDocument) loadMethod.invoke(null, pdfBytes);
-                                    }
-                                }
+                                // Always use PDDocument.load(byte[]) to avoid invoking PDFBox Loader.loadPDF(),
+                                // which can throw NoSuchMethodError when PDFBox jars are mismatched.
+                                document = PDDocument.load(pdfBytes);
 
                                 PDFTextStripper stripper = new PDFTextStripper();
                                 extractedText = stripper.getText(document);
@@ -1389,25 +1208,10 @@ try {
                                 }
                             }
                         } catch (Throwable loadError) {
-                            Throwable root = loadError;
-                            if (root instanceof java.lang.reflect.InvocationTargetException) {
-                                Throwable target = ((java.lang.reflect.InvocationTargetException) root).getTargetException();
-                                if (target != null) root = target;
-                            }
-                            while (root.getCause() != null && root.getCause() != root) {
-                                root = root.getCause();
-                            }
-
-                            String technical = String.valueOf(root);
-                            String message = "Error loading PDF: " + technical;
-                            if (technical.contains("IOUtils.createMemoryOnlyStreamCache")) {
-                                message = "PDFBox libraries are incompatible/mismatched (mixed versions in WEB-INF/lib). Please keep a single consistent PDFBox version set (e.g. pdfbox-3.0.6 + pdfbox-io-3.0.6 + fontbox-3.0.6) and remove older pdfbox-app/pdfbox-tools jars.";
-                            }
-
-                            LOGGER.log(Level.WARNING, message, loadError);
+                            LOGGER.log(Level.WARNING, "Error loading PDF: " + loadError.getMessage(), loadError);
                             JSONObject err = new JSONObject();
                             err.put("success", false);
-                            err.put("message", message);
+                            err.put("message", "Error loading PDF: " + loadError.getMessage());
                             outJSON.print(err.toString());
                             return;
                         }
