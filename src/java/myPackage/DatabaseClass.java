@@ -2388,7 +2388,7 @@ private String getAnswerStatus(String ans, String correct, String questionType) 
     }
 
     // 3. Handle Drag and Drop
-    if ("DragAndDrop".equalsIgnoreCase(questionType)) {
+    if ("DragAndDrop".equalsIgnoreCase(questionType) || "Drag and Drop".equalsIgnoreCase(questionType)) {
         try {
             JSONObject userObj = new JSONObject(userAnswer);
             JSONObject correctObj = new JSONObject(correctAnswer);
@@ -3091,7 +3091,7 @@ private int getObtMarks(int examId, int tMarks, int size) {
             String questionType = rs.getString("question_type");
             
             float weight = "MultipleSelect".equalsIgnoreCase(questionType) ? 2.0f : 
-                          "DragAndDrop".equalsIgnoreCase(questionType) ? 4.0f : 1.0f;
+                          ("DragAndDrop".equalsIgnoreCase(questionType) || "Drag and Drop".equalsIgnoreCase(questionType)) ? 4.0f : 1.0f;
             totalWeight += weight;
 
             if ("correct".equals(status)) {
@@ -4860,7 +4860,7 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
      * @return true if question was created successfully, false otherwise
      */
     public boolean createDragDropQuestion(String courseName, String questionText, double marks,
-            ArrayList<DragDropItem> items, ArrayList<DragDropZone> zones) {
+            ArrayList<DragDropItem> items, ArrayList<DragDropZone> zones, String extraData, String correctAnswer) {
         Connection conn = null;
         PreparedStatement pstmQuestion = null;
         PreparedStatement pstmItem = null;
@@ -4872,11 +4872,13 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             conn.setAutoCommit(false);
             
             // Insert the question
-            String sqlQuestion = "INSERT INTO questions (course_name, question, question_type, marks) VALUES (?, ?, 'Drag and Drop', ?)";
+            String sqlQuestion = "INSERT INTO questions (course_name, question, question_type, marks, extra_data, correct) VALUES (?, ?, 'DragAndDrop', ?, ?, ?)";
             pstmQuestion = conn.prepareStatement(sqlQuestion, Statement.RETURN_GENERATED_KEYS);
             pstmQuestion.setString(1, courseName);
             pstmQuestion.setString(2, questionText);
             pstmQuestion.setDouble(3, marks);
+            pstmQuestion.setString(4, extraData);
+            pstmQuestion.setString(5, correctAnswer);
             pstmQuestion.executeUpdate();
             
             // Get the generated question ID
