@@ -842,27 +842,20 @@ try {
                             }
                         }
                         
-                        // Process drag and drop data if this is a DRAG_AND_DROP question
-                        java.util.List<String> dragItemsList = new java.util.ArrayList<>();
-                        java.util.List<String> dropTargetsList = new java.util.ArrayList<>();
-                        java.util.List<String> dragCorrectTargetsList = new java.util.ArrayList<>();
+                        // 🔹 STEP 10 — Controller Must Simply Store JSON
+                        // Controller should NOT re-encode.
+                        String dragItemsHidden = "";
+                        String dropTargetsHidden = "";
+                        String correctTargetsHidden = "";
                         Integer totalMarks = null;
                         
                         if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
-                            application.log("=== EDIT DRAG DROP PROCESSING START ===");
-                            application.log("Question type: " + questionType);
-                            
-                            // Parse JSON data from hidden fields
-                            String dragItemsJson = "";
-                            String dropTargetsJson = "";
-                            String dragCorrectTargetsJson = "";
+                            application.log("=== EDIT DRAG DROP PROCESSING START (SIMPLE JSON) ===");
                             
                             for (FileItem item : items) {
                                 if (item.isFormField()) {
                                     String fieldName = item.getFieldName();
                                     String fieldValue = item.getString("UTF-8");
-                                    
-                                    application.log("Processing field: " + fieldName + " = " + fieldValue);
                                     
                                     if ("totalMarks".equals(fieldName)) {
                                         try {
@@ -870,122 +863,20 @@ try {
                                                 totalMarks = Integer.parseInt(fieldValue.trim());
                                             }
                                         } catch (NumberFormatException e) {
-                                            application.log("Invalid totalMarks value: " + fieldValue + ", using null");
+                                            application.log("Invalid totalMarks value: " + fieldValue);
                                         }
-                                    }
-                                    
-                                    // Collect JSON data
-                                    if ("dragItems".equals(fieldName)) {
-                                        dragItemsJson = fieldValue;
-                                    } else if ("dropTargets".equals(fieldName)) {
-                                        dropTargetsJson = fieldValue;
-                                    } else if ("dragCorrectTargets".equals(fieldName)) {
-                                        dragCorrectTargetsJson = fieldValue;
+                                    } else if ("dragItemsHidden".equals(fieldName)) {
+                                        dragItemsHidden = fieldValue;
+                                    } else if ("dropTargetsHidden".equals(fieldName)) {
+                                        dropTargetsHidden = fieldValue;
+                                    } else if ("correctTargetsHidden".equals(fieldName)) {
+                                        correctTargetsHidden = fieldValue;
                                     }
                                 }
                             }
                             
-                            // Parse JSON arrays
-                            try {
-                                if (dragItemsJson != null && !dragItemsJson.trim().isEmpty() && !"[]".equals(dragItemsJson)) {
-                                    // Parse drag items JSON - convert objects to string array
-                                    javax.json.JsonReader reader = javax.json.Json.createReader(new java.io.StringReader(dragItemsJson));
-                                    javax.json.JsonArray dragArray = reader.readArray();
-                                    for (javax.json.JsonValue value : dragArray) {
-                                        if (value.getValueType() == javax.json.JsonValue.ValueType.OBJECT) {
-                                            javax.json.JsonObject obj = (javax.json.JsonObject) value;
-                                            String text = obj.getString("text", "");
-                                            if (!text.trim().isEmpty()) {
-                                                dragItemsList.add(text);
-                                            }
-                                        } else if (value.getValueType() == javax.json.JsonValue.ValueType.STRING) {
-                                            // Handle case where it's already a string array
-                                            String text = ((javax.json.JsonString) value).getString();
-                                            if (!text.trim().isEmpty()) {
-                                                dragItemsList.add(text);
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                if (dropTargetsJson != null && !dropTargetsJson.trim().isEmpty() && !"[]".equals(dropTargetsJson)) {
-                                    // Parse drop targets JSON - convert objects to string array
-                                    javax.json.JsonReader reader = javax.json.Json.createReader(new java.io.StringReader(dropTargetsJson));
-                                    javax.json.JsonArray dropArray = reader.readArray();
-                                    for (javax.json.JsonValue value : dropArray) {
-                                        if (value.getValueType() == javax.json.JsonValue.ValueType.OBJECT) {
-                                            javax.json.JsonObject obj = (javax.json.JsonObject) value;
-                                            String text = obj.getString("text", "");
-                                            if (!text.trim().isEmpty()) {
-                                                dropTargetsList.add(text);
-                                            }
-                                        } else if (value.getValueType() == javax.json.JsonValue.ValueType.STRING) {
-                                            // Handle case where it's already a string array
-                                            String text = ((javax.json.JsonString) value).getString();
-                                            if (!text.trim().isEmpty()) {
-                                                dropTargetsList.add(text);
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                if (dragCorrectTargetsJson != null && !dragCorrectTargetsJson.trim().isEmpty() && !"{}".equals(dragCorrectTargetsJson)) {
-                                    // Parse correct pairings JSON - convert object mapping to string array
-                                    javax.json.JsonReader reader = javax.json.Json.createReader(new java.io.StringReader(dragCorrectTargetsJson));
-                                    javax.json.JsonObject pairingsObj = reader.readObject();
-                                    
-                                    // Create a list of target texts matching drag items order
-                                    for (int i = 0; i < dragItemsList.size(); i++) {
-                                        dragCorrectTargetsList.add(""); // Default to no target
-                                    }
-                                    
-                                    // Map pairings to drag items order
-                                    int dragIndex = 0;
-                                    for (String dragItemId : pairingsObj.keySet()) {
-                                        if (dragIndex < dragItemsList.size()) {
-                                            String targetId = pairingsObj.getString(dragItemId);
-                                            // Find the target text by matching the target ID
-                                            try {
-                                                int targetIdNum = Integer.parseInt(targetId);
-                                                // Find target with matching ID (target IDs are 1-based in our JS)
-                                                javax.json.JsonReader targetReader = javax.json.Json.createReader(new java.io.StringReader(dropTargetsJson));
-                                                javax.json.JsonArray targetArray = targetReader.readArray();
-                                                for (int i = 0; i < targetArray.size(); i++) {
-                                                    javax.json.JsonValue targetValue = targetArray.get(i);
-                                                    String targetText = "";
-                                                    
-                                                    if (targetValue.getValueType() == javax.json.JsonValue.ValueType.OBJECT) {
-                                                        javax.json.JsonObject targetObj = (javax.json.JsonObject) targetValue;
-                                                        if (targetObj.getInt("id") == targetIdNum) {
-                                                            targetText = targetObj.getString("text", "");
-                                                        }
-                                                    } else if (targetValue.getValueType() == javax.json.JsonValue.ValueType.STRING) {
-                                                        // For simple arrays, use index + 1 as ID
-                                                        if (i + 1 == targetIdNum) {
-                                                            targetText = ((javax.json.JsonString) targetValue).getString();
-                                                        }
-                                                    }
-                                                    
-                                                    if (!targetText.isEmpty()) {
-                                                        dragCorrectTargetsList.set(dragIndex, targetText);
-                                                        break;
-                                                    }
-                                                }
-                                            } catch (Exception e) {
-                                                application.log("Error parsing target mapping: " + e.getMessage());
-                                            }
-                                        }
-                                        dragIndex++;
-                                    }
-                                }
-                            } catch (Exception e) {
-                                application.log("Error parsing JSON drag-drop data: " + e.getMessage());
-                                e.printStackTrace();
-                            }
+                            application.log("Collected JSON Data - DragItems: " + dragItemsHidden.length() + " chars");
                             
-                            application.log("Final counts - DragItems: " + dragItemsList.size() + ", DropTargets: " + dropTargetsList.size() + ", CorrectTargets: " + dragCorrectTargetsList.size());
-                            application.log("=== EDIT DRAG DROP PROCESSING END ===");
-
                             // For drag-drop questions, keep opts/correct empty (not used) to satisfy NOT NULL constraints.
                             question.setOpt1("");
                             question.setOpt2("");
@@ -997,10 +888,9 @@ try {
                         pDAO.updateQuestion(question);
 
                         if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
-                            // Refresh relational drag/drop tables and JSON columns
-                            pDAO.clearDragDropQuestionData(question.getQuestionId());
-                            pDAO.addDragDropData(question.getQuestionId(), dragItemsList, dropTargetsList, dragCorrectTargetsList);
-                            pDAO.updateDragDropQuestionColumns(question.getQuestionId(), dragItemsList, dropTargetsList, dragCorrectTargetsList, totalMarks);
+                            // Simply update JSON columns directly without re-encoding
+                            pDAO.updateDragDropQuestionJson(question.getQuestionId(), dragItemsHidden, dropTargetsHidden, correctTargetsHidden, totalMarks);
+                            application.log("=== EDIT DRAG DROP PROCESSING END (SIMPLE JSON) ===");
                         }
 
                         session.setAttribute("message","Question updated successfully");

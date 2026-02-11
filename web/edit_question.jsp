@@ -86,9 +86,15 @@
             // Get drag-drop data from the JSON columns
             java.util.Map<String, String> dragDropData = pDAO.getDragDropData(questionId);
             if (dragDropData != null) {
-                dragItemsJson = dragDropData.get("drag_items") != null ? dragDropData.get("drag_items") : "[]";
-                dropTargetsJson = dragDropData.get("drop_targets") != null ? dragDropData.get("drop_targets") : "[]";
-                dragCorrectTargetsJson = dragDropData.get("drag_correct_targets") != null ? dragDropData.get("drag_correct_targets") : "[]";
+                String val;
+                val = dragDropData.get("drag_items");
+                dragItemsJson = (val != null && !val.trim().isEmpty() && !val.equals("null")) ? val : "[]";
+
+                val = dragDropData.get("drop_targets");
+                dropTargetsJson = (val != null && !val.trim().isEmpty() && !val.equals("null")) ? val : "[]";
+
+                val = dragDropData.get("drag_correct_targets");
+                dragCorrectTargetsJson = (val != null && !val.trim().isEmpty() && !val.equals("null")) ? val : "[]";
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -1200,7 +1206,7 @@
                                 <i class="fas fa-star" style="color: var(--warning);"></i>
                                 Total Marks
                             </label>
-                            <input type="number" id="totalMarks" name="totalMarks" class="form-control" 
+                            <input type="number" id="totalMarksInput" name="totalMarks" class="form-control"
                                    value="1" min="1" max="100" required 
                                    style="max-width: 150px;">
                             <small class="form-hint">Total marks for this drag-and-drop question</small>
@@ -1219,7 +1225,7 @@
                                         <span class="item-count" id="dragItemCount">0</span>
                                     </div>
                                     <div class="column-content">
-                                        <div id="dragItemsList" class="items-list drag-items-list">
+                                        <div id="dragItemsContainer" class="items-list drag-items-list">
                                             <!-- Items will be populated here -->
                                             <div class="empty-state">
                                                 <i class="fas fa-arrows-alt"></i>
@@ -1241,7 +1247,7 @@
                                         <span class="item-count" id="dropTargetCount">0</span>
                                     </div>
                                     <div class="column-content">
-                                        <div id="dropTargetsList" class="items-list drop-targets-list">
+                                        <div id="dropTargetsContainer" class="items-list drop-targets-list">
                                             <!-- Targets will be populated here -->
                                             <div class="empty-state">
                                                 <i class="fas fa-bullseye"></i>
@@ -1263,7 +1269,7 @@
                                         <span class="item-count" id="pairingCount">0</span>
                                     </div>
                                     <div class="column-content">
-                                        <div id="pairingsList" class="items-list pairings-list">
+                                        <div id="correctPairingsContainer" class="items-list pairings-list">
                                             <!-- Pairings will be populated here -->
                                             <div class="empty-state">
                                                 <i class="fas fa-link"></i>
@@ -1280,9 +1286,9 @@
                         </div>
                         
                         <!-- Hidden fields for data storage -->
-                        <input type="hidden" id="dragItemsData" name="dragItems" value="">
-                        <input type="hidden" id="dropTargetsData" name="dropTargets" value="">
-                        <input type="hidden" id="dragCorrectTargetsData" name="dragCorrectTargets" value="">
+                        <input type="hidden" id="dragItemsHidden" name="dragItemsHidden" value="">
+                        <input type="hidden" id="dropTargetsHidden" name="dropTargetsHidden" value="">
+                        <input type="hidden" id="correctTargetsHidden" name="correctTargetsHidden" value="">
                     </div>
                     
                     <!-- Image Upload Section -->
@@ -1342,16 +1348,10 @@
 
 <script>
     // 🔹 STEP 3 — Pass JSON Data to JavaScript
-    // Use a simpler approach to safely pass JSON data from JSP to JavaScript
-    var dragItemsJsonStr = '<%= (dragItemsJson != null && !dragItemsJson.trim().isEmpty() && !dragItemsJson.equals("null")) ? dragItemsJson : "[]" %>';
-    var dropTargetsJsonStr = '<%= (dropTargetsJson != null && !dropTargetsJson.trim().isEmpty() && !dropTargetsJson.equals("null")) ? dropTargetsJson : "[]" %>';
-    var correctTargetsJsonStr = '<%= (dragCorrectTargetsJson != null && !dragCorrectTargetsJson.trim().isEmpty() && !dragCorrectTargetsJson.equals("null")) ? dragCorrectTargetsJson : "[]" %>';
-    var totalMarksFromDB = <%= totalMarks %>;
-    
-    // Parse JSON safely
-    var dragItemsFromDB = JSON.parse(dragItemsJsonStr);
-    var dropTargetsFromDB = JSON.parse(dropTargetsJsonStr);
-    var correctTargetsFromDB = JSON.parse(correctTargetsJsonStr);
+    const dragItemsFromDB = <%= dragItemsJson %>;
+    const dropTargetsFromDB = <%= dropTargetsJson %>;
+    const correctTargetsFromDB = <%= dragCorrectTargetsJson %>;
+    const totalMarksFromDB = <%= totalMarks %>;
     
     console.log('=== JSON Data from DB ===');
     console.log('Drag Items:', dragItemsFromDB);
@@ -1573,8 +1573,11 @@ window.addEventListener('DOMContentLoaded', function() {
                     msg = "At least 1 draggable item is required.";
                 } else if (dropTargets.length < 1) {
                     msg = "At least 1 drop target is required.";
-                } else if (correctTargets.length !== dragItems.length) {
-                    msg = "All draggable items must have a correct target assigned.";
+                } else {
+                    const incompletePairings = correctTargets.filter(val => val === "");
+                    if (incompletePairings.length > 0 || correctTargets.length !== dragItems.length) {
+                        msg = "All draggable items must have a correct target assigned.";
+                    }
                 }
             } else if (qType === "MultipleSelect") {
                 const selectedCount = document.querySelectorAll('.edit-correct-checkbox:checked').length;
@@ -1741,144 +1744,10 @@ window.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-// 🔹 STEP 9 — When Saving (Convert Back to JSON)
-function prepareDragDropDataForSubmit() {
-    console.log('Preparing drag drop data for submit...');
-    
-    const dragItems = collectDragItemsFromUI();
-    const dropTargets = collectDropTargetsFromUI();
-    const correctTargets = collectCorrectPairingsFromUI();
-
-    document.getElementById("dragItemsData").value = JSON.stringify(dragItems);
-    document.getElementById("dropTargetsData").value = JSON.stringify(dropTargets);
-    document.getElementById("dragCorrectTargetsData").value = JSON.stringify(correctTargets);
-    
-    console.log('Prepared data:', {dragItems, dropTargets, correctTargets});
-}
-
-// Helper functions to collect data from UI
-function collectDragItemsFromUI() {
-    const dragItems = [];
-    const dragItemInputs = document.querySelectorAll('#editDragItemsContainer input[type="text"]');
-    dragItemInputs.forEach(input => {
-        const value = input.value.trim();
-        if (value) {
-            dragItems.push(value);
-        }
-    });
-    return dragItems;
-}
-
-function collectDropTargetsFromUI() {
-    const dropTargets = [];
-    const dropTargetInputs = document.querySelectorAll('#editDropTargetsContainer input[type="text"]');
-    dropTargetInputs.forEach(input => {
-        const value = input.value.trim();
-        if (value) {
-            dropTargets.push(value);
-        }
-    });
-    return dropTargets;
-}
-
-function collectCorrectPairingsFromUI() {
-    const correctTargets = [];
-    const dragItemRows = document.querySelectorAll('#editDragItemsContainer .drag-item-row');
-    dragItemRows.forEach(row => {
-        const targetSelect = row.querySelector('select');
-        const selectedOption = targetSelect ? targetSelect.options[targetSelect.selectedIndex] : null;
-        correctTargets.push(selectedOption ? selectedOption.textContent : '');
-    });
-    return correctTargets;
-}
-
-// Update item counts in the column headers
-function updateItemCounts() {
-    const dragCount = document.getElementById('dragItemCount');
-    const targetCount = document.getElementById('dropTargetCount');
-    const pairingCount = document.getElementById('pairingCount');
-    
-    // Get current counts from the UI
-    const dragItems = document.querySelectorAll('#dragItemsList .drag-item').length;
-    const dropTargets = document.querySelectorAll('#dropTargetsList .drop-target').length;
-    const pairings = document.querySelectorAll('#pairingsList .pairing-item').length;
-    
-    if (dragCount) dragCount.textContent = dragItems;
-    if (targetCount) targetCount.textContent = dropTargets;
-    if (pairingCount) pairingCount.textContent = pairings;
-}
 
     document.addEventListener('DOMContentLoaded', function() {
         // First, toggle the edit options to show the correct layout
         toggleEditOptions();
-        
-        // 🔹 STEP 4 — On Page Load, Auto-Populate UI
-        if (typeof dragItemsFromDB !== "undefined" && dragItemsFromDB.length > 0) {
-            console.log('=== Auto-populating Drag Drop UI ===');
-            
-            // Ensure drag drop is properly initialized before populating
-            const qType = document.getElementById("questionTypeSelect").value;
-            console.log('Current question type:', qType);
-            
-            if (qType === "DRAG_AND_DROP") {
-                console.log('Setting up DRAG_AND_DROP layout...');
-                
-                // Make sure the drag drop editor is visible
-                const dragDrop = document.getElementById("editDragDropOptions");
-                const dragDropEditor = document.getElementById("dragDropEditor");
-                const mcq = document.getElementById("editMcqOptions");
-                
-                console.log('Elements found:', {
-                    dragDrop: !!dragDrop,
-                    dragDropEditor: !!dragDropEditor,
-                    mcq: !!mcq
-                });
-                
-                if (dragDrop) {
-                    dragDrop.style.display = "block";
-                    console.log('Drag drop section shown');
-                } else {
-                    console.error('editDragDropOptions element not found!');
-                }
-                
-                if (dragDropEditor) {
-                    dragDropEditor.style.display = "grid";
-                    console.log('Drag drop editor shown');
-                } else {
-                    console.error('dragDropEditor element not found!');
-                }
-                
-                if (mcq) {
-                    mcq.style.display = "none"; // Hide MCQ options
-                    console.log('MCQ options hidden');
-                }
-                
-                // Initialize drag drop if needed
-                if (typeof initializeDragDrop === 'function') {
-                    initializeDragDrop();
-                    console.log('initializeDragDrop called');
-                } else {
-                    console.error('initializeDragDrop function not found!');
-                }
-            }
-            
-            // Now populate the data
-            populateDragItems(dragItemsFromDB);
-            populateDropTargets(dropTargetsFromDB);
-            populateCorrectPairings(
-                dragItemsFromDB,
-                dropTargetsFromDB,
-                correctTargetsFromDB
-            );
-            
-            // Set total marks
-            const totalMarksInput = document.getElementById("totalMarks");
-            if (totalMarksInput) {
-                totalMarksInput.value = totalMarksFromDB;
-            }
-        } else {
-            console.log('No drag drop data to populate');
-        }
         
         // Initialize option values for checkboxes
         for (let i = 1; i <= 4; i++) {
@@ -1928,57 +1797,10 @@ function updateItemCounts() {
         
         // Initialize drag-drop if current question type is DRAG_AND_DROP
         if ('<%= questionType %>' === 'DRAG_AND_DROP') {
-            // Set the JSP data variables for the external JS file
-            if (typeof dragItemsJson !== 'undefined') {
-                dragItemsJson = '<%= dragItemsJson %>';
+            if (typeof initializeDragDrop === 'function') {
+                initializeDragDrop();
             }
-            if (typeof dropTargetsJson !== 'undefined') {
-                dropTargetsJson = '<%= dropTargetsJson %>';
-            }
-            if (typeof dragCorrectTargetsJson !== 'undefined') {
-                dragCorrectTargetsJson = '<%= dragCorrectTargetsJson %>';
-            }
-            initializeDragDrop();
         }
         
-        // Add validation wrapper for drag-drop
-        const originalValidateAndSubmit = validateAndSubmit;
-        validateAndSubmit = function(event) {
-            const qType = document.getElementById("questionTypeSelect").value;
-            
-            if (qType === "DRAG_AND_DROP") {
-                if (dragItems.length === 0) {
-                    alert("Please add at least one draggable item.");
-                    return false;
-                }
-                
-                if (dropTargets.length === 0) {
-                    alert("Please add at least one drop target.");
-                    return false;
-                }
-                
-                const emptyItems = dragItems.filter(item => !item.text.trim());
-                if (emptyItems.length > 0) {
-                    alert("Please fill in text for all draggable items.");
-                    return false;
-                }
-                
-                const emptyTargets = dropTargets.filter(target => !target.text.trim());
-                if (emptyTargets.length > 0) {
-                    alert("Please fill in text for all drop targets.");
-                    return false;
-                }
-                
-                const unpairedItems = dragItems.filter(item => !correctPairings[item.id]);
-                if (unpairedItems.length > 0) {
-                    alert("Please assign a correct target for all draggable items.");
-                    return false;
-                }
-                
-                updateHiddenFields();
-            }
-            
-            return originalValidateAndSubmit.call(this, event);
-        };
     });
 </script>
