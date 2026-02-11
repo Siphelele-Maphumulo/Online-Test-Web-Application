@@ -1546,53 +1546,54 @@ window.addEventListener('DOMContentLoaded', function() {
             if (!correctValue) {
                 msg = "Please select the correct answer for True/False question.";
             }
+        } else if (qType === "DRAG_AND_DROP") {
+            // 🔹 STEP 9 — Prepare drag drop data for submit
+            prepareDragDropDataForSubmit();
+
+            // Efficient validation for D&D
+            const dragItems = collectDragItemsFromUI();
+            const dropTargets = collectDropTargetsFromUI();
+            const correctTargets = collectCorrectPairingsFromUI();
+
+            if (dragItems.length < 1) {
+                msg = "At least 1 draggable item is required.";
+            } else if (dropTargets.length < 1) {
+                msg = "At least 1 drop target is required.";
+            } else {
+                const incompletePairings = correctTargets.filter(val => val === "");
+                if (incompletePairings.length > 0 || correctTargets.length !== dragItems.length) {
+                    msg = "All draggable items must have a correct target assigned.";
+                }
+            }
         } else {
+            // MCQ, MultipleSelect, Code
             const opt1 = document.getElementById('editOpt1').value.trim();
             const opt2 = document.getElementById('editOpt2').value.trim();
             
             if (!opt1 || !opt2) {
                 msg = "At least Option 1 and Option 2 are required.";
-            }
-            
-            const opts = ['editOpt1', 'editOpt2', 'editOpt3', 'editOpt4']
-                .map(id => document.getElementById(id).value.trim())
-                .filter(Boolean);
-                
-            if (new Set(opts).size !== opts.length) {
-                msg = "Options must be unique.";
-            } else if (qType === "DRAG_AND_DROP") {
-                // 🔹 STEP 9 — Prepare drag drop data for submit
-                prepareDragDropDataForSubmit();
-                
-                // Basic validation
-                const dragItems = collectDragItemsFromUI();
-                const dropTargets = collectDropTargetsFromUI();
-                const correctTargets = collectCorrectPairingsFromUI();
-                
-                if (dragItems.length < 1) {
-                    msg = "At least 1 draggable item is required.";
-                } else if (dropTargets.length < 1) {
-                    msg = "At least 1 drop target is required.";
-                } else {
-                    const incompletePairings = correctTargets.filter(val => val === "");
-                    if (incompletePairings.length > 0 || correctTargets.length !== dragItems.length) {
-                        msg = "All draggable items must have a correct target assigned.";
-                    }
-                }
-            } else if (qType === "MultipleSelect") {
-                const selectedCount = document.querySelectorAll('.edit-correct-checkbox:checked').length;
-                if (selectedCount !== 2) {
-                    msg = "Select exactly 2 correct answers.";
-                } else {
-                    const selectedAnswers = Array.from(document.querySelectorAll('.edit-correct-checkbox:checked'))
-                        .map(cb => cb.value)
-                        .join('|');
-                    document.getElementById('editCorrectAnswer').value = selectedAnswers;
-                }
             } else {
-                const correctValue = document.getElementById('editCorrectAnswer').value.trim();
-                if (correctValue && !opts.includes(correctValue)) {
-                    msg = "Correct answer must match one of the options.";
+                const opts = ['editOpt1', 'editOpt2', 'editOpt3', 'editOpt4']
+                    .map(id => document.getElementById(id).value.trim())
+                    .filter(Boolean);
+
+                if (new Set(opts).size !== opts.length) {
+                    msg = "Options must be unique.";
+                } else if (qType === "MultipleSelect") {
+                    const selectedCount = document.querySelectorAll('.edit-correct-checkbox:checked').length;
+                    if (selectedCount !== 2) {
+                        msg = "Select exactly 2 correct answers.";
+                    } else {
+                        const selectedAnswers = Array.from(document.querySelectorAll('.edit-correct-checkbox:checked'))
+                            .map(cb => cb.value)
+                            .join('|');
+                        document.getElementById('editCorrectAnswer').value = selectedAnswers;
+                    }
+                } else {
+                    const correctValue = document.getElementById('editCorrectAnswer').value.trim();
+                    if (correctValue && !opts.includes(correctValue)) {
+                        msg = "Correct answer must match one of the options.";
+                    }
                 }
             }
         }
