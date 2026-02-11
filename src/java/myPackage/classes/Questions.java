@@ -5,6 +5,7 @@ import java.util.List;
 public class Questions {
     private int questionId;
     private String question,opt1,opt2,opt3,opt4,correct,courseName, questionType, imagePath, extraData;
+    private String dragItemsJson, dropTargetsJson, correctTargetsJson;
     private int totalMarks;
     private List<DragItem> dragItems;
     private List<DropTarget> dropTargets;
@@ -145,6 +146,30 @@ public class Questions {
     
     public void setTotalMarks(int totalMarks) {
         this.totalMarks = totalMarks;
+    }
+
+    public String getDragItemsJson() {
+        return dragItemsJson;
+    }
+
+    public void setDragItemsJson(String dragItemsJson) {
+        this.dragItemsJson = dragItemsJson;
+    }
+
+    public String getDropTargetsJson() {
+        return dropTargetsJson;
+    }
+
+    public void setDropTargetsJson(String dropTargetsJson) {
+        this.dropTargetsJson = dropTargetsJson;
+    }
+
+    public String getCorrectTargetsJson() {
+        return correctTargetsJson;
+    }
+
+    public void setCorrectTargetsJson(String correctTargetsJson) {
+        this.correctTargetsJson = correctTargetsJson;
     }
     
     public List<DragItem> getDragItems() {

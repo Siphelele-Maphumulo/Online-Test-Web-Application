@@ -1666,6 +1666,22 @@ public Questions getQuestionById(int questionId) {
             question.setCourseName(rs.getString("course_name"));
             question.setQuestionType(rs.getString("question_type"));
             question.setImagePath(rs.getString("image_path"));
+
+            // Populate advanced fields
+            try {
+                question.setExtraData(rs.getString("extra_data"));
+                question.setDragItemsJson(rs.getString("drag_items"));
+                question.setDropTargetsJson(rs.getString("drop_targets"));
+                question.setCorrectTargetsJson(rs.getString("drag_correct_targets"));
+                question.setTotalMarks(rs.getInt("marks"));
+
+                if ("DRAG_AND_DROP".equalsIgnoreCase(question.getQuestionType())) {
+                    question.setDragItems(getDragItemsByQuestionIdOld(question.getQuestionId()));
+                    question.setDropTargets(getDropTargetsByQuestionIdOld(question.getQuestionId()));
+                }
+            } catch (SQLException sqle) {
+                // Columns might not exist yet
+            }
         }
     } catch (SQLException e) {
         e.printStackTrace();
@@ -2207,6 +2223,24 @@ public ArrayList getQuestions(String courseName, int questions) {
                 rs.getString("question_type"),
                 rs.getString("image_path")
             );
+
+            // Populate advanced fields
+            try {
+                question.setExtraData(rs.getString("extra_data"));
+                question.setDragItemsJson(rs.getString("drag_items"));
+                question.setDropTargetsJson(rs.getString("drop_targets"));
+                question.setCorrectTargetsJson(rs.getString("drag_correct_targets"));
+                question.setTotalMarks(rs.getInt("marks"));
+
+                if ("DRAG_AND_DROP".equalsIgnoreCase(question.getQuestionType())) {
+                    question.setDragItems(getDragItemsByQuestionIdOld(question.getQuestionId()));
+                    question.setDropTargets(getDropTargetsByQuestionIdOld(question.getQuestionId()));
+                }
+            } catch (SQLException sqle) {
+                // Columns might not exist yet in all environments
+                LOGGER.log(Level.WARNING, "Advanced question columns not found: {0}", sqle.getMessage());
+            }
+
             list.add(question);
         }
     } catch (SQLException ex) {
@@ -2424,6 +2458,23 @@ public ArrayList getAllQuestions(String courseName) {
                 rs.getString("question_type"),
                 rs.getString("image_path")
             );
+
+            // Populate advanced fields
+            try {
+                question.setExtraData(rs.getString("extra_data"));
+                question.setDragItemsJson(rs.getString("drag_items"));
+                question.setDropTargetsJson(rs.getString("drop_targets"));
+                question.setCorrectTargetsJson(rs.getString("drag_correct_targets"));
+                question.setTotalMarks(rs.getInt("marks"));
+
+                if ("DRAG_AND_DROP".equalsIgnoreCase(question.getQuestionType())) {
+                    question.setDragItems(getDragItemsByQuestionIdOld(question.getQuestionId()));
+                    question.setDropTargets(getDropTargetsByQuestionIdOld(question.getQuestionId()));
+                }
+            } catch (SQLException sqle) {
+                // Columns might not exist yet
+            }
+
             list.add(question);
         }
     } catch (SQLException ex) {
@@ -2583,6 +2634,22 @@ private String getCorrectAnswer(int qid) {
             String result = rs.getString("correct");
             String questionType = rs.getString("question_type");
             
+            // For Drag and Drop, return the correct targets JSON
+            if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
+                org.json.JSONObject correctJson = new org.json.JSONObject();
+                try {
+                    ArrayList<myPackage.classes.DragItem> dragItems = getDragItemsByQuestionIdOld(qid);
+                    for (myPackage.classes.DragItem di : dragItems) {
+                        if (di.getCorrectTargetId() != null && di.getCorrectTargetId() > 0) {
+                            correctJson.put("zone_" + di.getCorrectTargetId(), "item_" + di.getId());
+                        }
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Error building drag drop correct targets JSON: " + e.getMessage());
+                }
+                return correctJson.toString();
+            }
+
             // Handle null from DB and trim whitespace
             if (result != null) {
                 ans = result.trim();
@@ -2748,7 +2815,29 @@ private String getAnswerStatus(String ans, String correct) {
         return "incorrect";
     }
 
-    // 3. Compare based on question type (multi-select or single)
+    // 3. Compare based on question type (drag-drop, multi-select or single)
+    if (userAnswer.startsWith("{") && correctAnswer.startsWith("{")) {
+        if (userAnswer.equals(correctAnswer)) return "correct";
+
+        // If not exactly equal, check if there are any matches at all
+        try {
+            org.json.JSONObject userObj = new org.json.JSONObject(userAnswer);
+            org.json.JSONObject correctObj = new org.json.JSONObject(correctAnswer);
+            java.util.Iterator<String> keys = correctObj.keys();
+            boolean anyMatch = false;
+            while(keys.hasNext()) {
+                String key = keys.next();
+                if (userObj.has(key) && userObj.get(key).equals(correctObj.get(key))) {
+                    anyMatch = true;
+                    break;
+                }
+            }
+            return anyMatch ? "partial" : "incorrect";
+        } catch (Exception e) {
+            return "incorrect";
+        }
+    }
+
     if (correctAnswer.contains("|")) {
         // Normalize multi-select answers by splitting, trimming, sorting, and rejoining
         String[] ansParts = userAnswer.split("\\|");
@@ -3402,7 +3491,7 @@ private int getObtMarks(int examId, int tMarks, int size) {
     float correctWeight = 0;
 
     try {
-        String sql = "SELECT a.status, q.question_type " +
+        String sql = "SELECT a.status, q.question_type, q.question_id, q.marks " +
                      "FROM answers a " +
                      "JOIN questions q ON a.question_id = q.question_id " +
                      "WHERE a.exam_id = ?";
@@ -3413,12 +3502,37 @@ private int getObtMarks(int examId, int tMarks, int size) {
         while (rs.next()) {
             String status = rs.getString("status");
             String questionType = rs.getString("question_type");
+            int qid = rs.getInt("question_id");
+            int qMarks = rs.getInt("marks");
             
-            float weight = "MultipleSelect".equalsIgnoreCase(questionType) ? 2.0f : 1.0f;
-            totalWeight += weight;
+            if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
+                // For drag and drop, we use the marks stored in drag_drop_answers
+                float obtainedForQ = 0;
+                String ddSql = "SELECT SUM(marks_obtained) FROM drag_drop_answers WHERE exam_id = ? AND question_id = ?";
+                try (PreparedStatement ddPstm = conn.prepareStatement(ddSql)) {
+                    ddPstm.setInt(1, examId);
+                    ddPstm.setInt(2, qid);
+                    try (ResultSet ddRs = ddPstm.executeQuery()) {
+                        if (ddRs.next()) {
+                            obtainedForQ = ddRs.getFloat(1);
+                        }
+                    }
+                } catch (SQLException e) {
+                    LOGGER.log(Level.WARNING, "Error fetching drag drop marks: " + e.getMessage());
+                }
 
-            if ("correct".equals(status)) {
-                correctWeight += weight;
+                float qWeight = qMarks > 0 ? (float)qMarks : 1.0f;
+                totalWeight += qWeight;
+                correctWeight += obtainedForQ;
+
+            } else {
+                float weight = "MultipleSelect".equalsIgnoreCase(questionType) ? 2.0f : 1.0f;
+                if (qMarks > 0) weight = (float)qMarks;
+
+                totalWeight += weight;
+                if ("correct".equals(status)) {
+                    correctWeight += weight;
+                }
             }
         }
         

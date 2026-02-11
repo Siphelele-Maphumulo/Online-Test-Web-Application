@@ -1653,9 +1653,27 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                     </div>
                   <% } %>
                 </div>
-                <div class="question-status" style="color: <%= isCorrect ? "var(--success)" : "var(--error)" %>;">
-                  <i class="fas <%= isCorrect ? "fa-check" : "fa-times" %>"></i>
-                  <%= isCorrect ? "Correct" : "Incorrect" %>
+                <%
+                  String statusText = a.getStatus();
+                  String statusDisplay = statusText;
+                  String statusColor = "var(--error)";
+                  String statusIcon = "fa-times";
+
+                  if ("correct".equalsIgnoreCase(statusText)) {
+                      statusColor = "var(--success)";
+                      statusIcon = "fa-check";
+                      statusDisplay = "Correct";
+                  } else if ("partial".equalsIgnoreCase(statusText)) {
+                      statusColor = "var(--warning)";
+                      statusIcon = "fa-exclamation-triangle";
+                      statusDisplay = "Partial";
+                  } else {
+                      statusDisplay = "Incorrect";
+                  }
+                %>
+                <div class="question-status" style="color: <%= statusColor %>;">
+                  <i class="fas <%= statusIcon %>"></i>
+                  <%= statusDisplay %>
                 </div>
               </div>
               
@@ -1664,24 +1682,18 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                       org.json.JSONObject userObj = new org.json.JSONObject(a.getAnswer());
                       org.json.JSONObject correctObj = new org.json.JSONObject(a.getCorrectAnswer());
                       
-                      // Get config for labels
-                      String extraData = "";
-                      Questions qObj = pDAO.getQuestionById(a.getQuestionId());
-                      if (qObj != null) extraData = qObj.getExtraData();
-                      org.json.JSONObject questionConfig = new org.json.JSONObject(extraData);
-                      org.json.JSONArray items = questionConfig.getJSONArray("items");
-                      org.json.JSONArray zones = questionConfig.getJSONArray("zones");
+                      // Get mapping of IDs to labels/text from relational tables
+                      java.util.List<java.util.Map<String, Object>> items = pDAO.getDragItemsByQuestionId(a.getQuestionId());
+                      java.util.List<java.util.Map<String, Object>> zones = pDAO.getDropTargetsByQuestionId(a.getQuestionId());
                       
                       java.util.Map<String, String> itemMap = new java.util.HashMap<>();
-                      for(int j=0; j<items.length(); j++) {
-                          org.json.JSONObject item = items.getJSONObject(j);
-                          itemMap.put("item_" + item.get("id"), item.getString("text"));
+                      for(java.util.Map<String, Object> item : items) {
+                          itemMap.put("item_" + item.get("id"), (String)item.get("text"));
                       }
                       
                       java.util.Map<String, String> zoneMap = new java.util.HashMap<>();
-                      for(int j=0; j<zones.length(); j++) {
-                          org.json.JSONObject zone = zones.getJSONObject(j);
-                          zoneMap.put("zone_" + zone.get("id"), zone.getString("label"));
+                      for(java.util.Map<String, Object> zone : zones) {
+                          zoneMap.put("zone_" + zone.get("id"), (String)zone.get("label"));
                       }
               %>
                 <div style="padding: var(--spacing-md);">
@@ -1718,96 +1730,6 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                   }
               } else { %>
               <div class="answer-grid">
-                <% if (isDragDrop) { %>
-                  <!-- Drag-Drop Question Answer Display -->
-                  <div style="grid-column: 1 / -1;">
-                    <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 12px; font-size: 13px;">
-                      <i class="fas fa-hand-rock"></i> Drag and Drop Question
-                    </div>
-                    
-                    <div style="background: var(--light-gray); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--medium-gray);">
-                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                        <!-- Student's Answers -->
-                        <div>
-                          <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 8px; font-size: 12px;">
-                            <i class="fas fa-user-edit"></i> Your Matches
-                          </div>
-                          <div style="background: var(--white); padding: 12px; border-radius: var(--radius-sm); border: 1px solid <%= isCorrect ? "var(--success)" : "var(--error)" %>;">
-                            <%
-                              // Get student's drag-drop answers
-                              ArrayList<myPackage.classes.DragDropAnswer> studentAnswers = new ArrayList<>();
-                              try {
-                                  studentAnswers = pDAO.getStudentDragDropAnswers(examDetails.getExamId(), a.getQuestionId(), String.valueOf(userId));
-                              } catch (Exception e) {
-                                  // Handle error gracefully
-                              }
-                              
-                              if (studentAnswers.isEmpty()) {
-                            %>
-                                <div style="color: var(--dark-gray); font-style: italic;">No matches made</div>
-                            <%
-                              } else {
-                                for (myPackage.classes.DragDropAnswer answer : studentAnswers) {
-                            %>
-                                <div style="margin-bottom: 8px; padding: 6px; background: <%= answer.isCorrect() ? "rgba(5, 150, 105, 0.1)" : "rgba(220, 38, 38, 0.1)" %>; border-radius: 4px; font-size: 12px;">
-                                  <i class="fas <%= answer.isCorrect() ? "fa-check" : "fa-times" %>" style="color: <%= answer.isCorrect() ? "var(--success)" : "var(--error)" %>;"></i>
-                                  Item → Target <%= answer.isCorrect() ? "(Correct)" : "(Incorrect)" %>
-                                </div>
-                            <%
-                                }
-                              }
-                            %>
-                          </div>
-                        </div>
-                        
-                        <!-- Correct Answers -->
-                        <div>
-                          <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 8px; font-size: 12px;">
-                            <i class="fas fa-check-circle"></i> Correct Matches
-                          </div>
-                          <div style="background: var(--white); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--success);">
-                            <%
-                              // Get correct drag-drop answers
-                              ArrayList<myPackage.classes.DragDropAnswer> correctDragDropAnswers = new ArrayList<>();
-                              try {
-                                  correctDragDropAnswers = pDAO.getStudentDragDropAnswers(examDetails.getExamId(), a.getQuestionId(), "correct");
-                              } catch (Exception e) {
-                                  // Handle error gracefully
-                              }
-                              
-                              if (correctDragDropAnswers.isEmpty()) {
-                            %>
-                                <div style="color: var(--dark-gray); font-style: italic;">No correct matches available</div>
-                            <%
-                              } else {
-                                for (myPackage.classes.DragDropAnswer answer : correctDragDropAnswers) {
-                            %>
-                                <div style="margin-bottom: 8px; padding: 6px; background: rgba(5, 150, 105, 0.1); border-radius: 4px; font-size: 12px;">
-                                  <i class="fas fa-check" style="color: var(--success);"></i>
-                                  Item → Target (Correct)
-                                </div>
-                            <%
-                                }
-                              }
-                            %>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <!-- Score Display -->
-                      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--medium-gray);">
-                        <div style="text-align: center;">
-                          <div style="font-size: 14px; font-weight: 600; color: <%= isCorrect ? "var(--success)" : "var(--error)" %>;">
-                            <%= isCorrect ? "Full Score" : "Partial Score" %>
-                          </div>
-                          <div style="font-size: 12px; color: var(--dark-gray); margin-top: 4px;">
-                            <%= a.getAnswer() %>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                <% } else { %>
                   <!-- Regular Question Answer Display -->
                   <div>
                     <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 4px; font-size: 13px;">
@@ -1826,7 +1748,6 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                       <%= escapeHtml(a.getCorrectAnswer() != null ? a.getCorrectAnswer() : "N/A") %>
                     </div>
                   </div>
-                <% } %>
               </div>
               <% } %>
             </div>
