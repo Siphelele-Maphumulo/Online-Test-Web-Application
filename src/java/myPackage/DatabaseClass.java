@@ -103,6 +103,39 @@ public class DatabaseClass {
         }
     }
 
+    public void updateDragDropQuestionJson(int questionId,
+            String dragItemsJson,
+            String dropTargetsJson,
+            String correctTargetsJson,
+            Integer totalMarks) {
+
+        Connection conn = null;
+        PreparedStatement pstm = null;
+
+        try {
+            conn = getConnection();
+            String sql = "UPDATE questions SET drag_items=?, drop_targets=?, drag_correct_targets=?, marks=? WHERE question_id=?";
+            pstm = conn.prepareStatement(sql);
+            pstm.setString(1, dragItemsJson);
+            pstm.setString(2, dropTargetsJson);
+            pstm.setString(3, correctTargetsJson);
+            if (totalMarks != null) {
+                pstm.setBigDecimal(4, new BigDecimal(totalMarks));
+            } else {
+                pstm.setNull(4, Types.DECIMAL);
+            }
+            pstm.setInt(5, questionId);
+
+            int updated = pstm.executeUpdate();
+            LOGGER.log(Level.INFO, "Updated questions drag-drop JSON for questionId={0}, rows={1}", new Object[]{questionId, updated});
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error updating questions drag-drop JSON: " + e.getMessage(), e);
+        } finally {
+            try { if (pstm != null) pstm.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing statement", e); }
+            try { if (conn != null) conn.close(); } catch (SQLException e) { LOGGER.log(Level.SEVERE, "Error closing connection", e); }
+        }
+    }
+
     private String toJsonArray(java.util.List<String> values) {
         if (values == null) {
             return "[]";
