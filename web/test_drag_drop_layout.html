@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Drag & Drop Layout Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        .hidden { display: none; }
+        .drag-drop-section { 
+            border: 2px solid #007bff; 
+            padding: 15px; 
+            margin: 10px 0; 
+            background-color: #f8f9fa;
+        }
+        .mcq-section { 
+            border: 2px solid #28a745; 
+            padding: 15px; 
+            margin: 10px 0; 
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <h1>Drag & Drop Layout Test</h1>
+    
+    <div class="test-section info">
+        <h2>Testing Drag & Drop Layout Display</h2>
+        <p>This page simulates the edit_question.jsp layout to test if drag & drop sections appear correctly.</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>Question Type Selection</h3>
+        <select id="questionTypeSelect" onchange="toggleOptions()">
+            <option value="MCQ">Multiple Choice</option>
+            <option value="DRAG_AND_DROP" selected>Drag and Drop</option>
+            <option value="TrueFalse">True/False</option>
+        </select>
+    </div>
+    
+    <!-- MCQ Section (should be hidden for DRAG_AND_DROP) -->
+    <div id="editMcqOptions" class="mcq-section">
+        <h3>MCQ Options Section</h3>
+        <p>This should be HIDDEN for drag & drop questions</p>
+        <div class="form-group">
+            <label>Options</label>
+            <textarea id="editOpt1">Option 1</textarea>
+            <textarea id="editOpt2">Option 2</textarea>
+        </div>
+        <div class="form-group">
+            <label>Correct Answer</label>
+            <textarea id="editCorrectAnswer">Correct answer</textarea>
+        </div>
+    </div>
+    
+    <!-- Drag & Drop Section (should be visible for DRAG_AND_DROP) -->
+    <div id="editDragDropOptions" class="drag-drop-section" style="display: none;">
+        <h3>Drag & Drop Section</h3>
+        <p>This should be VISIBLE for drag & drop questions</p>
+        
+        <div class="form-group">
+            <label>Total Marks</label>
+            <input type="number" id="totalMarks" value="1" min="1" max="100">
+        </div>
+        
+        <div id="dragDropEditor" style="display: none;">
+            <h4>Drag Drop Editor</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                <div>
+                    <h5>Draggable Items</h5>
+                    <div id="dragItemsList">
+                        <div class="empty-state">
+                            <p>No draggable items yet</p>
+                        </div>
+                    </div>
+                    <button type="button">Add Draggable Item</button>
+                </div>
+                <div>
+                    <h5>Drop Targets</h5>
+                    <div id="dropTargetsList">
+                        <div class="empty-state">
+                            <p>No drop targets yet</p>
+                        </div>
+                    </div>
+                    <button type="button">Add Drop Target</button>
+                </div>
+                <div>
+                    <h5>Correct Pairings</h5>
+                    <div id="pairingsList">
+                        <div class="empty-state">
+                            <p>Add items and targets to create pairings</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section info">
+        <h3>Debug Information</h3>
+        <div id="debugInfo"></div>
+    </div>
+    
+    <script>
+        function toggleOptions() {
+            const qType = document.getElementById("questionTypeSelect").value;
+            const mcq = document.getElementById("editMcqOptions");
+            const dragDrop = document.getElementById("editDragDropOptions");
+            const dragDropEditor = document.getElementById("dragDropEditor");
+            const debugInfo = document.getElementById("debugInfo");
+            
+            // Log current state
+            const debugText = `
+                <p><strong>Current Question Type:</strong> ${qType}</p>
+                <p><strong>MCQ Section Display:</strong> ${mcq.style.display || 'block (default)'}</p>
+                <p><strong>Drag Drop Section Display:</strong> ${dragDrop.style.display || 'none (default)'}</p>
+                <p><strong>Drag Drop Editor Display:</strong> ${dragDropEditor.style.display || 'none (default)'}</p>
+            `;
+            debugInfo.innerHTML = debugText;
+            
+            // Hide all sections first
+            if (mcq) mcq.style.display = "none";
+            if (dragDrop) dragDrop.style.display = "none";
+            if (dragDropEditor) dragDropEditor.style.display = "none";
+            
+            console.log('Toggling to question type:', qType);
+            
+            if (qType === "DRAG_AND_DROP") {
+                console.log('Showing DRAG_AND_DROP layout');
+                // Show drag and drop section
+                if (dragDrop) {
+                    dragDrop.style.display = "block";
+                    console.log('Drag drop section shown');
+                }
+                if (dragDropEditor) {
+                    dragDropEditor.style.display = "grid";
+                    console.log('Drag drop editor shown');
+                }
+                // Hide MCQ options completely for drag/drop questions
+                if (mcq) mcq.style.display = "none";
+            } else {
+                // Show MCQ for other question types
+                if (mcq) mcq.style.display = "block";
+                if (dragDrop) dragDrop.style.display = "none";
+                if (dragDropEditor) dragDropEditor.style.display = "none";
+            }
+            
+            // Update debug info after changes
+            setTimeout(() => {
+                const updatedDebugText = `
+                    <p><strong style="color: green;">AFTER TOGGLE:</strong></p>
+                    <p><strong>MCQ Section Display:</strong> ${mcq.style.display || 'block (default)'}</p>
+                    <p><strong>Drag Drop Section Display:</strong> ${dragDrop.style.display || 'none (default)'}</p>
+                    <p><strong>Drag Drop Editor Display:</strong> ${dragDropEditor.style.display || 'none (default)'}</p>
+                `;
+                debugInfo.innerHTML += updatedDebugText;
+            }, 50);
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, initializing...');
+            toggleOptions();
+        });
+    </script>
+</body>
+</html>

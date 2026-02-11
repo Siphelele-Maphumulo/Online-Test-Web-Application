@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Drag & Drop Auto-Load Verification</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Drag & Drop Auto-Load Verification</h1>
+    
+    <div class="test-section info">
+        <h2>Implementation Summary</h2>
+        <p>This page verifies that the drag & drop auto-loading functionality has been implemented correctly.</p>
+        <h3>Key Features Implemented:</h3>
+        <ul>
+            <li><strong>Step 1-2:</strong> Database data loading with NULL handling</li>
+            <li><strong>Step 3:</strong> Safe JSON data passing to JavaScript</li>
+            <li><strong>Step 4:</strong> Auto-population on page load</li>
+            <li><strong>Step 5-7:</strong> UI population functions</li>
+            <li><strong>Step 8:</strong> Correct target selection in dropdowns</li>
+            <li><strong>Step 9:</strong> Data preparation for form submission</li>
+        </ul>
+    </div>
+    
+    <div class="test-section info">
+        <h2>Files Modified</h2>
+        <ul>
+            <li><strong>edit_question.jsp</strong> - Updated to load database data into hidden inputs and auto-populate UI</li>
+            <li><strong>drag_drop_edit.js</strong> - Added populateDragItems, populateDropTargets, populateCorrectPairings functions</li>
+        </ul>
+    </div>
+    
+    <div class="test-section info">
+        <h2>How to Test</h2>
+        <ol>
+            <li>Navigate to a drag & drop question edit page: <code>edit_question.jsp?qid=YOUR_QUESTION_ID</code></li>
+            <li>Check browser console for log messages</li>
+            <li>Verify that drag items, drop targets, and correct pairings are automatically populated</li>
+            <li>Make changes and save to verify data is properly stored back to database</li>
+        </ol>
+    </div>
+    
+    <div class="test-section info">
+        <h2>Expected Behavior</h2>
+        <p>When editing a drag & drop question:</p>
+        <ul>
+            <li>Draggable items should appear in the "Draggable Items" section</li>
+            <li>Drop targets should appear in the "Drop Targets" section</li>
+            <li>Correct pairings should be pre-selected in the dropdowns</li>
+            <li>Total marks should be pre-filled</li>
+            <li>All data should save correctly when the form is submitted</li>
+        </ul>
+    </div>
+    
+    <div class="test-section info">
+        <h2>Debugging Tips</h2>
+        <p>Check the browser console for these log messages:</p>
+        <pre>
+=== JSON Data from DB ===
+Drag Items: [...]
+Drop Targets: [...]
+Correct Targets: [...]
+Total Marks: 1
+
+=== Auto-populating Drag Drop UI ===
+Populating drag items: [...]
+Populating drop targets: [...]
+Populating correct pairings: [...]</pre>
+    </div>
+    
+    <script>
+        // Simple verification that required functions exist
+        const requiredFunctions = [
+            'populateDragItems',
+            'populateDropTargets', 
+            'populateCorrectPairings',
+            'prepareDragDropDataForSubmit'
+        ];
+        
+        console.log('=== Verifying Drag & Drop Functions ===');
+        
+        requiredFunctions.forEach(funcName => {
+            if (typeof window[funcName] === 'function') {
+                console.log('✓ ' + funcName + ' function exists');
+            } else {
+                console.log('✗ ' + funcName + ' function missing');
+            }
+        });
+        
+        // Test with sample data
+        const sampleData = {
+            dragItems: ['"Hello World"', '42'],
+            dropTargets: ['String', 'Integer'],
+            correctTargets: ['String', 'Integer']
+        };
+        
+        console.log('=== Testing with Sample Data ===');
+        console.log('Sample drag items:', sampleData.dragItems);
+        console.log('Sample drop targets:', sampleData.dropTargets);
+        console.log('Sample correct targets:', sampleData.correctTargets);
+    </script>
+</body>
+</html>

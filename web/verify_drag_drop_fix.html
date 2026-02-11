@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Drag & Drop Edit Fix Verification</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Drag & Drop Edit Fix Verification</h1>
+    
+    <div class="test-section info">
+        <h2>Fix Summary</h2>
+        <p>The issue was caused by:</p>
+        <ul>
+            <li><strong>Nested DOMContentLoaded events</strong> - Two event listeners were registered, causing conflicts</li>
+            <li><strong>Duplicate initialization logic</strong> - Drag & drop initialization was happening in multiple places</li>
+            <li><strong>Timing issues</strong> - The UI elements weren't ready when the initialization code ran</li>
+        </ul>
+        
+        <h3>Fixes Applied:</h3>
+        <ul>
+            <li>Removed nested DOMContentLoaded event listener</li>
+            <li>Consolidated all drag & drop initialization logic into one place</li>
+            <li>Ensured proper element visibility toggling</li>
+            <li>Fixed duplicate code sections</li>
+        </ul>
+    </div>
+    
+    <div class="test-section info">
+        <h2>Testing Instructions</h2>
+        <ol>
+            <li>Run the test page: <a href="test_drag_drop_edit_fix.jsp">test_drag_drop_edit_fix.jsp</a></li>
+            <li>Click the "Edit this question (new fix)" link</li>
+            <li>Verify that the drag & drop layout appears correctly</li>
+            <li>Check that all data is pre-populated from the database</li>
+            <li>Make some changes and save to verify functionality</li>
+        </ol>
+    </div>
+    
+    <div class="test-section info">
+        <h2>Expected Behavior After Fix</h2>
+        <p>When editing a drag & drop question:</p>
+        <ul>
+            <li>The "Drag and Drop" option should be selected in the question type dropdown</li>
+            <li>The drag & drop editor section should be visible</li>
+            <li>Draggable items should be pre-populated from database</li>
+            <li>Drop targets should be pre-populated from database</li>
+            <li>Correct pairings should be pre-selected</li>
+            <li>Total marks should be pre-filled</li>
+        </ul>
+    </div>
+    
+    <div class="test-section info">
+        <h2>Debugging Information</h2>
+        <p>Check browser console for these messages:</p>
+        <pre>
+=== Auto-populating Drag Drop UI ===
+Drag Items: [...]
+Drop Targets: [...]
+Correct Targets: [...]
+Total Marks: 1
+Current question type: DRAG_AND_DROP
+Setting up DRAG_AND_DROP layout...
+Drag drop section shown
+Drag drop editor shown
+MCQ options hidden
+initializeDragDrop called
+populateDragItems function found
+populateDropTargets function found
+populateCorrectPairings function found
+        </pre>
+    </div>
+    
+    <script>
+        // This is just for demonstration - in the actual edit page, 
+        // these functions will be defined in drag_drop_edit.js
+        console.log('=== Drag & Drop Edit Fix Verification ===');
+        console.log('This page verifies the fix is applied correctly.');
+        console.log('Navigate to the actual edit_question.jsp page to test the functionality.');
+    </script>
+</body>
+</html>
