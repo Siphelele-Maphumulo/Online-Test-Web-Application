@@ -1753,6 +1753,101 @@ public void delQuestion(int qId) {
     }
 }
 
+/**
+ * Force delete a question by ID, ensuring all related data is removed
+ */
+public boolean forceDeleteQuestion(int questionId) {
+    Connection conn = null;
+    PreparedStatement pstmt = null;
+    boolean success = false;
+    
+    try {
+        conn = getConnection();
+        conn.setAutoCommit(false);
+        
+        // 1. Delete from drag_drop_answers first (if table exists)
+        try {
+            String sql1 = "DELETE FROM drag_drop_answers WHERE question_id = ?";
+            pstmt = conn.prepareStatement(sql1);
+            pstmt.setInt(1, questionId);
+            pstmt.executeUpdate();
+            pstmt.close();
+        } catch (SQLException e) {
+            // Table might not exist, continue
+        }
+        
+        // 2. Delete from drag_items
+        try {
+            String sql2 = "DELETE FROM drag_items WHERE question_id = ?";
+            pstmt = conn.prepareStatement(sql2);
+            pstmt.setInt(1, questionId);
+            pstmt.executeUpdate();
+            pstmt.close();
+        } catch (SQLException e) {
+            LOGGER.warning("Error deleting drag_items: " + e.getMessage());
+        }
+        
+        // 3. Delete from drop_targets
+        try {
+            String sql3 = "DELETE FROM drop_targets WHERE question_id = ?";
+            pstmt = conn.prepareStatement(sql3);
+            pstmt.setInt(1, questionId);
+            pstmt.executeUpdate();
+            pstmt.close();
+        } catch (SQLException e) {
+            LOGGER.warning("Error deleting drop_targets: " + e.getMessage());
+        }
+        
+        // 4. Delete from answers (by question text)
+        String getQuestionSql = "SELECT question FROM questions WHERE question_id = ?";
+        pstmt = conn.prepareStatement(getQuestionSql);
+        pstmt.setInt(1, questionId);
+        ResultSet rs = pstmt.executeQuery();
+        
+        if (rs.next()) {
+            String questionText = rs.getString("question");
+            rs.close();
+            pstmt.close();
+            
+            if (questionText != null) {
+                String deleteAnswersSql = "DELETE FROM answers WHERE question = ?";
+                pstmt = conn.prepareStatement(deleteAnswersSql);
+                pstmt.setString(1, questionText);
+                pstmt.executeUpdate();
+                pstmt.close();
+            }
+        }
+        
+        // 5. Finally delete the question itself
+        String deleteQuestionSql = "DELETE FROM questions WHERE question_id = ?";
+        pstmt = conn.prepareStatement(deleteQuestionSql);
+        pstmt.setInt(1, questionId);
+        int rowsAffected = pstmt.executeUpdate();
+        
+        success = rowsAffected > 0;
+        conn.commit();
+        
+        LOGGER.info("Force delete question " + questionId + ": " + success);
+        
+    } catch (SQLException e) {
+        try {
+            if (conn != null) conn.rollback();
+        } catch (SQLException ex) {
+            LOGGER.log(Level.SEVERE, "Rollback failed", ex);
+        }
+        LOGGER.log(Level.SEVERE, "Error force deleting question", e);
+    } finally {
+        try {
+            if (pstmt != null) pstmt.close();
+            if (conn != null) conn.setAutoCommit(true);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error closing resources", e);
+        }
+    }
+    
+    return success;
+}
+
 public boolean deleteQuestion(int questionId) {
     LOGGER.info("deleteQuestion called with ID: " + questionId);
     
@@ -1769,9 +1864,11 @@ public boolean deleteQuestion(int questionId) {
     
     PreparedStatement pstmt = null;
     PreparedStatement pstmtAnswers = null;
+    PreparedStatement pstmtDragItems = null;
+    PreparedStatement pstmtDropTargets = null;
     
     try {
-        // First, get the question text to potentially clean up related answers
+        // STEP 1: Get the question text
         String getQuestionSql = "SELECT question FROM questions WHERE question_id = ?";
         pstmt = conn.prepareStatement(getQuestionSql);
         pstmt.setInt(1, questionId);
@@ -1784,9 +1881,8 @@ public boolean deleteQuestion(int questionId) {
         rs.close();
         pstmt.close();
         
+        // STEP 2: Delete from answers table (by question text)
         if (questionText != null) {
-            // Delete related answers based on question text (if needed)
-            // Note: This is a workaround since there's no direct foreign key to question_id in answers table
             String deleteAnswersSql = "DELETE FROM answers WHERE question = ?";
             pstmtAnswers = conn.prepareStatement(deleteAnswersSql);
             pstmtAnswers.setString(1, questionText);
@@ -1798,14 +1894,44 @@ public boolean deleteQuestion(int questionId) {
             }
         }
         
-        // Now delete the question itself
+        // STEP 3: Delete from drag_drop_answers (if table exists)
+        try {
+            String deleteDragDropAnswersSql = "DELETE FROM drag_drop_answers WHERE question_id = ?";
+            pstmtDragItems = conn.prepareStatement(deleteDragDropAnswersSql);
+            pstmtDragItems.setInt(1, questionId);
+            pstmtDragItems.executeUpdate();
+            pstmtDragItems.close();
+        } catch (SQLException e) {
+            // Table might not exist, ignore
+        }
+        
+        // STEP 4: Delete from drag_items
+        try {
+            String deleteDragItemsSql = "DELETE FROM drag_items WHERE question_id = ?";
+            pstmtDragItems = conn.prepareStatement(deleteDragItemsSql);
+            pstmtDragItems.setInt(1, questionId);
+            pstmtDragItems.executeUpdate();
+            pstmtDragItems.close();
+        } catch (SQLException e) {
+            LOGGER.warning("Error deleting drag_items: " + e.getMessage());
+        }
+        
+        // STEP 5: Delete from drop_targets
+        try {
+            String deleteDropTargetsSql = "DELETE FROM drop_targets WHERE question_id = ?";
+            pstmtDropTargets = conn.prepareStatement(deleteDropTargetsSql);
+            pstmtDropTargets.setInt(1, questionId);
+            pstmtDropTargets.executeUpdate();
+            pstmtDropTargets.close();
+        } catch (SQLException e) {
+            LOGGER.warning("Error deleting drop_targets: " + e.getMessage());
+        }
+        
+        // STEP 6: Delete the question itself
         String deleteQuestionSql = "DELETE FROM questions WHERE question_id = ?";
         pstmt = conn.prepareStatement(deleteQuestionSql);
         pstmt.setInt(1, questionId);
         
-        LOGGER.info("Executing DELETE: " + deleteQuestionSql + " with ID: " + questionId);
-        
-        // Execute the statement and get number of affected rows
         int rowsAffected = pstmt.executeUpdate();
         LOGGER.info("Deleted " + rowsAffected + " question record(s) with ID: " + questionId);
         
@@ -1814,6 +1940,7 @@ public boolean deleteQuestion(int questionId) {
         LOGGER.info("Transaction committed successfully");
         
         return rowsAffected > 0;
+        
     } catch (SQLException ex) {
         LOGGER.log(Level.SEVERE, "SQLException in deleteQuestion: " + ex.getMessage(), ex);
         try {
@@ -1822,13 +1949,14 @@ public boolean deleteQuestion(int questionId) {
         } catch (SQLException rollbackEx) {
             LOGGER.log(Level.SEVERE, "Rollback failed", rollbackEx);
         }
-        LOGGER.log(Level.SEVERE, "Error deleting question ID: " + questionId, ex);
         return false;
     } finally {
         try {
             if (pstmt != null) pstmt.close();
             if (pstmtAnswers != null) pstmtAnswers.close();
-            conn.setAutoCommit(autoCommit); // Restore original autocommit setting
+            if (pstmtDragItems != null) pstmtDragItems.close();
+            if (pstmtDropTargets != null) pstmtDropTargets.close();
+            conn.setAutoCommit(autoCommit);
             LOGGER.info("Connection auto-commit restored to: " + autoCommit);
         } catch (SQLException ex) {
             LOGGER.log(Level.SEVERE, "Error closing resources", ex);

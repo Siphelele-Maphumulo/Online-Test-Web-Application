@@ -1946,7 +1946,47 @@
     }
     
     function viewStudentDetails(studentId) {
-        alert('View details for student ID: ' + studentId);
+        // Get student details from the table row
+        const studentRow = event.target.closest('tr');
+        if (!studentRow) return;
+        
+        const cells = studentRow.getElementsByTagName('td');
+        if (cells.length < 3) return;
+        
+        const studentName = cells[2] ? cells[2].textContent.trim() : 'Unknown';
+        const registrationDate = cells[3] ? cells[3].textContent.trim() : 'N/A';
+        const registrationTime = cells[4] ? cells[4].textContent.trim() : 'N/A';
+        const status = cells[5] ? cells[5].textContent.trim() : 'Unknown';
+        
+        // Populate alert modal with student details
+        const alertModalMessage = document.getElementById('alertModalMessage');
+        alertModalMessage.innerHTML = `
+            <div style="text-align: left; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <div style="font-weight: 600; color: var(--primary-blue);">Student Details:</div>
+                    <div style="text-align: right;">
+                        <a href="adm-page.jsp?pgprt=8&student_id=${studentId}" 
+                           style="color: var(--accent-blue); text-decoration: underline; font-size: 14px;">
+                            <i class="fas fa-external-link-alt"></i> View Full Details
+                        </a>
+                    </div>
+                </div>
+                <div style="border-top: 1px solid var(--medium-gray); padding-top: 10px;">
+                    <div style="margin-bottom: 8px;"><strong>Student ID:</strong> ${studentId}</div>
+                    <div style="margin-bottom: 8px;"><strong>Name:</strong> ${studentName}</div>
+                    <div style="margin-bottom: 8px;"><strong>Registration Date:</strong> ${registrationDate}</div>
+                    <div style="margin-bottom: 8px;"><strong>Registration Time:</strong> ${registrationTime}</div>
+                    <div style="margin-bottom: 8px;"><strong>Status:</strong> ${status}</div>
+                </div>
+                <div style="text-align: center; margin-top: 15px;">
+                    <button type="button" onclick="closeModal('alertModal')" 
+                            style="background: var(--primary-blue); color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                        Close
+                    </button>
+                </div>
+        `;
+        
+        showAlert('Student Details Retrieved');
     }
     
     function highlightActiveFilters() {

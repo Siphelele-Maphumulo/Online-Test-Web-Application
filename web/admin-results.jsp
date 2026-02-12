@@ -818,20 +818,6 @@ public String escapeHtml(String input) {
             <input type="hidden" name="csrf_token" value="<%= csrf_token %>">
         </form>
 
-        <!-- Hidden Form for Bulk Delete -->
-        <form id="bulkDeleteForm" action="controller.jsp" method="post" style="display: none;">
-            <input type="hidden" name="page" value="admin-results">
-            <input type="hidden" name="operation" value="bulk_delete">
-            <input type="hidden" name="csrf_token" value="<%= csrf_token %>">
-        </form>
-
-        <!-- Floating Delete Button Container -->
-        <div id="floatingDeleteBtn" class="floating-delete-btn" style="display: none;">
-            <button type="button" class="btn btn-danger" onclick="handleBulkDelete()" style="padding: 12px 20px; font-size: 14px; font-weight: 500;">
-                <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCountBadge">0</span>)
-            </button>
-        </div>
-        
         <!-- Scroll to Top Button -->
         <button class="scroll-to-top" id="scrollToTopBtn" title="Scroll to top">
             <i class="fas fa-arrow-up"></i>
@@ -1044,7 +1030,17 @@ public String escapeHtml(String input) {
     </main>
 </div>
 
-<!-- Professional Modal for Delete Confirmation -->
+<!-- FLOATING DELETE BUTTON - MOVED OUTSIDE SCROLLING CONTAINER -->
+<div id="floatingDeleteBtn" class="floating-delete-btn inactive">
+    <button type="button" class="btn btn-danger" onclick="handleBulkDelete()">
+        <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCountBadge">0</span>)
+    </button>
+</div>
+
+<!-- Scroll to Top Button -->
+<button class="scroll-to-top" id="scrollToTopBtn" title="Scroll to top">
+    <i class="fas fa-arrow-up"></i>
+</button>
 <div id="confirmationModal" class="modal" style="display: none;">
     <div class="modal-content">
         <div class="modal-header">
@@ -1139,62 +1135,182 @@ public String escapeHtml(String input) {
     text-align: right;
 }
 
-/* Floating delete button */
+/* Floating delete button - PROFESSIONAL VERSION */
 .floating-delete-btn {
+    position: fixed;
+    bottom: 80px;
+    right: 30px;
+    z-index: 9999;
+    display: flex;
+    animation: floatIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 8px 20px rgba(220, 38, 38, 0.35);
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(145deg, #dc2626, #b91c1c);
+    padding: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: center;
+    will-change: transform, opacity, box-shadow;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.floating-delete-btn button {
+    border: none;
+    border-radius: 50px;
+    background: transparent;
+    color: white;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    font-weight: 600;
+    white-space: nowrap;
+    padding: 14px 28px;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.floating-delete-btn button i {
+    font-size: 16px;
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
+}
+
+.floating-delete-btn:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 28px rgba(220, 38, 38, 0.45);
+    background: linear-gradient(145deg, #ef4444, #dc2626);
+}
+
+.floating-delete-btn:active {
+    transform: translateY(-2px) scale(0.98);
+    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+}
+
+.floating-delete-btn.inactive {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+    pointer-events: none;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.floating-delete-btn.active {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+    visibility: visible;
+}
+
+/* Scroll to Top Button - Professional Version */
+.scroll-to-top {
     position: fixed;
     bottom: 30px;
     right: 30px;
-    z-index: 10000;
-    display: none;
-    animation: fadeIn 0.3s;
-    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-    border: none;
-    border-radius: 8px;
-    background: var(--error);
-    padding: 0;
-}
-
-/* Scroll to Top Button */
-    .scroll-to-top {
-        position: fixed;
-        bottom: 30px;
-        right: 20px;
-        z-index: 999;
-        display: none;
-        background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
-        color: white;
-        border: none;
-        border-radius: 40%;
-        width: 40px;
-        height: 40px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-.scroll-to-top:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
-}
-
-.scroll-to-top.show {
+    z-index: 9998;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: linear-gradient(145deg, var(--primary-blue), var(--secondary-blue));
+    color: white;
+    border: none;
+    border-radius: 50px;
+    width: 50px;
+    height: 50px;
+    box-shadow: 0 4px 15px rgba(9, 41, 77, 0.25);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+    visibility: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.scroll-to-top.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    visibility: visible;
+}
+
+.scroll-to-top:hover {
+    transform: translateY(-4px) scale(1.05);
+    box-shadow: 0 8px 25px rgba(9, 41, 77, 0.35);
+    background: linear-gradient(145deg, var(--secondary-blue), var(--primary-blue));
+}
+
+.scroll-to-top:active {
+    transform: translateY(-2px) scale(0.98);
 }
 
 .scroll-to-top i {
-    font-size: 20px;
+    font-size: 22px;
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
 }
-    
-.floating-delete-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+    @keyframes floatIn {
+    0% {
+        opacity: 0;
+        transform: translateY(40px) scale(0.8);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
+
+/* Responsive adjustments for floating buttons */
+@media (max-width: 768px) {
+    .floating-delete-btn {
+        bottom: 70px;
+        right: 20px;
+    }
     
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    .floating-delete-btn button {
+        padding: 12px 24px;
+        font-size: 14px;
+    }
+    
+    .scroll-to-top {
+        bottom: 20px;
+        right: 20px;
+        width: 45px;
+        height: 45px;
+    }
+    
+    .scroll-to-top i {
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .floating-delete-btn {
+        bottom: 60px;
+        right: 15px;
+        left: 15px;
+        width: auto;
+    }
+    
+    .floating-delete-btn button {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 20px;
+    }
+    
+    .scroll-to-top {
+        bottom: 15px;
+        right: 15px;
+        width: 40px;
+        height: 40px;
+    }
+}
+
+/* Remove any old bulkDeleteBtn styles if they exist */
+#bulkDeleteBtn {
+    display: none !important;
 }
 </style>
 
@@ -1970,7 +2086,7 @@ public String escapeHtml(String input) {
         });
     }
     
-    // Floating delete button functionality
+    // Floating delete button functionality - FIXED VERSION
     function updateFloatingDeleteButton() {
         const selectedCheckboxes = document.querySelectorAll('.record-checkbox:checked');
         const floatingDeleteBtn = document.getElementById('floatingDeleteBtn');
@@ -1982,16 +2098,20 @@ public String escapeHtml(String input) {
             selectedCountBadge.textContent = selectedCountNum;
         }
         
-        // Show/hide floating delete button based on selection
-        if (selectedCountNum > 0) {
-            if (floatingDeleteBtn) {
-                floatingDeleteBtn.style.display = 'block';
-                floatingDeleteBtn.classList.add('visible');
-            }
-        } else {
-            if (floatingDeleteBtn) {
-                floatingDeleteBtn.style.display = 'none';
-                floatingDeleteBtn.classList.remove('visible');
+        // Update floating delete button state based on selection
+        if (floatingDeleteBtn) {
+            if (selectedCountNum > 0) {
+                floatingDeleteBtn.classList.add('active');
+                floatingDeleteBtn.classList.remove('inactive');
+                floatingDeleteBtn.style.visibility = 'visible';
+                floatingDeleteBtn.style.opacity = '1';
+                floatingDeleteBtn.style.pointerEvents = 'auto';
+            } else {
+                floatingDeleteBtn.classList.add('inactive');
+                floatingDeleteBtn.classList.remove('active');
+                floatingDeleteBtn.style.visibility = 'hidden';
+                floatingDeleteBtn.style.opacity = '0';
+                floatingDeleteBtn.style.pointerEvents = 'none';
             }
         }
     }
@@ -2046,6 +2166,26 @@ public String escapeHtml(String input) {
     }
     
 
+    
+    // Initialize floating delete button
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize floating delete button state
+        updateFloatingDeleteButton();
+        
+        // Wire up floating delete button
+        const floatingDeleteBtn = document.getElementById('floatingDeleteBtn');
+        if (floatingDeleteBtn) {
+            const btn = floatingDeleteBtn.querySelector('button');
+            if (btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleBulkDelete();
+                });
+            }
+        }
+    });
+    
     
     // Modal functions
     function hideModal() {

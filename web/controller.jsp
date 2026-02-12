@@ -537,11 +537,16 @@ try {
         String submittedToken = request.getParameter("csrf_token");
         String sessionToken = (String) session.getAttribute("csrf_token");
 
-        if (sessionToken == null || !sessionToken.equals(submittedToken)) {
+        // DEBUG LOGGING
+        LOGGER.info("CSRF Validation - Submitted: " + submittedToken);
+        LOGGER.info("CSRF Validation - Session: " + sessionToken);
+        
+        if (sessionToken == null || submittedToken == null || !sessionToken.equals(submittedToken)) {
+            LOGGER.warning("CSRF validation failed for delete operation");
             session.setAttribute("error", "Invalid request. Please try again.");
+            
             String courseName = nz(request.getParameter("coursename"), "");
             if (!courseName.isEmpty()) {
-                // Redirect back to the showall page with an error
                 response.sendRedirect("showall.jsp?coursename=" + java.net.URLEncoder.encode(courseName, "UTF-8") + "&error=csrf");
             } else {
                 response.sendRedirect("showall.jsp?error=csrf");
@@ -559,29 +564,31 @@ try {
             qid = nz(request.getParameter("qid"), "");
         }
         
+        // Get course name for redirect
+        String courseName = nz(request.getParameter("coursename"), "");
+        
         // Debug logging
-        LOGGER.info("DELETE QUESTION - qid: " + qid);
+        LOGGER.info("DELETE QUESTION - qid: " + qid + ", course: " + courseName);
         
         if (!qid.isEmpty()) {
             try {
                 int questionId = Integer.parseInt(qid);
+                
+                // FIX: First delete drag-drop related data if it exists
+                try {
+                    pDAO.clearDragDropQuestionData(questionId);
+                } catch (Exception e) {
+                    LOGGER.warning("Error clearing drag-drop data: " + e.getMessage());
+                    // Continue with deletion even if this fails
+                }
+                
+                // Then delete the question
                 boolean success = pDAO.deleteQuestion(questionId);
                 
-                // Debug logging
                 LOGGER.info("DELETE QUESTION - success for ID " + questionId + ": " + success);
                 
                 if (success) {
-                    session.setAttribute("message","Question deleted successfully");
-                    // Force full page refresh by redirecting to showall.jsp
-                    String courseName = nz(request.getParameter("coursename"), "");
-                    String timestamp = String.valueOf(new Date().getTime());
-                    if (!courseName.isEmpty()) {
-                        // Add cache-busting parameter to ensure fresh page load
-                        response.sendRedirect("showall.jsp?coursename=" + courseName + "&_=" + timestamp);
-                    } else {
-                        response.sendRedirect("showall.jsp?_=" + timestamp);
-                    }
-                    return;
+                    session.setAttribute("message", "Question deleted successfully");
                 } else {
                     session.setAttribute("error", "Failed to delete question ID: " + qid);
                 }
@@ -596,14 +603,15 @@ try {
             LOGGER.warning("DELETE QUESTION - Empty qid parameter");
             session.setAttribute("error", "Question ID is required for deletion");
         }
-        // Redirect to showall.jsp even if no question ID was provided
-        String courseName = nz(request.getParameter("coursename"), "");
+        
+        // Redirect back to showall.jsp
         String timestamp = String.valueOf(new Date().getTime());
         if (!courseName.isEmpty()) {
-            response.sendRedirect("showall.jsp?coursename=" + courseName + "&_=" + timestamp);
+            response.sendRedirect("showall.jsp?coursename=" + java.net.URLEncoder.encode(courseName, "UTF-8") + "&_=" + timestamp);
         } else {
             response.sendRedirect("showall.jsp?_=" + timestamp);
         }
+        return;
     } else if ("bulk_delete".equalsIgnoreCase(operation)) {
         String[] questionIds = request.getParameterValues("questionIds");
         String courseName = nz(request.getParameter("coursename"), "");

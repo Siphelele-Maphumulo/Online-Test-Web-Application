@@ -95,6 +95,7 @@
 <jsp:include page="header.jsp" />
 
 
+
 <!-- Main -->
 <main class="flex-fill d-flex align-items-center">
     <div class="container py-4">
@@ -210,6 +211,25 @@
                                     <a href="login.jsp">Log in</a>
                                 </small>
                             </div>
+                            <!-- Back Button (only show when coming from accounts.jsp) -->
+                            <% if ("account".equals(fromPage)) { %>
+                            <div class="container-fluid">
+                                <div class="row">
+                                    <div class="col-12 text-center">
+                                        <button onclick="goBackToAccounts()" class="btn btn-outline-secondary mb-3">
+                                            <i class="fas fa-arrow-left mr-2"></i>Back to Accounts
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <script>
+                            function goBackToAccounts() {
+                                // Redirect back to accounts.jsp
+                                window.location.href = 'accounts.jsp';
+                            }
+                            </script>
+                            <% } %>
                         </div>
                     </form>
                 </div>

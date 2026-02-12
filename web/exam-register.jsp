@@ -718,21 +718,77 @@
         margin: 2px;
     }
     
+    /* Floating Delete Button - PROFESSIONAL VERSION */
     .floating-delete-btn {
         position: fixed;
-        bottom: 30px;
-        left: 50%;
-        transform: translateX(-50%);
+        bottom: 80px;
+        right: 30px;
         z-index: 9999;
-        display: none; /* Initially hidden */
+        display: flex;
+        animation: floatIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 0 8px 20px rgba(220, 38, 38, 0.35);
+        border: none;
+        border-radius: 50px;
+        background: linear-gradient(145deg, #dc2626, #b91c1c);
+        padding: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transform-origin: center;
+        will-change: transform, opacity, box-shadow;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transform: translateX(-50%);
         opacity: 0;
-        transition: opacity 0.3s ease-in-out;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        visibility: hidden;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    
+
+    .floating-delete-btn button {
+        border: none;
+        border-radius: 50px;
+        background: transparent;
+        color: white;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        font-weight: 600;
+        white-space: nowrap;
+        padding: 14px 28px;
+        font-size: 15px;
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.3);
+    }
+
+    .floating-delete-btn button i {
+        font-size: 16px;
+        filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
+    }
+
+    .floating-delete-btn:hover {
+        transform: translateX(-50%) translateY(-4px) scale(1.02);
+        box-shadow: 0 12px 28px rgba(220, 38, 38, 0.45);
+        background: linear-gradient(145deg, #ef4444, #dc2626);
+    }
+
+    .floating-delete-btn:active {
+        transform: translateX(-50%) translateY(-2px) scale(0.98);
+        box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+    }
+
     .floating-delete-btn.visible {
-        display: block;
         opacity: 1;
+        transform: translateX(-50%) translateY(0) scale(1);
+        visibility: visible;
+    }
+
+    .floating-delete-btn.inactive {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px) scale(0.9);
+        pointer-events: none;
+        visibility: hidden;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
         /* Add to your existing CSS */

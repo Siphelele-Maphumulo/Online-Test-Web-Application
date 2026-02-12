@@ -462,6 +462,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName) : new A
 <script>
     let questionToDelete = null;
     let courseToDeleteFrom = null;
+    let csrfToken = '<%= csrfToken %>';
 
     function showDeleteModal(qid, cname) {
         questionToDelete = qid;
@@ -477,17 +478,39 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName) : new A
 
     function hideDeleteModal() {
         document.getElementById('deleteModal').style.display = 'none';
+        questionToDelete = null;
+        courseToDeleteFrom = null;
     }
 
     document.getElementById('confirmDelBtn').onclick = function() {
         if (questionToDelete && courseToDeleteFrom) {
-            window.location.href = `controller.jsp?page=questions&operation=del&qid=${questionToDelete}&coursename=${courseToDeleteFrom}&csrf_token=<%= csrfToken %>`;
+            // METHOD 1: Redirect with URL parameters (simplest)
+            const url = 'controller.jsp?page=questions&operation=del&qid=' + 
+                        encodeURIComponent(questionToDelete) + 
+                        '&coursename=' + encodeURIComponent(courseToDeleteFrom) + 
+                        '&csrf_token=' + encodeURIComponent(csrfToken);
+            
+            window.location.href = url;
+            
+            // Hide modal after click
+            hideDeleteModal();
+        } else {
+            alert('Missing question information');
         }
     };
 
     // Close modal on outside click
     window.onclick = function(event) {
         const modal = document.getElementById('deleteModal');
-        if (event.target == modal) hideDeleteModal();
+        if (event.target == modal) {
+            hideDeleteModal();
+        }
     }
+    
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            hideDeleteModal();
+        }
+    });
 </script>
