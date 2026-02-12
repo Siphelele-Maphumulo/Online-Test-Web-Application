@@ -2095,22 +2095,36 @@
                             <% if(isDragDrop){ 
                                 // Serialize relational data to JSON for JS
                                 org.json.JSONArray itemsArray = new org.json.JSONArray();
-                                if (q.getDragItems() != null) {
+                                if (q.getDragItems() != null && !q.getDragItems().isEmpty()) {
                                     for (myPackage.classes.DragItem di : q.getDragItems()) {
                                         org.json.JSONObject jo = new org.json.JSONObject();
                                         jo.put("id", di.getId());
                                         jo.put("text", di.getItemText());
                                         itemsArray.put(jo);
                                     }
+                                } else if (q.getDragItemsJson() != null && !q.getDragItemsJson().isEmpty()) {
+                                    // Fallback to JSON column if relational list is empty
+                                    try {
+                                        itemsArray = new org.json.JSONArray(q.getDragItemsJson());
+                                    } catch (Exception e) {
+                                        System.err.println("Error parsing items JSON for question " + q.getQuestionId());
+                                    }
                                 }
                                 
                                 org.json.JSONArray targetsArray = new org.json.JSONArray();
-                                if (q.getDropTargets() != null) {
+                                if (q.getDropTargets() != null && !q.getDropTargets().isEmpty()) {
                                     for (myPackage.classes.DropTarget dt : q.getDropTargets()) {
                                         org.json.JSONObject jo = new org.json.JSONObject();
                                         jo.put("id", dt.getId());
                                         jo.put("label", dt.getTargetLabel());
                                         targetsArray.put(jo);
+                                    }
+                                } else if (q.getDropTargetsJson() != null && !q.getDropTargetsJson().isEmpty()) {
+                                    // Fallback to JSON column if relational list is empty
+                                    try {
+                                        targetsArray = new org.json.JSONArray(q.getDropTargetsJson());
+                                    } catch (Exception e) {
+                                        System.err.println("Error parsing targets JSON for question " + q.getQuestionId());
                                     }
                                 }
                             %>
@@ -2143,6 +2157,24 @@
                                     
                                     <input type="hidden" name="dragDropQuestion_<%= i %>" value="true">
                                     <input type="hidden" name="qid<%= i %>" value="<%= q.getQuestionId() %>">
+
+                                    <!-- Step 12: Visible Debugging -->
+                                    <div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 10px; margin: 10px 0; font-size: 11px; display: none;" class="drag-debug">
+                                        <strong>Debug Info (Question <%= i+1 %>):</strong>
+                                        <div>Items: <code id="debug-items-<%= i %>"></code></div>
+                                        <div>Targets: <code id="debug-targets-<%= i %>"></code></div>
+                                    </div>
+                                    <script>
+                                        (function() {
+                                            const itemsJson = '<%= escapeHtmlAttr(itemsArray.toString()) %>';
+                                            const targetsJson = '<%= escapeHtmlAttr(targetsArray.toString()) %>';
+                                            console.log('Question <%= i+1 %> Data:', { itemsJson, targetsJson });
+                                            document.getElementById('debug-items-<%= i %>').textContent = itemsJson;
+                                            document.getElementById('debug-targets-<%= i %>').textContent = targetsJson;
+                                            // Uncomment to show debug info in UI
+                                            // document.querySelector('.drag-debug').style.display = 'block';
+                                        })();
+                                    </script>
                                 </div>
                             <% } else { %>
                                 <% if(isMultiTwo){ %>
@@ -2731,10 +2763,20 @@
                         let itemsData = [];
                         let targetsData = [];
                         try {
-                            itemsData = JSON.parse(questionContainer.getAttribute('data-items-json') || '[]');
-                            targetsData = JSON.parse(questionContainer.getAttribute('data-targets-json') || '[]');
+                            const rawItems = questionContainer.getAttribute('data-items-json');
+                            const rawTargets = questionContainer.getAttribute('data-targets-json');
+
+                            if (rawItems && rawItems !== 'null' && rawItems !== 'undefined') {
+                                itemsData = JSON.parse(rawItems);
+                            }
+                            if (rawTargets && rawTargets !== 'null' && rawTargets !== 'undefined') {
+                                targetsData = JSON.parse(rawTargets);
+                            }
                         } catch (e) {
-                            console.error('Error parsing drag-drop JSON:', e);
+                            console.error(`Error parsing drag-drop JSON for Q${parseInt(questionIndex)+1}:`, e);
+                            // Fallback to empty if parsing fails
+                            itemsData = [];
+                            targetsData = [];
                         }
 
                         renderDragDropInterface(questionIndex, dragItemsContainer, dropTargetsContainer, itemsData, targetsData);
@@ -2742,9 +2784,28 @@
                 }
 
                 function renderDragDropInterface(qIdx, dragContainer, dropContainer, items, targets) {
+                    // Step 14: Support for both simple string arrays and object arrays
+                    console.log(`Rendering drag-drop for Question ${parseInt(qIdx)+1}`, { items, targets });
+
+                    // Normalize Items
+                    const normalizedItems = items.map((item, index) => {
+                        if (typeof item === 'string') {
+                            return { id: `simple_${index}`, text: item };
+                        }
+                        return item;
+                    });
+
+                    // Normalize Targets
+                    const normalizedTargets = targets.map((target, index) => {
+                        if (typeof target === 'string') {
+                            return { id: `simple_${index}`, label: target };
+                        }
+                        return target;
+                    });
+
                     // Render Items Pool - PHASE 6 Item Shuffling
                     dragContainer.innerHTML = '';
-                    const shuffledItems = [...items].sort(() => Math.random() - 0.5);
+                    const shuffledItems = [...normalizedItems].sort(() => Math.random() - 0.5);
                     shuffledItems.forEach(item => {
                         const el = document.createElement('div');
                         el.className = 'drag-item';
@@ -2762,7 +2823,7 @@
                     
                     // Render Targets
                     dropContainer.innerHTML = '';
-                    targets.forEach(target => {
+                    normalizedTargets.forEach(target => {
                         const el = document.createElement('div');
                         el.className = 'drop-target';
                         el.id = `q${qIdx}_target_${target.id}`;
