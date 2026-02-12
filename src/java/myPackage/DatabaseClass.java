@@ -5212,8 +5212,8 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             pstmDelete.executeUpdate();
             pstmDelete.close();
             
-            // Insert new answers
-            String insertSql = "INSERT INTO drag_drop_answers (exam_id, question_id, student_id, drag_item_id, drop_target_id, is_correct, marks_obtained) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            // Insert new answers - FIXED: Removed extra '?' placeholder
+            String insertSql = "INSERT INTO drag_drop_answers (exam_id, question_id, student_id, drag_item_id, drop_target_id, is_correct, marks_obtained) VALUES (?, ?, ?, ?, ?, ?, ?)";
             pstmInsert = conn.prepareStatement(insertSql);
             
             int correctCount = 0;
@@ -5240,7 +5240,8 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
                 }
                 
                 pstmInsert.setInt(6, isCorrect ? 1 : 0);
-                pstmInsert.setBigDecimal(7, new BigDecimal(String.valueOf(marksObtained)));
+                // Use setFloat instead of setBigDecimal for marks_obtained
+                pstmInsert.setFloat(7, marksObtained);
                 pstmInsert.addBatch();
                 
                 totalMarks += marksObtained;
