@@ -2634,14 +2634,15 @@ private String getCorrectAnswer(int qid) {
             String result = rs.getString("correct");
             String questionType = rs.getString("question_type");
             
-            // For Drag and Drop, return the correct targets JSON
+            // For Drag and Drop, return the correct targets JSON in standard format
             if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
                 org.json.JSONObject correctJson = new org.json.JSONObject();
                 try {
-                    ArrayList<myPackage.classes.DragItem> dragItems = getDragItemsByQuestionIdOld(qid);
-                    for (myPackage.classes.DragItem di : dragItems) {
+                    ArrayList<DragItem> dragItems = getDragItemsByQuestionIdOld(qid);
+                    for (DragItem di : dragItems) {
                         if (di.getCorrectTargetId() != null && di.getCorrectTargetId() > 0) {
-                            correctJson.put("zone_" + di.getCorrectTargetId(), "item_" + di.getId());
+                            // Use target_ format for consistency
+                            correctJson.put("target_" + di.getCorrectTargetId(), "item_" + di.getId());
                         }
                     }
                 } catch (Exception e) {
@@ -2817,22 +2818,30 @@ private String getAnswerStatus(String ans, String correct) {
 
     // 3. Compare based on question type (drag-drop, multi-select or single)
     if (userAnswer.startsWith("{") && correctAnswer.startsWith("{")) {
-        if (userAnswer.equals(correctAnswer)) return "correct";
-        
-        // If not exactly equal, check if there are any matches at all
         try {
             org.json.JSONObject userObj = new org.json.JSONObject(userAnswer);
             org.json.JSONObject correctObj = new org.json.JSONObject(correctAnswer);
+            
+            // Count correct matches
+            int correctMatches = 0;
+            int totalMatches = correctObj.length();
+            
             java.util.Iterator<String> keys = correctObj.keys();
-            boolean anyMatch = false;
-            while(keys.hasNext()) {
+            while (keys.hasNext()) {
                 String key = keys.next();
                 if (userObj.has(key) && userObj.get(key).equals(correctObj.get(key))) {
-                    anyMatch = true;
-                    break;
+                    correctMatches++;
                 }
             }
-            return anyMatch ? "partial" : "incorrect";
+            
+            // Determine status
+            if (correctMatches == totalMatches && totalMatches > 0) {
+                return "correct";
+            } else if (correctMatches > 0) {
+                return "partial";
+            } else {
+                return "incorrect";
+            }
         } catch (Exception e) {
             return "incorrect";
         }
@@ -3486,11 +3495,12 @@ private int getObtMarks(int examId, int tMarks, int size) {
         return 0;
     }
 
-    float totalWeight = 0;
-    float correctWeight = 0;
+    float totalPossibleMarks = 0;
+    float totalObtainedMarks = 0;
 
     try {
-        String sql = "SELECT a.status, q.question_type, q.question_id, q.marks " +
+        // Get all answers for this exam
+        String sql = "SELECT a.status, a.answer, a.correct_answer, q.question_type, q.question_id, q.marks " +
                      "FROM answers a " +
                      "JOIN questions q ON a.question_id = q.question_id " +
                      "WHERE a.exam_id = ?";
@@ -3498,67 +3508,59 @@ private int getObtMarks(int examId, int tMarks, int size) {
         pstm.setInt(1, examId);
         ResultSet rs = pstm.executeQuery();
 
-        // 1. Collect all data from the first ResultSet
-        java.util.List<java.util.Map<String, Object>> answerData = new java.util.ArrayList<>();
         while (rs.next()) {
-            java.util.Map<String, Object> data = new java.util.HashMap<>();
-            data.put("status", rs.getString("status"));
-            data.put("question_type", rs.getString("question_type"));
-            data.put("question_id", rs.getInt("question_id"));
-            data.put("marks", rs.getInt("marks"));
-            answerData.add(data);
-        }
-        
-        // Close resources early
-        rs.close();
-        pstm.close();
-        rs = null;
-        pstm = null;
-
-        // 2. Process collected data, performing sub-queries as needed
-        for (java.util.Map<String, Object> data : answerData) {
-            String status = (String) data.get("status");
-            String questionType = (String) data.get("question_type");
-            int qid = (Integer) data.get("question_id");
-            int qMarks = (Integer) data.get("marks");
+            String status = rs.getString("status");
+            String questionType = rs.getString("question_type");
+            int qid = rs.getInt("question_id");
+            int qMarks = rs.getInt("marks");
+            
+            // Default weight if marks not set
+            float questionWeight = qMarks > 0 ? qMarks : 1.0f;
+            totalPossibleMarks += questionWeight;
             
             if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
+                // For drag-drop questions, get marks from drag_drop_answers table
                 float obtainedForQ = 0;
-                String ddSql = "SELECT SUM(marks_obtained) FROM drag_drop_answers WHERE exam_id = ? AND question_id = ?";
+                String ddSql = "SELECT SUM(marks_obtained) as total_marks FROM drag_drop_answers WHERE exam_id = ? AND question_id = ?";
                 try (PreparedStatement ddPstm = conn.prepareStatement(ddSql)) {
                     ddPstm.setInt(1, examId);
                     ddPstm.setInt(2, qid);
                     try (ResultSet ddRs = ddPstm.executeQuery()) {
                         if (ddRs.next()) {
-                            obtainedForQ = ddRs.getFloat(1);
+                            obtainedForQ = ddRs.getFloat("total_marks");
                         }
                     }
                 } catch (SQLException e) {
                     LOGGER.log(Level.WARNING, "Error fetching drag drop marks: " + e.getMessage());
                 }
                 
-                float qWeight = qMarks > 0 ? (float)qMarks : 1.0f;
-                totalWeight += qWeight;
-                correctWeight += obtainedForQ;
+                totalObtainedMarks += obtainedForQ;
+                LOGGER.log(Level.FINE, "Drag-drop Q{0}: obtained {1}/{2}", 
+                          new Object[]{qid, obtainedForQ, questionWeight});
                 
             } else {
-                float weight = "MultipleSelect".equalsIgnoreCase(questionType) ? 2.0f : 1.0f;
-                if (qMarks > 0) weight = (float)qMarks;
-                
-                totalWeight += weight;
+                // For regular questions, check status
                 if ("correct".equals(status)) {
-                    correctWeight += weight;
+                    totalObtainedMarks += questionWeight;
                 }
             }
         }
+        rs.close();
+        pstm.close();
         
-        if (totalWeight == 0) {
+        if (totalPossibleMarks == 0) {
             return 0;
         }
 
-        // Calculate marks based on the proportion of correct weight
-        float finalMarks = (correctWeight / totalWeight) * tMarks;
-        return Math.round(finalMarks);
+        // Scale marks proportionally to total exam marks
+        float finalMarks = (totalObtainedMarks / totalPossibleMarks) * tMarks;
+        int roundedMarks = Math.round(finalMarks);
+        
+        LOGGER.info("Exam " + examId + " marks: " + roundedMarks + 
+                   " (" + totalObtainedMarks + "/" + totalPossibleMarks + 
+                   " = " + (totalObtainedMarks/totalPossibleMarks*100) + "%)");
+        
+        return roundedMarks;
         
     } catch (SQLException ex) {
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
@@ -3710,9 +3712,8 @@ public boolean registerExamCompletion(int studentId, int examId, String endTime)
     
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
         ps.setString(1, endTime.trim());
-        ps.setString(2, endTime.trim());
-        ps.setInt(3, studentId);
-        ps.setInt(4, examId);
+        ps.setInt(2, studentId);
+        ps.setInt(3, examId);
         
         return ps.executeUpdate() > 0;
     }
@@ -5154,11 +5155,14 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
     
     /**
      * Submits drag-drop answers and calculates marks
+     * 1 mark per correct match, divided proportionally from total marks
      */
     public float submitDragDropAnswers(int examId, int questionId, String studentId, 
                                       Map<Integer, Integer> selectedMatches) {
         Connection conn = null;
-        PreparedStatement pstm = null;
+        PreparedStatement pstmDelete = null;
+        PreparedStatement pstmInsert = null;
+        PreparedStatement pstmCheck = null;
         ResultSet rs = null;
         float totalMarks = 0;
         
@@ -5168,43 +5172,74 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             
             // Get the question's total marks
             Questions question = getQuestionById(questionId);
-            float marksPerCorrectMatch = (float) question.getTotalMarks() / question.getDragItems().size();
+            if (question == null) {
+                throw new RuntimeException("Question not found: " + questionId);
+            }
             
             // Get drag items to check correct answers
             ArrayList<DragItem> dragItems = getDragItemsByQuestionIdOld(questionId);
+            if (dragItems == null || dragItems.isEmpty()) {
+                throw new RuntimeException("No drag items found for question: " + questionId);
+            }
+            
+            // Calculate marks per match (equal distribution)
+            float marksPerCorrectMatch = 0;
+            if (dragItems.size() > 0) {
+                marksPerCorrectMatch = (float) question.getTotalMarks() / dragItems.size();
+            }
             
             // Delete any existing answers for this question
             String deleteSql = "DELETE FROM drag_drop_answers WHERE exam_id = ? AND question_id = ? AND student_id = ?";
-            pstm = conn.prepareStatement(deleteSql);
-            pstm.setInt(1, examId);
-            pstm.setInt(2, questionId);
-            pstm.setString(3, studentId);
-            pstm.executeUpdate();
+            pstmDelete = conn.prepareStatement(deleteSql);
+            pstmDelete.setInt(1, examId);
+            pstmDelete.setInt(2, questionId);
+            pstmDelete.setString(3, studentId);
+            pstmDelete.executeUpdate();
+            pstmDelete.close();
             
             // Insert new answers
-            String insertSql = "INSERT INTO drag_drop_answers (exam_id, question_id, student_id, drag_item_id, drop_target_id, is_correct, marks_obtained) VALUES (?, ?, ?, ?, ?, ?, ?)";
-            pstm = conn.prepareStatement(insertSql);
+            String insertSql = "INSERT INTO drag_drop_answers (exam_id, question_id, student_id, drag_item_id, drop_target_id, is_correct, marks_obtained) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            pstmInsert = conn.prepareStatement(insertSql);
             
+            int correctCount = 0;
             for (DragItem item : dragItems) {
                 Integer selectedTargetId = selectedMatches.get(item.getId());
-                boolean isCorrect = (selectedTargetId != null && selectedTargetId.equals(item.getCorrectTargetId()));
+                boolean isCorrect = false;
+                
+                // FIX: Check if correct_target_id exists and matches selected target
+                if (item.getCorrectTargetId() != null && selectedTargetId != null) {
+                    isCorrect = item.getCorrectTargetId().equals(selectedTargetId);
+                }
+                
                 float marksObtained = isCorrect ? marksPerCorrectMatch : 0;
                 
-                pstm.setInt(1, examId);
-                pstm.setInt(2, questionId);
-                pstm.setString(3, studentId);
-                pstm.setInt(4, item.getId());
-                pstm.setInt(5, selectedTargetId != null ? selectedTargetId : 0);
-                pstm.setBoolean(6, isCorrect);
-                pstm.setFloat(7, marksObtained);
-                pstm.addBatch();
+                pstmInsert.setInt(1, examId);
+                pstmInsert.setInt(2, questionId);
+                pstmInsert.setString(3, studentId);
+                pstmInsert.setInt(4, item.getId());
+                
+                if (selectedTargetId != null) {
+                    pstmInsert.setInt(5, selectedTargetId);
+                } else {
+                    pstmInsert.setNull(5, Types.INTEGER);
+                }
+                
+                pstmInsert.setInt(6, isCorrect ? 1 : 0);
+                pstmInsert.setBigDecimal(7, new BigDecimal(String.valueOf(marksObtained)));
+                pstmInsert.addBatch();
                 
                 totalMarks += marksObtained;
+                if (isCorrect) correctCount++;
             }
-            pstm.executeBatch();
             
+            pstmInsert.executeBatch();
             conn.commit();
-            LOGGER.info("Drag-drop answers submitted for exam: " + examId + ", question: " + questionId + ", student: " + studentId);
+            
+            LOGGER.info("Drag-drop answers submitted for exam: " + examId + 
+                        ", question: " + questionId + 
+                        ", student: " + studentId + 
+                        ", correct: " + correctCount + "/" + dragItems.size() +
+                        ", marks: " + totalMarks + "/" + question.getTotalMarks());
             
         } catch (SQLException e) {
             try {
@@ -5217,7 +5252,8 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
         } finally {
             try {
                 if (rs != null) rs.close();
-                if (pstm != null) pstm.close();
+                if (pstmDelete != null) pstmDelete.close();
+                if (pstmInsert != null) pstmInsert.close();
                 if (conn != null) {
                     conn.setAutoCommit(true);
                 }

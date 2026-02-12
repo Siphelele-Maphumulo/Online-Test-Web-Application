@@ -1588,15 +1588,50 @@ try {
                         ans = multiSelectAns; // Use the multi-select answer instead
                     }
                     
-                    // Handle drag-drop questions - PHASE 5 Integration
+                    // Handle drag-drop questions - FIXED JSON PARSING
                     if ("dragdrop".equals(qtype)) {
                         if (ans != null && !ans.trim().isEmpty() && ans.startsWith("{")) {
                             try {
-                                myPackage.DragDropService ddService = new myPackage.DragDropService();
-                                java.util.Map<Integer, Integer> dragDropMatches = ddService.parseUserMappings(ans);
+                                // Parse JSON mapping from format: {"target_15":"item_14","target_16":"item_15"}
+                                java.util.Map<Integer, Integer> dragDropMatches = new java.util.HashMap<>();
+                                
+                                org.json.JSONObject userObj = new org.json.JSONObject(ans);
+                                java.util.Iterator<String> keys = userObj.keys();
+                                
+                                while (keys.hasNext()) {
+                                    String key = keys.next();
+                                    // Key format: "target_15" or "zone_15"
+                                    String value = userObj.getString(key);
+                                    
+                                    // Extract target ID from key
+                                    Integer targetId = null;
+                                    if (key.startsWith("target_")) {
+                                        try {
+                                            targetId = Integer.parseInt(key.substring(7));
+                                        } catch (NumberFormatException e) {}
+                                    } else if (key.startsWith("zone_")) {
+                                        try {
+                                            targetId = Integer.parseInt(key.substring(5));
+                                        } catch (NumberFormatException e) {}
+                                    }
+                                    
+                                    // Extract item ID from value
+                                    Integer itemId = null;
+                                    if (value.startsWith("item_")) {
+                                        try {
+                                            itemId = Integer.parseInt(value.substring(5));
+                                        } catch (NumberFormatException e) {}
+                                    }
+                                    
+                                    if (targetId != null && itemId != null) {
+                                        // IMPORTANT: Map is itemId -> targetId
+                                        dragDropMatches.put(itemId, targetId);
+                                    }
+                                }
                                 
                                 if (!dragDropMatches.isEmpty() && userId > 0) {
-                                    pDAO.submitDragDropAnswers(eId, qid, String.valueOf(userId), dragDropMatches);
+                                    float marks = pDAO.submitDragDropAnswers(eId, qid, String.valueOf(userId), dragDropMatches);
+                                    application.log("Drag-drop marks for Q" + qid + ": " + marks);
                                 }
                             } catch (Exception e) {
                                 application.log("Error processing drag-drop JSON: " + e.getMessage());
