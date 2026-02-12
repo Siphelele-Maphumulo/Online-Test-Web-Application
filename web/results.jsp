@@ -1519,13 +1519,10 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
               Question-wise Analysis
             </h3>
             
-            <%
+           <%
               for (int i = 0; i < answersList.size(); i++) {
                 Answers a = answersList.get(i);
                 boolean isCorrect = a.getStatus().equals("correct");
-                
-                // Check if this is a drag-drop question
-                boolean isDragDrop = a.getAnswer() != null && a.getAnswer().startsWith("Drag-Drop:");
                 
                 // Get question details to check question type
                 Questions questionObj = null;
@@ -1536,6 +1533,10 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                         questionType = questionObj.getQuestionType();
                     }
                 }
+                
+                // Check if this is a drag-drop question
+                boolean isDragDrop = "DRAG_AND_DROP".equalsIgnoreCase(questionType) || 
+                                    (a.getAnswer() != null && a.getAnswer().startsWith("{"));
                 
                 // Extract and format question text with code snippets
                 String fullQuestion = a.getQuestion();
@@ -1641,10 +1642,32 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                             <%
                               } else {
                                 for (myPackage.classes.DragDropAnswer answer : studentAnswers) {
+                                  // Find item and target text
+                                  String itemTxt = "Item " + answer.getDragItemId();
+                                  String targetTxt = "Target " + answer.getDropTargetId();
+                                  
+                                  if (questionObj != null) {
+                                      if (questionObj.getDragItems() != null) {
+                                          for (myPackage.classes.DragItem di : questionObj.getDragItems()) {
+                                              if (di.getId() == answer.getDragItemId()) {
+                                                  itemTxt = di.getItemText();
+                                                  break;
+                                              }
+                                          }
+                                      }
+                                      if (questionObj.getDropTargets() != null) {
+                                          for (myPackage.classes.DropTarget dt : questionObj.getDropTargets()) {
+                                              if (dt.getId() == answer.getDropTargetId()) {
+                                                  targetTxt = dt.getTargetLabel();
+                                                  break;
+                                              }
+                                          }
+                                      }
+                                  }
                             %>
                                 <div style="margin-bottom: 8px; padding: 6px; background: <%= answer.isCorrect() ? "rgba(5, 150, 105, 0.1)" : "rgba(220, 38, 38, 0.1)" %>; border-radius: 4px; font-size: 12px;">
                                   <i class="fas <%= answer.isCorrect() ? "fa-check" : "fa-times" %>" style="color: <%= answer.isCorrect() ? "var(--success)" : "var(--error)" %>;"></i>
-                                  Item → Target <%= answer.isCorrect() ? "(Correct)" : "(Incorrect)" %>
+                                  <strong><%= itemTxt %></strong> ? <%= targetTxt %> <%= answer.isCorrect() ? "(Correct)" : "(Incorrect)" %>
                                 </div>
                             <%
                                 }
@@ -1660,27 +1683,31 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                           </div>
                           <div style="background: var(--white); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--success);">
                             <%
-                              // Get correct drag-drop answers
-                              ArrayList<myPackage.classes.DragDropAnswer> correctDragDropAnswers = new ArrayList<>();
-                              try {
-                                  correctDragDropAnswers = pDAO.getStudentDragDropAnswers(examDetails.getExamId(), a.getQuestionId(), "correct");
-                              } catch (Exception e) {
-                                  // Handle error gracefully
-                              }
-                              
-                              if (correctDragDropAnswers.isEmpty()) {
-                            %>
-                                <div style="color: var(--dark-gray); font-style: italic;">No correct matches available</div>
-                            <%
-                              } else {
-                                for (myPackage.classes.DragDropAnswer answer : correctDragDropAnswers) {
+                              // Get correct drag-drop answers from question object
+                              if (questionObj != null && questionObj.getDragItems() != null) {
+                                  for (myPackage.classes.DragItem di : questionObj.getDragItems()) {
+                                      if (di.getCorrectTargetId() != null && di.getCorrectTargetId() > 0) {
+                                          String correctTargetLabel = "Target " + di.getCorrectTargetId();
+                                          if (questionObj.getDropTargets() != null) {
+                                              for (myPackage.classes.DropTarget dt : questionObj.getDropTargets()) {
+                                                  if (dt.getId() == di.getCorrectTargetId().intValue()) {
+                                                      correctTargetLabel = dt.getTargetLabel();
+                                                      break;
+                                                  }
+                                              }
+                                          }
                             %>
                                 <div style="margin-bottom: 8px; padding: 6px; background: rgba(5, 150, 105, 0.1); border-radius: 4px; font-size: 12px;">
                                   <i class="fas fa-check" style="color: var(--success);"></i>
-                                  Item → Target (Correct)
+                                  <strong><%= di.getItemText() %></strong> ? <%= correctTargetLabel %>
                                 </div>
                             <%
-                                }
+                                      }
+                                  }
+                              } else {
+                            %>
+                                <div style="color: var(--dark-gray); font-style: italic;">No correct matches available</div>
+                            <%
                               }
                             %>
                           </div>

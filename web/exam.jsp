@@ -1,6 +1,5 @@
-<!-- Font Awesome for Icons -->
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-<!-- DragDropTouch Polyfill for Mobile Support -->
 <script src="https://cdn.jsdelivr.net/gh/Bernardo-Castilho/dragdroptouch@master/DragDropTouch.js"></script>
 <%@page import="java.util.ArrayList"%>
 <%@page import="myPackage.classes.Questions"%>
@@ -1762,142 +1761,204 @@
         }
     }
     
-    /* Drag and Drop Question Styles */
+    /* Drag and Drop Question Styles - PHASE 3 Implementation */
     .drag-drop-question {
-        background: var(--light-gray);
-        border-radius: var(--radius-md);
-        padding: var(--spacing-lg);
+        background: white;
+        border-radius: 12px;
+        padding: 0;
         margin: var(--spacing-md) 0;
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
     }
     
     .drag-drop-instructions {
-        text-align: center;
-        margin-bottom: var(--spacing-lg);
-        padding: var(--spacing-md);
-        background: var(--white);
-        border-radius: var(--radius-sm);
-        border: 1px solid var(--medium-gray);
+        text-align: left;
+        padding: var(--spacing-md) var(--spacing-lg);
+        background: #f8fafc;
+        border-bottom: 1px solid var(--medium-gray);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
     }
     
     .drag-drop-instructions i {
-        font-size: 24px;
+        font-size: 20px;
         color: var(--accent-blue);
-        margin-bottom: var(--spacing-sm);
+        background: white;
+        padding: 10px;
+        border-radius: 8px;
+        box-shadow: var(--shadow-sm);
     }
     
     .drag-drop-instructions strong {
         display: block;
-        margin-bottom: var(--spacing-sm);
+        font-size: 15px;
         color: var(--text-dark);
+        margin-bottom: 2px;
     }
     
     .drag-drop-instructions p {
         margin: 0;
         color: var(--dark-gray);
+        font-size: 13px;
     }
     
     .drag-drop-container {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: var(--spacing-lg);
-        margin-top: var(--spacing-md);
-        padding: 10px;
-        background: #f1f5f9;
-        border-radius: var(--radius-md);
+        gap: 30px;
+        padding: 20px;
+        background: white;
     }
     
-    .drag-items-section, .drop-targets-section {
-        background: var(--white);
-        border-radius: var(--radius-md);
-        padding: var(--spacing-md);
-        border: 2px solid #cbd5e1;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        min-height: 300px;
+    .draggable-items-panel {
+        background: #f5f7fa;
+        border-radius: 10px;
+        padding: 20px;
     }
     
-    .drag-items-section h4, .drop-targets-section h4 {
-        margin-bottom: var(--spacing-md);
+    .drop-targets-panel {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        border: 2px dashed #ccc;
+    }
+    
+    .panel-header {
+        margin-bottom: 20px;
         color: var(--text-dark);
         font-size: 14px;
         font-weight: 600;
         display: flex;
         align-items: center;
-        gap: var(--spacing-sm);
+        gap: 10px;
+    }
+    
+    .panel-header i {
+        color: var(--accent-blue);
     }
     
     .drag-items-list, .drop-targets-list {
         display: flex;
         flex-direction: column;
-        gap: var(--spacing-sm);
+        gap: 12px;
     }
     
     .drag-item {
-        background: #8eb440; /* Professional Olive Green to match image */
-        color: var(--white);
-        padding: var(--spacing-sm) var(--spacing-md);
-        border-radius: var(--radius-sm);
-        cursor: move;
-        transition: all var(--transition-normal);
-        font-size: 13px;
-        text-align: center;
+        background: white;
+        border: 2px solid #3b82f6;
+        border-radius: 8px;
+        padding: 15px 20px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        cursor: grab;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.2s;
+        font-size: 14px;
+        color: var(--text-dark);
         user-select: none;
-        border: 2px solid transparent;
+    }
+    
+    .drag-item::before {
+        content: '?';
+        font-size: 18px;
+        color: #3b82f6;
+        font-weight: bold;
     }
     
     .drag-item:hover {
-        background: var(--primary-blue);
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
+        border-color: var(--primary-blue);
     }
     
     .drag-item.dragging {
-        opacity: 0.5;
-        transform: rotate(5deg);
-    }
-    
-    .drop-target {
-        background: var(--white);
-        border: 2px dashed var(--medium-gray);
-        border-radius: var(--radius-sm);
-        padding: var(--spacing-md);
-        min-height: 60px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all var(--transition-normal);
-        position: relative;
-        font-size: 13px;
-        color: var(--dark-gray);
-        text-align: center;
-    }
-    
-    .drop-target.drag-over {
-        background: rgba(74, 144, 226, 0.1);
-        border-color: var(--accent-blue);
+        opacity: 0.7;
+        box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        cursor: grabbing;
         transform: scale(1.02);
     }
     
-    .drop-target.has-item {
-        border-style: solid;
-        border-color: var(--success);
-        background: rgba(5, 150, 105, 0.1);
+    .drop-target {
+        background: #f8fafc;
+        border: 2px solid #94a3b8;
+        border-radius: 8px;
+        padding: 20px;
+        min-height: 80px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        transition: all 0.2s;
     }
     
-    .drop-target.has-item .placeholder {
-        display: none;
+    .drop-target-header {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--dark-gray);
+        margin-bottom: 5px;
+    }
+    
+    .drop-target.drag-over {
+        border-color: #3b82f6;
+        background: #eff6ff;
+        border-style: solid;
+        transform: scale(1.02);
     }
     
     .drop-target .placeholder {
         font-style: italic;
+        color: var(--dark-gray);
+        font-size: 13px;
+        text-align: center;
+        margin: auto;
     }
     
-    .drop-target .drag-item {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        margin: 0;
-        z-index: 10;
+    .dropped-item {
+        background: white;
+        border: 1px solid #3b82f6;
+        border-left: 4px solid #3b82f6;
+        border-radius: 6px;
+        padding: 12px 15px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: var(--shadow-sm);
+        animation: slideIn 0.3s ease-out;
+    }
+    
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .remove-btn {
+        background: #fee2e2;
+        color: #ef4444;
+        border: none;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.2s;
+        font-size: 14px;
+    }
+    
+    .dropped-item:hover .remove-btn {
+        opacity: 1;
+    }
+    
+    .remove-btn:hover {
+        background: #fecaca;
+        transform: scale(1.1);
     }
     
     @media (max-width: 768px) {
@@ -2033,22 +2094,36 @@
                             <% if(isDragDrop){ 
                                 // Serialize relational data to JSON for JS
                                 org.json.JSONArray itemsArray = new org.json.JSONArray();
-                                if (q.getDragItems() != null) {
+                                if (q.getDragItems() != null && !q.getDragItems().isEmpty()) {
                                     for (myPackage.classes.DragItem di : q.getDragItems()) {
                                         org.json.JSONObject jo = new org.json.JSONObject();
                                         jo.put("id", di.getId());
                                         jo.put("text", di.getItemText());
                                         itemsArray.put(jo);
                                     }
+                                } else if (q.getDragItemsJson() != null && !q.getDragItemsJson().isEmpty()) {
+                                    // Fallback to JSON column if relational list is empty
+                                    try {
+                                        itemsArray = new org.json.JSONArray(q.getDragItemsJson());
+                                    } catch (Exception e) {
+                                        // Silently handle JSON parsing errors
+                                    }
                                 }
                                 
                                 org.json.JSONArray targetsArray = new org.json.JSONArray();
-                                if (q.getDropTargets() != null) {
+                                if (q.getDropTargets() != null && !q.getDropTargets().isEmpty()) {
                                     for (myPackage.classes.DropTarget dt : q.getDropTargets()) {
                                         org.json.JSONObject jo = new org.json.JSONObject();
                                         jo.put("id", dt.getId());
                                         jo.put("label", dt.getTargetLabel());
                                         targetsArray.put(jo);
+                                    }
+                                } else if (q.getDropTargetsJson() != null && !q.getDropTargetsJson().isEmpty()) {
+                                    // Fallback to JSON column if relational list is empty
+                                    try {
+                                        targetsArray = new org.json.JSONArray(q.getDropTargetsJson());
+                                    } catch (Exception e) {
+                                        // Silently handle JSON parsing errors
                                     }
                                 }
                             %>
@@ -2057,20 +2132,22 @@
                                      data-targets-json="<%= escapeHtmlAttr(targetsArray.toString()) %>">
                                     <div class="drag-drop-instructions">
                                         <i class="fas fa-hand-rock"></i>
-                                        <strong>Drag and Drop Question</strong>
-                                        <p>Drag the items on the left to their correct targets on the right</p>
+                                        <div>
+                                            <strong>Drag and Drop the Items</strong>
+                                            <p>Match each item from the left panel to its corresponding target on the right.</p>
+                                        </div>
                                     </div>
                                     
                                     <div class="drag-drop-container">
-                                        <div class="drag-items-section">
-                                            <h4><i class="fas fa-grip-vertical"></i> Draggable Items</h4>
+                                        <div class="draggable-items-panel">
+                                            <div class="panel-header"><i class="fas fa-grip-vertical"></i> Draggable Items</div>
                                             <div class="drag-items-list" id="dragItems_<%= i %>">
                                                 <!-- Drag items will be loaded dynamically -->
                                             </div>
                                         </div>
                                         
-                                        <div class="drop-targets-section">
-                                            <h4><i class="fas fa-bullseye"></i> Drop Targets</h4>
+                                        <div class="drop-targets-panel">
+                                            <div class="panel-header"><i class="fas fa-bullseye"></i> Drop Targets</div>
                                             <div class="drop-targets-list" id="dropTargets_<%= i %>">
                                                 <!-- Drop targets will be loaded dynamically -->
                                             </div>
@@ -2079,6 +2156,24 @@
                                     
                                     <input type="hidden" name="dragDropQuestion_<%= i %>" value="true">
                                     <input type="hidden" name="qid<%= i %>" value="<%= q.getQuestionId() %>">
+
+                                    <!-- Step 12: Visible Debugging -->
+                                    <div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 10px; margin: 10px 0; font-size: 11px; display: none;" class="drag-debug">
+                                        <strong>Debug Info (Question <%= i+1 %>):</strong>
+                                        <div>Items: <code id="debug-items-<%= i %>"></code></div>
+                                        <div>Targets: <code id="debug-targets-<%= i %>"></code></div>
+                                    </div>
+                                    <script>
+                                        (function() {
+                                            const itemsJson = '<%= escapeHtmlAttr(itemsArray.toString()) %>';
+                                            const targetsJson = '<%= escapeHtmlAttr(targetsArray.toString()) %>';
+                                            console.log('Question <%= i+1 %> Data:', { itemsJson, targetsJson });
+                                            document.getElementById('debug-items-<%= i %>').textContent = itemsJson;
+                                            document.getElementById('debug-targets-<%= i %>').textContent = targetsJson;
+                                            // Uncomment to show debug info in UI
+                                            // document.querySelector('.drag-debug').style.display = 'block';
+                                        })();
+                                    </script>
                                 </div>
                             <% } else { %>
                                 <% if(isMultiTwo){ %>
@@ -2266,7 +2361,7 @@
                         
                         if (isDragDrop) {
                             // Question is answered if at least one target has an item
-                            if (card.querySelectorAll('.drop-target .drag-item').length > 0) {
+                            if (card.querySelectorAll('.dropped-item').length > 0) {
                                 answered++;
                             }
                         } else {
@@ -2447,25 +2542,31 @@
                         if (qindex) updateHiddenForMulti(qindex);
                     });
                     
-                    // Handle Drag and Drop answers
+                    // Handle Drag and Drop answers - PHASE 5 Integration
                     const dragDropAnswers = getDragDropAnswers();
                     Object.keys(dragDropAnswers).forEach(qindex => {
-                        const questionMatches = dragDropAnswers[qindex];
-                        Object.keys(questionMatches).forEach(targetId => {
-                            const itemId = questionMatches[targetId];
-                            const hiddenField = document.createElement('input');
-                            hiddenField.type = 'hidden';
-                            hiddenField.name = `match_${qindex}_${targetId}`;
-                            hiddenField.value = itemId;
-                            document.getElementById('myform').appendChild(hiddenField);
-                        });
+                        const mappings = dragDropAnswers[qindex];
+                        const formattedMappings = {};
+                        for (let tId in mappings) {
+                            formattedMappings['target_' + tId] = 'item_' + mappings[tId];
+                        }
+                        const ansValue = JSON.stringify(formattedMappings);
+                        
+                        let hiddenAns = document.querySelector('input[name="ans' + qindex + '"]');
+                        if (!hiddenAns) {
+                            hiddenAns = document.createElement('input');
+                            hiddenAns.type = 'hidden';
+                            hiddenAns.name = 'ans' + qindex;
+                            document.getElementById('myform').appendChild(hiddenAns);
+                        }
+                        hiddenAns.value = ansValue;
                     });
                     
                     var answeredQuestions = 0;
                     document.querySelectorAll('.question-card').forEach(function(card){
                         const isDragDrop = card.querySelector('.drag-drop-question') !== null;
                         if (isDragDrop) {
-                            if (card.querySelectorAll('.drop-target .drag-item').length > 0) {
+                            if (card.querySelectorAll('.dropped-item').length > 0) {
                                 answeredQuestions++;
                             }
                         } else {
@@ -2642,184 +2743,242 @@
                     });
                 });
                 
-                /* --- DRAG AND DROP FUNCTIONALITY --- */
-                function initializeDragDropQuestions() {
-                    const dragDropQuestions = document.querySelectorAll('.drag-drop-question');
-                    
-                    dragDropQuestions.forEach(questionContainer => {
-                        try {
-                            const card = questionContainer.closest('.question-card');
-                            if (!card) return;
-                            
-                            const questionIndex = card.getAttribute('data-qindex');
-                            const dragItemsContainer = document.getElementById(`dragItems_${questionIndex}`);
-                            const dropTargetsContainer = document.getElementById(`dropTargets_${questionIndex}`);
-                            
-                            if (!dragItemsContainer || !dropTargetsContainer) {
-                                console.warn(`Containers not found for question index ${questionIndex}`);
-                                return;
-                            }
-                            
-                            // Get JSON data from data attributes
-                            let itemsData = [];
-                            let targetsData = [];
-                            try {
-                                itemsData = JSON.parse(questionContainer.getAttribute('data-items-json') || '[]');
-                                targetsData = JSON.parse(questionContainer.getAttribute('data-targets-json') || '[]');
-                            } catch (e) {
-                                console.error('Error parsing drag-drop JSON:', e);
-                            }
-                            
-                            loadDragDropData(questionIndex, dragItemsContainer, dropTargetsContainer, itemsData, targetsData);
-                        } catch (err) {
-                            console.error('Error initializing drag-drop question:', err);
-                        }
-                    });
-                }
-                
-                function loadDragDropData(questionIndex, dragItemsContainer, dropTargetsContainer, itemsData, targetsData) {
-                    // Shuffling items pool
-                    const shuffledItems = [...itemsData].sort(() => Math.random() - 0.5);
-                    
-                    // Create drag items
-                    dragItemsContainer.innerHTML = '';
-                    shuffledItems.forEach((item, idx) => {
-                        const dragElement = document.createElement('div');
-                        dragElement.className = 'drag-item';
-                        dragElement.draggable = true;
-                        dragElement.setAttribute('data-item-id', item.id); 
-                        dragElement.setAttribute('id', `q${questionIndex}_item_${item.id}`);
-                        dragElement.textContent = item.text;
-                        dragItemsContainer.appendChild(dragElement);
-                    });
-                    
-                    // Create drop targets
-                    dropTargetsContainer.innerHTML = '';
-                    targetsData.forEach((target, idx) => {
-                        const dropElement = document.createElement('div');
-                        dropElement.className = 'drop-target';
-                        dropElement.setAttribute('data-target-id', target.id);
-                        dropElement.setAttribute('id', `q${questionIndex}_target_${target.id}`);
-                        dropElement.innerHTML = `<span class="placeholder">${target.label}</span>`;
-                        dropTargetsContainer.appendChild(dropElement);
-                    });
-                    
-                    // Set up drag and drop events
-                    setupDragAndDropEvents(dragItemsContainer, dropTargetsContainer);
-                }
-                
-                function setupDragAndDropEvents(dragContainer, dropContainer) {
-                    const dragItems = dragContainer.querySelectorAll('.drag-item');
-                    const dropTargets = dropContainer.querySelectorAll('.drop-target');
-                    
-                    // Drag events
-                    dragItems.forEach(item => {
-                        item.addEventListener('dragstart', handleDragStart);
-                        item.addEventListener('dragend', handleDragEnd);
-                    });
-                    
-                    // Drop events
-                    dropTargets.forEach(target => {
-                        target.addEventListener('dragover', handleDragOver);
-                        target.addEventListener('drop', handleDrop);
-                        target.addEventListener('dragleave', handleDragLeave);
-                    });
-                    
-                    // Allow dragging items back to the pool
-                    dragContainer.addEventListener('dragover', handleDragOver);
-                    dragContainer.addEventListener('drop', function(e) {
-                        e.preventDefault();
-                        this.classList.remove('drag-over');
-                        const itemId = e.dataTransfer.getData('text/plain');
-                        const draggedElement = document.getElementById(itemId);
-                        if (draggedElement) {
-                            this.appendChild(draggedElement);
-                            updateProgress();
-                        }
-                    });
-                }
-                
-                function handleDragStart(e) {
-                    e.target.classList.add('dragging');
-                    e.dataTransfer.effectAllowed = 'move';
-                    // Store the ID of the element being dragged
-                    e.dataTransfer.setData('text/plain', e.target.id);
-                }
-                
-                function handleDragEnd(e) {
-                    e.target.classList.remove('dragging');
-                    // Remove has-item class from targets that no longer have items
-                    document.querySelectorAll('.drop-target').forEach(target => {
-                        if (!target.querySelector('.drag-item')) {
-                            target.classList.remove('has-item');
-                        }
-                    });
-                }
-                
-                function handleDragOver(e) {
-                    e.preventDefault();
-                    e.currentTarget.classList.add('drag-over');
-                }
-                
-                function handleDragLeave(e) {
-                    e.currentTarget.classList.remove('drag-over');
-                }
-                
-                function handleDrop(e) {
-                    e.preventDefault();
-                    const target = e.currentTarget;
-                    target.classList.remove('drag-over');
-                    
-                    const elementId = e.dataTransfer.getData('text/plain');
-                    const draggedElement = document.getElementById(elementId);
-                    
-                    if (draggedElement) {
-                        // If target already has an item, swap them or move old one back to pool
-                        const existingItem = target.querySelector('.drag-item');
-                        if (existingItem) {
-                            const questionIndex = target.closest('.question-card').getAttribute('data-qindex');
-                            const pool = document.getElementById(`dragItems_${questionIndex}`);
-                            pool.appendChild(existingItem);
-                        }
-                        
-                        target.appendChild(draggedElement);
-                        target.classList.add('has-item');
-                        updateProgress();
-                    }
-                }
-                
-                function getDragDropAnswers() {
-                    const answers = {};
-                    const dragDropQuestions = document.querySelectorAll('.drag-drop-question');
-                    
-                    dragDropQuestions.forEach(questionContainer => {
-                        const questionIndex = questionContainer.closest('.question-card').getAttribute('data-qindex');
-                        const dropTargets = questionContainer.querySelectorAll('.drop-target');
-                        const questionAnswers = {};
-                        
-                        dropTargets.forEach(target => {
-                            const targetId = target.getAttribute('data-target-id');
-                            const dragItem = target.querySelector('.drag-item');
-                            
-                            if (dragItem) {
-                                const itemId = dragItem.getAttribute('data-item-id');
-                                questionAnswers[targetId] = itemId;
-                            }
-                        });
-                        
-                        answers[questionIndex] = questionAnswers;
-                    });
-                    
-                    return answers;
-                }
-                
-                
-                // Initialize drag-drop questions when DOM is ready
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', initializeDragDropQuestions);
-                } else {
-                    initializeDragDropQuestions();
-                }
+                /* --- SIMPLIFIED DRAG AND DROP FUNCTIONALITY - NO BACKTICKS --- */
+let userMappings = {};
+
+function initializeDragDropQuestions() {
+    const dragDropQuestions = document.querySelectorAll('.drag-drop-question');
+    
+    dragDropQuestions.forEach(function(questionContainer, idx) {
+        const card = questionContainer.closest('.question-card');
+        if (!card) return;
+        
+        const questionIndex = card.getAttribute('data-qindex');
+        userMappings[questionIndex] = {};
+        
+        const dragItemsContainer = document.getElementById('dragItems_' + questionIndex);
+        const dropTargetsContainer = document.getElementById('dropTargets_' + questionIndex);
+        
+        // SIMPLE parsing with NO template literals
+        let itemsData = [];
+        let targetsData = [];
+        
+        try {
+            var itemsJson = questionContainer.getAttribute('data-items-json');
+            var targetsJson = questionContainer.getAttribute('data-targets-json');
+            
+            if (itemsJson && itemsJson != 'null' && itemsJson != 'undefined') {
+                itemsData = JSON.parse(itemsJson);
+            }
+            if (targetsJson && targetsJson != 'null' && targetsJson != 'undefined') {
+                targetsData = JSON.parse(targetsJson);
+            }
+        } catch (e) {
+            console.log('Error parsing drag-drop JSON for question ' + (parseInt(questionIndex) + 1));
+            itemsData = [];
+            targetsData = [];
+        }
+        
+        // Call render function
+        renderDragDropInterface(questionIndex, dragItemsContainer, dropTargetsContainer, itemsData, targetsData);
+    });
+}
+
+function renderDragDropInterface(qIdx, dragContainer, dropContainer, items, targets) {
+    console.log('Rendering drag-drop for question ' + (parseInt(qIdx) + 1));
+    
+    // Handle simple string arrays
+    var normalizedItems = [];
+    for (var i = 0; i < items.length; i++) {
+        if (typeof items[i] === 'string') {
+            normalizedItems.push({ id: 'item_' + i, text: items[i] });
+        } else {
+            normalizedItems.push(items[i]);
+        }
+    }
+    
+    var normalizedTargets = [];
+    for (var i = 0; i < targets.length; i++) {
+        if (typeof targets[i] === 'string') {
+            normalizedTargets.push({ id: 'target_' + i, label: targets[i] });
+        } else {
+            normalizedTargets.push(targets[i]);
+        }
+    }
+    
+    // Render Items
+    dragContainer.innerHTML = '';
+    for (var i = 0; i < normalizedItems.length; i++) {
+        var item = normalizedItems[i];
+        var el = document.createElement('div');
+        el.className = 'drag-item';
+        el.draggable = true;
+        el.id = 'q' + qIdx + '_item_' + item.id;
+        el.setAttribute('data-item-id', item.id);
+        el.setAttribute('data-text', item.text);
+        el.textContent = item.text;
+        
+        el.addEventListener('dragstart', handleDragStart);
+        el.addEventListener('dragend', handleDragEnd);
+        
+        dragContainer.appendChild(el);
+    }
+    
+    // Render Targets
+    dropContainer.innerHTML = '';
+    for (var i = 0; i < normalizedTargets.length; i++) {
+        var target = normalizedTargets[i];
+        var el = document.createElement('div');
+        el.className = 'drop-target';
+        el.id = 'q' + qIdx + '_target_' + target.id;
+        el.setAttribute('data-target-id', target.id);
+        el.innerHTML = '<div class="drop-target-header">' + target.label + '</div>' +
+                       '<div class="placeholder">Drop here</div>';
+        
+        el.addEventListener('dragover', handleDragOver);
+        el.addEventListener('dragenter', handleDragEnter);
+        el.addEventListener('dragleave', handleDragLeave);
+        el.addEventListener('drop', handleDrop);
+        
+        dropContainer.appendChild(el);
+    }
+}
+
+// DRAG HANDLERS
+function handleDragStart(e) {
+    e.target.classList.add('dragging');
+    e.dataTransfer.setData('text/plain', e.target.id);
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragEnd(e) {
+    e.target.classList.remove('dragging');
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+}
+
+function handleDragEnter(e) {
+    e.preventDefault();
+    var target = e.target.closest('.drop-target');
+    if (target) target.classList.add('drag-over');
+}
+
+function handleDragLeave(e) {
+    var target = e.target.closest('.drop-target');
+    if (target) target.classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    var target = e.target.closest('.drop-target');
+    if (!target) return;
+    
+    target.classList.remove('drag-over');
+    
+    var itemId = e.dataTransfer.getData('text/plain');
+    var draggedEl = document.getElementById(itemId);
+    if (!draggedEl) return;
+    
+    var qIdx = target.id.split('_')[0].substring(1);
+    var targetId = target.getAttribute('data-target-id');
+    var itemDataId = draggedEl.getAttribute('data-item-id');
+    var itemText = draggedEl.getAttribute('data-text');
+    
+    // Remove existing item if present
+    if (target.querySelector('.dropped-item')) {
+        var existingDropped = target.querySelector('.dropped-item');
+        restoreItemToPool(qIdx, existingDropped.getAttribute('data-item-id'), existingDropped.getAttribute('data-text'));
+        target.innerHTML = '<div class="drop-target-header">' + target.querySelector('.drop-target-header').textContent + '</div>';
+    }
+    
+    // Add new item
+    var droppedEl = document.createElement('div');
+    droppedEl.className = 'dropped-item';
+    droppedEl.setAttribute('data-item-id', itemDataId);
+    droppedEl.setAttribute('data-text', itemText);
+    droppedEl.innerHTML = '<span>' + itemText + '</span>' +
+                          '<button type="button" class="remove-btn" title="Remove">&times;</button>';
+    
+    droppedEl.querySelector('.remove-btn').onclick = function() {
+        removeItemFromTarget(qIdx, targetId, itemDataId, itemText);
+    };
+    
+    target.appendChild(droppedEl);
+    
+    // Hide original item
+    draggedEl.style.display = 'none';
+    
+    // Update mappings
+    if (!userMappings[qIdx]) userMappings[qIdx] = {};
+    userMappings[qIdx][targetId] = itemDataId;
+    
+    updateProgress();
+    
+    // Save answer
+    saveDragDropAnswer(qIdx);
+}
+
+function restoreItemToPool(qIdx, itemId, text) {
+    var pool = document.getElementById('dragItems_' + qIdx);
+    var originalItem = document.getElementById('q' + qIdx + '_item_' + itemId);
+    if (originalItem) {
+        originalItem.style.display = 'flex';
+    }
+}
+
+function removeItemFromTarget(qIdx, targetId, itemId, text) {
+    var target = document.getElementById('q' + qIdx + '_target_' + targetId);
+    if (target) {
+        var droppedItem = target.querySelector('.dropped-item');
+        if (droppedItem) droppedItem.remove();
+        if (!target.querySelector('.placeholder')) {
+            var placeholder = document.createElement('div');
+            placeholder.className = 'placeholder';
+            placeholder.textContent = 'Drop here';
+            target.appendChild(placeholder);
+        }
+    }
+    
+    restoreItemToPool(qIdx, itemId, text);
+    if (userMappings[qIdx]) {
+        delete userMappings[qIdx][targetId];
+    }
+    
+    updateProgress();
+    saveDragDropAnswer(qIdx);
+}
+
+function saveDragDropAnswer(qIdx) {
+    if (!userMappings[qIdx]) return;
+    
+    var mappings = userMappings[qIdx];
+    var formattedMappings = {};
+    
+    for (var tId in mappings) {
+        formattedMappings['target_' + tId] = 'item_' + mappings[tId];
+    }
+    
+    var answer = JSON.stringify(formattedMappings);
+    
+    // Save using existing saveAnswer function
+    if (typeof saveAnswer === 'function') {
+        saveAnswer(qIdx, answer);
+    }
+}
+
+function getDragDropAnswers() {
+    return userMappings;
+}
+
+// Initialize drag-drop questions when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeDragDropQuestions);
+} else {
+    initializeDragDropQuestions();
+}
             </script>
 
             <% } else if ("1".equals(request.getParameter("showresult"))) {

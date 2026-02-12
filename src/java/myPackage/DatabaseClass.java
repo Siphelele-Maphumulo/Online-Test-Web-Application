@@ -159,43 +159,38 @@ public class DatabaseClass {
                 .replace("\t", "\\t");
     }
 
-    // Get drag and drop data for a specific question
-    public java.util.Map<String, String> getDragDropData(int questionId) {
-        try {
-            ensureConnection();
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Connection error in getDragDropData", e);
-            return null;
+// Get drag drop data from the questions table
+public Map<String, String> getDragDropData(int questionId) {
+    Map<String, String> data = new HashMap<>();
+    
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getDragDropData", e);
+        return data;
+    }
+    
+    try {
+        String sql = "SELECT drag_items, drop_targets, drag_correct_targets FROM questions WHERE question_id = ?";
+        PreparedStatement pstm = conn.prepareStatement(sql);
+        pstm.setInt(1, questionId);
+        ResultSet rs = pstm.executeQuery();
+        
+        if (rs.next()) {
+            data.put("drag_items", rs.getString("drag_items") != null ? rs.getString("drag_items") : "[]");
+            data.put("drop_targets", rs.getString("drop_targets") != null ? rs.getString("drop_targets") : "[]");
+            data.put("drag_correct_targets", rs.getString("drag_correct_targets") != null ? rs.getString("drag_correct_targets") : "[]");
         }
         
-        java.util.Map<String, String> dragDropData = new java.util.HashMap<>();
-        PreparedStatement pstm = null;
-        ResultSet rs = null;
-
-        try {
-            String sql = "SELECT drag_items, drop_targets, drag_correct_targets FROM questions WHERE question_id = ?";
-            pstm = conn.prepareStatement(sql);
-            pstm.setInt(1, questionId);
-            rs = pstm.executeQuery();
-
-            if (rs.next()) {
-                dragDropData.put("drag_items", rs.getString("drag_items"));
-                dragDropData.put("drop_targets", rs.getString("drop_targets"));
-                dragDropData.put("drag_correct_targets", rs.getString("drag_correct_targets"));
-            }
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error getting drag drop data for questionId=" + questionId, e);
-        } finally {
-            try {
-                if (rs != null) rs.close();
-                if (pstm != null) pstm.close();
-            } catch (SQLException e) {
-                LOGGER.log(Level.SEVERE, "Error closing resources in getDragDropData", e);
-            }
-        }
-
-        return dragDropData;
+        rs.close();
+        pstm.close();
+        
+    } catch (SQLException ex) {
+        LOGGER.log(Level.SEVERE, "Error getting drag drop data: " + ex.getMessage(), ex);
     }
+    
+    return data;
+}
 
     // Get the connection with lazy initialization
     public Connection getConnection() throws SQLException {
@@ -1630,38 +1625,7 @@ public int getLastInsertedQuestionId() {
     return -1;
 }
 
-//// Get drag drop data from the questions table
-//public Map<String, String> getDragDropData(int questionId) {
-//    Map<String, String> data = new HashMap<>();
-//    
-//    try {
-//        ensureConnection();
-//    } catch (SQLException e) {
-//        LOGGER.log(Level.SEVERE, "Connection error in getDragDropData", e);
-//        return data;
-//    }
-//    
-//    try {
-//        String sql = "SELECT drag_items, drop_targets, drag_correct_targets FROM questions WHERE question_id = ?";
-//        PreparedStatement pstm = conn.prepareStatement(sql);
-//        pstm.setInt(1, questionId);
-//        ResultSet rs = pstm.executeQuery();
-//        
-//        if (rs.next()) {
-//            data.put("drag_items", rs.getString("drag_items") != null ? rs.getString("drag_items") : "[]");
-//            data.put("drop_targets", rs.getString("drop_targets") != null ? rs.getString("drop_targets") : "[]");
-//            data.put("drag_correct_targets", rs.getString("drag_correct_targets") != null ? rs.getString("drag_correct_targets") : "[]");
-//        }
-//        
-//        rs.close();
-//        pstm.close();
-//        
-//    } catch (SQLException ex) {
-//        LOGGER.log(Level.SEVERE, "Error getting drag drop data: " + ex.getMessage(), ex);
-//    }
-//    
-//    return data;
-//}
+
     
 public Questions getQuestionById(int questionId) {
     try {
