@@ -3126,166 +3126,37 @@ if (document.readyState === 'loading') {
                         session.removeAttribute("remainingTime");
                         session.removeAttribute("courseName");
                         
-                        // Get student name - FIXED to use actual getters from Exams class
-                        String studentFullName = "";
-                        String courseName = "";
-                        String examDate = "";
-                        String startTime = "";
-                        String endTime = "";
+                        // Get result details directly from Exams object - NO REFLECTION NEEDED
+                        String studentFullName = "Student";
+                        String courseName = "Unknown Course";
+                        String examDate = "N/A";
+                        String startTime = "N/A";
+                        String endTime = "N/A";
                         int obtainedMarks = 0;
                         int totalMarks = 0;
-                        String resultStatus = "";
+                        String resultStatus = "Unknown";
                         
                         if (result != null) {
-                            try {
-                                // Get the actual values from the Exams object
-                                // Try different possible getter method names
-                                
-                                // Get first name
-                                String firstName = "";
-                                try {
-                                    java.lang.reflect.Method getFirstNameMethod = result.getClass().getMethod("getFirstName");
-                                    firstName = (String) getFirstNameMethod.invoke(result);
-                                } catch (Exception e1) {
-                                    try {
-                                        java.lang.reflect.Method getFirst_nameMethod = result.getClass().getMethod("getFirst_name");
-                                        firstName = (String) getFirst_nameMethod.invoke(result);
-                                    } catch (Exception e2) {
-                                        firstName = "";
-                                    }
-                                }
-                                
-                                // Get last name
-                                String lastName = "";
-                                try {
-                                    java.lang.reflect.Method getLastNameMethod = result.getClass().getMethod("getLastName");
-                                    lastName = (String) getLastNameMethod.invoke(result);
-                                } catch (Exception e1) {
-                                    try {
-                                        java.lang.reflect.Method getLast_nameMethod = result.getClass().getMethod("getLast_name");
-                                        lastName = (String) getLast_nameMethod.invoke(result);
-                                    } catch (Exception e2) {
-                                        lastName = "";
-                                    }
-                                }
-                                
-                                studentFullName = (firstName + " " + lastName).trim();
-                                
-                                // If empty, try user_name
-                                if (studentFullName.isEmpty()) {
-                                    try {
-                                        java.lang.reflect.Method getUserNameMethod = result.getClass().getMethod("getUserName");
-                                        studentFullName = (String) getUserNameMethod.invoke(result);
-                                    } catch (Exception e) {
-                                        // Try email as last resort
-                                        try {
-                                            java.lang.reflect.Method getEmailMethod = result.getClass().getMethod("getEmail");
-                                            studentFullName = (String) getEmailMethod.invoke(result);
-                                        } catch (Exception ex) {
-                                            studentFullName = "Student";
-                                        }
-                                    }
-                                }
-                                
-                                // Get course name
-                                try {
-                                    java.lang.reflect.Method getCourseNameMethod = result.getClass().getMethod("getCourseName");
-                                    courseName = (String) getCourseNameMethod.invoke(result);
-                                } catch (Exception e1) {
-                                    try {
-                                        java.lang.reflect.Method getcNameMethod = result.getClass().getMethod("getcName");
-                                        courseName = (String) getcNameMethod.invoke(result);
-                                    } catch (Exception e2) {
-                                        courseName = "Unknown Course";
-                                    }
-                                }
-                                
-                                // Get exam date
-                                try {
-                                    java.lang.reflect.Method getDateMethod = result.getClass().getMethod("getDate");
-                                    examDate = (String) getDateMethod.invoke(result);
-                                } catch (Exception e) {
-                                    examDate = "N/A";
-                                }
-                                
-                                // Get start time
-                                try {
-                                    java.lang.reflect.Method getStartTimeMethod = result.getClass().getMethod("getStartTime");
-                                    startTime = (String) getStartTimeMethod.invoke(result);
-                                } catch (Exception e1) {
-                                    try {
-                                        java.lang.reflect.Method getStart_timeMethod = result.getClass().getMethod("getStart_time");
-                                        startTime = (String) getStart_timeMethod.invoke(result);
-                                    } catch (Exception e2) {
-                                        startTime = "N/A";
-                                    }
-                                }
-                                
-                                // Get end time
-                                try {
-                                    java.lang.reflect.Method getEndTimeMethod = result.getClass().getMethod("getEndTime");
-                                    endTime = (String) getEndTimeMethod.invoke(result);
-                                } catch (Exception e1) {
-                                    try {
-                                        java.lang.reflect.Method getEnd_timeMethod = result.getClass().getMethod("getEnd_time");
-                                        endTime = (String) getEnd_timeMethod.invoke(result);
-                                    } catch (Exception e2) {
-                                        endTime = "N/A";
-                                    }
-                                }
-                                
-                                // Get obtained marks
-                                try {
-                                    java.lang.reflect.Method getObtMarksMethod = result.getClass().getMethod("getObtMarks");
-                                    obtainedMarks = (Integer) getObtMarksMethod.invoke(result);
-                                } catch (Exception e) {
-                                    obtainedMarks = 0;
-                                }
-                                
-                                // Get total marks
-                                try {
-                                    java.lang.reflect.Method getTotalMarksMethod = result.getClass().getMethod("getTotalMarks");
-                                    totalMarks = (Integer) getTotalMarksMethod.invoke(result);
-                                } catch (Exception e1) {
-                                    try {
-                                        java.lang.reflect.Method gettMarksMethod = result.getClass().getMethod("gettMarks");
-                                        totalMarks = (Integer) gettMarksMethod.invoke(result);
-                                    } catch (Exception e2) {
-                                        totalMarks = 0;
-                                    }
-                                }
-                                
-                                // Get result status
-                                try {
-                                    java.lang.reflect.Method getStatusMethod = result.getClass().getMethod("getStatus");
-                                    resultStatus = (String) getStatusMethod.invoke(result);
-                                    if (resultStatus == null || resultStatus.isEmpty()) {
-                                        // Calculate status based on marks if not set
-                                        double percentage = 0;
-                                        if (totalMarks > 0) {
-                                            percentage = (double) obtainedMarks / totalMarks * 100;
-                                        }
-                                        resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
-                                    }
-                                } catch (Exception e) {
-                                    // Calculate status based on marks
-                                    double percentage = 0;
-                                    if (totalMarks > 0) {
-                                        percentage = (double) obtainedMarks / totalMarks * 100;
-                                    }
-                                    resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
-                                }
-                                
-                            } catch (Exception e) {
-                                // If reflection fails, use defaults
-                                studentFullName = "Student";
-                                courseName = "Unknown Course";
-                                examDate = "N/A";
-                                startTime = "N/A";
-                                endTime = "N/A";
-                                obtainedMarks = 0;
-                                totalMarks = 0;
-                                resultStatus = "Unknown";
+                            studentFullName = result.getFullName();
+                            if (studentFullName == null || studentFullName.trim().isEmpty()) {
+                                studentFullName = result.getUserName();
+                            }
+                            if (studentFullName == null || studentFullName.trim().isEmpty()) {
+                                studentFullName = result.getEmail();
+                            }
+                            
+                            courseName = result.getcName();
+                            examDate = result.getDate();
+                            startTime = result.getStartTime();
+                            endTime = result.getEndTime();
+                            obtainedMarks = result.getObtMarks();
+                            totalMarks = result.gettMarks();
+                            resultStatus = result.getStatus();
+                            
+                            // Fallback for status if it's missing or just "completed"
+                            if (resultStatus == null || resultStatus.isEmpty() || resultStatus.equalsIgnoreCase("completed")) {
+                                double percentage = (totalMarks > 0) ? (double) obtainedMarks / totalMarks * 100 : 0;
+                                resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
                             }
                         }
                     %>

@@ -3601,13 +3601,13 @@ public void calculateResult(int eid, int tMarks, String endTime, int size) {
         LOGGER.info("===========================");
         
         // Update exams table with both status and result_status
-        String sql = "UPDATE exams SET obt_marks=?, end_time=?, status=?, result_status=? WHERE exam_id=?";
+        // Ensure both obt_marks and result_status are updated correctly
+        String sql = "UPDATE exams SET obt_marks=?, end_time=?, status='completed', result_status=? WHERE exam_id=?";
         PreparedStatement pstm = conn.prepareStatement(sql);
         pstm.setInt(1, obt);
         pstm.setString(2, endTime);
-        pstm.setString(3, "completed");
-        pstm.setString(4, resultStatus);
-        pstm.setInt(5, eid);
+        pstm.setString(3, resultStatus);
+        pstm.setInt(4, eid);
         
         int rowsUpdated = pstm.executeUpdate();
         LOGGER.info("Rows updated: " + rowsUpdated);
@@ -5212,8 +5212,8 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             pstmDelete.executeUpdate();
             pstmDelete.close();
             
-            // Insert new answers
-            String insertSql = "INSERT INTO drag_drop_answers (exam_id, question_id, student_id, drag_item_id, drop_target_id, is_correct, marks_obtained) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            // Insert new answers - FIXED: Removed extra '?' placeholder
+            String insertSql = "INSERT INTO drag_drop_answers (exam_id, question_id, student_id, drag_item_id, drop_target_id, is_correct, marks_obtained) VALUES (?, ?, ?, ?, ?, ?, ?)";
             pstmInsert = conn.prepareStatement(insertSql);
             
             int correctCount = 0;
@@ -5240,7 +5240,8 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
                 }
                 
                 pstmInsert.setInt(6, isCorrect ? 1 : 0);
-                pstmInsert.setBigDecimal(7, new BigDecimal(String.valueOf(marksObtained)));
+                // Use setFloat instead of setBigDecimal for marks_obtained
+                pstmInsert.setFloat(7, marksObtained);
                 pstmInsert.addBatch();
                 
                 totalMarks += marksObtained;
