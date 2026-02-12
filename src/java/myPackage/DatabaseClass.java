@@ -3601,13 +3601,13 @@ public void calculateResult(int eid, int tMarks, String endTime, int size) {
         LOGGER.info("===========================");
         
         // Update exams table with both status and result_status
-        String sql = "UPDATE exams SET obt_marks=?, end_time=?, status=?, result_status=? WHERE exam_id=?";
+        // Ensure both obt_marks and result_status are updated correctly
+        String sql = "UPDATE exams SET obt_marks=?, end_time=?, status='completed', result_status=? WHERE exam_id=?";
         PreparedStatement pstm = conn.prepareStatement(sql);
         pstm.setInt(1, obt);
         pstm.setString(2, endTime);
-        pstm.setString(3, "completed");
-        pstm.setString(4, resultStatus);
-        pstm.setInt(5, eid);
+        pstm.setString(3, resultStatus);
+        pstm.setInt(4, eid);
         
         int rowsUpdated = pstm.executeUpdate();
         LOGGER.info("Rows updated: " + rowsUpdated);

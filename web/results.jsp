@@ -1441,25 +1441,25 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                   }
                 }
                 
-                // Get actual values from database - CRITICAL FIX
-                int obtainedMarks = examDetails.getObtMarks();  // This should come from database
+                // Get actual values from database
+                int obtainedMarks = examDetails.getObtMarks();
                 int totalMarks = examDetails.gettMarks();
                 
                 // Calculate percentage
                 double percentage = 0;
-                String percentageColor = "var(--error)"; // Default to error color
                 if (totalMarks > 0) {
                     percentage = (double) obtainedMarks / totalMarks * 100;
-                    percentageColor = (percentage >= 45.0) ? "var(--success)" : "var(--error)";
                 }
                 
-                // Get result status from database
+                // Get result status from database (populated in getResultByExamId)
                 String statusText = examDetails.getStatus();
-                if (statusText == null || statusText.isEmpty()) {
-                    // Calculate from percentage if not set
+                if (statusText == null || statusText.isEmpty() || statusText.equalsIgnoreCase("completed")) {
+                    // Fallback to calculation if status is missing or just "completed"
                     statusText = (percentage >= 45.0) ? "Pass" : "Fail";
                 }
-                String statusClass = (percentage >= 45.0) ? "status-pass" : "status-fail";
+
+                String statusClass = statusText.equalsIgnoreCase("Pass") ? "status-pass" : "status-fail";
+                String percentageColor = statusText.equalsIgnoreCase("Pass") ? "var(--success)" : "var(--error)";
                 
                 // Debug logging
                 // === RESULTS DEBUG ===
@@ -1883,19 +1883,21 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                           percentage = (double) e.getObtMarks() / e.gettMarks() * 100;
                       }
                       
-                      // Determine status based on percentage (45% passing threshold)
-                      String statusText;
-                      String statusClass;
+                      // Get result status from object (already has fallback logic in DatabaseClass)
+                      String statusText = e.getStatus();
+                      String statusClass = "status-fail";
                       
-                      if (percentage >= 45.0) {
-                          statusText = "Pass";
-                          statusClass = "status-pass";
-                      } else if (percentage > 0) {
-                          statusText = "Fail";
-                          statusClass = "status-fail";
-                      } else if (e.getStatus() != null && e.getStatus().equals("completed")) {
-                          statusText = "Terminated";
-                          statusClass = "status-terminated";
+                      if (statusText != null) {
+                          if (statusText.equalsIgnoreCase("Pass")) {
+                              statusClass = "status-pass";
+                          } else if (statusText.equalsIgnoreCase("Fail")) {
+                              statusClass = "status-fail";
+                          } else if (statusText.equalsIgnoreCase("completed") || statusText.equalsIgnoreCase("terminated")) {
+                              statusText = "Terminated";
+                              statusClass = "status-terminated";
+                          } else {
+                              statusClass = "status-terminated";
+                          }
                       } else {
                           statusText = "InComplete";
                           statusClass = "status-terminated";
