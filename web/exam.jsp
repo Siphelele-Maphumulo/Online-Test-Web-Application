@@ -1831,11 +1831,29 @@
         font-weight: 600;
         display: flex;
         align-items: center;
+        justify-content: space-between;
         gap: 10px;
     }
     
     .panel-header i {
         color: var(--accent-blue);
+    }
+    
+    .shuffle-btn {
+        background: transparent;
+        border: 1px solid var(--medium-gray);
+        border-radius: var(--radius-sm);
+        padding: 6px 10px;
+        color: var(--dark-gray);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        font-size: 12px;
+    }
+    
+    .shuffle-btn:hover {
+        background: var(--primary-blue);
+        color: white;
+        border-color: var(--primary-blue);
     }
     
     .drag-items-list, .drop-targets-list {
@@ -1845,8 +1863,8 @@
     }
     
     .drag-item {
-        background: white;
-        border: 2px solid #3b82f6;
+        background: #92AB2F;
+        border: 2px solid #5D8E2;
         border-radius: 8px;
         padding: 15px 20px;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
@@ -1857,21 +1875,22 @@
         gap: 10px;
         transition: all 0.2s;
         font-size: 14px;
-        color: var(--text-dark);
+        color: white;
         user-select: none;
     }
     
     .drag-item::before {
         content: '?';
         font-size: 18px;
-        color: #3b82f6;
+        color: white;
         font-weight: bold;
     }
     
     .drag-item:hover {
+        background: #7FB069;
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
-        border-color: var(--primary-blue);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        border-color: #5D8E2;
     }
     
     .drag-item.dragging {
@@ -1883,7 +1902,7 @@
     
     .drop-target {
         background: #f8fafc;
-        border: 2px solid #94a3b8;
+        border: 2px dashed #94a3b8;
         border-radius: 8px;
         padding: 20px;
         min-height: 80px;
@@ -1892,6 +1911,17 @@
         flex-direction: column;
         gap: 10px;
         transition: all 0.2s;
+    }
+    
+    .drop-target.waiting {
+        border: 2px dashed #92AB2F;
+        animation: blinkBorder 1.5s infinite;
+    }
+    
+    @keyframes blinkBorder {
+        0%, 50% { border-color: #92AB2F; border-style: dashed; }
+        25%, 75% { border-color: #5D8E2; border-style: solid; }
+        100% { border-color: #92AB2F; border-style: dashed; }
     }
     
     .drop-target-header {
@@ -2140,14 +2170,24 @@
                                     
                                     <div class="drag-drop-container">
                                         <div class="draggable-items-panel">
-                                            <div class="panel-header"><i class="fas fa-grip-vertical"></i> Draggable Items</div>
+                                            <div class="panel-header">
+                                                <i class="fas fa-grip-vertical"></i> Draggable Items
+                                                <button type="button" class="shuffle-btn" onclick="shuffleDraggableItems(<%= i %>)" title="Shuffle Items">
+                                                    <i class="fas fa-random"></i>
+                                                </button>
+                                            </div>
                                             <div class="drag-items-list" id="dragItems_<%= i %>">
                                                 <!-- Drag items will be loaded dynamically -->
                                             </div>
                                         </div>
                                         
                                         <div class="drop-targets-panel">
-                                            <div class="panel-header"><i class="fas fa-bullseye"></i> Drop Targets</div>
+                                            <div class="panel-header">
+                                                <i class="fas fa-bullseye"></i> Drop Targets
+                                                <button type="button" class="shuffle-btn" onclick="shuffleDropTargets(<%= i %>)" title="Shuffle Targets">
+                                                    <i class="fas fa-random"></i>
+                                                </button>
+                                            </div>
                                             <div class="drop-targets-list" id="dropTargets_<%= i %>">
                                                 <!-- Drop targets will be loaded dynamically -->
                                             </div>
@@ -2784,6 +2824,17 @@ function initializeDragDropQuestions() {
     });
 }
 
+/* --- DRAG AND DROP RANDOMIZATION --- */
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+    return array;
+}
+
 function renderDragDropInterface(qIdx, dragContainer, dropContainer, items, targets) {
     console.log('Rendering drag-drop for question ' + (parseInt(qIdx) + 1));
     
@@ -2806,10 +2857,14 @@ function renderDragDropInterface(qIdx, dragContainer, dropContainer, items, targ
         }
     }
     
-    // Render Items
+    // RANDOMIZE: Shuffle both items and targets
+    var shuffledItems = shuffleArray(normalizedItems.slice());
+    var shuffledTargets = shuffleArray(normalizedTargets.slice());
+    
+    // Render Items (randomized order)
     dragContainer.innerHTML = '';
-    for (var i = 0; i < normalizedItems.length; i++) {
-        var item = normalizedItems[i];
+    for (var i = 0; i < shuffledItems.length; i++) {
+        var item = shuffledItems[i];
         var el = document.createElement('div');
         el.className = 'drag-item';
         el.draggable = true;
@@ -2824,10 +2879,10 @@ function renderDragDropInterface(qIdx, dragContainer, dropContainer, items, targ
         dragContainer.appendChild(el);
     }
     
-    // Render Targets
+    // Render Targets (randomized order)
     dropContainer.innerHTML = '';
-    for (var i = 0; i < normalizedTargets.length; i++) {
-        var target = normalizedTargets[i];
+    for (var i = 0; i < shuffledTargets.length; i++) {
+        var target = shuffledTargets[i];
         var el = document.createElement('div');
         el.className = 'drop-target';
         el.id = 'q' + qIdx + '_target_' + target.id;
@@ -2842,7 +2897,61 @@ function renderDragDropInterface(qIdx, dragContainer, dropContainer, items, targ
         
         dropContainer.appendChild(el);
     }
+    
+    // Initialize waiting states for empty targets
+    updateWaitingStates();
 }
+
+function shuffleDraggableItems(qIdx) {
+    const dragContainer = document.getElementById('dragItems_' + qIdx);
+    const dragItems = Array.from(dragContainer.children);
+    
+    // Shuffle items
+    const shuffled = shuffleArray(dragItems);
+    
+    // Clear and re-append in shuffled order
+    dragContainer.innerHTML = '';
+    shuffled.forEach(item => dragContainer.appendChild(item));
+}
+
+function shuffleDropTargets(qIdx) {
+    const dropContainer = document.getElementById('dropTargets_' + qIdx);
+    const dropTargets = Array.from(dropContainer.children);
+    
+    // Shuffle targets
+    const shuffled = shuffleArray(dropTargets);
+    
+    // Clear and re-append in shuffled order
+    dropContainer.innerHTML = '';
+    shuffled.forEach(target => dropContainer.appendChild(target));
+}
+
+/* --- IMAGE RANDOMIZATION --- */
+function randomizeImages() {
+    const questionCards = document.querySelectorAll('.question-card');
+    
+    questionCards.forEach(card => {
+        const imageContainer = card.querySelector('.question-image-container');
+        if (imageContainer) {
+            // Random chance to show image above or below question text
+            if (Math.random() > 0.5) {
+                // Already in default position
+            } else {
+                // Move image after question text
+                const questionContent = card.querySelector('.question-content');
+                const questionText = card.querySelector('.question-text');
+                if (questionText && imageContainer) {
+                    questionContent.insertBefore(imageContainer, questionText.nextSibling);
+                }
+            }
+        }
+    });
+}
+
+// Call this after DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    randomizeImages();
+});
 
 // DRAG HANDLERS
 function handleDragStart(e) {
@@ -2863,12 +2972,21 @@ function handleDragOver(e) {
 function handleDragEnter(e) {
     e.preventDefault();
     var target = e.target.closest('.drop-target');
-    if (target) target.classList.add('drag-over');
+    if (target) {
+        target.classList.add('drag-over');
+        target.classList.remove('waiting');
+    }
 }
 
 function handleDragLeave(e) {
     var target = e.target.closest('.drop-target');
-    if (target) target.classList.remove('drag-over');
+    if (target) {
+        target.classList.remove('drag-over');
+        // Add waiting state back if target doesn't have items
+        if (!target.querySelector('.dropped-item')) {
+            target.classList.add('waiting');
+        }
+    }
 }
 
 function handleDrop(e) {
@@ -2877,6 +2995,7 @@ function handleDrop(e) {
     if (!target) return;
     
     target.classList.remove('drag-over');
+    target.classList.remove('waiting');
     
     var itemId = e.dataTransfer.getData('text/plain');
     var draggedEl = document.getElementById(itemId);
@@ -2919,6 +3038,20 @@ function handleDrop(e) {
     
     // Save answer
     saveDragDropAnswer(qIdx);
+    
+    // Add waiting state to all empty targets
+    updateWaitingStates();
+}
+
+function updateWaitingStates() {
+    var allTargets = document.querySelectorAll('.drop-target');
+    allTargets.forEach(function(target) {
+        if (!target.querySelector('.dropped-item')) {
+            target.classList.add('waiting');
+        } else {
+            target.classList.remove('waiting');
+        }
+    });
 }
 
 function restoreItemToPool(qIdx, itemId, text) {

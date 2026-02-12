@@ -1441,17 +1441,34 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                   }
                 }
                 
+                // Get actual values from database - CRITICAL FIX
+                int obtainedMarks = examDetails.getObtMarks();  // This should come from database
+                int totalMarks = examDetails.gettMarks();
+                
                 // Calculate percentage
                 double percentage = 0;
                 String percentageColor = "var(--error)"; // Default to error color
-                if (examDetails.gettMarks() > 0) {
-                    percentage = (double) examDetails.getObtMarks() / examDetails.gettMarks() * 100;
+                if (totalMarks > 0) {
+                    percentage = (double) obtainedMarks / totalMarks * 100;
                     percentageColor = (percentage >= 45.0) ? "var(--success)" : "var(--error)";
                 }
                 
-                // Determine status
-                String statusText = (percentage >= 45.0) ? "Pass" : "Fail";
+                // Get result status from database
+                String statusText = examDetails.getStatus();
+                if (statusText == null || statusText.isEmpty()) {
+                    // Calculate from percentage if not set
+                    statusText = (percentage >= 45.0) ? "Pass" : "Fail";
+                }
                 String statusClass = (percentage >= 45.0) ? "status-pass" : "status-fail";
+                
+                // Debug logging
+                // === RESULTS DEBUG ===
+                // Exam ID: " + displayExamId
+                // Obtained Marks: " + obtainedMarks
+                // Total Marks: " + totalMarks
+                // Percentage: " + percentage
+                // Status: " + statusText
+                // ===================
             %>
             
             <!-- Exam Summary -->
@@ -1468,7 +1485,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                   </div>
                 </div>
                 <div class="exam-status-badge <%= statusClass %>">
-                  <i class="fas <%= statusClass.equals("status-pass") ? "fa-check-circle" : "fa-times-circle" %>"></i>
+                  <i class="fas fa-check-circle"></i>
                   <%= statusText %>
                 </div>
               </div>

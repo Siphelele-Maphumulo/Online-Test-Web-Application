@@ -3074,7 +3074,7 @@ public Exams getResultByExamId(int examId) {
     try {
         String query = "SELECT u.first_name, u.last_name, u.user_name, u.email, " +
                        "e.exam_id, e.std_id, e.course_name, e.total_marks, e.obt_marks, " +
-                       "e.date, e.start_time, e.end_time, e.exam_time, e.status, e.result_status " + // ADDED result_status
+                       "e.date, e.start_time, e.end_time, e.exam_time, e.status, e.result_status " +
                        "FROM exams e " +
                        "INNER JOIN users u ON e.std_id = u.user_id " +
                        "WHERE e.exam_id = ?";
@@ -3086,19 +3086,22 @@ public Exams getResultByExamId(int examId) {
         if (rs.next()) {
             String formattedDate = rs.getDate("date") != null ? rs.getDate("date").toString() : null;
             
-            // Get result_status, fallback to status if NULL
+            // Get marks - THESE ARE THE ACTUAL VALUES FROM DATABASE
+            int obtMarks = rs.getInt("obt_marks");
+            int totalMarks = rs.getInt("total_marks");
+            
+            // Get result_status directly from database
             String resultStatus = rs.getString("result_status");
-            if (resultStatus == null) {
-                // Calculate from marks
-                int totalMarks = rs.getInt("total_marks");
-                int obtMarks = rs.getInt("obt_marks");
-                if (totalMarks > 0) {
-                    double percentage = (obtMarks * 100.0) / totalMarks;
-                    resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
-                } else {
-                    resultStatus = rs.getString("status"); // Fallback
-                }
+            
+            // Calculate percentage for logging/debug
+            double percentage = 0;
+            if (totalMarks > 0) {
+                percentage = (obtMarks * 100.0) / totalMarks;
             }
+            
+            // Log the actual values for debugging
+            LOGGER.info("Exam ID " + examId + " - Marks: " + obtMarks + "/" + totalMarks + 
+                       " (" + String.format("%.1f", percentage) + "%) - Status: " + resultStatus);
             
             exam = new Exams(
                 rs.getString("first_name"), 
@@ -3108,13 +3111,13 @@ public Exams getResultByExamId(int examId) {
                 rs.getInt("exam_id"),
                 rs.getString("std_id"),
                 rs.getString("course_name"),
-                rs.getInt("total_marks"),
-                rs.getInt("obt_marks"),
+                totalMarks,
+                obtMarks,
                 formattedDate,
                 rs.getString("start_time"),
                 rs.getString("end_time"),
                 rs.getString("exam_time"),
-                resultStatus  // Use result_status NOT status
+                resultStatus != null ? resultStatus : (percentage >= 45.0 ? "Pass" : "Fail")
             );
         }
     } catch (SQLException ex) {
@@ -3589,32 +3592,44 @@ public void calculateResult(int eid, int tMarks, String endTime, int size) {
         // Determine result status based on percentage (45% passing threshold)
         String resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
         
-        // DEBUG LOGGING
-        LOGGER.log(Level.FINE, "=== DEBUG calculateResult ===");
-        LOGGER.log(Level.FINE, "Exam ID: {0}", eid);
-        LOGGER.log(Level.FINE, "Marks: {0}/{1}", new Object[]{obt, tMarks});
-        LOGGER.log(Level.FINE, "Percentage: {0}%", percentage);
-        LOGGER.log(Level.FINE, "Result Status: {0}", resultStatus);
+        // CRITICAL: Log the actual values being saved
+        LOGGER.info("=== SAVING EXAM RESULTS ===");
+        LOGGER.info("Exam ID: " + eid);
+        LOGGER.info("Obtained Marks: " + obt + "/" + tMarks);
+        LOGGER.info("Percentage: " + String.format("%.1f", percentage) + "%");
+        LOGGER.info("Result Status: " + resultStatus);
+        LOGGER.info("===========================");
         
-        // Update the exams table with both status and result_status
+        // Update exams table with both status and result_status
         String sql = "UPDATE exams SET obt_marks=?, end_time=?, status=?, result_status=? WHERE exam_id=?";
         PreparedStatement pstm = conn.prepareStatement(sql);
         pstm.setInt(1, obt);
         pstm.setString(2, endTime);
         pstm.setString(3, "completed");
-        pstm.setString(4, resultStatus); // CRITICAL: This sets result_status
+        pstm.setString(4, resultStatus);
         pstm.setInt(5, eid);
         
         int rowsUpdated = pstm.executeUpdate();
-        LOGGER.log(Level.FINE, "Rows updated: {0}", rowsUpdated);
+        LOGGER.info("Rows updated: " + rowsUpdated);
         
         pstm.close();
+        
+        // Verify the update worked
+        String verifySql = "SELECT obt_marks, result_status FROM exams WHERE exam_id = ?";
+        PreparedStatement verifyStmt = conn.prepareStatement(verifySql);
+        verifyStmt.setInt(1, eid);
+        ResultSet verifyRs = verifyStmt.executeQuery();
+        if (verifyRs.next()) {
+            LOGGER.info("VERIFIED - Exam " + eid + ": obt_marks=" + verifyRs.getInt("obt_marks") + 
+                       ", result_status=" + verifyRs.getString("result_status"));
+        }
+        verifyRs.close();
+        verifyStmt.close();
 
         logExamCompletion(eid);
         
     } catch (SQLException ex) {
-        System.err.println("ERROR in calculateResult: " + ex.getMessage());
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
+        LOGGER.log(Level.SEVERE, "ERROR in calculateResult: " + ex.getMessage(), ex);
     }
 }
 
