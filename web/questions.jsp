@@ -2206,17 +2206,17 @@ function initializeTrueFalseSelection() {
 }
 
 // Smart parsing functions for multi-line input
-function parseMultiLineInput(text, sourceField) {
+function parseMultiLineInput(text, sourceField, silent = false) {
     if (!text || !text.trim()) return;
     
     const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
     
     if (sourceField === 'question') {
         // Parse from question textarea using keyword detection
-        parseFromQuestionTextarea(lines);
+        parseFromQuestionTextarea(lines, silent);
     } else if (sourceField.startsWith('opt')) {
         // Parse from option textarea using keyword detection
-        parseFromOptionTextarea(lines, sourceField);
+        parseFromOptionTextarea(lines, sourceField, silent);
     }
 }
 
@@ -2527,7 +2527,7 @@ function initializeSmartParsing() {
             if (text) {
                 // Check if text contains parsing patterns
                 if (containsParsingPatterns(text)) {
-                    parseMultiLineInput(text, sourceField);
+                    parseMultiLineInput(text, sourceField, true); // Silent parsing
                 }
             }
         }, 5000); // 5 seconds
@@ -2535,7 +2535,35 @@ function initializeSmartParsing() {
         return timeoutRef;
     }
     
-    // Automatic parsing event listeners removed to only trigger parsing on form submission
+    // Add event listeners for automatic parsing
+    if (questionTextarea) {
+        questionTextarea.addEventListener('input', function() {
+            questionTimeout = setParseTimeout(this, 'question', questionTimeout);
+        });
+
+        questionTextarea.addEventListener('paste', function() {
+            // Give a moment for paste to complete
+            setTimeout(() => {
+                questionTimeout = setParseTimeout(this, 'question', questionTimeout);
+            }, 100);
+        });
+    }
+
+    // Add event listeners for option textareas
+    [opt1, opt2, opt3, opt4].forEach((opt, index) => {
+        if (opt) {
+            opt.addEventListener('input', function() {
+                optTimeouts[index] = setParseTimeout(this, 'opt' + (index + 1), optTimeouts[index]);
+            });
+
+            opt.addEventListener('paste', function() {
+                // Give a moment for paste to complete
+                setTimeout(() => {
+                    optTimeouts[index] = setParseTimeout(this, 'opt' + (index + 1), optTimeouts[index]);
+                }, 100);
+            });
+        }
+    });
 }
 
 function updateCorrectOptionLabels() {
