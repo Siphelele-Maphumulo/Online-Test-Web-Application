@@ -117,6 +117,26 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
     }
 </style>
 
+<!-- Modal for batch completion confirmation -->
+<div id="batchCompleteModal" class="modal" style="display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+    <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 40%; min-width: 300px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+            <h3 style="margin: 0; color: #333;">
+                <i class="fas fa-check-circle" style="color: #28a745;"></i> Batch Complete
+            </h3>
+            <span class="close-modal" onclick="closeBatchCompleteModal()" style="font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa;">&times;</span>
+        </div>
+        <div class="modal-body" style="margin-bottom: 20px;">
+            <p>All questions in the batch have been added successfully!</p>
+            <p>Would you like to view all questions now?</p>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 15px; border-top: 1px solid #eee;">
+            <button onclick="closeBatchCompleteModal()" class="btn btn-secondary" style="padding: 8px 16px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">No, Continue</button>
+            <button onclick="viewAllQuestions()" class="btn btn-primary" style="padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Yes, View All</button>
+        </div>
+    </div>
+</div>
+
 <!-- Success/Error Toast -->
 <div id="toast" class="toast" style="display: none;">
     <div class="toast-content">
@@ -2981,9 +3001,7 @@ async function submitCurrentBatchQuestion() {
                 resetForm();
                 
                 // Show a final success modal or redirect to showall
-                if (confirm("All questions in the batch have been added. Would you like to view all questions now?")) {
-                    window.location.href = 'showall.jsp?coursename=' + encodeURIComponent(document.getElementById('courseSelectAddNew').value);
-                }
+                showBatchCompleteModal();
             }
         } else {
             showToast('error', 'Error', result.message || "Failed to add question. Please check the form and try again.");
@@ -3558,6 +3576,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Also close multiple questions modal if clicked outside
         const multiModal = document.getElementById('multipleQuestionsModal');
         if (multiModal && event.target == multiModal) closeMultipleQuestionsModal();
+        
+        // Also close batch complete modal if clicked outside
+        const batchModal = document.getElementById('batchCompleteModal');
+        if (batchModal && event.target == batchModal) closeBatchCompleteModal();
     };
 
     // Re-enable scroll indicator with debounce to prevent performance issues
@@ -3684,6 +3706,25 @@ function updateDragDropTargetOptions() {
             select.appendChild(optionElement);
         });
     });
+}
+
+// Functions for batch completion modal
+function showBatchCompleteModal() {
+    document.getElementById('batchCompleteModal').style.display = 'block';
+}
+
+function closeBatchCompleteModal() {
+    document.getElementById('batchCompleteModal').style.display = 'none';
+}
+
+function viewAllQuestions() {
+    closeBatchCompleteModal();
+    const courseSelect = document.getElementById('courseSelectAddNew');
+    if (courseSelect && courseSelect.value) {
+        window.location.href = 'showall.jsp?coursename=' + encodeURIComponent(courseSelect.value);
+    } else {
+        window.location.href = 'showall.jsp';
+    }
 }
 
 // Initialize when DOM is loaded (this will be called after the above DOMContentLoaded event)
