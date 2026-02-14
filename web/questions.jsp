@@ -1289,7 +1289,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                     
                     <div class="form-group">
                         <label class="form-label"><i class="fas fa-question-circle" style="color: var(--primary-blue);"></i> Your Question</label>
-                        <textarea name="question" id="questionTextarea" class="question-input" rows="3" oninput="checkForCodeSnippet()"></textarea>
+                        <textarea name="question" id="questionTextarea" class="question-input" rows="3"></textarea>
                         <small class="form-hint">Enter your question text (optional if uploading an image)</small>
                     </div>
                     
@@ -1824,7 +1824,9 @@ function hideToast() {
 
 // Modal functions
 function showModal(title, message) {
-    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + title;
+    let icon = 'fa-exclamation-triangle';
+    if (title === 'Success') icon = 'fa-check-circle';
+    document.getElementById('modalTitle').innerHTML = '<i class="fas ' + icon + '"></i> ' + title;
     document.getElementById('modalMessage').textContent = message;
     document.getElementById('validationModal').style.display = 'block';
 }
@@ -2218,7 +2220,7 @@ function parseMultiLineInput(text, sourceField) {
     }
 }
 
-function parseFromQuestionTextarea(lines) {
+function parseFromQuestionTextarea(lines, silent = false) {
     const questionTextarea = document.getElementById('questionTextarea');
     const opt1 = document.getElementById('opt1');
     const opt2 = document.getElementById('opt2');
@@ -2249,21 +2251,23 @@ function parseFromQuestionTextarea(lines) {
         console.log('Option 4:', opt4.value);
         console.log('Correct Answer:', correct.value);
         
-        showModal('Success', 'Question parsed successfully!\n\n' + 
-            (result.question ? 'Question: ' + result.question + '\n' : '') +
-            'Option 1: ' + (result.options[0] || '') + '\n' + 
-            'Option 2: ' + (result.options[1] || '') + '\n' + 
-            'Option 3: ' + (result.options[2] || '') + '\n' + 
-            'Option 4: ' + (result.options[3] || '') + '\n' + 
-            'Correct: ' + (result.correct || result.options[0] || ''));
+        if (!silent) {
+            showModal('Success', 'Question parsed successfully!\n\n' +
+                (result.question ? 'Question: ' + result.question + '\n' : '') +
+                'Option 1: ' + (result.options[0] || '') + '\n' +
+                'Option 2: ' + (result.options[1] || '') + '\n' +
+                'Option 3: ' + (result.options[2] || '') + '\n' +
+                'Option 4: ' + (result.options[3] || '') + '\n' +
+                'Correct: ' + (result.correct || result.options[0] || ''));
+        }
         return;
     }
     
     // Fallback to the original complex parsing
-    parseComplexFormat(lines, 'question');
+    parseComplexFormat(lines, 'question', silent);
 }
 
-function parseFromOptionTextarea(lines, sourceOption) {
+function parseFromOptionTextarea(lines, sourceOption, silent = false) {
     const opt1 = document.getElementById('opt1');
     const opt2 = document.getElementById('opt2');
     const opt3 = document.getElementById('opt3');
@@ -2289,17 +2293,19 @@ function parseFromOptionTextarea(lines, sourceOption) {
             correct.value = result.correct || result.options[0] || '';
         }
         
-        showModal('Success', 'Options parsed successfully!\n\n' + 
-            'First Option: ' + (result.options[0] || '') + '\n' + 
-            'Second Option: ' + (result.options[1] || '') + '\n' + 
-            'Third Option: ' + (result.options[2] || '') + '\n' + 
-            'Fourth Option: ' + (result.options[3] || '') + '\n' + 
-            'Correct Answer: ' + (result.correct || result.options[0] || ''));
+        if (!silent) {
+            showModal('Success', 'Options parsed successfully!\n\n' +
+                'First Option: ' + (result.options[0] || '') + '\n' +
+                'Second Option: ' + (result.options[1] || '') + '\n' +
+                'Third Option: ' + (result.options[2] || '') + '\n' +
+                'Fourth Option: ' + (result.options[3] || '') + '\n' +
+                'Correct Answer: ' + (result.correct || result.options[0] || ''));
+        }
         return;
     }
     
     // Fallback to the original complex parsing
-    parseComplexFormat(lines, sourceOption);
+    parseComplexFormat(lines, sourceOption, silent);
 }
 
 // Simple format parser for common layouts
@@ -2374,7 +2380,7 @@ function parseSimpleFormat(lines) {
 }
 
 // Complex format parser (fallback) - Improved version
-function parseComplexFormat(lines, sourceField) {
+function parseComplexFormat(lines, sourceField, silent = false) {
     const questionTextarea = document.getElementById('questionTextarea');
     const opt1 = document.getElementById('opt1');
     const opt2 = document.getElementById('opt2');
@@ -2438,17 +2444,64 @@ function parseComplexFormat(lines, sourceField) {
         if (option4) opt4.value = option4;
         if (correctAnswer) correct.value = correctAnswer;
         
-        showModal('Success', 'Question parsed successfully!\n\n' + 
-            (questionText ? 'Question: ' + questionText + '\n' : '') +
-            'Option 1: ' + option1 + '\n' + 
-            'Option 2: ' + option2 + '\n' + 
-            'Option 3: ' + option3 + '\n' + 
-            'Option 4: ' + option4 + '\n' + 
-            'Correct: ' + correctAnswer);
+        if (!silent) {
+            showModal('Success', 'Question parsed successfully!\n\n' +
+                (questionText ? 'Question: ' + questionText + '\n' : '') +
+                'Option 1: ' + option1 + '\n' +
+                'Option 2: ' + option2 + '\n' +
+                'Option 3: ' + option3 + '\n' +
+                'Option 4: ' + option4 + '\n' +
+                'Correct: ' + correctAnswer);
+        }
     }
 }
 
 
+
+// Function to check if text contains parsing patterns
+function containsParsingPatterns(text) {
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
+
+    // Check for function name patterns
+    const functionPatterns = ['input()', 'read()', 'get()', 'scan()'];
+    let hasFunctionPatterns = false;
+
+    lines.forEach(line => {
+        functionPatterns.forEach(pattern => {
+            if (line.toLowerCase().includes(pattern.toLowerCase())) {
+                hasFunctionPatterns = true;
+            }
+        });
+    });
+
+    // Check for question patterns - more flexible
+    const questionPatterns = [
+        /what.*question/i,
+        /what.*function/i,
+        /what.*correct/i,
+        /what.*way/i,
+        /your.*question/i,
+        /question:/i,
+        /q:/i,
+        /option\s*[:\-]?\s*→/i,
+        /correct\s*[:\-]?\s*answer/i
+    ];
+
+    const hasQuestionPattern = lines.some(line =>
+        questionPatterns.some(pattern => pattern.test(line))
+    );
+
+    // Check for arrow patterns (→)
+    const hasArrowPattern = lines.some(line => line.includes('→'));
+
+    // Check for colon patterns with option keywords
+    const optionKeywords = ['first option', 'second option', 'third option', 'fourth option', 'option 1', 'option 2', 'option 3', 'option 4'];
+    const hasOptionPattern = lines.some(line =>
+        optionKeywords.some(keyword => line.toLowerCase().includes(keyword.toLowerCase()))
+    );
+
+    return hasFunctionPatterns || hasQuestionPattern || hasArrowPattern || hasOptionPattern;
+}
 
 function initializeSmartParsing() {
     const questionTextarea = document.getElementById('questionTextarea');
@@ -2482,80 +2535,7 @@ function initializeSmartParsing() {
         return timeoutRef;
     }
     
-    // Function to check if text contains parsing patterns
-    function containsParsingPatterns(text) {
-        const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
-        
-        // Check for function name patterns
-        const functionPatterns = ['input()', 'read()', 'get()', 'scan()'];
-        let hasFunctionPatterns = false;
-        
-        lines.forEach(line => {
-            functionPatterns.forEach(pattern => {
-                if (line.toLowerCase().includes(pattern.toLowerCase())) {
-                    hasFunctionPatterns = true;
-                }
-            });
-        });
-        
-        // Check for question patterns - more flexible
-        const questionPatterns = [
-            /what.*question/i,
-            /what.*function/i,
-            /what.*correct/i,
-            /what.*way/i,
-            /your.*question/i,
-            /question:/i,
-            /q:/i,
-            /option\s*[:\-]?\s*→/i,
-            /correct\s*[:\-]?\s*answer/i
-        ];
-        
-        const hasQuestionPattern = lines.some(line => 
-            questionPatterns.some(pattern => pattern.test(line))
-        );
-        
-        // Check for arrow patterns (→)
-        const hasArrowPattern = lines.some(line => line.includes('→'));
-        
-        // Check for colon patterns with option keywords
-        const optionKeywords = ['first option', 'second option', 'third option', 'fourth option', 'option 1', 'option 2', 'option 3', 'option 4'];
-        const hasOptionPattern = lines.some(line => 
-            optionKeywords.some(keyword => line.toLowerCase().includes(keyword.toLowerCase()))
-        );
-        
-        return hasFunctionPatterns || hasQuestionPattern || hasArrowPattern || hasOptionPattern;
-    }
-    
-    // Add event listeners for automatic parsing
-    if (questionTextarea) {
-        questionTextarea.addEventListener('input', function() {
-            questionTimeout = setParseTimeout(this, 'question', questionTimeout);
-        });
-        
-        questionTextarea.addEventListener('paste', function() {
-            // Give a moment for paste to complete
-            setTimeout(() => {
-                questionTimeout = setParseTimeout(this, 'question', questionTimeout);
-            }, 100);
-        });
-    }
-    
-    // Add event listeners for option textareas
-    [opt1, opt2, opt3, opt4].forEach((opt, index) => {
-        if (opt) {
-            opt.addEventListener('input', function() {
-                optTimeouts[index] = setParseTimeout(this, 'opt' + (index + 1), optTimeouts[index]);
-            });
-            
-            opt.addEventListener('paste', function() {
-                // Give a moment for paste to complete
-                setTimeout(() => {
-                    optTimeouts[index] = setParseTimeout(this, 'opt' + (index + 1), optTimeouts[index]);
-                }, 100);
-            });
-        }
-    });
+    // Automatic parsing event listeners removed to only trigger parsing on form submission
 }
 
 function updateCorrectOptionLabels() {
@@ -2668,26 +2648,18 @@ document.addEventListener('DOMContentLoaded', function() {
             // Trigger immediate parsing if there's content in the question textarea
             const questionTextarea = document.getElementById('questionTextarea');
             if (questionTextarea && questionTextarea.value.trim()) {
-                // Parse immediately to ensure content is processed before validation
-                const lines = questionTextarea.value.trim().split('\n').map(line => line.trim()).filter(line => line !== '');
-                if (lines.length >= 5) {
-                    // Check if it looks like our special format
-                    const hasYourQuestion = lines.some(line => line.toLowerCase().startsWith('your question:'));
-                    const hasOptions = lines.some(line => 
-                        line.toLowerCase().startsWith('option 1:') ||
-                        line.toLowerCase().startsWith('option 2:') ||
-                        line.toLowerCase().startsWith('option 3:') ||
-                        line.toLowerCase().startsWith('option 4:')
-                    );
-                    const hasCorrectAnswer = lines.some(line => line.toLowerCase().startsWith('correct answer:'));
-                    
-                    if (hasYourQuestion && hasOptions && hasCorrectAnswer) {
-                        // Parse immediately before validation
-                        parseFromQuestionTextarea(lines);
-                    }
+                const text = questionTextarea.value.trim();
+                // Check if text contains parsing patterns
+                if (containsParsingPatterns(text)) {
+                    // Parse immediately to ensure content is processed before validation
+                    const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
+                    parseFromQuestionTextarea(lines, true); // Silent parsing
                 }
             }
             
+            // Check if question suggests code snippet type immediately after parsing
+            checkForCodeSnippet();
+
             const qType = document.getElementById("questionTypeSelect").value;
             const questionText = document.getElementById('questionTextarea').value.trim();
             const imageFile = document.getElementById('imageFile').files[0];
