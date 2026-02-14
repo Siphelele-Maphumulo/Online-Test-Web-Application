@@ -1278,21 +1278,21 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
             </div>
         </div>
         
-        <!-- Upload PDF to Generate Questions Panel -->
-<!--        <div class="question-card" id="uploadPdfPanel">
-            <div class="card-header">
-                <span><i class="fas fa-file-pdf"></i> Upload Exam Paper (PDF)</span>
+        <!-- Upload Question File Panel -->
+        <div class="question-card" id="uploadQuestionFilePanel">
+            <div class="card-header" style="background: linear-gradient(90deg, var(--info), var(--secondary-blue));">
+                <span><i class="fas fa-file-upload"></i> Upload Question File (TXT/PDF)</span>
                 <i class="fas fa-upload" style="opacity: 0.8;"></i>
             </div>
             <div class="question-form">
-                <form id="pdfUploadForm" enctype="multipart/form-data">
+                <form id="questionFileUploadForm" enctype="multipart/form-data">
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label">
                                 <i class="fas fa-book" style="color: var(--accent-blue);"></i>
-                                Select Course
+                                Target Course
                             </label>
-                            <select name="coursename" class="form-select" id="courseSelectPdf" required>
+                            <select name="coursename" class="form-select" id="courseSelectFile" required>
                                 <% 
                                 if (courseNames.isEmpty()) {
                                 %>
@@ -1311,62 +1311,53 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                 } 
                                 %>
                             </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-list" style="color: var(--info);"></i>
-                                Question Type
-                            </label>
-                            <select id="questionTypeSelectPdf" class="form-select">
-                                <option value="MCQ">Multiple Choice</option>
-                                <option value="TrueFalse">True/False</option>
-                                <option value="MultipleSelect">Multiple Select (2 correct)</option>
-                                <option value="Code">Code Snippet</option>
-                            </select>
+                            <small class="form-hint">Course where questions will be added</small>
                         </div>
                     </div>
                     
                     <div class="form-group">
                         <label class="form-label">
-                            <i class="fas fa-file-upload" style="color: var(--primary-blue);"></i>
-                            Upload PDF File
+                            <i class="fas fa-file-import" style="color: var(--primary-blue);"></i>
+                            Select Question File
                         </label>
-                        <div class="drop-zone" id="dropZone">
+                        <div class="drop-zone" id="fileDropZone">
                             <div class="drop-zone-content">
                                 <i class="fas fa-cloud-upload-alt drop-icon"></i>
-                                <p class="drop-text">Drag & drop your PDF here or click to browse</p>
-                                <p class="drop-hint">Supports PDF (Max 5MB)</p>
-                                <input type="file" name="pdfFile" class="form-control" id="pdfFile" accept=".pdf" style="display: none;">
+                                <p class="drop-text">Drag & drop your file here or click to browse</p>
+                                <p class="drop-hint">Supports Text (.txt) and PDF (.pdf) (Max 5MB)</p>
+                                <input type="file" name="questionFile" class="form-control" id="questionFile" accept=".txt,.pdf" style="display: none;">
                             </div>
                         </div>
-                        <div id="fileNameDisplay" class="file-name-display" style="display: none; margin-top: 10px;">
-                            <i class="fas fa-file-pdf"></i>
-                            <span id="fileName"></span>
-                            <button type="button" class="remove-file-btn" onclick="removeFile()">?</button>
+                        <div id="fileUploadNameDisplay" class="file-name-display" style="display: none; margin-top: 10px;">
+                            <i id="fileTypeIcon" class="fas fa-file-alt"></i>
+                            <span id="uploadFileName"></span>
+                            <button type="button" class="remove-file-btn" onclick="removeUploadFile()">�</button>
                         </div>
-                        <small class="form-hint">Upload a PDF file to extract questions automatically</small>
+                        <div class="quick-add-indicator mt-2" style="background: #e9ecef; color: #495057; border-left-color: #6c757d;">
+                            <i class="fas fa-info-circle"></i>
+                            <span>The file should contain questions in the format: <strong>"Your Question: ... Option 1: ... Option 2: ... Correct Answer: ..."</strong></span>
+                        </div>
                     </div>
                     
-                     Progress and Status Elements for PDF Upload 
-                    <div id="uploadProgress" class="progress" style="display: none; margin: 15px 0;">
+                    <!-- Progress and Status Elements -->
+                    <div id="fileUploadProgress" class="progress" style="display: none; margin: 15px 0;">
                         <div class="progress-bar" style="width: 0%;">0%</div>
                     </div>
-                    <div id="uploadStatus" style="display: none;"></div>
+                    <div id="fileUploadStatus" style="display: none;"></div>
                     
                     <div class="form-actions">
-                        <button type="button" class="btn btn-outline" onclick="resetPdfForm()">
+                        <button type="button" class="btn btn-outline" onclick="resetFileUploadForm()">
                             <i class="fas fa-redo"></i>
                             Reset
                         </button>
-                        <button type="button" class="btn btn-primary" id="uploadPdfBtn">
-                            <i class="fas fa-bolt"></i>
-                            Generate Questions
+                        <button type="button" class="btn btn-primary" id="processFileBtn">
+                            <i class="fas fa-magic"></i>
+                            Extract & Parse Questions
                         </button>
                     </div>
                 </form>
             </div>
-        </div>-->
+        </div>
         
         <!-- Batch Progress Card -->
         <div class="question-card" id="batchProgressCard" style="display: none; border-left: 5px solid var(--accent-blue);">
@@ -1748,196 +1739,154 @@ function syncCourseDropdowns() {
     updateShowAllButton();
 }
 
-// PDF Upload Functions
-function uploadAndGenerateQuestions() {
-    const form = document.getElementById('pdfUploadForm');
-    const fileInput = document.getElementById('pdfFile');
-    const courseSelect = document.getElementById('courseSelectPdf');
-    const uploadBtn = document.getElementById('uploadPdfBtn');
-    const progressDiv = document.getElementById('uploadProgress');
+// File Upload and Processing Functions
+function handleFileUploadAndParsing() {
+    const form = document.getElementById('questionFileUploadForm');
+    const fileInput = document.getElementById('questionFile');
+    const courseSelect = document.getElementById('courseSelectFile');
+    const processBtn = document.getElementById('processFileBtn');
+    const progressDiv = document.getElementById('fileUploadProgress');
     const progressBar = progressDiv.querySelector('.progress-bar');
-    const statusDiv = document.getElementById('uploadStatus');
+    const statusDiv = document.getElementById('fileUploadStatus');
     
-    // Validate inputs
     if (!fileInput.files[0]) {
-        showToast('error', 'Validation Error', 'Please select a PDF file to upload.');
+        showToast('error', 'Validation Error', 'Please select a file to upload.');
         return;
     }
     
     if (!courseSelect.value) {
-        showToast('error', 'Validation Error', 'Please select a course.');
+        showToast('error', 'Validation Error', 'Please select a target course.');
         return;
     }
     
-    // Check file size (5MB = 5242880 bytes)
-    if (fileInput.files[0].size > 5242880) {
-        showToast('error', 'File Too Large', 'File size exceeds 5MB limit. Please select a smaller file.');
-        return;
-    }
-    
-    // Check file type
-    if (fileInput.files[0].type !== 'application/pdf' && !fileInput.files[0].name.toLowerCase().endsWith('.pdf')) {
-        showToast('error', 'Invalid File Type', 'Only PDF files are allowed.');
-        return;
-    }
-    
-    // Prepare form data
-    const formData = new FormData(form);
+    const file = fileInput.files[0];
+    const fileName = file.name.toLowerCase();
     
     // Show progress bar
     progressDiv.style.display = 'block';
     statusDiv.style.display = 'block';
-    statusDiv.innerHTML = '<div class="alert"><i class="fas fa-spinner fa-spin"></i> Processing PDF and extracting questions...</div>';
+    statusDiv.innerHTML = '<div class="alert"><i class="fas fa-spinner fa-spin"></i> Reading and processing file...</div>';
+    progressBar.style.width = '20%';
+    progressBar.textContent = '20%';
     
-    // Disable button during upload
-    uploadBtn.disabled = true;
-    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    // Disable button
+    processBtn.disabled = true;
+    processBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
     
-    // Send request
-    fetch('controller.jsp?action=pdf_upload&page=questions', {
-        method: 'POST',
-        body: formData
-    })
-    .then(async response => {
-        // Check if response is OK before parsing JSON
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        // Try to parse JSON response
-        let data;
-        try {
-            data = await response.json();
-        } catch (parseError) {
-            console.error('JSON Parse Error:', parseError);
-            console.error('Response text:', await response.text());
-            throw new Error('Invalid JSON response from server');
-        }
-        
-        if (data.success) {
-            // Update progress to 100%
-            progressBar.style.width = '100%';
-            progressBar.textContent = '100%';
-            
-            statusDiv.innerHTML = `<div class="alert" style="background: #d4edda; color: #155724;"><i class="fas fa-check-circle"></i> Successfully extracted ${data.count} questions. Adding to database...</div>`;
-            
-            // Add questions to database
-            addExtractedQuestionsToDB(data.questions, courseSelect.value);
-        } else {
-            // Check if this is the library not installed message
-            if (data.message && data.message.includes('libraries not installed')) {
-                statusDiv.innerHTML = `<div class="alert" style="background: #fff3cd; color: #856404;"><i class="fas fa-exclamation-triangle"></i> PDF processing is not available. Required libraries need to be installed on the server.</div>`;
-                progressBar.style.backgroundColor = '#ffc107';
-                showToast('warning', 'Libraries Required', 'PDF processing requires additional libraries to be installed on the server.');
-            } else {
-                throw new Error(data.message || 'Unknown error occurred');
-            }
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        statusDiv.innerHTML = `<div class="alert" style="background: #f8d7da; color: #721c24;"><i class="fas fa-exclamation-triangle"></i> Error: ${error.message || error}</div>`;
-        progressBar.style.backgroundColor = '#dc3545';
-    })
-    .finally(() => {
-        // Re-enable button
-        uploadBtn.disabled = false;
-        uploadBtn.innerHTML = '<i class="fas fa-bolt"></i> Generate Questions';
-    });
-}
-
-function addExtractedQuestionsToDB(questions, courseName) {
-    let addedCount = 0;
-    let errorCount = 0;
-    
-    const statusDiv = document.getElementById('uploadStatus');
-    
-    // Process each question
-    questions.forEach((question, index) => {
-        // Prepare form data for adding question
+    if (fileName.endsWith('.txt')) {
+        // Process text file client-side
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            progressBar.style.width = '60%';
+            progressBar.textContent = '60%';
+            const text = e.target.result;
+            processExtractedText(text, courseSelect.value);
+        };
+        reader.onerror = function() {
+            showToast('error', 'File Error', 'Failed to read the text file.');
+            resetFileUploadProgress();
+        };
+        reader.readAsText(file);
+    } else if (fileName.endsWith('.pdf')) {
+        // Process PDF server-side
         const formData = new FormData();
+        formData.append('questionFile', file);
         formData.append('page', 'questions');
-        formData.append('operation', 'addnew');
-        formData.append('coursename', courseName);
-        formData.append('questionType', question.type);
-        formData.append('question', question.question);
+        formData.append('operation', 'extract_text');
         
-        // Add options
-        for (let i = 0; i < question.options.length && i < 4; i++) {
-            formData.append(`opt${i+1}`, question.options[i]);
-        }
-        
-        // Add correct answer
-        formData.append('correct', question.correct);
-        
-        // Send request to add question
         fetch('controller.jsp', {
             method: 'POST',
             body: formData
         })
-        .then(response => response.text())
-        .then(result => {
-            addedCount++;
-            
-            // Update status
-            statusDiv.innerHTML = `<div class="alert" style="background: #d4edda; color: #155724;"><i class="fas fa-check-circle"></i> Added ${addedCount} of ${questions.length} questions to ${courseName}</div>`;
-            
-            // When all questions are added
-            if (addedCount + errorCount === questions.length) {
-                finishPDFUploadProcess(addedCount, errorCount, courseName);
+        .then(async response => {
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+            if (data.success) {
+                progressBar.style.width = '60%';
+                progressBar.textContent = '60%';
+                processExtractedText(data.extractedText, courseSelect.value);
+            } else {
+                throw new Error(data.message || 'Failed to extract text from PDF');
             }
         })
         .catch(error => {
-            console.error('Error adding question:', error);
-            errorCount++;
-            
-            // Continue processing other questions
-            if (addedCount + errorCount === questions.length) {
-                finishPDFUploadProcess(addedCount, errorCount, courseName);
-            }
+            console.error('PDF Processing Error:', error);
+            statusDiv.innerHTML = `<div class="alert" style="background: #f8d7da; color: #721c24;"><i class="fas fa-exclamation-triangle"></i> Error: ${error.message}</div>`;
+            progressBar.style.backgroundColor = '#dc3545';
+            processBtn.disabled = false;
+            processBtn.innerHTML = '<i class="fas fa-magic"></i> Extract & Parse Questions';
         });
-    });
-    
-    // Handle case where no questions were processed
-    if (questions.length === 0) {
-        finishPDFUploadProcess(0, 0, courseName);
+    } else {
+        showToast('error', 'Invalid File', 'Only .txt and .pdf files are supported.');
+        resetFileUploadProgress();
     }
 }
 
-function finishPDFUploadProcess(successCount, errorCount, courseName) {
-    const statusDiv = document.getElementById('uploadStatus');
-    const progressDiv = document.getElementById('uploadProgress');
+function processExtractedText(text, courseName) {
+    const statusDiv = document.getElementById('fileUploadStatus');
+    const progressBar = document.querySelector('#fileUploadProgress .progress-bar');
+    const processBtn = document.getElementById('processFileBtn');
     
-    if (successCount > 0) {
-        statusDiv.innerHTML = `<div class="alert" style="background: #d4edda; color: #155724;"><i class="fas fa-check-circle"></i> Successfully added ${successCount} questions to ${courseName}. ${errorCount > 0 ? errorCount + ' failed.' : ''}</div>`;
+    try {
+        // Update course selection in main form to match the file upload target
+        const mainCourseSelect = document.getElementById('courseSelectAddNew');
+        if (mainCourseSelect) {
+            mainCourseSelect.value = courseName;
+            saveLastSelection();
+        }
         
-        // Show success toast
-        showToast('success', 'Success', `Added ${successCount} questions to ${courseName}`);
-    } else {
-        statusDiv.innerHTML = `<div class="alert" style="background: #f8d7da; color: #721c24;"><i class="fas fa-exclamation-triangle"></i> No questions were added. ${errorCount > 0 ? errorCount + ' errors occurred.' : ''}</div>`;
+        // Parse questions from text
+        const questions = parseMultipleQuestions(text);
         
-        // Show error toast
-        showToast('error', 'Processing Error', 'No questions were added to the database');
+        if (questions.length > 0) {
+            progressBar.style.width = '100%';
+            progressBar.textContent = '100%';
+            statusDiv.innerHTML = `<div class="alert" style="background: #d4edda; color: #155724;"><i class="fas fa-check-circle"></i> Successfully parsed ${questions.length} questions.</div>`;
+            
+            showToast('success', 'Success', `Parsed ${questions.length} questions from file.`);
+            
+            // Show review modal
+            setTimeout(() => {
+                showMultipleQuestionsModal(questions);
+                resetFileUploadProgress();
+            }, 1000);
+        } else {
+            throw new Error('No valid questions found in the file. Please check the format.');
+        }
+    } catch (error) {
+        statusDiv.innerHTML = `<div class="alert" style="background: #f8d7da; color: #721c24;"><i class="fas fa-exclamation-triangle"></i> Error: ${error.message}</div>`;
+        progressBar.style.backgroundColor = '#dc3545';
+        processBtn.disabled = false;
+        processBtn.innerHTML = '<i class="fas fa-magic"></i> Extract & Parse Questions';
     }
+}
+
+function resetFileUploadProgress() {
+    const processBtn = document.getElementById('processFileBtn');
+    const progressDiv = document.getElementById('fileUploadProgress');
+    const progressBar = progressDiv.querySelector('.progress-bar');
     
-    // Hide progress bar after delay
+    processBtn.disabled = false;
+    processBtn.innerHTML = '<i class="fas fa-magic"></i> Extract & Parse Questions';
+    
     setTimeout(() => {
         progressDiv.style.display = 'none';
+        progressBar.style.width = '0%';
+        progressBar.style.backgroundColor = '';
     }, 3000);
 }
 
-function resetPdfForm() {
-    document.getElementById('pdfUploadForm').reset();
-    document.getElementById('uploadProgress').style.display = 'none';
-    document.getElementById('uploadStatus').style.display = 'none';
+function resetFileUploadForm() {
+    document.getElementById('questionFileUploadForm').reset();
+    document.getElementById('fileUploadProgress').style.display = 'none';
+    document.getElementById('fileUploadStatus').style.display = 'none';
     
-    // Reset drag and drop UI
-    const pdfFileInput = document.getElementById('pdfFile');
-    const fileNameDisplay = document.getElementById('fileNameDisplay');
-    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('questionFile');
+    const nameDisplay = document.getElementById('fileUploadNameDisplay');
+    const dropZone = document.getElementById('fileDropZone');
     
-    if (pdfFileInput) pdfFileInput.value = '';
-    if (fileNameDisplay) fileNameDisplay.style.display = 'none';
+    if (fileInput) fileInput.value = '';
+    if (nameDisplay) nameDisplay.style.display = 'none';
     if (dropZone) dropZone.style.display = 'block';
 }
 
@@ -2020,90 +1969,100 @@ function showValidationModal(correctValue, opts, questionType = "MCQ") {
     document.getElementById("validationModal").style.display = "block";
 }
 
-// Drag and drop functionality for PDF upload
-const pdfFileInput = document.getElementById('pdfFile');
-const dropZone = document.getElementById('dropZone');
+// Drag and drop functionality for generic file upload
+const questionFileInput = document.getElementById('questionFile');
+const fileDropZone = document.getElementById('fileDropZone');
 
-if (pdfFileInput && dropZone) {
+if (questionFileInput && fileDropZone) {
     // Click to browse
-    dropZone.addEventListener('click', () => {
-        pdfFileInput.click();
+    fileDropZone.addEventListener('click', () => {
+        questionFileInput.click();
     });
     
     // File input change
-    pdfFileInput.addEventListener('change', function() {
+    questionFileInput.addEventListener('change', function() {
         if (this.files && this.files[0]) {
-            displayFileName(this.files[0]);
+            displayFileUploadName(this.files[0]);
         }
     });
     
     // Drag and drop events
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, preventDefaults, false);
+        fileDropZone.addEventListener(eventName, preventFileUploadDefaults, false);
     });
     
-    function preventDefaults(e) {
+    function preventFileUploadDefaults(e) {
         e.preventDefault();
         e.stopPropagation();
     }
     
     ['dragenter', 'dragover'].forEach(eventName => {
-        dropZone.addEventListener(eventName, highlight, false);
+        fileDropZone.addEventListener(eventName, highlightFileDrop, false);
     });
     
     ['dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, unhighlight, false);
+        fileDropZone.addEventListener(eventName, unhighlightFileDrop, false);
     });
     
-    function highlight() {
-        dropZone.classList.add('drag-over');
+    function highlightFileDrop() {
+        fileDropZone.classList.add('drag-over');
     }
     
-    function unhighlight() {
-        dropZone.classList.remove('drag-over');
+    function unhighlightFileDrop() {
+        fileDropZone.classList.remove('drag-over');
     }
     
-    dropZone.addEventListener('drop', handleDrop, false);
+    fileDropZone.addEventListener('drop', handleFileDrop, false);
     
-    function handleDrop(e) {
+    function handleFileDrop(e) {
         const dt = e.dataTransfer;
         const files = dt.files;
         
         if (files.length > 0) {
             const file = files[0];
-            // Check if it's a PDF file
-            if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-                // Set the file to the hidden input
+            const name = file.name.toLowerCase();
+            // Check if it's a TXT or PDF file
+            if (name.endsWith('.txt') || name.endsWith('.pdf')) {
+                // Set the file to the input
                 const dataTransfer = new DataTransfer();
                 dataTransfer.items.add(file);
-                pdfFileInput.files = dataTransfer.files;
-                displayFileName(file);
+                questionFileInput.files = dataTransfer.files;
+                displayFileUploadName(file);
             } else {
-                showToast('error', 'Invalid File Type', 'Only PDF files are allowed.');
+                showToast('error', 'Invalid File Type', 'Only .txt and .pdf files are allowed.');
             }
         }
     }
     
-    function displayFileName(file) {
-        const fileNameDisplay = document.getElementById('fileNameDisplay');
-        const fileNameSpan = document.getElementById('fileName');
+    function displayFileUploadName(file) {
+        const nameDisplay = document.getElementById('fileUploadNameDisplay');
+        const nameSpan = document.getElementById('uploadFileName');
+        const icon = document.getElementById('fileTypeIcon');
         
-        fileNameSpan.textContent = file.name;
-        fileNameDisplay.style.display = 'flex';
-        dropZone.style.display = 'none';
+        nameSpan.textContent = file.name;
+        if (file.name.toLowerCase().endsWith('.pdf')) {
+            icon.className = 'fas fa-file-pdf';
+            icon.style.color = '#dc3545';
+        } else {
+            icon.className = 'fas fa-file-alt';
+            icon.style.color = '#6c757d';
+        }
+        
+        nameDisplay.style.display = 'flex';
+        fileDropZone.style.display = 'none';
     }
 }
 
-function removeFile() {
-    const pdfFileInput = document.getElementById('pdfFile');
-    const fileNameDisplay = document.getElementById('fileNameDisplay');
-    const dropZone = document.getElementById('dropZone');
+function removeUploadFile() {
+    const fileInput = document.getElementById('questionFile');
+    const nameDisplay = document.getElementById('fileUploadNameDisplay');
+    const dropZone = document.getElementById('fileDropZone');
     
     // Reset file input
-    pdfFileInput.value = '';
+    fileInput.value = '';
     
     // Hide file name display and show drop zone
-    fileNameDisplay.style.display = 'none';
+    nameDisplay.style.display = 'none';
     dropZone.style.display = 'block';
 }
 
@@ -2220,10 +2179,10 @@ if (imageFileInput && imageDropZone) {
     }
 }
 
-// Add event listener to the PDF upload button
-const uploadPdfBtn = document.getElementById('uploadPdfBtn');
-if (uploadPdfBtn) {
-    uploadPdfBtn.addEventListener('click', uploadAndGenerateQuestions);
+// Add event listener to the file processing button
+const processFileBtn = document.getElementById('processFileBtn');
+if (processFileBtn) {
+    processFileBtn.addEventListener('click', handleFileUploadAndParsing);
 }
 
 // Question form functions
@@ -2269,21 +2228,21 @@ function toggleOptions() {
         if (opt3) opt3.required = false;
         if (opt4) opt4.required = false;
         
-        // Clear and disable option fields for True/False questions
+        // Store current option values before disabling
         if (opt1) {
-            opt1.value = '';
+            sessionStorage.setItem('stored_opt1', opt1.value);
             opt1.disabled = true;
         }
         if (opt2) {
-            opt2.value = '';
+            sessionStorage.setItem('stored_opt2', opt2.value);
             opt2.disabled = true;
         }
         if (opt3) {
-            opt3.value = '';
+            sessionStorage.setItem('stored_opt3', opt3.value);
             opt3.disabled = true;
         }
         if (opt4) {
-            opt4.value = '';
+            sessionStorage.setItem('stored_opt4', opt4.value);
             opt4.disabled = true;
         }
         
@@ -2302,21 +2261,21 @@ function toggleOptions() {
         if (opt3) opt3.required = false;
         if (opt4) opt4.required = false;
         
-        // Clear and disable option fields for drag-drop questions
+        // Store current option values before disabling
         if (opt1) {
-            opt1.value = '';
+            sessionStorage.setItem('stored_opt1', opt1.value);
             opt1.disabled = true;
         }
         if (opt2) {
-            opt2.value = '';
+            sessionStorage.setItem('stored_opt2', opt2.value);
             opt2.disabled = true;
         }
         if (opt3) {
-            opt3.value = '';
+            sessionStorage.setItem('stored_opt3', opt3.value);
             opt3.disabled = true;
         }
         if (opt4) {
-            opt4.value = '';
+            sessionStorage.setItem('stored_opt4', opt4.value);
             opt4.disabled = true;
         }
         
@@ -2327,11 +2286,39 @@ function toggleOptions() {
         if (opt1) opt1.required = true;
         if (opt2) opt2.required = true;
         
-        // Enable option fields for non-True/False questions
-        if (opt1) opt1.disabled = false;
-        if (opt2) opt2.disabled = false;
-        if (opt3) opt3.disabled = false;
-        if (opt4) opt4.disabled = false;
+        // Enable option fields for non-True/False questions and restore values
+        if (opt1) {
+            opt1.disabled = false;
+            // Restore stored value if it exists
+            const storedValue1 = sessionStorage.getItem('stored_opt1');
+            if (storedValue1 && opt1.value === '') {
+                opt1.value = storedValue1;
+            }
+        }
+        if (opt2) {
+            opt2.disabled = false;
+            // Restore stored value if it exists
+            const storedValue2 = sessionStorage.getItem('stored_opt2');
+            if (storedValue2 && opt2.value === '') {
+                opt2.value = storedValue2;
+            }
+        }
+        if (opt3) {
+            opt3.disabled = false;
+            // Restore stored value if it exists
+            const storedValue3 = sessionStorage.getItem('stored_opt3');
+            if (storedValue3 && opt3.value === '') {
+                opt3.value = storedValue3;
+            }
+        }
+        if (opt4) {
+            opt4.disabled = false;
+            // Restore stored value if it exists
+            const storedValue4 = sessionStorage.getItem('stored_opt4');
+            if (storedValue4 && opt4.value === '') {
+                opt4.value = storedValue4;
+            }
+        }
         
         if (qType === "MultipleSelect") {
             multiple.style.display = "block";
@@ -2347,6 +2334,12 @@ function toggleOptions() {
 
 // Function to check if question suggests code snippet type
 function checkForCodeSnippet() {
+    // Skip this check if questions are being processed from batch session
+    const batchQuestions = sessionStorage.getItem('batchQuestions');
+    if (batchQuestions) {
+        return; // Don't show the prompt during batch processing
+    }
+    
     const questionText = document.getElementById("questionTextarea").value;
     const questionType = document.getElementById("questionTypeSelect").value;
     
@@ -2666,19 +2659,62 @@ function parseMultipleQuestions(text) {
         questions.push({...currentQuestion});
     }
     
-    // Auto-detect question types
+    // Auto-detect question types and sanitize correct answers
     questions.forEach(q => {
-        const options = q.options.filter(opt => opt.trim() !== '');
-        if (options.length === 2 && 
-            (options.some(o => o.toLowerCase() === 'true') || options.some(o => o.toLowerCase() === 'false'))) {
+        // Sanitize options (remove empty strings)
+        q.options = q.options.map(opt => opt ? opt.trim() : '');
+        
+        // Auto-detect type
+        const nonBlankOptions = q.options.filter(opt => opt !== '');
+        if (nonBlankOptions.length === 2 && 
+            (nonBlankOptions.some(o => o.toLowerCase() === 'true') || nonBlankOptions.some(o => o.toLowerCase() === 'false'))) {
             q.type = 'TrueFalse';
         } else if (q.correct && q.correct.includes('|')) {
             q.type = 'MultipleSelect';
+        }
+        
+        // Sanitize correct answer using firstCorrectAnswer logic
+        if (q.correct) {
+            q.correct = sanitizeCorrectAnswer(q);
         }
     });
 
     console.log('Parsed multiple questions:', questions);
     return questions;
+}
+
+// Helper to sanitize correct answer during parsing
+function sanitizeCorrectAnswer(q) {
+    const correctText = q.correct.trim();
+    const options = q.options;
+    
+    // 1. Check for exact match
+    if (options.includes(correctText)) return correctText;
+    
+    // 2. Check for "Option X: text" format in correct answer
+    const optionMatch = correctText.match(/Option\s+(\d+)[:\s]*(.*)/i);
+    if (optionMatch) {
+        const index = parseInt(optionMatch[1]) - 1;
+        const textAfterPrefix = optionMatch[2].trim();
+        
+        if (index >= 0 && index < options.length && options[index]) {
+            // If the text after prefix matches the option, or if no text provided, return option text
+            if (!textAfterPrefix || options[index].includes(textAfterPrefix) || textAfterPrefix.includes(options[index])) {
+                return options[index];
+            }
+        }
+    }
+    
+    // 3. Check if any option is contained in the correct answer or vice versa (fuzzy)
+    for (let opt of options) {
+        if (opt && opt.length > 2) {
+            if (correctText.toLowerCase().includes(opt.toLowerCase()) || opt.toLowerCase().includes(correctText.toLowerCase())) {
+                return opt;
+            }
+        }
+    }
+    
+    return correctText;
 }
 
 // Modal for displaying and editing multiple questions
