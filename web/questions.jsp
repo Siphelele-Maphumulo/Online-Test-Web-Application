@@ -2937,7 +2937,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (!isValid) {
                 e.preventDefault();
+                // Display error in both toast and modal
                 showToast('error', 'Validation Error', errorMsg);
+                document.getElementById('modalTitle').textContent = 'Validation Error';
+                document.getElementById('modalMessage').textContent = errorMsg;
+                document.getElementById('validationModal').style.display = 'block';
             }
         });
     }
