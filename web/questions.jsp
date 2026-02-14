@@ -1289,8 +1289,11 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                     
                     <div class="form-group">
                         <label class="form-label"><i class="fas fa-question-circle" style="color: var(--primary-blue);"></i> Your Question</label>
-                        <textarea name="question" id="questionTextarea" class="question-input" rows="3"></textarea>
-                        <small class="form-hint">Enter your question text (optional if uploading an image)</small>
+                        <textarea name="question" id="questionTextarea" class="question-input" rows="3" placeholder="Enter your question here...&#10;&#10;Tip: Paste structured questions in this format:&#10;Your Question: What is the correct way to get values in Python?&#10;Option 1: Gets value after input()&#10;Option 2: Gets value after read()&#10;Option 3: Gets value after get()&#10;Option 4: Gets value after scan()&#10;Correct Answer: Gets value after input()"></textarea>
+                        <button type="button" class="btn btn-sm btn-secondary mt-2" id="parseQuestionBtn" style="display: none;">
+                            <i class="fas fa-magic"></i> Parse Question
+                        </button>
+                        <small class="form-hint">Type or paste your question. Auto-parsing triggers after 1 second of inactivity.</small>
                     </div>
                     
                     <!-- Image Upload Section -->
@@ -2576,7 +2579,26 @@ function containsParsingPatterns(text) {
         optionKeywords.some(keyword => line.toLowerCase().includes(keyword.toLowerCase()))
     );
     
-    return hasFunctionPatterns || hasQuestionPattern || hasArrowPattern || hasOptionPattern;
+    // NEW: Check for structured question format with "Your Question:", "Option X:", "Correct Answer:" pattern
+    const hasStructuredFormat = lines.some(line => 
+        line.match(/^(Your Question|Option \d+|Correct Answer):/i)
+    );
+    
+    // NEW: Check if there are at least 3 lines with colon-separated values (likely question/options format)
+    const colonSeparatedLines = lines.filter(line => line.includes(':')).length;
+    const hasColonFormat = colonSeparatedLines >= 3;
+    
+    console.log('Parsing pattern detection:', {
+        hasFunctionPatterns,
+        hasQuestionPattern,
+        hasArrowPattern,
+        hasOptionPattern,
+        hasStructuredFormat,
+        hasColonFormat,
+        lines
+    });
+    
+    return hasFunctionPatterns || hasQuestionPattern || hasArrowPattern || hasOptionPattern || hasStructuredFormat || hasColonFormat;
 }
 
 function initializeSmartParsing() {
@@ -2597,7 +2619,7 @@ function initializeSmartParsing() {
             clearTimeout(timeoutRef);
         }
         
-        // Set new timeout for 5 seconds
+        // Set new timeout for 1 second for better responsiveness
         timeoutRef = setTimeout(() => {
             const text = textarea.value.trim();
             if (text) {
@@ -2606,7 +2628,7 @@ function initializeSmartParsing() {
                     parseMultiLineInput(text, sourceField, true); // Silent parsing
                 }
             }
-        }, 5000); // 5 seconds
+        }, 1000); // 1 second
         
         return timeoutRef;
     }
@@ -2614,15 +2636,39 @@ function initializeSmartParsing() {
     // Add event listeners for automatic parsing
     if (questionTextarea) {
         questionTextarea.addEventListener('input', function() {
+            // Show parse button when there's content
+            const parseBtn = document.getElementById('parseQuestionBtn');
+            if (parseBtn) {
+                parseBtn.style.display = this.value.trim() ? 'inline-block' : 'none';
+            }
             questionTimeout = setParseTimeout(this, 'question', questionTimeout);
         });
         
         questionTextarea.addEventListener('paste', function() {
+            // Show parse button when there's content
+            const parseBtn = document.getElementById('parseQuestionBtn');
+            if (parseBtn) {
+                parseBtn.style.display = this.value.trim() ? 'inline-block' : 'none';
+            }
             // Give a moment for paste to complete
             setTimeout(() => {
                 questionTimeout = setParseTimeout(this, 'question', questionTimeout);
             }, 100);
         });
+        
+        // Add manual parse button event listener
+        const parseBtn = document.getElementById('parseQuestionBtn');
+        if (parseBtn) {
+            parseBtn.addEventListener('click', function() {
+                const text = questionTextarea.value.trim();
+                if (text && containsParsingPatterns(text)) {
+                    parseMultiLineInput(text, 'question', false); // Non-silent parsing with success message
+                    showToast('success', 'Parsing Complete', 'Question parsed successfully!');
+                } else {
+                    showToast('warning', 'No Parseable Content', 'No structured question format detected. Please use the format shown in the placeholder.');
+                }
+            });
+        }
     }
     
     // Add event listeners for option textareas
