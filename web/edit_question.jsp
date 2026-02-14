@@ -1454,7 +1454,9 @@
         }
         
         // Update modal content
-        document.getElementById('modalTitle').textContent = title;
+        let icon = 'fa-exclamation-triangle';
+        if (title === 'Success') icon = 'fa-check-circle';
+        document.getElementById('modalTitle').innerHTML = '<i class="fas ' + icon + '"></i> ' + title;
         document.getElementById('modalMessage').textContent = message;
         
         // Show modal
@@ -1462,21 +1464,21 @@
     }
     
     // Smart parsing functions for multi-line input in edit form
-    function parseMultiLineInput(text, sourceField) {
+    function parseMultiLineInput(text, sourceField, silent = false) {
         if (!text || !text.trim()) return;
         
         const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
         
         if (sourceField === 'question') {
             // Parse from question textarea using keyword detection
-            parseFromQuestionTextarea(lines);
+            parseFromQuestionTextarea(lines, silent);
         } else if (sourceField.startsWith('opt')) {
             // Parse from option textarea using keyword detection
-            parseFromOptionTextarea(lines, sourceField);
+            parseFromOptionTextarea(lines, sourceField, silent);
         }
     }
 
-    function parseFromQuestionTextarea(lines) {
+    function parseFromQuestionTextarea(lines, silent = false) {
         const questionTextarea = document.getElementById('editQuestionTextarea');
         const opt1 = document.getElementById('editOpt1');
         const opt2 = document.getElementById('editOpt2');
@@ -1506,22 +1508,36 @@
             console.log('Option 3:', opt3.value);
             console.log('Option 4:', opt4.value);
             console.log('Correct Answer:', correct.value);
+
+            // Validate correct answer against options
+            const options = result.options.map(opt => opt.trim()).filter(opt => opt !== '');
+            const correctVal = result.correct ? result.correct.trim() : '';
+
+            if (correctVal && options.length > 0 && !options.includes(correctVal)) {
+                showModal('Correct Answer Mismatch', 
+                    'The parsed correct answer ("' + correctVal + '") does not match any of the provided options.\n\n' +
+                    'Available options:\n' + options.map((o, i) => (i + 1) + '. ' + o).join('\n') + '\n\n' +
+                    'Please manually select or correct the correct answer.');
+                return;
+            }
             
-            showModal('Success', 'Question parsed successfully!\n\n' + 
-                (result.question ? 'Question: ' + result.question + '\n' : '') +
-                'Option 1: ' + (result.options[0] || '') + '\n' + 
-                'Option 2: ' + (result.options[1] || '') + '\n' + 
-                'Option 3: ' + (result.options[2] || '') + '\n' + 
-                'Option 4: ' + (result.options[3] || '') + '\n' + 
-                'Correct: ' + (result.correct || result.options[0] || ''));
+            if (!silent) {
+                showModal('Success', 'Question parsed successfully!\n\n' + 
+                    (result.question ? 'Question: ' + result.question + '\n' : '') +
+                    'Option 1: ' + (result.options[0] || '') + '\n' + 
+                    'Option 2: ' + (result.options[1] || '') + '\n' + 
+                    'Option 3: ' + (result.options[2] || '') + '\n' + 
+                    'Option 4: ' + (result.options[3] || '') + '\n' + 
+                    'Correct: ' + (result.correct || result.options[0] || ''));
+            }
             return;
         }
         
         // Fallback to the original complex parsing
-        parseComplexFormat(lines, 'question');
+        parseComplexFormat(lines, 'question', silent);
     }
 
-    function parseFromOptionTextarea(lines, sourceOption) {
+    function parseFromOptionTextarea(lines, sourceOption, silent = false) {
         const opt1 = document.getElementById('editOpt1');
         const opt2 = document.getElementById('editOpt2');
         const opt3 = document.getElementById('editOpt3');
@@ -1547,17 +1563,31 @@
                 correct.value = result.correct || result.options[0] || '';
             }
             
-            showModal('Success', 'Options parsed successfully!\n\n' + 
-                'First Option: ' + (result.options[0] || '') + '\n' + 
-                'Second Option: ' + (result.options[1] || '') + '\n' + 
-                'Third Option: ' + (result.options[2] || '') + '\n' + 
-                'Fourth Option: ' + (result.options[3] || '') + '\n' + 
-                'Correct Answer: ' + (result.correct || result.options[0] || ''));
+            // Validate correct answer against options
+            const options = result.options.map(opt => opt.trim()).filter(opt => opt !== '');
+            const correctVal = result.correct ? result.correct.trim() : '';
+
+            if (correctVal && options.length > 0 && !options.includes(correctVal)) {
+                showModal('Correct Answer Mismatch', 
+                    'The parsed correct answer ("' + correctVal + '") does not match any of the provided options.\n\n' +
+                    'Available options:\n' + options.map((o, i) => (i + 1) + '. ' + o).join('\n') + '\n\n' +
+                    'Please manually select or correct the correct answer.');
+                return;
+            }
+
+            if (!silent) {
+                showModal('Success', 'Options parsed successfully!\n\n' + 
+                    'First Option: ' + (result.options[0] || '') + '\n' + 
+                    'Second Option: ' + (result.options[1] || '') + '\n' + 
+                    'Third Option: ' + (result.options[2] || '') + '\n' + 
+                    'Fourth Option: ' + (result.options[3] || '') + '\n' + 
+                    'Correct Answer: ' + (result.correct || result.options[0] || ''));
+            }
             return;
         }
         
         // Fallback to the original complex parsing
-        parseComplexFormat(lines, sourceOption);
+        parseComplexFormat(lines, sourceOption, silent);
     }
 
     // Simple format parser for common layouts
@@ -1632,7 +1662,7 @@
     }
 
     // Complex format parser (fallback) - Improved version
-    function parseComplexFormat(lines, sourceField) {
+    function parseComplexFormat(lines, sourceField, silent = false) {
         const questionTextarea = document.getElementById('editQuestionTextarea');
         const opt1 = document.getElementById('editOpt1');
         const opt2 = document.getElementById('editOpt2');
@@ -1696,18 +1726,77 @@
             if (option4) opt4.value = option4;
             if (correctAnswer) correct.value = correctAnswer;
             
-            showModal('Success', 'Question parsed successfully!\n\n' + 
-                (questionText ? 'Question: ' + questionText + '\n' : '') +
-                'Option 1: ' + option1 + '\n' + 
-                'Option 2: ' + option2 + '\n' + 
-                'Option 3: ' + option3 + '\n' + 
-                'Option 4: ' + option4 + '\n' + 
-                'Correct: ' + correctAnswer);
+            // Validate correct answer against options
+            const opts = [option1, option2, option3, option4].map(opt => opt.trim()).filter(opt => opt !== '');
+            const correctVal = correctAnswer ? correctAnswer.trim() : '';
+
+            if (correctVal && opts.length > 0 && !opts.includes(correctVal)) {
+                showModal('Correct Answer Mismatch', 
+                    'The parsed correct answer ("' + correctVal + '") does not match any of the provided options.\n\n' +
+                    'Available options:\n' + opts.map((o, i) => (i + 1) + '. ' + o).join('\n') + '\n\n' +
+                    'Please manually select or correct the correct answer.');
+                return;
+            }
+
+            if (!silent) {
+                showModal('Success', 'Question parsed successfully!\n\n' + 
+                    (questionText ? 'Question: ' + questionText + '\n' : '') +
+                    'Option 1: ' + option1 + '\n' + 
+                    'Option 2: ' + option2 + '\n' + 
+                    'Option 3: ' + option3 + '\n' + 
+                    'Option 4: ' + option4 + '\n' + 
+                    'Correct: ' + correctAnswer);
+            }
         }
     }
 
 
     
+    // Function to check if text contains parsing patterns
+    function containsParsingPatterns(text) {
+        const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
+        
+        // Check for function name patterns
+        const functionPatterns = ['input()', 'read()', 'get()', 'scan()'];
+        let hasFunctionPatterns = false;
+        
+        lines.forEach(line => {
+            functionPatterns.forEach(pattern => {
+                if (line.toLowerCase().includes(pattern.toLowerCase())) {
+                    hasFunctionPatterns = true;
+                }
+            });
+        });
+        
+        // Check for question patterns - more flexible
+        const questionPatterns = [
+            /what.*question/i,
+            /what.*function/i,
+            /what.*correct/i,
+            /what.*way/i,
+            /your.*question/i,
+            /question:/i,
+            /q:/i,
+            /option\s*[:\-]?\s*→/i,
+            /correct\s*[:\-]?\s*answer/i
+        ];
+        
+        const hasQuestionPattern = lines.some(line => 
+            questionPatterns.some(pattern => pattern.test(line))
+        );
+        
+        // Check for arrow patterns (→)
+        const hasArrowPattern = lines.some(line => line.includes('→'));
+        
+        // Check for colon patterns with option keywords
+        const optionKeywords = ['first option', 'second option', 'third option', 'fourth option', 'option 1', 'option 2', 'option 3', 'option 4'];
+        const hasOptionPattern = lines.some(line => 
+            optionKeywords.some(keyword => line.toLowerCase().includes(keyword.toLowerCase()))
+        );
+        
+        return hasFunctionPatterns || hasQuestionPattern || hasArrowPattern || hasOptionPattern;
+    }
+
     function initializeSmartParsing() {
         const questionTextarea = document.getElementById('editQuestionTextarea');
         const opt1 = document.getElementById('editOpt1');
@@ -1732,57 +1821,12 @@
                 if (text) {
                     // Check if text contains parsing patterns
                     if (containsParsingPatterns(text)) {
-                        parseMultiLineInput(text, sourceField);
+                        parseMultiLineInput(text, sourceField, true); // Silent parsing
                     }
                 }
             }, 5000); // 5 seconds
             
             return timeoutRef;
-        }
-        
-        // Function to check if text contains parsing patterns
-        function containsParsingPatterns(text) {
-            const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
-            
-            // Check for function name patterns
-            const functionPatterns = ['input()', 'read()', 'get()', 'scan()'];
-            let hasFunctionPatterns = false;
-            
-            lines.forEach(line => {
-                functionPatterns.forEach(pattern => {
-                    if (line.toLowerCase().includes(pattern.toLowerCase())) {
-                        hasFunctionPatterns = true;
-                    }
-                });
-            });
-            
-            // Check for question patterns - more flexible
-            const questionPatterns = [
-                /what.*question/i,
-                /what.*function/i,
-                /what.*correct/i,
-                /what.*way/i,
-                /your.*question/i,
-                /question:/i,
-                /q:/i,
-                /option\s*[:\-]?\s*→/i,
-                /correct\s*[:\-]?\s*answer/i
-            ];
-            
-            const hasQuestionPattern = lines.some(line => 
-                questionPatterns.some(pattern => pattern.test(line))
-            );
-            
-            // Check for arrow patterns (→)
-            const hasArrowPattern = lines.some(line => line.includes('→'));
-            
-            // Check for colon patterns with option keywords
-            const optionKeywords = ['first option', 'second option', 'third option', 'fourth option', 'option 1', 'option 2', 'option 3', 'option 4'];
-            const hasOptionPattern = lines.some(line => 
-                optionKeywords.some(keyword => line.toLowerCase().includes(keyword.toLowerCase()))
-            );
-            
-            return hasFunctionPatterns || hasQuestionPattern || hasArrowPattern || hasOptionPattern;
         }
         
         // Add event listeners for automatic parsing
@@ -1976,25 +2020,17 @@ window.addEventListener('DOMContentLoaded', function() {
         // Trigger immediate parsing if there's content in the question textarea
         const questionTextarea = document.getElementById('editQuestionTextarea');
         if (questionTextarea && questionTextarea.value.trim()) {
-            // Parse immediately to ensure content is processed before validation
-            const lines = questionTextarea.value.trim().split('\n').map(line => line.trim()).filter(line => line !== '');
-            if (lines.length >= 5) {
-                // Check if it looks like our special format
-                const hasYourQuestion = lines.some(line => line.toLowerCase().startsWith('your question:'));
-                const hasOptions = lines.some(line => 
-                    line.toLowerCase().startsWith('option 1:') ||
-                    line.toLowerCase().startsWith('option 2:') ||
-                    line.toLowerCase().startsWith('option 3:') ||
-                    line.toLowerCase().startsWith('option 4:')
-                );
-                const hasCorrectAnswer = lines.some(line => line.toLowerCase().startsWith('correct answer:'));
-                
-                if (hasYourQuestion && hasOptions && hasCorrectAnswer) {
-                    // Parse immediately before validation
-                    parseFromQuestionTextarea(lines);
-                }
+            const text = questionTextarea.value.trim();
+            // Check if text contains parsing patterns
+            if (containsParsingPatterns(text)) {
+                // Parse immediately to ensure content is processed before validation
+                const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
+                parseFromQuestionTextarea(lines, true); // Silent parsing
             }
         }
+        
+        // Check if question suggests code snippet type immediately after parsing
+        checkForCodeSnippetEdit();
         
         const qType = document.getElementById("questionTypeSelect").value;
         let msg = '';
@@ -2073,7 +2109,10 @@ window.addEventListener('DOMContentLoaded', function() {
                 } else {
                     const correctValue = document.getElementById('editCorrectAnswer').value.trim();
                     if (correctValue && !opts.includes(correctValue)) {
-                        msg = "Correct answer must match one of the options.";
+                        msg = "Correct answer mismatch!\n\n" +
+                            "The correct answer (\"" + correctValue + "\") must match one of the provided options exactly.\n\n" +
+                            "Available Options:\n" + opts.map((opt, i) => (i + 1) + ". " + opt).join("\n") + "\n\n" +
+                            "Please ensure the correct answer matches one of the options above.";
                     }
                 }
             }
