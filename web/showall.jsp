@@ -903,7 +903,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
 </button>
 
 <!-- Delete Confirmation Modal -->
-<div id="deleteModal" class="modal-backdrop">
+<div id="deleteModal" class="modal-backdrop" style="display: none;">
     <div class="modal-box">
         <div class="modal-header">Confirm Deletion</div>
         <div class="modal-body">
