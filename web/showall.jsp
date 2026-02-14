@@ -245,8 +245,8 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
         overflow: hidden; animation: slideIn 0.3s ease;
     }
     @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    .modal-header { padding: 20px; background: #f8fafc; border-bottom: 1px solid #eee; font-weight: 600; }
-    .modal-body { padding: 24px; font-size: 15px; line-height: 1.5; color: #475569; }
+    .modal-header { padding: 20px; background: #f8fafc; border-bottom: 1px solid #eee; font-weight: 600; text-align: center; }
+    .modal-body { padding: 24px; font-size: 15px; line-height: 1.5; color: #475569; text-align: center; }
     .modal-footer { padding: 16px 24px; background: #f8fafc; display: flex; justify-content: flex-end; gap: 12px; }
     .btn-cancel { background: #eee; color: #666; padding: 8px 16px; border-radius: 6px; cursor: pointer; border: none; }
     .btn-confirm-del { background: var(--error); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; border: none; }
