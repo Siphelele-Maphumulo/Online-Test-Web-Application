@@ -2578,34 +2578,118 @@ function parseMultipleQuestions(text) {
     return questions;
 }
 
-// Function to add multiple questions to the form (simulated by showing them one by one)
+// Modal for displaying multiple questions
+function showMultipleQuestionsModal(questions) {
+    // Create modal HTML dynamically
+    let modalHtml = `
+        <div id="multipleQuestionsModal" class="modal" style="display: block; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+            <div class="modal-content" style="background-color: #fefefe; margin: 2% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 1000px; max-height: 80vh; overflow-y: auto; border-radius: 8px;">
+                <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+                    <h3 style="margin: 0; color: #333;">
+                        <i class="fas fa-list"></i> Multiple Questions Detected
+                    </h3>
+                    <span class="close-modal" onclick="closeMultipleQuestionsModal()" style="font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa;">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p>You have ${questions.length} questions ready to be processed. Review and confirm to add all at once:</p>
+                    <div id="questionsList" style="max-height: 400px; overflow-y: auto; margin-bottom: 20px;">
+    `;
+    
+    // Add each question to the modal
+    questions.forEach((q, index) => {
+        modalHtml += `
+            <div class="question-preview" style="border: 1px solid #ddd; margin-bottom: 15px; padding: 15px; border-radius: 5px; background-color: #f9f9f9;">
+                <h4 style="margin-top: 0; color: #444;">Question ${index + 1}</h4>
+                <p><strong>Question:</strong> ${q.question}</p>
+                <p><strong>Options:</strong></p>
+                <ul style="margin-bottom: 10px;">
+                    ${q.options[0] ? `<li><strong>1:</strong> ${q.options[0]}</li>` : ''}
+                    ${q.options[1] ? `<li><strong>2:</strong> ${q.options[1]}</li>` : ''}
+                    ${q.options[2] ? `<li><strong>3:</strong> ${q.options[2]}</li>` : ''}
+                    ${q.options[3] ? `<li><strong>4:</strong> ${q.options[3]}</li>` : ''}
+                </ul>
+                <p><strong>Correct Answer:</strong> ${q.correct}</p>
+            </div>
+        `;
+    });
+    
+    modalHtml += `
+                    </div>
+                </div>
+                <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 15px; border-top: 1px solid #eee;">
+                    <button onclick="closeMultipleQuestionsModal()" class="btn btn-secondary" style="padding: 8px 16px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    <button onclick="processAllQuestions(${JSON.stringify(questions).replace(/</g, '\u003c').replace(/>/g, '\u003e').replace(/&/g, '\u0026')})" class="btn btn-primary" style="padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Add All Questions</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Insert modal into body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+// Function to close the multiple questions modal
+function closeMultipleQuestionsModal() {
+    const modal = document.getElementById('multipleQuestionsModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Function to process all questions
+function processAllQuestions(questions) {
+    // Close the modal
+    closeMultipleQuestionsModal();
+    
+    // Process the first question in the current form
+    if (questions.length > 0) {
+        const firstQuestion = questions[0];
+        
+        // Populate the current form
+        const questionTextarea = document.getElementById('questionTextarea');
+        const opt1 = document.getElementById('opt1');
+        const opt2 = document.getElementById('opt2');
+        const opt3 = document.getElementById('opt3');
+        const opt4 = document.getElementById('opt4');
+        const correct = document.getElementById('correctAnswer');
+        
+        if (questionTextarea) questionTextarea.value = firstQuestion.question;
+        if (opt1) opt1.value = firstQuestion.options[0];
+        if (opt2) opt2.value = firstQuestion.options[1];
+        if (opt3) opt3.value = firstQuestion.options[2];
+        if (opt4) opt4.value = firstQuestion.options[3];
+        if (correct) correct.value = firstCorrectAnswer(firstQuestion);
+        
+        showToast('success', 'Questions Loaded', `Loaded first question. ${questions.length - 1} remaining questions can be processed by submitting and repeating.`);
+    }
+}
+
+// Function to add multiple questions to the form
 function addMultipleQuestions(questions) {
     if (questions.length === 0) return;
     
-    // Process the first question immediately
-    const firstQuestion = questions[0];
-    
-    // Populate the current form
-    const questionTextarea = document.getElementById('questionTextarea');
-    const opt1 = document.getElementById('opt1');
-    const opt2 = document.getElementById('opt2');
-    const opt3 = document.getElementById('opt3');
-    const opt4 = document.getElementById('opt4');
-    const correct = document.getElementById('correctAnswer');
-    
-    if (questionTextarea) questionTextarea.value = firstQuestion.question;
-    if (opt1) opt1.value = firstQuestion.options[0];
-    if (opt2) opt2.value = firstQuestion.options[1];
-    if (opt3) opt3.value = firstQuestion.options[2];
-    if (opt4) opt4.value = firstQuestion.options[3];
-    if (correct) correct.value = firstCorrectAnswer(firstQuestion);
-    
-    // Show a message about remaining questions
     if (questions.length > 1) {
-        showToast('info', 'Multiple Questions Detected', 
-            `Found ${questions.length} questions. Processing first question.\n` +
-            `Remaining questions (${questions.length - 1}) can be processed separately.`);
+        // Show modal with all questions if there are multiple
+        showMultipleQuestionsModal(questions);
     } else {
+        // Process single question directly
+        const firstQuestion = questions[0];
+        
+        // Populate the current form
+        const questionTextarea = document.getElementById('questionTextarea');
+        const opt1 = document.getElementById('opt1');
+        const opt2 = document.getElementById('opt2');
+        const opt3 = document.getElementById('opt3');
+        const opt4 = document.getElementById('opt4');
+        const correct = document.getElementById('correctAnswer');
+        
+        if (questionTextarea) questionTextarea.value = firstQuestion.question;
+        if (opt1) opt1.value = firstQuestion.options[0];
+        if (opt2) opt2.value = firstQuestion.options[1];
+        if (opt3) opt3.value = firstQuestion.options[2];
+        if (opt4) opt4.value = firstQuestion.options[3];
+        if (correct) correct.value = firstCorrectAnswer(firstQuestion);
+        
         showToast('success', 'Success', `Processed 1 question successfully.`);
     }
 }
@@ -3125,6 +3209,10 @@ document.addEventListener('DOMContentLoaded', function() {
     window.onclick = (event) => {
         const modal = document.getElementById('validationModal');
         if (event.target == modal) closeModal();
+        
+        // Also close multiple questions modal if clicked outside
+        const multiModal = document.getElementById('multipleQuestionsModal');
+        if (multiModal && event.target == multiModal) closeMultipleQuestionsModal();
     };
 
     // Re-enable scroll indicator with debounce to prevent performance issues
