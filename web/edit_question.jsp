@@ -1499,6 +1499,15 @@
             opt3.value = result.options[2] || '';
             opt4.value = result.options[3] || '';
             correct.value = result.correct || result.options[0] || '';
+
+            // Auto-update question type
+            if (result.type) {
+                const typeSelect = document.getElementById('questionTypeSelect');
+                if (typeSelect) {
+                    typeSelect.value = result.type;
+                    if (typeof toggleEditOptions === 'function') toggleEditOptions();
+                }
+            }
             
             // Debug the field values
             console.log('Setting field values:');
@@ -1596,7 +1605,8 @@
             success: false,
             question: '',
             options: ['', '', '', ''],
-            correct: ''
+            correct: '',
+            type: 'MCQ'
         };
         
         console.log('=== PARSING START ==='); // Debug log
@@ -1653,6 +1663,14 @@
             if (result.question || result.options.some(opt => opt !== '') || result.correct) {
                 result.success = true;
                 console.log('Parsing successful with question or options'); // Debug log
+
+                // Auto-detect type
+                result.type = detectQuestionType(result.question, result.options, result.correct);
+
+                // Sanitize correct answer
+                if (result.correct) {
+                    result.correct = sanitizeCorrectAnswer(result);
+                }
             }
         }
         
@@ -1725,6 +1743,21 @@
             if (option3) opt3.value = option3;
             if (option4) opt4.value = option4;
             if (correctAnswer) correct.value = correctAnswer;
+
+            // Auto-detect and sanitize
+            const opts = [option1, option2, option3, option4];
+            const detectedType = detectQuestionType(questionText, opts, correctAnswer);
+            const sanitizedCorrect = sanitizeCorrectAnswer({ correct: correctAnswer, options: opts });
+
+            if (sanitizedCorrect) {
+                correct.value = sanitizedCorrect;
+            }
+
+            const typeSelect = document.getElementById('questionTypeSelect');
+            if (typeSelect) {
+                typeSelect.value = detectedType;
+                if (typeof toggleEditOptions === 'function') toggleEditOptions();
+            }
             
             // Validate correct answer against options
             const opts = [option1, option2, option3, option4].map(opt => opt.trim()).filter(opt => opt !== '');
@@ -1752,6 +1785,72 @@
 
 
     
+    /**
+     * Auto-detects the question type based on content, options, and correct answer.
+     */
+    function detectQuestionType(question, options, correct) {
+        const qText = (question || "").toLowerCase();
+        const cVal = (correct || "").trim().toLowerCase();
+        const opts = (options || []).filter(o => o && o.trim() !== '');
+
+        // 1. Detect Code Snippet
+        const codeKeywords = /(?:def |function |public |class |print\(|console\.|<[^>]*>|\{|\}|import |int |String |printf\(|cout |output of the code|following code|code snippet)/i;
+        if (codeKeywords.test(question) || (question && question.includes('\n') && question.split('\n').filter(l => l.trim()).length > 3)) {
+            return 'Code';
+        }
+        // 2. Detect True/False
+        if (cVal === 'true' || cVal === 'false' || (opts.length === 2 && (opts.some(o => o.toLowerCase() === 'true') || opts.some(o => o.toLowerCase() === 'false')))) {
+            return 'TrueFalse';
+        }
+        // 3. Detect Multiple Select
+        if ((correct && correct.includes('|')) || qText.includes('(select two)') || qText.includes('(select 2)') || qText.includes('(select all)') || qText.includes('(select all that apply)')) {
+            return 'MultipleSelect';
+        }
+        // 4. Default to MCQ
+        return 'MCQ';
+    }
+
+    /**
+     * Sanitizes the correct answer by matching it against options or extracting from Option X format.
+     */
+    function sanitizeCorrectAnswer(q) {
+        if (!q || !q.correct) return "";
+        const correctText = q.correct.trim();
+        const options = q.options || [];
+
+        // 1. Check for exact match
+        if (options.includes(correctText)) return correctText;
+
+        // 2. Check for "Option X: text" format in correct answer
+        const optionMatch = correctText.match(/Option\s+(\d+)[:\s]*(.*)/i);
+        if (optionMatch) {
+            const index = parseInt(optionMatch[1]) - 1;
+            const textAfterPrefix = optionMatch[2].trim();
+            if (index >= 0 && index < options.length && options[index]) {
+                if (!textAfterPrefix || options[index].includes(textAfterPrefix) || textAfterPrefix.includes(options[index])) {
+                    return options[index];
+                }
+            }
+        }
+
+        // 3. Check if correct answer contains a number (1-4), use that option if no prefix but just "1"
+        if (correctText.length === 1 && !isNaN(correctText)) {
+            const num = parseInt(correctText);
+            if (num >= 1 && num <= 4 && options[num-1]) return options[num-1];
+        }
+
+        // 4. Check if any option is contained in the correct answer or vice versa (fuzzy)
+        for (let opt of options) {
+            if (opt && opt.length > 2) {
+                if (correctText.toLowerCase().includes(opt.toLowerCase()) || opt.toLowerCase().includes(correctText.toLowerCase())) {
+                    return opt;
+                }
+            }
+        }
+
+        return correctText;
+    }
+
     // Function to check if text contains parsing patterns
     function containsParsingPatterns(text) {
         const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');

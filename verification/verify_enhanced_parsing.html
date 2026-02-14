@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Refactored Enhanced Parsing</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .container { display: flex; gap: 20px; }
+        .panel { flex: 1; border: 1px solid #ccc; padding: 10px; border-radius: 5px; }
+        textarea { width: 100%; }
+        .result-item { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .match-indicator { font-weight: bold; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h2>Refactored Enhanced Question Parsing Verification</h2>
+
+    <div class="container">
+        <div class="panel">
+            <h3>Input Questions</h3>
+            <textarea id="testInput" rows="20">
+Your Question: The LINQ method filters elements based on a condition is Where().
+Option 1: Opt 1
+Option 2: Opt 2
+Option 3: Opt 3
+Option 4: Opt 4
+Correct Answer: True
+
+Your Question: Please select 2 statements that will equal to zero? (select two)
+Option 1: 1 + 1 - 2
+Option 2: 10 * 10 - 20
+Option 3: 1 * 1 + 0
+Option 4: 14 / 7 - 2
+Correct Answer: 1 + 1 - 2
+
+Your Question: What would be the output of the code? def velocity(x): return speed + x speed = 10 new_speed = velocity() new_speed=velocity(new_speed) print(new_speed)
+Option 1: 1
+Option 2: 10
+Option 3: 100
+Option 4: error
+Correct Answer: 100
+            </textarea>
+            <br><br>
+            <button id="runTestBtn" onclick="runTest()">Run Detection Test</button>
+        </div>
+
+        <div class="panel">
+            <h3>Detection Results</h3>
+            <div id="resultsOutput"></div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Auto-detects the question type based on content, options, and correct answer.
+         */
+        function detectQuestionType(question, options, correct) {
+            const qText = (question || "").toLowerCase();
+            const cVal = (correct || "").trim().toLowerCase();
+            const opts = (options || []).filter(o => o && o.trim() !== '');
+
+            // 1. Detect Code Snippet
+            const codeKeywords = /(?:def |function |public |class |print\(|console\.|<[^>]*>|\{|\}|import |int |String |printf\(|cout |output of the code|following code|code snippet)/i;
+            if (codeKeywords.test(question) || (question && question.includes('\n') && question.split('\n').filter(l => l.trim()).length > 3)) {
+                return 'Code';
+            }
+            // 2. Detect True/False
+            if (cVal === 'true' || cVal === 'false' || (opts.length === 2 && (opts.some(o => o.toLowerCase() === 'true') || opts.some(o => o.toLowerCase() === 'false')))) {
+                return 'TrueFalse';
+            }
+            // 3. Detect Multiple Select
+            if ((correct && correct.includes('|')) || qText.includes('(select two)') || qText.includes('(select 2)') || qText.includes('(select all)') || qText.includes('(select all that apply)')) {
+                return 'MultipleSelect';
+            }
+            // 4. Default to MCQ
+            return 'MCQ';
+        }
+
+        /**
+         * Sanitizes the correct answer by matching it against options or extracting from Option X format.
+         */
+        function sanitizeCorrectAnswer(q) {
+            if (!q || !q.correct) return "";
+            const correctText = q.correct.trim();
+            const options = q.options || [];
+            if (options.includes(correctText)) return correctText;
+            const optionMatch = correctText.match(/Option\s+(\d+)[:\s]*(.*)/i);
+            if (optionMatch) {
+                const index = parseInt(optionMatch[1]) - 1;
+                const textAfterPrefix = optionMatch[2].trim();
+                if (index >= 0 && index < options.length && options[index]) {
+                    if (!textAfterPrefix || options[index].includes(textAfterPrefix) || textAfterPrefix.includes(options[index])) {
+                        return options[index];
+                    }
+                }
+            }
+            if (correctText.length === 1 && !isNaN(correctText)) {
+                const num = parseInt(correctText);
+                if (num >= 1 && num <= 4 && options[num-1]) return options[num-1];
+            }
+            for (let opt of options) {
+                if (opt && opt.length > 2) {
+                    if (correctText.toLowerCase().includes(opt.toLowerCase()) || opt.toLowerCase().includes(correctText.toLowerCase())) {
+                        return opt;
+                    }
+                }
+            }
+            return correctText;
+        }
+
+        function parseMultipleQuestions(text) {
+            const questions = [];
+            const lines = text.split('\n').map(line => line.trim());
+            let currentQuestion = null;
+            let currentSection = '';
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const lowerLine = line.toLowerCase().trim();
+                if (lowerLine.startsWith('your question:')) {
+                    if (currentQuestion && (currentQuestion.question || currentQuestion.options.some(opt => opt))) {
+                        questions.push({...currentQuestion});
+                    }
+                    currentQuestion = {
+                        question: line.substring(line.indexOf(':') + 1).trim(),
+                        options: ['', '', '', ''],
+                        correct: '',
+                        type: 'MCQ'
+                    };
+                    currentSection = 'question';
+                } else if (currentQuestion && lowerLine.startsWith('option 1:')) {
+                    currentQuestion.options[0] = line.substring(line.indexOf(':') + 1).trim();
+                    currentSection = 'option1';
+                } else if (currentQuestion && lowerLine.startsWith('option 2:')) {
+                    currentQuestion.options[1] = line.substring(line.indexOf(':') + 1).trim();
+                    currentSection = 'option2';
+                } else if (currentQuestion && lowerLine.startsWith('option 3:')) {
+                    currentQuestion.options[2] = line.substring(line.indexOf(':') + 1).trim();
+                    currentSection = 'option3';
+                } else if (currentQuestion && lowerLine.startsWith('option 4:')) {
+                    currentQuestion.options[3] = line.substring(line.indexOf(':') + 1).trim();
+                    currentSection = 'option4';
+                } else if (currentQuestion && lowerLine.startsWith('correct answer:')) {
+                    currentQuestion.correct = line.substring(line.indexOf(':') + 1).trim();
+                    currentSection = 'correct';
+                } else if (line && currentQuestion) {
+                    if (currentSection === 'question') currentQuestion.question += ' ' + line;
+                    else if (currentSection === 'option1') currentQuestion.options[0] += ' ' + line;
+                    else if (currentSection === 'option2') currentQuestion.options[1] += ' ' + line;
+                    else if (currentSection === 'option3') currentQuestion.options[2] += ' ' + line;
+                    else if (currentSection === 'option4') currentQuestion.options[3] += ' ' + line;
+                    else if (currentSection === 'correct') currentQuestion.correct += ' ' + line;
+                }
+            }
+            if (currentQuestion && (currentQuestion.question || currentQuestion.options.some(opt => opt))) {
+                questions.push({...currentQuestion});
+            }
+
+            questions.forEach(q => {
+                q.options = q.options.map(opt => opt ? opt.trim() : '');
+                q.type = detectQuestionType(q.question, q.options, q.correct);
+                if (q.correct) q.correct = sanitizeCorrectAnswer(q);
+            });
+            return questions;
+        }
+
+        function runTest() {
+            const input = document.getElementById('testInput').value;
+            const questions = parseMultipleQuestions(input);
+            const output = document.getElementById('resultsOutput');
+            output.innerHTML = '';
+
+            questions.forEach((q, i) => {
+                const div = document.createElement('div');
+                div.className = 'result-item';
+                let expected = '';
+                if (i === 0) expected = 'TrueFalse';
+                if (i === 1) expected = 'MultipleSelect';
+                if (i === 2) expected = 'Code';
+
+                const isMatch = q.type === expected;
+                div.innerHTML = `
+                    <strong>Question ${i+1}:</strong> ${q.question.substring(0, 50)}...<br>
+                    <strong>Detected Type:</strong> <span class="match-indicator ${isMatch ? 'success' : 'error'}">${q.type}</span>
+                    (Expected: ${expected})
+                `;
+                output.appendChild(div);
+            });
+        }
+    </script>
+</body>
+</html>
