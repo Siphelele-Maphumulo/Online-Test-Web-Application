@@ -1300,7 +1300,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
         
         <!-- Upload Question File Panel -->
         <div class="question-card" id="uploadQuestionFilePanel">
-            <div class="card-header" style="background: linear-gradient(90deg, var(--info), var(--secondary-blue));">
+            <div class="card-header" style="background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));">
                 <span><i class="fas fa-file-upload"></i> Upload Question File (TXT/PDF)</span>
                 <i class="fas fa-upload" style="opacity: 0.8;"></i>
             </div>
