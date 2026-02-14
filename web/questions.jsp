@@ -1153,6 +1153,59 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
     transform: scale(1.05);
 }
 
+    /* Enhanced Multi-Question Modal Styles */
+    .batch-review-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+    .batch-review-table th {
+        background: var(--light-gray);
+        padding: 10px;
+        text-align: left;
+        font-size: 12px;
+        text-transform: uppercase;
+        color: var(--dark-gray);
+        border-bottom: 2px solid var(--medium-gray);
+    }
+    .batch-review-table td {
+        padding: 10px;
+        border-bottom: 1px solid var(--medium-gray);
+        vertical-align: top;
+    }
+    .batch-row-edit {
+        background: #fff;
+        border: 1px solid var(--medium-gray);
+        border-radius: 4px;
+        padding: 5px;
+        width: 100%;
+        font-size: 13px;
+    }
+    .batch-row-edit:focus {
+        border-color: var(--accent-blue);
+        outline: none;
+    }
+    .match-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 10px;
+    }
+    .match-success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    .match-error {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    .batch-modal-content {
+        max-width: 1200px !important;
+        width: 95% !important;
+    }
 </style>
 
 <!-- Dashboard Layout -->
@@ -1270,7 +1323,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                         <div id="fileNameDisplay" class="file-name-display" style="display: none; margin-top: 10px;">
                             <i class="fas fa-file-pdf"></i>
                             <span id="fileName"></span>
-                            <button type="button" class="remove-file-btn" onclick="removeFile()">�</button>
+                            <button type="button" class="remove-file-btn" onclick="removeFile()">?</button>
                         </div>
                         <small class="form-hint">Upload a PDF file to extract questions automatically</small>
                     </div>
@@ -1295,6 +1348,24 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
             </div>
         </div>-->
         
+        <!-- Batch Progress Card -->
+        <div class="question-card" id="batchProgressCard" style="display: none; border-left: 5px solid var(--accent-blue);">
+            <div class="card-header" style="background: linear-gradient(90deg, var(--accent-blue), var(--secondary-blue));">
+                <span><i class="fas fa-layer-group"></i> Batch Processing Active</span>
+                <button type="button" class="btn btn-sm btn-outline" style="color: white; border-color: white; padding: 2px 8px;" onclick="cancelBatch()">Cancel Batch</button>
+            </div>
+            <div class="question-form" style="padding: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span id="batchProgressText" style="font-weight: 600; color: var(--primary-blue);">Question 1 of 5</span>
+                    <span id="batchPercentageText" style="font-weight: 600; color: var(--success);">20%</span>
+                </div>
+                <div class="progress" style="height: 10px; margin-bottom: 5px;">
+                    <div id="batchProgressBar" class="progress-bar" style="width: 20%;"></div>
+                </div>
+                <small class="form-hint" id="batchStatusHint">Loading next question into form automatically after each submission...</small>
+            </div>
+        </div>
+
         <!-- Add Question Panel -->
         <div class="question-card" id="addQuestionPanel">
             <div class="card-header">
@@ -1369,7 +1440,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                         <div id="imageFileNameDisplay" class="file-name-display" style="display: none; margin-top: 10px;">
                             <i class="fas fa-image"></i>
                             <span id="imageFileName"></span>
-                            <button type="button" class="remove-file-btn" onclick="removeImageFile()">�</button>
+                            <button type="button" class="remove-file-btn" onclick="removeImageFile()">?</button>
                         </div>
                         <small class="form-hint">Upload an image to accompany your question (optional)</small>
                     </div>
@@ -2529,7 +2600,8 @@ function parseMultipleQuestions(text) {
             currentQuestion = {
                 question: line.substring(line.indexOf(':') + 1).trim(),
                 options: ['', '', '', ''],
-                correct: ''
+                correct: '',
+                type: 'MCQ'
             };
             currentSection = 'question';
         } else if (currentQuestion && lowerLine.startsWith('option 1:')) {
@@ -2574,58 +2646,142 @@ function parseMultipleQuestions(text) {
         questions.push({...currentQuestion});
     }
     
+    // Auto-detect question types
+    questions.forEach(q => {
+        const options = q.options.filter(opt => opt.trim() !== '');
+        if (options.length === 2 && 
+            (options.some(o => o.toLowerCase() === 'true') || options.some(o => o.toLowerCase() === 'false'))) {
+            q.type = 'TrueFalse';
+        } else if (q.correct && q.correct.includes('|')) {
+            q.type = 'MultipleSelect';
+        }
+    });
+
     console.log('Parsed multiple questions:', questions);
     return questions;
 }
 
-// Modal for displaying multiple questions
+// Modal for displaying and editing multiple questions
 function showMultipleQuestionsModal(questions) {
     // Create modal HTML dynamically
     let modalHtml = `
         <div id="multipleQuestionsModal" class="modal" style="display: block; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
-            <div class="modal-content" style="background-color: #fefefe; margin: 2% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 1000px; max-height: 80vh; overflow-y: auto; border-radius: 8px;">
+            <div class="modal-content batch-modal-content" style="background-color: #fefefe; margin: 2% auto; padding: 20px; border: 1px solid #888; border-radius: 8px;">
                 <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
                     <h3 style="margin: 0; color: #333;">
-                        <i class="fas fa-list"></i> Multiple Questions Detected
+                        <i class="fas fa-list"></i> Review Parsed Questions (${questions.length})
                     </h3>
                     <span class="close-modal" onclick="closeMultipleQuestionsModal()" style="font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa;">&times;</span>
                 </div>
-                <div class="modal-body">
-                    <p>You have ${questions.length} questions ready to be processed. Review and confirm to add all at once:</p>
-                    <div id="questionsList" style="max-height: 400px; overflow-y: auto; margin-bottom: 20px;">
+                <div class="modal-body" style="padding: 0;">
+                    <p style="padding: 10px 0;">Please review and edit the parsed questions below. Click "Add All Questions" to start batch processing.</p>
+                    <div style="max-height: 60vh; overflow-y: auto; border: 1px solid var(--medium-gray); border-radius: 4px;">
+                        <table class="batch-review-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 30%;">Question Text</th>
+                                    <th style="width: 35%;">Options</th>
+                                    <th style="width: 20%;">Correct Answer</th>
+                                    <th style="width: 10%;">Type</th>
+                                </tr>
+                            </thead>
+                            <tbody id="batchQuestionsTableBody">
     `;
     
-    // Add each question to the modal
+    // Add each question to the table
     questions.forEach((q, index) => {
+        const matchStatus = getMatchStatus(q);
         modalHtml += `
-            <div class="question-preview" style="border: 1px solid #ddd; margin-bottom: 15px; padding: 15px; border-radius: 5px; background-color: #f9f9f9;">
-                <h4 style="margin-top: 0; color: #444;">Question ${index + 1}</h4>
-                <p><strong>Question:</strong> ${q.question}</p>
-                <p><strong>Options:</strong></p>
-                <ul style="margin-bottom: 10px;">
-                    ${q.options[0] ? `<li><strong>1:</strong> ${q.options[0]}</li>` : ''}
-                    ${q.options[1] ? `<li><strong>2:</strong> ${q.options[1]}</li>` : ''}
-                    ${q.options[2] ? `<li><strong>3:</strong> ${q.options[2]}</li>` : ''}
-                    ${q.options[3] ? `<li><strong>4:</strong> ${q.options[3]}</li>` : ''}
-                </ul>
-                <p><strong>Correct Answer:</strong> ${q.correct}</p>
-            </div>
+            <tr data-index="${index}">
+                <td>${index + 1}</td>
+                <td>
+                    <textarea class="batch-row-edit" oninput="updateBatchQuestion(${index}, 'question', this.value)" rows="3">${q.question}</textarea>
+                </td>
+                <td>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                        <input type="text" class="batch-row-edit" value="${q.options[0] || ''}" placeholder="Opt 1" oninput="updateBatchQuestion(${index}, 'opt0', this.value)">
+                        <input type="text" class="batch-row-edit" value="${q.options[1] || ''}" placeholder="Opt 2" oninput="updateBatchQuestion(${index}, 'opt1', this.value)">
+                        <input type="text" class="batch-row-edit" value="${q.options[2] || ''}" placeholder="Opt 3" oninput="updateBatchQuestion(${index}, 'opt2', this.value)">
+                        <input type="text" class="batch-row-edit" value="${q.options[3] || ''}" placeholder="Opt 4" oninput="updateBatchQuestion(${index}, 'opt3', this.value)">
+                    </div>
+                </td>
+                <td>
+                    <input type="text" class="batch-row-edit" value="${q.correct}" oninput="updateBatchQuestion(${index}, 'correct', this.value)">
+                    <div id="match-indicator-${index}" class="match-indicator ${matchStatus.isValid ? 'match-success' : 'match-error'}" style="margin-top: 5px;">
+                        <i class="fas ${matchStatus.isValid ? 'fa-check-circle' : 'fa-exclamation-triangle'}"></i>
+                        <span>${matchStatus.message}</span>
+                    </div>
+                </td>
+                <td>
+                    <select class="batch-row-edit" onchange="updateBatchQuestion(${index}, 'type', this.value)">
+                        <option value="MCQ" ${q.type === 'MCQ' ? 'selected' : ''}>MCQ</option>
+                        <option value="TrueFalse" ${q.type === 'TrueFalse' ? 'selected' : ''}>T/F</option>
+                        <option value="MultipleSelect" ${q.type === 'MultipleSelect' ? 'selected' : ''}>Multi</option>
+                        <option value="Code" ${q.type === 'Code' ? 'selected' : ''}>Code</option>
+                    </select>
+                </td>
+            </tr>
         `;
     });
     
     modalHtml += `
+                            </tbody>
+                        </table>
                     </div>
                 </div>
                 <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 15px; border-top: 1px solid #eee;">
-                    <button onclick="closeMultipleQuestionsModal()" class="btn btn-secondary" style="padding: 8px 16px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
-                    <button onclick="processAllQuestions(${JSON.stringify(questions).replace(/</g, '\u003c').replace(/>/g, '\u003e').replace(/&/g, '\u0026')})" class="btn btn-primary" style="padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Add All Questions</button>
+                    <button type="button" onclick="closeMultipleQuestionsModal()" class="btn btn-outline">Cancel</button>
+                    <button type="button" onclick="processAllQuestions()" class="btn btn-primary">
+                        <i class="fas fa-plus-circle"></i> Add All Questions
+                    </button>
                 </div>
             </div>
         </div>
     `;
     
+    // Store current working questions globally for the modal
+    window.currentBatchQuestions = JSON.parse(JSON.stringify(questions));
+    
     // Insert modal into body
     document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function getMatchStatus(q) {
+    if (!q.correct) return { isValid: false, message: 'Missing answer' };
+    
+    const options = q.options.filter(opt => opt && opt.trim() !== '');
+    if (q.type === 'MCQ' || q.type === 'Code') {
+        const match = options.some(opt => opt.trim() === q.correct.trim());
+        return match ? { isValid: true, message: 'Matches option' } : { isValid: false, message: 'No match' };
+    } else if (q.type === 'MultipleSelect') {
+        const correctParts = q.correct.split('|').map(p => p.trim());
+        const matchCount = correctParts.filter(p => options.includes(p)).length;
+        return matchCount === 2 ? { isValid: true, message: 'Matches 2 options' } : { isValid: false, message: `Matches ${matchCount}/2` };
+    } else if (q.type === 'TrueFalse') {
+        const isValid = ['true', 'false'].includes(q.correct.toLowerCase());
+        return isValid ? { isValid: true, message: 'Valid T/F' } : { isValid: false, message: 'Invalid T/F' };
+    }
+    return { isValid: true, message: 'Ready' };
+}
+
+function updateBatchQuestion(index, field, value) {
+    const q = window.currentBatchQuestions[index];
+    if (field === 'question') q.question = value;
+    else if (field === 'correct') q.correct = value;
+    else if (field === 'type') q.type = value;
+    else if (field.startsWith('opt')) {
+        const optIndex = parseInt(field.substring(3));
+        q.options[optIndex] = value;
+    }
+    
+    // Update match indicator
+    const matchStatus = getMatchStatus(q);
+    const indicator = document.getElementById(`match-indicator-${index}`);
+    if (indicator) {
+        indicator.className = `match-indicator ${matchStatus.isValid ? 'match-success' : 'match-error'}`;
+        indicator.innerHTML = `<i class="fas ${matchStatus.isValid ? 'fa-check-circle' : 'fa-exclamation-triangle'}"></i> <span>${matchStatus.message}</span>`;
+    }
 }
 
 // Function to close the multiple questions modal
@@ -2634,93 +2790,210 @@ function closeMultipleQuestionsModal() {
     if (modal) {
         modal.remove();
     }
+    window.currentBatchQuestions = null;
 }
 
 // Function to process all questions
-function processAllQuestions(questions) {
+function processAllQuestions() {
+    const questions = window.currentBatchQuestions;
+    if (!questions || questions.length === 0) return;
+
     // Close the modal
     closeMultipleQuestionsModal();
     
     // Store all questions for batch processing
     sessionStorage.setItem('batchQuestions', JSON.stringify(questions));
-    sessionStorage.setItem('batchQuestionsTotal', questions.length.toString());
+    sessionStorage.setItem('batchTotal', questions.length.toString());
+    sessionStorage.setItem('batchCurrentIndex', '0');
     
-    // Process the first question in the current form
-    if (questions.length > 0) {
-        const firstQuestion = questions[0];
+    startBatchProcessing();
+}
+
+function startBatchProcessing() {
+    const questions = JSON.parse(sessionStorage.getItem('batchQuestions') || '[]');
+    const index = parseInt(sessionStorage.getItem('batchCurrentIndex') || '0');
+    
+    if (index < questions.length) {
+        // Show progress card
+        updateBatchProgressUI(index, questions.length);
         
-        // Populate the current form
-        const questionTextarea = document.getElementById('questionTextarea');
-        const opt1 = document.getElementById('opt1');
-        const opt2 = document.getElementById('opt2');
-        const opt3 = document.getElementById('opt3');
-        const opt4 = document.getElementById('opt4');
-        const correct = document.getElementById('correctAnswer');
+        // Load the question into the form
+        loadQuestionIntoForm(questions[index]);
         
-        if (questionTextarea) questionTextarea.value = firstQuestion.question;
-        if (opt1) opt1.value = firstQuestion.options[0];
-        if (opt2) opt2.value = firstQuestion.options[1];
-        if (opt3) opt3.value = firstQuestion.options[2];
-        if (opt4) opt4.value = firstQuestion.options[3];
-        if (correct) correct.value = firstCorrectAnswer(firstQuestion);
+        showToast('info', 'Batch Processing Started', `Loaded first question. ${questions.length} total questions queued.`);
         
-        showToast('success', 'Batch Processing Started', `Loaded first question. ${questions.length} total questions queued for processing. Submit to add this question, then remaining questions will be auto-loaded.`);
+        // Scroll to the add question panel
+        document.getElementById('addQuestionPanel').scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('addQuestionPanel').classList.add('form-highlight');
+        setTimeout(() => document.getElementById('addQuestionPanel').classList.remove('form-highlight'), 2000);
     }
 }
 
-// Function to process next question in batch
-function processNextBatchQuestion() {
-    const batchQuestions = JSON.parse(sessionStorage.getItem('batchQuestions') || '[]');
+function updateBatchProgressUI(index, total) {
+    const card = document.getElementById('batchProgressCard');
+    const text = document.getElementById('batchProgressText');
+    const percentText = document.getElementById('batchPercentageText');
+    const bar = document.getElementById('batchProgressBar');
     
-    if (batchQuestions.length > 0) {
-        // Remove the first question that was just processed
-        batchQuestions.shift();
+    if (card) {
+        card.style.display = 'block';
+        const current = index + 1;
+        const percent = Math.round((index / total) * 100);
         
-        if (batchQuestions.length > 0) {
-            // Update the session storage
-            sessionStorage.setItem('batchQuestions', JSON.stringify(batchQuestions));
-            
-            // Load the next question
-            const nextQuestion = batchQuestions[0];
-            
-            // Populate the current form
-            const questionTextarea = document.getElementById('questionTextarea');
-            const opt1 = document.getElementById('opt1');
-            const opt2 = document.getElementById('opt2');
-            const opt3 = document.getElementById('opt3');
-            const opt4 = document.getElementById('opt4');
-            const correct = document.getElementById('correctAnswer');
-            
-            if (questionTextarea) questionTextarea.value = nextQuestion.question;
-            if (opt1) opt1.value = nextQuestion.options[0];
-            if (opt2) opt2.value = nextQuestion.options[1];
-            if (opt3) opt3.value = nextQuestion.options[2];
-            if (opt4) opt4.value = nextQuestion.options[3];
-            if (correct) correct.value = firstCorrectAnswer(nextQuestion);
-            
-            showToast('info', 'Next Question Loaded', `Loaded question ${parseInt(sessionStorage.getItem('batchQuestionsTotal')) - batchQuestions.length}/${sessionStorage.getItem('batchQuestionsTotal')} from batch. Submit to add this question.`);
+        text.textContent = `Question ${current} of ${total}`;
+        percentText.textContent = `${percent}%`;
+        bar.style.width = `${percent}%`;
+        
+        if (index === 0) {
+            document.getElementById('batchStatusHint').textContent = "Submit this question to automatically load the next one.";
         } else {
-            // Clear the batch when done
-            sessionStorage.removeItem('batchQuestions');
-            sessionStorage.removeItem('batchQuestionsTotal');
-            showToast('success', 'Batch Complete', 'All questions from the batch have been processed!');
+            document.getElementById('batchStatusHint').textContent = `Successfully added ${index} questions. Processing remaining...`;
         }
+    }
+}
+
+function loadQuestionIntoForm(q) {
+    const questionTextarea = document.getElementById('questionTextarea');
+    const typeSelect = document.getElementById('questionTypeSelect');
+    
+    // Clear existing image if any
+    if (typeof removeImageFile === 'function') removeImageFile();
+    
+    const opt1 = document.getElementById('opt1');
+    const opt2 = document.getElementById('opt2');
+    const opt3 = document.getElementById('opt3');
+    const opt4 = document.getElementById('opt4');
+    const correct = document.getElementById('correctAnswer');
+    const tfSelect = document.getElementById('trueFalseSelect');
+    
+    if (questionTextarea) questionTextarea.value = q.question;
+    if (typeSelect) {
+        typeSelect.value = q.type;
+        toggleOptions(); // Update UI for the type
+    }
+    
+    if (q.type === 'TrueFalse') {
+        if (tfSelect) tfSelect.value = (q.correct.toLowerCase() === 'true' ? 'True' : (q.correct.toLowerCase() === 'false' ? 'False' : ''));
+        if (correct) correct.value = tfSelect.value;
+    } else if (q.type === 'MultipleSelect') {
+        const correctParts = q.correct.split('|').map(p => p.trim());
+        if (opt1) opt1.value = q.options[0] || '';
+        if (opt2) opt2.value = q.options[1] || '';
+        if (opt3) opt3.value = q.options[2] || '';
+        if (opt4) opt4.value = q.options[3] || '';
+        
+        // Delay a bit to let updateCorrectOptionLabels and toggleOptions finish
+        setTimeout(() => {
+            document.querySelectorAll('.correct-checkbox').forEach((cb, idx) => {
+                const optVal = q.options[idx] || '';
+                cb.checked = optVal && correctParts.includes(optVal);
+            });
+            updateCorrectAnswerField();
+        }, 100);
+    } else {
+        if (opt1) opt1.value = q.options[0] || '';
+        if (opt2) opt2.value = q.options[1] || '';
+        if (opt3) opt3.value = q.options[2] || '';
+        if (opt4) opt4.value = q.options[3] || '';
+        if (correct) correct.value = q.correct || '';
+    }
+    
+    // Trigger any other UI updates
+    updateCorrectOptionLabels();
+}
+
+function cancelBatch() {
+    if (confirm("Are you sure you want to cancel the current batch process? Any unsubmitted questions will be lost.")) {
+        sessionStorage.removeItem('batchQuestions');
+        sessionStorage.removeItem('batchTotal');
+        sessionStorage.removeItem('batchCurrentIndex');
+        document.getElementById('batchProgressCard').style.display = 'none';
+        showToast('info', 'Batch Cancelled', 'The batch process has been stopped.');
+        resetForm();
     }
 }
 
 // Enhanced submit handler to support batch processing
 function initBatchSubmitHandling() {
-    const addQuestionForm = document.getElementById('addQuestionForm');
-    if (addQuestionForm) {
-        addQuestionForm.addEventListener('submit', function(e) {
-            // After successful submission, check if there are more questions in batch
-            setTimeout(() => {
-                const batchQuestions = JSON.parse(sessionStorage.getItem('batchQuestions') || '[]');
-                if (batchQuestions.length > 0) {
-                    processNextBatchQuestion();
-                }
-            }, 1000); // Small delay to ensure submission is processed
+    // Check if we should resume a batch on page load
+    const batchQuestions = JSON.parse(sessionStorage.getItem('batchQuestions') || '[]');
+    const index = parseInt(sessionStorage.getItem('batchCurrentIndex') || '-1');
+    if (index !== -1 && index < batchQuestions.length) {
+        updateBatchProgressUI(index, batchQuestions.length);
+        loadQuestionIntoForm(batchQuestions[index]);
+    }
+}
+
+async function submitCurrentBatchQuestion() {
+    const form = document.getElementById('addQuestionForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const originalBtnHtml = submitBtn.innerHTML;
+    
+    // Visual feedback
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding Question...';
+    
+    try {
+        const formData = new FormData(form);
+        formData.append('ajax', 'true'); // Tell controller we want JSON
+        
+        const response = await fetch(form.action, {
+            method: 'POST',
+            body: formData
         });
+        
+        let result;
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            result = await response.json();
+        } else {
+            // Fallback for non-JSON response (redirects, etc.)
+            const text = await response.text();
+            if (text.includes("Success") || response.redirected || response.url.includes("success")) {
+                result = { success: true, message: "Question added successfully" };
+            } else {
+                result = { success: false, message: "Error adding question" };
+            }
+        }
+        
+        if (result.success) {
+            const questions = JSON.parse(sessionStorage.getItem('batchQuestions') || '[]');
+            let nextIndex = parseInt(sessionStorage.getItem('batchCurrentIndex') || '0') + 1;
+            
+            if (nextIndex < questions.length) {
+                // More questions to process
+                sessionStorage.setItem('batchCurrentIndex', nextIndex.toString());
+                updateBatchProgressUI(nextIndex, questions.length);
+                loadQuestionIntoForm(questions[nextIndex]);
+                showToast('success', 'Question Added', `Question ${nextIndex} added. Loaded next one.`);
+                
+                // Clear question fields but keep course/type if needed
+                // (loadQuestionIntoForm already handles population)
+            } else {
+                // Batch complete
+                const total = sessionStorage.getItem('batchTotal');
+                sessionStorage.removeItem('batchQuestions');
+                sessionStorage.removeItem('batchTotal');
+                sessionStorage.removeItem('batchCurrentIndex');
+                
+                document.getElementById('batchProgressCard').style.display = 'none';
+                showToast('success', 'Batch Complete', `All ${total} questions added successfully!`);
+                resetForm();
+                
+                // Show a final success modal or redirect to showall
+                if (confirm("All questions in the batch have been added. Would you like to view all questions now?")) {
+                    window.location.href = 'showall.jsp?coursename=' + encodeURIComponent(document.getElementById('courseSelectAddNew').value);
+                }
+            }
+        } else {
+            showToast('error', 'Error', result.message || "Failed to add question. Please check the form and try again.");
+        }
+    } catch (error) {
+        console.error('Batch Submission Error:', error);
+        showToast('error', 'Connection Error', 'Failed to communicate with the server.');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnHtml;
     }
 }
 
@@ -3265,13 +3538,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 // Modal is handled separately in the validation logic
             } else {
-                // If form is valid, check if there are more questions in batch
-                setTimeout(() => {
-                    const batchQuestions = JSON.parse(sessionStorage.getItem('batchQuestions') || '[]');
-                    if (batchQuestions.length > 0) {
-                        processNextBatchQuestion();
-                    }
-                }, 1000); // Small delay to ensure submission is processed
+                // If form is valid, check if there is an active batch
+                const batchQuestions = JSON.parse(sessionStorage.getItem('batchQuestions') || '[]');
+                const index = parseInt(sessionStorage.getItem('batchCurrentIndex') || '-1');
+                
+                if (index !== -1 && index < batchQuestions.length) {
+                    e.preventDefault();
+                    submitCurrentBatchQuestion();
+                }
             }
         });
     }
