@@ -2255,12 +2255,17 @@ function parseFromQuestionTextarea(lines, silent = false) {
         const options = result.options.map(opt => opt.trim()).filter(opt => opt !== '');
         const correctVal = result.correct ? result.correct.trim() : '';
 
-        if (correctVal && options.length > 0 && !options.includes(correctVal)) {
-            showModal('Correct Answer Mismatch', 
-                'The parsed correct answer ("' + correctVal + '") does not match any of the provided options.\n\n' +
-                'Available options:\n' + options.map((o, i) => (i + 1) + '. ' + o).join('\n') + '\n\n' +
-                'Please manually select or correct the correct answer.');
-            return;
+        if (correctVal && options.length > 0) {
+            const correctValues = correctVal.split('|').map(v => v.trim()).filter(v => v !== '');
+            const allMatch = correctValues.every(val => options.includes(val));
+
+            if (!allMatch) {
+                showModal('Correct Answer Mismatch',
+                    'The parsed correct answer ("' + correctVal + '") does not match any of the provided options.\n\n' +
+                    'Available options:\n' + options.map((o, i) => (i + 1) + '. ' + o).join('\n') + '\n\n' +
+                    'Please manually select or correct the correct answer.');
+                return;
+            }
         }
         
         if (!silent) {
@@ -2309,12 +2314,17 @@ function parseFromOptionTextarea(lines, sourceOption, silent = false) {
         const options = result.options.map(opt => opt.trim()).filter(opt => opt !== '');
         const correctVal = result.correct ? result.correct.trim() : '';
 
-        if (correctVal && options.length > 0 && !options.includes(correctVal)) {
-            showModal('Correct Answer Mismatch', 
-                'The parsed correct answer ("' + correctVal + '") does not match any of the provided options.\n\n' +
-                'Available options:\n' + options.map((o, i) => (i + 1) + '. ' + o).join('\n') + '\n\n' +
-                'Please manually select or correct the correct answer.');
-            return;
+        if (correctVal && options.length > 0) {
+            const correctValues = correctVal.split('|').map(v => v.trim()).filter(v => v !== '');
+            const allMatch = correctValues.every(val => options.includes(val));
+
+            if (!allMatch) {
+                showModal('Correct Answer Mismatch',
+                    'The parsed correct answer ("' + correctVal + '") does not match any of the provided options.\n\n' +
+                    'Available options:\n' + options.map((o, i) => (i + 1) + '. ' + o).join('\n') + '\n\n' +
+                    'Please manually select or correct the correct answer.');
+                return;
+            }
         }
 
         if (!silent) {
@@ -2472,12 +2482,17 @@ function parseComplexFormat(lines, sourceField, silent = false) {
         const opts = [option1, option2, option3, option4].map(opt => opt.trim()).filter(opt => opt !== '');
         const correctVal = correctAnswer ? correctAnswer.trim() : '';
 
-        if (correctVal && opts.length > 0 && !opts.includes(correctVal)) {
-            showModal('Correct Answer Mismatch', 
-                'The parsed correct answer ("' + correctVal + '") does not match any of the provided options.\n\n' +
-                'Available options:\n' + opts.map((o, i) => (i + 1) + '. ' + o).join('\n') + '\n\n' +
-                'Please manually select or correct the correct answer.');
-            return;
+        if (correctVal && opts.length > 0) {
+            const correctValues = correctVal.split('|').map(v => v.trim()).filter(v => v !== '');
+            const allMatch = correctValues.every(val => opts.includes(val));
+
+            if (!allMatch) {
+                showModal('Correct Answer Mismatch',
+                    'The parsed correct answer ("' + correctVal + '") does not match any of the provided options.\n\n' +
+                    'Available options:\n' + opts.map((o, i) => (i + 1) + '. ' + o).join('\n') + '\n\n' +
+                    'Please manually select or correct the correct answer.');
+                return;
+            }
         }
 
         if (!silent) {
@@ -2754,8 +2769,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     isValid = false;
                 }
             } else {
-                // For MCQ questions (but not True/False, MultipleSelect, or Code)
-                if (qType === "MCQ") {
+                // For MCQ and Code questions
+                if (qType === "MCQ" || qType === "Code") {
                     // Get the options
                     const opt1 = document.getElementById('opt1').value.trim();
                     const opt2 = document.getElementById('opt2').value.trim();
@@ -2773,21 +2788,17 @@ document.addEventListener('DOMContentLoaded', function() {
                             isValid = false;
                         } else {
                             const correctValue = document.getElementById('correctAnswer').value.trim();
-                            if (!opts.includes(correctValue)) {
+                            if (!correctValue) {
+                                errorMsg = qType === "Code" ? "Expected output is required." : "Correct answer is required.";
+                                isValid = false;
+                            } else if (!opts.includes(correctValue)) {
                                 errorMsg = "Correct answer mismatch!\n\n" +
-                                    "The correct answer (\"" + correctValue + "\") must match one of the provided options exactly.\n\n" +
+                                    "The " + (qType === "Code" ? "expected output" : "correct answer") + " (\"" + correctValue + "\") must match one of the provided options exactly.\n\n" +
                                     "Available Options:\n" + opts.map((opt, i) => (i + 1) + ". " + opt).join("\n") + "\n\n" +
-                                    "Please ensure the correct answer matches one of the options above.";
+                                    "Please ensure it matches one of the options above.";
                                 isValid = false;
                             }
                         }
-                    }
-                } else if (qType === "Code") {
-                    // For Code questions, validate that correct answer is provided
-                    const correctValue = document.getElementById('correctAnswer').value.trim();
-                    if (!correctValue) {
-                        errorMsg = "Expected output is required for Code questions.";
-                        isValid = false;
                     }
                 } else if (qType === "DRAG_AND_DROP") {
                     // For Drag and Drop questions, validate that drag items and drop targets are provided
