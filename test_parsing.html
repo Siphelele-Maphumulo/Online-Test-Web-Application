@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Auto-Parsing</title>
+</head>
+<body>
+    <h2>Test Auto-Parsing Functionality</h2>
+    
+    <textarea id="testTextarea" rows="10" cols="80" placeholder="Paste your question format here..."></textarea>
+    <br><br>
+    <button onclick="testParsing()">Test Parsing Now</button>
+    <button onclick="testPatterns()">Test Pattern Detection</button>
+    <br><br>
+    <div id="result"></div>
+
+    <script>
+        // Copy the parsing functions from questions.jsp
+        function containsParsingPatterns(text) {
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
+            
+            // Check for function name patterns
+            const functionPatterns = ['input()', 'read()', 'get()', 'scan()'];
+            let hasFunctionPatterns = false;
+            
+            lines.forEach(line => {
+                functionPatterns.forEach(pattern => {
+                    if (line.toLowerCase().includes(pattern.toLowerCase())) {
+                        hasFunctionPatterns = true;
+                    }
+                });
+            });
+            
+            // Check for question patterns - more flexible
+            const questionPatterns = [
+                /what.*question/i,
+                /what.*function/i,
+                /what.*correct/i,
+                /what.*way/i,
+                /your.*question/i,
+                /question:/i,
+                /q:/i,
+                /option\s*[:\-]?\s*?/i,
+                /correct\s*[:\-]?\s*answer/i
+            ];
+            
+            const hasQuestionPattern = lines.some(line => 
+                questionPatterns.some(pattern => pattern.test(line))
+            );
+            
+            // Check for arrow patterns (?)
+            const hasArrowPattern = lines.some(line => line.includes('?'));
+            
+            // Check for colon patterns with option keywords
+            const optionKeywords = ['first option', 'second option', 'third option', 'fourth option', 'option 1', 'option 2', 'option 3', 'option 4'];
+            const hasOptionPattern = lines.some(line => 
+                optionKeywords.some(keyword => line.toLowerCase().includes(keyword.toLowerCase()))
+            );
+            
+            // NEW: Check for structured question format with "Your Question:", "Option X:", "Correct Answer:" pattern
+            const hasStructuredFormat = lines.some(line => 
+                line.match(/^(Your Question|Option \d+|Correct Answer):/i)
+            );
+            
+            // NEW: Check if there are at least 3 lines with colon-separated values (likely question/options format)
+            const colonSeparatedLines = lines.filter(line => line.includes(':')).length;
+            const hasColonFormat = colonSeparatedLines >= 3;
+            
+            console.log('Parsing pattern detection:', {
+                hasFunctionPatterns,
+                hasQuestionPattern,
+                hasArrowPattern,
+                hasOptionPattern,
+                hasStructuredFormat,
+                hasColonFormat,
+                lines
+            });
+            
+            return hasFunctionPatterns || hasQuestionPattern || hasArrowPattern || hasOptionPattern || hasStructuredFormat || hasColonFormat;
+        }
+
+        function testPatterns() {
+            const text = document.getElementById('testTextarea').value;
+            const result = containsParsingPatterns(text);
+            document.getElementById('result').innerHTML = 
+                '<h3>Pattern Detection Result:</h3>' +
+                '<p>Text detected as parseable: <strong>' + result + '</strong></p>' +
+                '<p>Check browser console for detailed pattern analysis.</p>';
+        }
+
+        function testParsing() {
+            const text = document.getElementById('testTextarea').value;
+            if (!text.trim()) {
+                alert('Please enter some text first');
+                return;
+            }
+            
+            const isParseable = containsParsingPatterns(text);
+            document.getElementById('result').innerHTML = 
+                '<h3>Manual Test Result:</h3>' +
+                '<p>Text is parseable: ' + isParseable + '</p>' +
+                '<p>Auto-parsing would ' + (isParseable ? 'trigger' : 'NOT trigger') + ' for this content.</p>';
+        }
+
+        // Add event listener for auto-testing
+        document.getElementById('testTextarea').addEventListener('input', function() {
+            const text = this.value.trim();
+            if (text) {
+                setTimeout(() => {
+                    const isParseable = containsParsingPatterns(text);
+                    console.log('Auto-test result:', isParseable);
+                    if (isParseable) {
+                        document.getElementById('result').innerHTML = 
+                            '<p style="color: green;">✓ Auto-parsing would trigger for this content</p>';
+                    }
+                }, 1000); // 1 second delay like in the real implementation
+            }
+        });
+    </script>
+</body>
+</html>
