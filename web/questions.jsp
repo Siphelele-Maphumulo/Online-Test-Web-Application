@@ -2641,6 +2641,10 @@ function processAllQuestions(questions) {
     // Close the modal
     closeMultipleQuestionsModal();
     
+    // Store all questions for batch processing
+    sessionStorage.setItem('batchQuestions', JSON.stringify(questions));
+    sessionStorage.setItem('batchQuestionsTotal', questions.length.toString());
+    
     // Process the first question in the current form
     if (questions.length > 0) {
         const firstQuestion = questions[0];
@@ -2660,7 +2664,63 @@ function processAllQuestions(questions) {
         if (opt4) opt4.value = firstQuestion.options[3];
         if (correct) correct.value = firstCorrectAnswer(firstQuestion);
         
-        showToast('success', 'Questions Loaded', `Loaded first question. ${questions.length - 1} remaining questions can be processed by submitting and repeating.`);
+        showToast('success', 'Batch Processing Started', `Loaded first question. ${questions.length} total questions queued for processing. Submit to add this question, then remaining questions will be auto-loaded.`);
+    }
+}
+
+// Function to process next question in batch
+function processNextBatchQuestion() {
+    const batchQuestions = JSON.parse(sessionStorage.getItem('batchQuestions') || '[]');
+    
+    if (batchQuestions.length > 0) {
+        // Remove the first question that was just processed
+        batchQuestions.shift();
+        
+        if (batchQuestions.length > 0) {
+            // Update the session storage
+            sessionStorage.setItem('batchQuestions', JSON.stringify(batchQuestions));
+            
+            // Load the next question
+            const nextQuestion = batchQuestions[0];
+            
+            // Populate the current form
+            const questionTextarea = document.getElementById('questionTextarea');
+            const opt1 = document.getElementById('opt1');
+            const opt2 = document.getElementById('opt2');
+            const opt3 = document.getElementById('opt3');
+            const opt4 = document.getElementById('opt4');
+            const correct = document.getElementById('correctAnswer');
+            
+            if (questionTextarea) questionTextarea.value = nextQuestion.question;
+            if (opt1) opt1.value = nextQuestion.options[0];
+            if (opt2) opt2.value = nextQuestion.options[1];
+            if (opt3) opt3.value = nextQuestion.options[2];
+            if (opt4) opt4.value = nextQuestion.options[3];
+            if (correct) correct.value = firstCorrectAnswer(nextQuestion);
+            
+            showToast('info', 'Next Question Loaded', `Loaded question ${parseInt(sessionStorage.getItem('batchQuestionsTotal')) - batchQuestions.length}/${sessionStorage.getItem('batchQuestionsTotal')} from batch. Submit to add this question.`);
+        } else {
+            // Clear the batch when done
+            sessionStorage.removeItem('batchQuestions');
+            sessionStorage.removeItem('batchQuestionsTotal');
+            showToast('success', 'Batch Complete', 'All questions from the batch have been processed!');
+        }
+    }
+}
+
+// Enhanced submit handler to support batch processing
+function initBatchSubmitHandling() {
+    const addQuestionForm = document.getElementById('addQuestionForm');
+    if (addQuestionForm) {
+        addQuestionForm.addEventListener('submit', function(e) {
+            // After successful submission, check if there are more questions in batch
+            setTimeout(() => {
+                const batchQuestions = JSON.parse(sessionStorage.getItem('batchQuestions') || '[]');
+                if (batchQuestions.length > 0) {
+                    processNextBatchQuestion();
+                }
+            }, 1000); // Small delay to ensure submission is processed
+        });
     }
 }
 
@@ -3068,6 +3128,9 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeMultipleSelectCheckboxes();
     initializeTrueFalseSelection(); // Initialize True/False dropdown event handler
     
+    // Initialize batch processing functionality
+    initBatchSubmitHandling();
+    
     // Initialize drop target input event listeners for immediate updates
     const existingDropTargetInputs = document.querySelectorAll('#dropTargetsContainer input[type="text"]');
     existingDropTargetInputs.forEach(input => {
@@ -3201,6 +3264,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     showToast('error', 'Validation Error', errorMsg);
                 }
                 // Modal is handled separately in the validation logic
+            } else {
+                // If form is valid, check if there are more questions in batch
+                setTimeout(() => {
+                    const batchQuestions = JSON.parse(sessionStorage.getItem('batchQuestions') || '[]');
+                    if (batchQuestions.length > 0) {
+                        processNextBatchQuestion();
+                    }
+                }, 1000); // Small delay to ensure submission is processed
             }
         });
     }
