@@ -238,10 +238,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     /* Modal */
     .modal-backdrop {
         display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.5); z-index: 1000; 
-    }
-    .modal-backdrop.show {
-        display: flex; align-items: center; justify-content: center;
+        background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;
     }
     .modal-box {
         background: white; border-radius: 12px; width: 90%; max-width: 450px;
@@ -952,7 +949,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     function showDeleteModal(qid, cname) {
         questionToDelete = qid;
         courseToDeleteFrom = cname;
-        document.getElementById('deleteModal').classList.add('show');
+        document.getElementById('deleteModal').style.display = 'flex';
     }
     
     function showDeleteModalFromData(button) {
@@ -962,7 +959,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     }
 
     function hideDeleteModal() {
-        document.getElementById('deleteModal').classList.remove('show');
+        document.getElementById('deleteModal').style.display = 'none';
         questionToDelete = null;
         courseToDeleteFrom = null;
     }
@@ -1134,11 +1131,11 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
         
         // Show confirmation modal instead of confirm dialog
         document.getElementById('deleteCount').textContent = selectedCheckboxes.length;
-        document.getElementById('deleteSelectedModal').classList.add('show');
+        document.getElementById('deleteSelectedModal').style.display = 'flex';
     }
     
     function hideDeleteSelectedModal() {
-        document.getElementById('deleteSelectedModal').classList.remove('show');
+        document.getElementById('deleteSelectedModal').style.display = 'none';
     }
     
     function confirmDeleteSelected() {
