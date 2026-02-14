@@ -530,6 +530,105 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
             align-items: flex-start;
         }
     }
+    
+    /* Multi-select functionality */
+    .multi-select-checkbox {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 10;
+        opacity: 0;
+        pointer-events: none;
+    }
+    
+    .question-card.multi-selected {
+        outline: 3px solid var(--accent-blue);
+        outline-offset: -3px;
+        position: relative;
+    }
+    
+    .question-card.multi-selected::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(74, 144, 226, 0.1);
+        z-index: 1;
+        pointer-events: none;
+    }
+    
+    .multi-select-toggle {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 20;
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--dark-gray);
+        border-radius: 4px;
+        background: var(--white);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+    
+    .multi-select-toggle.checked {
+        background: var(--accent-blue);
+        border-color: var(--accent-blue);
+    }
+    
+    .multi-select-toggle.checked::after {
+        content: '✓';
+        color: white;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    /* Floating delete button */
+    .floating-delete-selected {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1000;
+        background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 15px 30px;
+        font-size: 16px;
+        font-weight: 600;
+        box-shadow: 0 10px 25px rgba(220, 38, 38, 0.4);
+        cursor: pointer;
+        display: none;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+    
+    .floating-delete-selected:hover {
+        transform: translate(-50%, -50%) scale(1.05);
+        box-shadow: 0 12px 30px rgba(220, 38, 38, 0.5);
+    }
+    
+    .floating-delete-selected.show {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .floating-delete-selected i {
+        font-size: 18px;
+    }
+    
+    /* Checkbox container to avoid interfering with card clicks */
+    .checkbox-container {
+        position: relative;
+        display: inline-block;
+    }
 </style>
 
 <div class="dashboard-container">
@@ -689,6 +788,10 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
                         String[] correctAns = isMS ? q.getCorrect().split("\\|") : new String[]{q.getCorrect()};
                     %>
                         <div class="question-card">
+                            <div class="checkbox-container">
+                                <input type="checkbox" class="multi-select-checkbox" id="checkbox-<%= q.getQuestionId() %>" data-qid="<%= q.getQuestionId() %>" />
+                                <label for="checkbox-<%= q.getQuestionId() %>" class="multi-select-toggle" onclick="toggleQuestionSelection(this)"></label>
+                            </div>
                             <div class="question-header">
                                 <div class="q-number-box">
                                     <div class="q-badge"><%= i + 1 %></div>
@@ -793,6 +896,11 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
 <a href="adm-page.jsp?pgprt=3" class="floating-back">
     <i class="fas fa-chevron-left" ></i> Back to Courses
 </a>
+
+<!-- Floating Delete Selected Button -->
+<button id="floatingDeleteBtn" class="floating-delete-selected" onclick="deleteSelectedQuestions()">
+    <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
+</button>
 
 <!-- Delete Confirmation Modal -->
 <div id="deleteModal" class="modal-backdrop">
@@ -957,5 +1065,126 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
         
         // Initialize scroll buttons
         initScrollButtons();
+    });
+    
+    // Multi-select functionality
+    function toggleQuestionSelection(element) {
+        const checkbox = element.previousElementSibling;
+        const questionCard = checkbox.closest('.question-card');
+        
+        checkbox.checked = !checkbox.checked;
+        
+        if (checkbox.checked) {
+            questionCard.classList.add('multi-selected');
+            element.classList.add('checked');
+        } else {
+            questionCard.classList.remove('multi-selected');
+            element.classList.remove('checked');
+        }
+        
+        updateFloatingDeleteButton();
+    }
+    
+    function updateFloatingDeleteButton() {
+        const selectedCheckboxes = document.querySelectorAll('.multi-select-checkbox:checked');
+        const floatingBtn = document.getElementById('floatingDeleteBtn');
+        const countSpan = document.getElementById('selectedCount');
+        
+        countSpan.textContent = selectedCheckboxes.length;
+        
+        if (selectedCheckboxes.length > 0) {
+            floatingBtn.classList.add('show');
+        } else {
+            floatingBtn.classList.remove('show');
+        }
+    }
+    
+    function deleteSelectedQuestions() {
+        const selectedCheckboxes = document.querySelectorAll('.multi-select-checkbox:checked');
+        
+        if (selectedCheckboxes.length === 0) {
+            alert('Please select at least one question to delete.');
+            return;
+        }
+        
+        if (!confirm(`Are you sure you want to delete ${selectedCheckboxes.length} selected question(s)?`)) {
+            return;
+        }
+        
+        // Collect all selected question IDs
+        const questionIds = [];
+        selectedCheckboxes.forEach(checkbox => {
+            questionIds.push(checkbox.dataset.qid);
+        });
+        
+        // Perform the deletion
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'controller.jsp';
+        
+        const pageInput = document.createElement('input');
+        pageInput.type = 'hidden';
+        pageInput.name = 'page';
+        pageInput.value = 'questions';
+        form.appendChild(pageInput);
+        
+        const operationInput = document.createElement('input');
+        operationInput.type = 'hidden';
+        operationInput.name = 'operation';
+        operationInput.value = 'bulk_delete';
+        form.appendChild(operationInput);
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = '<%= csrfToken %>';
+        form.appendChild(csrfInput);
+        
+        const courseInput = document.createElement('input');
+        courseInput.type = 'hidden';
+        courseInput.name = 'coursename';
+        courseInput.value = '<%= courseName %>';
+        form.appendChild(courseInput);
+        
+        // Add each question ID as a separate input
+        questionIds.forEach(id => {
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = 'questionIds';
+            idInput.value = id;
+            form.appendChild(idInput);
+        });
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+    
+    // Add event listener to handle clicks on question cards to prevent interference with checkboxes
+    document.addEventListener('click', function(e) {
+        // If clicked on a question card but not on an action button or checkbox, toggle selection
+        if (e.target.closest('.question-card') && 
+            !e.target.closest('.actions') && 
+            !e.target.closest('.multi-select-toggle') &&
+            !e.target.closest('.btn-edit') &&
+            !e.target.closest('.btn-delete')) {
+            
+            const card = e.target.closest('.question-card');
+            const checkbox = card.querySelector('.multi-select-checkbox');
+            const toggle = card.querySelector('.multi-select-toggle');
+            
+            if (checkbox && toggle) {
+                checkbox.checked = !checkbox.checked;
+                
+                if (checkbox.checked) {
+                    card.classList.add('multi-selected');
+                    toggle.classList.add('checked');
+                } else {
+                    card.classList.remove('multi-selected');
+                    toggle.classList.remove('checked');
+                }
+                
+                updateFloatingDeleteButton();
+            }
+        }
     });
 </script>
