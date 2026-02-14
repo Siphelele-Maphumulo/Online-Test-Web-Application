@@ -1403,7 +1403,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                         
                         <!-- True/False Dropdown -->
                         <div id="trueFalseContainer" style="display:none;">
-                            <select id="trueFalseSelect" name="correct" class="form-select" required>
+                            <select id="trueFalseSelect" name="correct" class="form-select">
                                 <option value="">Select Correct Answer</option>
                                 <option value="True">True</option>
                                 <option value="False">False</option>
