@@ -2608,6 +2608,14 @@ function initializeSmartParsing() {
     const opt3 = document.getElementById('opt3');
     const opt4 = document.getElementById('opt4');
     
+    // Debug logging
+    console.log('initializeSmartParsing called');
+    console.log('questionTextarea found:', !!questionTextarea);
+    console.log('opt1 found:', !!opt1);
+    console.log('opt2 found:', !!opt2);
+    console.log('opt3 found:', !!opt3);
+    console.log('opt4 found:', !!opt4);
+    
     // Store timeout references
     let questionTimeout = null;
     let optTimeouts = [null, null, null, null];
@@ -2622,11 +2630,20 @@ function initializeSmartParsing() {
         // Set new timeout for 1 second for better responsiveness
         timeoutRef = setTimeout(() => {
             const text = textarea.value.trim();
+            console.log('Auto-parsing timeout triggered for', sourceField);
+            console.log('Text content:', text.substring(0, 100) + (text.length > 100 ? '...' : ''));
             if (text) {
                 // Check if text contains parsing patterns
-                if (containsParsingPatterns(text)) {
+                const hasPatterns = containsParsingPatterns(text);
+                console.log('Contains parsing patterns:', hasPatterns);
+                if (hasPatterns) {
+                    console.log('Calling parseMultiLineInput...');
                     parseMultiLineInput(text, sourceField, true); // Silent parsing
+                } else {
+                    console.log('No parsing patterns detected');
                 }
+            } else {
+                console.log('No text content');
             }
         }, 1000); // 1 second
         
