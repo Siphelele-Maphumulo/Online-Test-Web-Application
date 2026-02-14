@@ -916,6 +916,21 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     </div>
 </div>
 
+<!-- Delete Selected Confirmation Modal -->
+<div id="deleteSelectedModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-box">
+        <div class="modal-header">Confirm Bulk Deletion</div>
+        <div class="modal-body">
+            <p>Are you sure you want to delete <span id="deleteCount" style="font-weight: bold;">0</span> selected question(s)?</p>
+            <p style="color: #dc3545; font-weight: 500; margin-top: 10px;">This action cannot be undone.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="hideDeleteSelectedModal()">Cancel</button>
+            <button class="btn-confirm-del" onclick="confirmDeleteSelected()">Delete Selected</button>
+        </div>
+    </div>
+</div>
+
 <!-- Floating Scroll Buttons -->
 <div class="floating-scroll" id="floatingScroll">
     <button class="scroll-btn" id="scrollUpBtn" title="Scroll to Top">
@@ -1042,12 +1057,19 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
         if (event.target == modal) {
             hideDeleteModal();
         }
+        
+        // Also close delete selected modal if clicked outside
+        const deleteSelectedModal = document.getElementById('deleteSelectedModal');
+        if (event.target == deleteSelectedModal) {
+            hideDeleteSelectedModal();
+        }
     }
     
     // Close modal on Escape key
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') {
             hideDeleteModal();
+            hideDeleteSelectedModal();
         }
     });
 
@@ -1107,9 +1129,19 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
             return;
         }
         
-        if (!confirm(`Are you sure you want to delete ${selectedCheckboxes.length} selected question(s)?`)) {
-            return;
-        }
+        // Show confirmation modal instead of confirm dialog
+        document.getElementById('deleteCount').textContent = selectedCheckboxes.length;
+        document.getElementById('deleteSelectedModal').style.display = 'block';
+    }
+    
+    function hideDeleteSelectedModal() {
+        document.getElementById('deleteSelectedModal').style.display = 'none';
+    }
+    
+    function confirmDeleteSelected() {
+        hideDeleteSelectedModal();
+        
+        const selectedCheckboxes = document.querySelectorAll('.multi-select-checkbox:checked');
         
         // Collect all selected question IDs
         const questionIds = [];

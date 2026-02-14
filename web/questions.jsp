@@ -137,6 +137,26 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
     </div>
 </div>
 
+<!-- Modal for batch cancellation confirmation -->
+<div id="batchCancelModal" class="modal" style="display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+    <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 40%; min-width: 300px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+            <h3 style="margin: 0; color: #333;">
+                <i class="fas fa-exclamation-triangle" style="color: #ffc107;"></i> Cancel Batch Process
+            </h3>
+            <span class="close-modal" onclick="closeBatchCancelModal()" style="font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa;">&times;</span>
+        </div>
+        <div class="modal-body" style="margin-bottom: 20px;">
+            <p>Are you sure you want to cancel the current batch process?</p>
+            <p style="color: #dc3545; font-weight: 500;">Any unsubmitted questions will be lost.</p>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 15px; border-top: 1px solid #eee;">
+            <button onclick="closeBatchCancelModal()" class="btn btn-secondary" style="padding: 8px 16px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">No, Continue Batch</button>
+            <button onclick="confirmBatchCancel()" class="btn btn-danger" style="padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">Yes, Cancel Batch</button>
+        </div>
+    </div>
+</div>
+
 <!-- Success/Error Toast -->
 <div id="toast" class="toast" style="display: none;">
     <div class="toast-content">
@@ -2959,14 +2979,7 @@ function loadQuestionIntoForm(q) {
 }
 
 function cancelBatch() {
-    if (confirm("Are you sure you want to cancel the current batch process? Any unsubmitted questions will be lost.")) {
-        sessionStorage.removeItem('batchQuestions');
-        sessionStorage.removeItem('batchTotal');
-        sessionStorage.removeItem('batchCurrentIndex');
-        document.getElementById('batchProgressCard').style.display = 'none';
-        showToast('info', 'Batch Cancelled', 'The batch process has been stopped.');
-        resetForm();
-    }
+    showBatchCancelModal();
 }
 
 // Enhanced submit handler to support batch processing
@@ -3616,6 +3629,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Also close batch complete modal if clicked outside
         const batchModal = document.getElementById('batchCompleteModal');
         if (batchModal && event.target == batchModal) closeBatchCompleteModal();
+        
+        // Also close batch cancel modal if clicked outside
+        const batchCancelModal = document.getElementById('batchCancelModal');
+        if (batchCancelModal && event.target == batchCancelModal) closeBatchCancelModal();
     };
 
     // Re-enable scroll indicator with debounce to prevent performance issues
@@ -3761,6 +3778,25 @@ function viewAllQuestions() {
     } else {
         window.location.href = 'showall.jsp';
     }
+}
+
+// Functions for batch cancellation modal
+function showBatchCancelModal() {
+    document.getElementById('batchCancelModal').style.display = 'block';
+}
+
+function closeBatchCancelModal() {
+    document.getElementById('batchCancelModal').style.display = 'none';
+}
+
+function confirmBatchCancel() {
+    closeBatchCancelModal();
+    sessionStorage.removeItem('batchQuestions');
+    sessionStorage.removeItem('batchTotal');
+    sessionStorage.removeItem('batchCurrentIndex');
+    document.getElementById('batchProgressCard').style.display = 'none';
+    showToast('info', 'Batch Cancelled', 'The batch process has been stopped.');
+    resetForm();
 }
 
 // Initialize when DOM is loaded (this will be called after the above DOMContentLoaded event)
