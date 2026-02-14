@@ -1351,7 +1351,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                         <div id="fileUploadNameDisplay" class="file-name-display" style="display: none; margin-top: 10px;">
                             <i id="fileTypeIcon" class="fas fa-file-alt"></i>
                             <span id="uploadFileName"></span>
-                            <button type="button" class="remove-file-btn" onclick="removeUploadFile()">�</button>
+                            <button type="button" class="remove-file-btn" onclick="removeUploadFile()">?</button>
                         </div>
                         <div class="quick-add-indicator mt-2" style="background: #e9ecef; color: #495057; border-left-color: #6c757d;">
                             <i class="fas fa-info-circle"></i>
@@ -2448,6 +2448,15 @@ function parseFromQuestionTextarea(lines, silent = false) {
         opt3.value = result.options[2] || '';
         opt4.value = result.options[3] || '';
         correct.value = result.correct || result.options[0] || '';
+
+        // Auto-update question type
+        if (result.type) {
+            const typeSelect = document.getElementById('questionTypeSelect');
+            if (typeSelect) {
+                typeSelect.value = result.type;
+                if (typeof toggleOptions === 'function') toggleOptions();
+            }
+        }
         
         // Debug the field values
         console.log('Setting field values:');
@@ -2545,7 +2554,8 @@ function parseSimpleFormat(lines) {
         success: false,
         question: '',
         options: ['', '', '', ''],
-        correct: ''
+        correct: '',
+        type: 'MCQ'
     };
     
     console.log('=== PARSING START ==='); // Debug log
@@ -2602,6 +2612,14 @@ function parseSimpleFormat(lines) {
         if (result.question || result.options.some(opt => opt !== '') || result.correct) {
             result.success = true;
             console.log('Parsing successful with question or options'); // Debug log
+
+            // Auto-detect type
+            result.type = detectQuestionType(result.question, result.options, result.correct);
+            
+            // Sanitize correct answer
+            if (result.correct) {
+                result.correct = sanitizeCorrectAnswer(result);
+            }
         }
     }
     
@@ -2685,15 +2703,9 @@ function parseMultipleQuestions(text) {
         q.options = q.options.map(opt => opt ? opt.trim() : '');
         
         // Auto-detect type
-        const nonBlankOptions = q.options.filter(opt => opt !== '');
-        if (nonBlankOptions.length === 2 && 
-            (nonBlankOptions.some(o => o.toLowerCase() === 'true') || nonBlankOptions.some(o => o.toLowerCase() === 'false'))) {
-            q.type = 'TrueFalse';
-        } else if (q.correct && q.correct.includes('|')) {
-            q.type = 'MultipleSelect';
-        }
+        q.type = detectQuestionType(q.question, q.options, q.correct);
         
-        // Sanitize correct answer using firstCorrectAnswer logic
+        // Sanitize correct answer
         if (q.correct) {
             q.correct = sanitizeCorrectAnswer(q);
         }
@@ -2705,8 +2717,9 @@ function parseMultipleQuestions(text) {
 
 // Helper to sanitize correct answer during parsing
 function sanitizeCorrectAnswer(q) {
+    if (!q || !q.correct) return "";
     const correctText = q.correct.trim();
-    const options = q.options;
+    const options = q.options || [];
     
     // 1. Check for exact match
     if (options.includes(correctText)) return correctText;
@@ -2725,7 +2738,13 @@ function sanitizeCorrectAnswer(q) {
         }
     }
     
-    // 3. Check if any option is contained in the correct answer or vice versa (fuzzy)
+    // 3. Check if correct answer contains a number (1-4), use that option if no prefix but just "1"
+    if (correctText.length === 1 && !isNaN(correctText)) {
+        const num = parseInt(correctText);
+        if (num >= 1 && num <= 4 && options[num-1]) return options[num-1];
+    }
+    
+    // 4. Check if any option is contained in the correct answer or vice versa (fuzzy)
     for (let opt of options) {
         if (opt && opt.length > 2) {
             if (correctText.toLowerCase().includes(opt.toLowerCase()) || opt.toLowerCase().includes(correctText.toLowerCase())) {
@@ -3094,34 +3113,34 @@ function addMultipleQuestions(questions) {
     }
 }
 
-// Helper function to determine the correct answer
+/**
+ * Auto-detects the question type based on content, options, and correct answer.
+ */
+function detectQuestionType(question, options, correct) {
+    const qText = (question || "").toLowerCase();
+    const cVal = (correct || "").trim().toLowerCase();
+    const opts = (options || []).filter(o => o && o.trim() !== '');
+    
+    // 1. Detect Code Snippet
+    const codeKeywords = /(?:def |function |public |class |print\(|console\.|<[^>]*>|\{|\}|import |int |String |printf\(|cout |output of the code|following code|code snippet)/i;
+    if (codeKeywords.test(question) || (question && question.includes('\n') && question.split('\n').filter(l => l.trim()).length > 3)) {
+        return 'Code';
+    } 
+    // 2. Detect True/False
+    if (cVal === 'true' || cVal === 'false' || (opts.length === 2 && (opts.some(o => o.toLowerCase() === 'true') || opts.some(o => o.toLowerCase() === 'false')))) {
+        return 'TrueFalse';
+    } 
+    // 3. Detect Multiple Select
+    if ((correct && correct.includes('|')) || qText.includes('(select two)') || qText.includes('(select 2)') || qText.includes('(select all)') || qText.includes('(select all that apply)')) {
+        return 'MultipleSelect';
+    } 
+    // 4. Default to MCQ
+    return 'MCQ';
+}
+
+// Re-using sanitizeCorrectAnswer as the primary sanitization logic
 function firstCorrectAnswer(question) {
-    // If the correct answer matches one of the options exactly, return it
-    const correctText = question.correct;
-    if (question.options.includes(correctText)) {
-        return correctText;
-    }
-    
-    // If correct answer refers to option (e.g., "Option 1: Gets value after input()"), extract the option text
-    const optionNumberMatch = correctText.match(/Option\s+(\d+):?/i);
-    if (optionNumberMatch) {
-        const optionIndex = parseInt(optionNumberMatch[1]) - 1;
-        if (optionIndex >= 0 && optionIndex < question.options.length && question.options[optionIndex]) {
-            return question.options[optionIndex];
-        }
-    }
-    
-    // If correct answer contains a number (1-4), use that option
-    const numberMatch = correctText.match(/(\d+)/);
-    if (numberMatch) {
-        const num = parseInt(numberMatch[1]);
-        if (num >= 1 && num <= 4 && question.options[num - 1]) {
-            return question.options[num - 1];
-        }
-    }
-    
-    // Return as-is if no match found
-    return correctText;
+    return sanitizeCorrectAnswer(question);
 }
 
 // Complex format parser (fallback) - Improved version
@@ -3188,6 +3207,21 @@ function parseComplexFormat(lines, sourceField, silent = false) {
         if (option3) opt3.value = option3;
         if (option4) opt4.value = option4;
         if (correctAnswer) correct.value = correctAnswer;
+
+        // Auto-detect and sanitize
+        const optionsArray = [option1, option2, option3, option4];
+        const detectedType = detectQuestionType(questionText, optionsArray, correctAnswer);
+        const sanitizedCorrect = sanitizeCorrectAnswer({ correct: correctAnswer, options: optionsArray });
+        
+        if (sanitizedCorrect) {
+            correct.value = sanitizedCorrect;
+        }
+
+        const typeSelect = document.getElementById('questionTypeSelect');
+        if (typeSelect) {
+            typeSelect.value = detectedType;
+            if (typeof toggleOptions === 'function') toggleOptions();
+        }
         
         // Validate correct answer against options
         const opts = [option1, option2, option3, option4].map(opt => opt.trim()).filter(opt => opt !== '');
