@@ -1734,7 +1734,7 @@
         <nav class="sidebar-nav">
             <div class="left-menu">
                 <a class="nav-item" href="std-page.jsp?pgprt=0"><i class="fas fa-user"></i><span>Profile</span></a>
-                <a class="nav-item active" href="std-page.jsp?pgprt=1"><i class="fas fa-file-alt"></i><span>Exams</span></a>
+                <a class="nav-item active" href="std-page.jsp?pgprt=1"><i class="fas fa-file-alt"></i><span>Lunch Exam</span></a>
                 <a class="nav-item" href="std-page.jsp?pgprt=2"><i class="fas fa-chart-line"></i><span>Results</span></a>
                 <a class="nav-item" href="std-page.jsp?pgprt=3"><i class="fas fa-chart-line"></i><span>Daily Register</span></a>
             </div>
