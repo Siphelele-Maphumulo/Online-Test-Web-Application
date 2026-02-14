@@ -2303,6 +2303,15 @@ function initializeTrueFalseSelection() {
 function parseMultiLineInput(text, sourceField, silent = false) {
     if (!text || !text.trim()) return;
     
+    // First, check if the text contains multiple questions
+    const multipleQuestions = parseMultipleQuestions(text);
+    
+    if (multipleQuestions.length > 1) {
+        // Handle multiple questions
+        addMultipleQuestions(multipleQuestions);
+        return;
+    }
+    
     const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
     
     if (sourceField === 'question') {
@@ -2497,6 +2506,140 @@ function parseSimpleFormat(lines) {
     return result;
 }
 
+// Advanced multi-question parser that can handle multiple structured questions
+function parseMultipleQuestions(text) {
+    const questions = [];
+    const lines = text.split('\n').map(line => line.trim());
+    
+    let currentQuestion = null;
+    let currentSection = '';
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const lowerLine = line.toLowerCase().trim();
+        
+        // Check if this is the start of a new question
+        if (lowerLine.startsWith('your question:')) {
+            // Save the previous question if it exists
+            if (currentQuestion && (currentQuestion.question || currentQuestion.options.some(opt => opt))) {
+                questions.push({...currentQuestion});
+            }
+            
+            // Start a new question
+            currentQuestion = {
+                question: line.substring(line.indexOf(':') + 1).trim(),
+                options: ['', '', '', ''],
+                correct: ''
+            };
+            currentSection = 'question';
+        } else if (currentQuestion && lowerLine.startsWith('option 1:')) {
+            currentQuestion.options[0] = line.substring(line.indexOf(':') + 1).trim();
+            currentSection = 'option1';
+        } else if (currentQuestion && lowerLine.startsWith('option 2:')) {
+            currentQuestion.options[1] = line.substring(line.indexOf(':') + 1).trim();
+            currentSection = 'option2';
+        } else if (currentQuestion && lowerLine.startsWith('option 3:')) {
+            currentQuestion.options[2] = line.substring(line.indexOf(':') + 1).trim();
+            currentSection = 'option3';
+        } else if (currentQuestion && lowerLine.startsWith('option 4:')) {
+            currentQuestion.options[3] = line.substring(line.indexOf(':') + 1).trim();
+            currentSection = 'option4';
+        } else if (currentQuestion && lowerLine.startsWith('correct answer:')) {
+            currentQuestion.correct = line.substring(line.indexOf(':') + 1).trim();
+            currentSection = 'correct';
+        } else if (line && currentQuestion && !lowerLine.startsWith('your question:') && 
+                 !lowerLine.startsWith('option 1:') && !lowerLine.startsWith('option 2:') && 
+                 !lowerLine.startsWith('option 3:') && !lowerLine.startsWith('option 4:') && 
+                 !lowerLine.startsWith('correct answer:')) {
+            
+            // Handle multi-line content for current section
+            if (currentSection === 'question') {
+                currentQuestion.question += ' ' + line;
+            } else if (currentSection === 'option1') {
+                currentQuestion.options[0] += ' ' + line;
+            } else if (currentSection === 'option2') {
+                currentQuestion.options[1] += ' ' + line;
+            } else if (currentSection === 'option3') {
+                currentQuestion.options[2] += ' ' + line;
+            } else if (currentSection === 'option4') {
+                currentQuestion.options[3] += ' ' + line;
+            } else if (currentSection === 'correct') {
+                currentQuestion.correct += ' ' + line;
+            }
+        }
+    }
+    
+    // Add the last question if it exists
+    if (currentQuestion && (currentQuestion.question || currentQuestion.options.some(opt => opt))) {
+        questions.push({...currentQuestion});
+    }
+    
+    console.log('Parsed multiple questions:', questions);
+    return questions;
+}
+
+// Function to add multiple questions to the form (simulated by showing them one by one)
+function addMultipleQuestions(questions) {
+    if (questions.length === 0) return;
+    
+    // Process the first question immediately
+    const firstQuestion = questions[0];
+    
+    // Populate the current form
+    const questionTextarea = document.getElementById('questionTextarea');
+    const opt1 = document.getElementById('opt1');
+    const opt2 = document.getElementById('opt2');
+    const opt3 = document.getElementById('opt3');
+    const opt4 = document.getElementById('opt4');
+    const correct = document.getElementById('correctAnswer');
+    
+    if (questionTextarea) questionTextarea.value = firstQuestion.question;
+    if (opt1) opt1.value = firstQuestion.options[0];
+    if (opt2) opt2.value = firstQuestion.options[1];
+    if (opt3) opt3.value = firstQuestion.options[2];
+    if (opt4) opt4.value = firstQuestion.options[3];
+    if (correct) correct.value = firstCorrectAnswer(firstQuestion);
+    
+    // Show a message about remaining questions
+    if (questions.length > 1) {
+        showToast('info', 'Multiple Questions Detected', 
+            `Found ${questions.length} questions. Processing first question.\n` +
+            `Remaining questions (${questions.length - 1}) can be processed separately.`);
+    } else {
+        showToast('success', 'Success', `Processed 1 question successfully.`);
+    }
+}
+
+// Helper function to determine the correct answer
+function firstCorrectAnswer(question) {
+    // If the correct answer matches one of the options exactly, return it
+    const correctText = question.correct;
+    if (question.options.includes(correctText)) {
+        return correctText;
+    }
+    
+    // If correct answer refers to option (e.g., "Option 1: Gets value after input()"), extract the option text
+    const optionNumberMatch = correctText.match(/Option\s+(\d+):?/i);
+    if (optionNumberMatch) {
+        const optionIndex = parseInt(optionNumberMatch[1]) - 1;
+        if (optionIndex >= 0 && optionIndex < question.options.length && question.options[optionIndex]) {
+            return question.options[optionIndex];
+        }
+    }
+    
+    // If correct answer contains a number (1-4), use that option
+    const numberMatch = correctText.match(/(\d+)/);
+    if (numberMatch) {
+        const num = parseInt(numberMatch[1]);
+        if (num >= 1 && num <= 4 && question.options[num - 1]) {
+            return question.options[num - 1];
+        }
+    }
+    
+    // Return as-is if no match found
+    return correctText;
+}
+
 // Complex format parser (fallback) - Improved version
 function parseComplexFormat(lines, sourceField, silent = false) {
     const questionTextarea = document.getElementById('questionTextarea');
@@ -2629,8 +2772,33 @@ function containsParsingPatterns(text) {
     const hasOptionPattern = lines.some(line =>
         optionKeywords.some(keyword => line.toLowerCase().includes(keyword.toLowerCase()))
     );
-
-    return hasFunctionPatterns || hasQuestionPattern || hasArrowPattern || hasOptionPattern;
+    
+    // NEW: Check for structured question format with "Your Question:", "Option X:", "Correct Answer:" pattern
+    const hasStructuredFormat = lines.some(line => 
+        line.match(/^(Your Question|Option \d+|Correct Answer):/i)
+    );
+    
+    // NEW: Check if there are at least 3 lines with colon-separated values (likely question/options format)
+    const colonSeparatedLines = lines.filter(line => line.includes(':')).length;
+    const hasColonFormat = colonSeparatedLines >= 3;
+    
+    // NEW: Check for multiple questions pattern
+    const questionCount = lines.filter(line => line.toLowerCase().startsWith('your question:')).length;
+    const hasMultipleQuestions = questionCount > 1;
+    
+    console.log('Parsing pattern detection:', {
+        hasFunctionPatterns,
+        hasQuestionPattern,
+        hasArrowPattern,
+        hasOptionPattern,
+        hasStructuredFormat,
+        hasColonFormat,
+        hasMultipleQuestions,
+        questionCount,
+        lines
+    });
+    
+    return hasFunctionPatterns || hasQuestionPattern || hasArrowPattern || hasOptionPattern || hasStructuredFormat || hasColonFormat || hasMultipleQuestions;
 }
 
 function initializeSmartParsing() {
@@ -2651,7 +2819,7 @@ function initializeSmartParsing() {
             clearTimeout(timeoutRef);
         }
         
-        // Set new timeout for 5 seconds
+        // Set new timeout for 1 second for better responsiveness
         timeoutRef = setTimeout(() => {
             const text = textarea.value.trim();
             if (text) {
@@ -2660,7 +2828,7 @@ function initializeSmartParsing() {
                     parseMultiLineInput(text, sourceField, true); // Silent parsing
                 }
             }
-        }, 5000); // 5 seconds
+        }, 1000); // 1 second
         
         return timeoutRef;
     }
