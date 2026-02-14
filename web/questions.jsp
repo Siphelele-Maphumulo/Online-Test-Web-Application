@@ -2205,6 +2205,42 @@ function initializeTrueFalseSelection() {
     }
 }
 
+// Helper to apply parsed correct answer and handle MultipleSelect
+function applyParsedCorrectAnswer(correctVal, options) {
+    if (!correctVal || options.length === 0) return true;
+
+    const correctValues = correctVal.split('|').map(v => v.trim()).filter(v => v !== '');
+    const allMatch = correctValues.length > 0 && correctValues.every(val => options.includes(val));
+
+    if (!allMatch) {
+        showModal('Correct Answer Mismatch',
+            'The parsed correct answer ("' + correctVal + '") does not match any of the provided options.\n\n' +
+            'Available options:\n' + options.map((o, i) => (i + 1) + '. ' + o).join('\n') + '\n\n' +
+            'Please manually select or correct the correct answer.');
+        return false;
+    }
+
+    // If multiple answers detected, switch to MultipleSelect type
+    if (correctValues.length > 1) {
+        const qTypeSelect = document.getElementById("questionTypeSelect");
+        if (qTypeSelect && qTypeSelect.value !== 'MultipleSelect') {
+            qTypeSelect.value = 'MultipleSelect';
+            if (typeof toggleOptions === 'function') toggleOptions();
+        }
+
+        // Update checkboxes - use timeout to ensure DOM is updated from toggleOptions
+        setTimeout(() => {
+            document.querySelectorAll('.correct-checkbox').forEach(cb => {
+                cb.checked = correctValues.includes(cb.value);
+            });
+            const correctAnswerField = document.getElementById('correctAnswer');
+            if (correctAnswerField) correctAnswerField.value = correctVal;
+        }, 100);
+    }
+
+    return true;
+}
+
 // Smart parsing functions for multi-line input
 function parseMultiLineInput(text, sourceField, silent = false) {
     if (!text || !text.trim()) return;
@@ -2251,22 +2287,10 @@ function parseFromQuestionTextarea(lines, silent = false) {
         console.log('Option 4:', opt4.value);
         console.log('Correct Answer:', correct.value);
 
-        // Validate correct answer against options
+        // Validate and apply correct answer
         const options = result.options.map(opt => opt.trim()).filter(opt => opt !== '');
         const correctVal = result.correct ? result.correct.trim() : '';
-
-        if (correctVal && options.length > 0) {
-            const correctValues = correctVal.split('|').map(v => v.trim()).filter(v => v !== '');
-            const allMatch = correctValues.every(val => options.includes(val));
-
-            if (!allMatch) {
-                showModal('Correct Answer Mismatch',
-                    'The parsed correct answer ("' + correctVal + '") does not match any of the provided options.\n\n' +
-                    'Available options:\n' + options.map((o, i) => (i + 1) + '. ' + o).join('\n') + '\n\n' +
-                    'Please manually select or correct the correct answer.');
-                return;
-            }
-        }
+        if (!applyParsedCorrectAnswer(correctVal, options)) return;
         
         if (!silent) {
             showModal('Success', 'Question parsed successfully!\n\n' + 
@@ -2310,22 +2334,10 @@ function parseFromOptionTextarea(lines, sourceOption, silent = false) {
             correct.value = result.correct || result.options[0] || '';
         }
         
-        // Validate correct answer against options
+        // Validate and apply correct answer
         const options = result.options.map(opt => opt.trim()).filter(opt => opt !== '');
         const correctVal = result.correct ? result.correct.trim() : '';
-
-        if (correctVal && options.length > 0) {
-            const correctValues = correctVal.split('|').map(v => v.trim()).filter(v => v !== '');
-            const allMatch = correctValues.every(val => options.includes(val));
-
-            if (!allMatch) {
-                showModal('Correct Answer Mismatch',
-                    'The parsed correct answer ("' + correctVal + '") does not match any of the provided options.\n\n' +
-                    'Available options:\n' + options.map((o, i) => (i + 1) + '. ' + o).join('\n') + '\n\n' +
-                    'Please manually select or correct the correct answer.');
-                return;
-            }
-        }
+        if (!applyParsedCorrectAnswer(correctVal, options)) return;
 
         if (!silent) {
             showModal('Success', 'Options parsed successfully!\n\n' + 
@@ -2478,22 +2490,10 @@ function parseComplexFormat(lines, sourceField, silent = false) {
         if (option4) opt4.value = option4;
         if (correctAnswer) correct.value = correctAnswer;
         
-        // Validate correct answer against options
+        // Validate and apply correct answer
         const opts = [option1, option2, option3, option4].map(opt => opt.trim()).filter(opt => opt !== '');
-        const correctVal = correctAnswer ? correctAnswer.trim() : '';
-
-        if (correctVal && opts.length > 0) {
-            const correctValues = correctVal.split('|').map(v => v.trim()).filter(v => v !== '');
-            const allMatch = correctValues.every(val => opts.includes(val));
-
-            if (!allMatch) {
-                showModal('Correct Answer Mismatch',
-                    'The parsed correct answer ("' + correctVal + '") does not match any of the provided options.\n\n' +
-                    'Available options:\n' + opts.map((o, i) => (i + 1) + '. ' + o).join('\n') + '\n\n' +
-                    'Please manually select or correct the correct answer.');
-                return;
-            }
-        }
+        const correctVal = (correctAnswer || '').trim();
+        if (!applyParsedCorrectAnswer(correctVal, opts)) return;
 
         if (!silent) {
             showModal('Success', 'Question parsed successfully!\n\n' + 
@@ -2762,45 +2762,49 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (correctAnswerField) {
                     correctAnswerField.value = trueFalseValue;
                 }
-            } else if (qType === "MultipleSelect") {
-                const selectedCount = document.querySelectorAll('.correct-checkbox:checked').length;
-                if (selectedCount !== 2) {
-                    errorMsg = "Select exactly 2 correct answers.";
+            } else if (qType === "MCQ" || qType === "Code" || qType === "MultipleSelect") {
+                // Get the options
+                const opt1 = document.getElementById('opt1').value.trim();
+                const opt2 = document.getElementById('opt2').value.trim();
+                const opt3 = document.getElementById('opt3').value.trim();
+                const opt4 = document.getElementById('opt4').value.trim();
+
+                // Check if required options are filled
+                if (!opt1 || !opt2) {
+                    errorMsg = "First and second options are required for this question type.";
                     isValid = false;
-                }
-            } else {
-                // For MCQ and Code questions
-                if (qType === "MCQ" || qType === "Code") {
-                    // Get the options
-                    const opt1 = document.getElementById('opt1').value.trim();
-                    const opt2 = document.getElementById('opt2').value.trim();
-                    const opt3 = document.getElementById('opt3').value.trim();
-                    const opt4 = document.getElementById('opt4').value.trim();
-                    
-                    // Check if required options are filled
-                    if (!opt1 || !opt2) {
-                        errorMsg = "First and second options are required for this question type.";
+                } else {
+                    const opts = [opt1, opt2, opt3, opt4].filter(Boolean);
+                    if (new Set(opts).size !== opts.length) {
+                        errorMsg = "Options must be unique.";
                         isValid = false;
                     } else {
-                        const opts = [opt1, opt2, opt3, opt4].filter(Boolean);
-                        if (new Set(opts).size !== opts.length) {
-                            errorMsg = "Options must be unique.";
+                        const correctValue = document.getElementById('correctAnswer').value.trim();
+                        if (!correctValue) {
+                            errorMsg = qType === "Code" ? "Expected output is required." : "Correct answer is required.";
                             isValid = false;
                         } else {
-                            const correctValue = document.getElementById('correctAnswer').value.trim();
-                            if (!correctValue) {
-                                errorMsg = qType === "Code" ? "Expected output is required." : "Correct answer is required.";
-                                isValid = false;
-                            } else if (!opts.includes(correctValue)) {
+                            // Check for MultipleSelect split or single match
+                            const correctValues = correctValue.split('|').map(v => v.trim()).filter(v => v !== '');
+                            const allMatch = correctValues.length > 0 && correctValues.every(val => opts.includes(val));
+
+                            if (!allMatch) {
                                 errorMsg = "Correct answer mismatch!\n\n" +
-                                    "The " + (qType === "Code" ? "expected output" : "correct answer") + " (\"" + correctValue + "\") must match one of the provided options exactly.\n\n" +
+                                    "The " + (qType === "Code" ? "expected output" : "correct answer") + " must match the provided options exactly.\n\n" +
                                     "Available Options:\n" + opts.map((opt, i) => (i + 1) + ". " + opt).join("\n") + "\n\n" +
-                                    "Please ensure it matches one of the options above.";
+                                    "Please ensure all parts of the correct answer match the options above.";
+                                isValid = false;
+                            } else if (qType === "MultipleSelect" && correctValues.length !== 2) {
+                                errorMsg = "Multiple Select questions must have exactly 2 correct answers selected.";
+                                isValid = false;
+                            } else if ((qType === "MCQ" || qType === "Code") && correctValues.length !== 1) {
+                                errorMsg = "This question type requires exactly one correct answer.";
                                 isValid = false;
                             }
                         }
                     }
-                } else if (qType === "DRAG_AND_DROP") {
+                }
+            } else if (qType === "DRAG_AND_DROP") {
                     // For Drag and Drop questions, validate that drag items and drop targets are provided
                     const dragItems = document.querySelectorAll('#dragItemsContainer input[type="text"]');
                     const dropTargets = document.querySelectorAll('#dropTargetsContainer input[type="text"]');
