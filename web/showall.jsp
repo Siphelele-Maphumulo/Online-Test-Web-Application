@@ -238,7 +238,10 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     /* Modal */
     .modal-backdrop {
         display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;
+        background: rgba(0,0,0,0.5); z-index: 1000; 
+    }
+    .modal-backdrop.show {
+        display: flex; align-items: center; justify-content: center;
     }
     .modal-box {
         background: white; border-radius: 12px; width: 90%; max-width: 450px;
@@ -921,8 +924,8 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     <div class="modal-box">
         <div class="modal-header">Confirm Bulk Deletion</div>
         <div class="modal-body">
-            <p>Are you sure you want to delete <span id="deleteCount" style="font-weight: bold;">0</span> selected question(s)?</p>
-            <p style="color: #dc3545; font-weight: 500; margin-top: 10px;">This action cannot be undone.</p>
+            Are you sure you want to delete <span id="deleteCount" style="font-weight: bold;">0</span> selected question(s)?
+            <div style="color: #dc3545; font-weight: 500; margin-top: 10px;">This action cannot be undone.</div>
         </div>
         <div class="modal-footer">
             <button class="btn-cancel" onclick="hideDeleteSelectedModal()">Cancel</button>
@@ -949,7 +952,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     function showDeleteModal(qid, cname) {
         questionToDelete = qid;
         courseToDeleteFrom = cname;
-        document.getElementById('deleteModal').style.display = 'flex';
+        document.getElementById('deleteModal').classList.add('show');
     }
     
     function showDeleteModalFromData(button) {
@@ -959,7 +962,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     }
 
     function hideDeleteModal() {
-        document.getElementById('deleteModal').style.display = 'none';
+        document.getElementById('deleteModal').classList.remove('show');
         questionToDelete = null;
         courseToDeleteFrom = null;
     }
@@ -1131,11 +1134,11 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
         
         // Show confirmation modal instead of confirm dialog
         document.getElementById('deleteCount').textContent = selectedCheckboxes.length;
-        document.getElementById('deleteSelectedModal').style.display = 'block';
+        document.getElementById('deleteSelectedModal').classList.add('show');
     }
     
     function hideDeleteSelectedModal() {
-        document.getElementById('deleteSelectedModal').style.display = 'none';
+        document.getElementById('deleteSelectedModal').classList.remove('show');
     }
     
     function confirmDeleteSelected() {
