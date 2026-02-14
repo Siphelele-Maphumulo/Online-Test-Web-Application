@@ -319,6 +319,31 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
         box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
     }
     
+    /* Smart parsing button styles */
+    .btn-sm {
+        padding: 6px 12px;
+        font-size: 12px;
+        line-height: 1.4;
+        border-radius: 4px;
+    }
+    
+    .btn-info {
+        background: linear-gradient(135deg, #17a2b8, #138496);
+        color: white;
+        border: none;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-info:hover {
+        background: linear-gradient(135deg, #138496, #117a8b);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
+    }
+    
+    .btn-info:active {
+        transform: translateY(0);
+    }
+    
     .form-select {
         appearance: none;
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M2 4l4 4 4-4z'/%3E%3C/svg%3E");
@@ -2178,6 +2203,361 @@ function initializeTrueFalseSelection() {
     }
 }
 
+// Smart parsing functions for multi-line input
+function parseMultiLineInput(text, sourceField) {
+    if (!text || !text.trim()) return;
+    
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
+    
+    if (sourceField === 'question') {
+        // Parse from question textarea using keyword detection
+        parseFromQuestionTextarea(lines);
+    } else if (sourceField.startsWith('opt')) {
+        // Parse from option textarea using keyword detection
+        parseFromOptionTextarea(lines, sourceField);
+    }
+}
+
+function parseFromQuestionTextarea(lines) {
+    const questionTextarea = document.getElementById('questionTextarea');
+    const opt1 = document.getElementById('opt1');
+    const opt2 = document.getElementById('opt2');
+    const opt3 = document.getElementById('opt3');
+    const opt4 = document.getElementById('opt4');
+    const correct = document.getElementById('correctAnswer');
+    
+    // Try simple line-by-line parsing first
+    const result = parseSimpleFormat(lines);
+    
+    if (result.success) {
+        // Populate form fields - FIXED MAPPING
+        if (result.question) {
+            questionTextarea.value = result.question;
+        }
+        opt1.value = result.options[0] || '';
+        opt2.value = result.options[1] || '';
+        opt3.value = result.options[2] || '';
+        opt4.value = result.options[3] || '';
+        correct.value = result.correct || result.options[0] || '';
+        
+        // Debug the field values
+        console.log('Setting field values:');
+        console.log('Question textarea:', questionTextarea.value);
+        console.log('Option 1:', opt1.value);
+        console.log('Option 2:', opt2.value);
+        console.log('Option 3:', opt3.value);
+        console.log('Option 4:', opt4.value);
+        console.log('Correct Answer:', correct.value);
+        
+        showModal('Success', 'Question parsed successfully!\n\n' + 
+            (result.question ? 'Question: ' + result.question + '\n' : '') +
+            'Option 1: ' + (result.options[0] || '') + '\n' + 
+            'Option 2: ' + (result.options[1] || '') + '\n' + 
+            'Option 3: ' + (result.options[2] || '') + '\n' + 
+            'Option 4: ' + (result.options[3] || '') + '\n' + 
+            'Correct: ' + (result.correct || result.options[0] || ''));
+        return;
+    }
+    
+    // Fallback to the original complex parsing
+    parseComplexFormat(lines, 'question');
+}
+
+function parseFromOptionTextarea(lines, sourceOption) {
+    const opt1 = document.getElementById('opt1');
+    const opt2 = document.getElementById('opt2');
+    const opt3 = document.getElementById('opt3');
+    const opt4 = document.getElementById('opt4');
+    const correct = document.getElementById('correctAnswer');
+    
+    // Try simple line-by-line parsing first
+    const result = parseSimpleFormat(lines);
+    
+    if (result.success) {
+        // Populate form fields based on source option
+        if (sourceOption === 'opt1') {
+            opt1.value = result.options[0] || '';
+            opt2.value = result.options[1] || '';
+            opt3.value = result.options[2] || '';
+            opt4.value = result.options[3] || '';
+            correct.value = result.correct || result.options[0] || '';
+        } else if (sourceOption === 'opt2') {
+            opt2.value = result.options[0] || '';
+            opt3.value = result.options[1] || '';
+            opt4.value = result.options[2] || '';
+            opt1.value = result.options[3] || '';
+            correct.value = result.correct || result.options[0] || '';
+        }
+        
+        showModal('Success', 'Options parsed successfully!\n\n' + 
+            'First Option: ' + (result.options[0] || '') + '\n' + 
+            'Second Option: ' + (result.options[1] || '') + '\n' + 
+            'Third Option: ' + (result.options[2] || '') + '\n' + 
+            'Fourth Option: ' + (result.options[3] || '') + '\n' + 
+            'Correct Answer: ' + (result.correct || result.options[0] || ''));
+        return;
+    }
+    
+    // Fallback to the original complex parsing
+    parseComplexFormat(lines, sourceOption);
+}
+
+// Simple format parser for common layouts
+function parseSimpleFormat(lines) {
+    const result = {
+        success: false,
+        question: '',
+        options: ['', '', '', ''],
+        correct: ''
+    };
+    
+    console.log('=== PARSING START ==='); // Debug log
+    console.log('Parsing lines:', lines); // Debug log
+    
+    // Check for the exact format you mentioned
+    if (lines.length >= 5) {
+        // Process each line to find options and correct answer
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const lowerLine = line.toLowerCase().trim();
+            
+            if (lowerLine.startsWith('your question:')) {
+                // Extract everything after "Your Question:"
+                const colonIndex = line.indexOf(':');
+                if (colonIndex > -1) {
+                    result.question = line.substring(colonIndex + 1).trim();
+                    console.log('Extracted question:', result.question); // Debug log
+                }
+            } else if (lowerLine.startsWith('option 1:')) {
+                const colonIndex = line.indexOf(':');
+                if (colonIndex > -1) {
+                    result.options[0] = line.substring(colonIndex + 1).trim();
+                    console.log('Option 1:', result.options[0]); // Debug log
+                }
+            } else if (lowerLine.startsWith('option 2:')) {
+                const colonIndex = line.indexOf(':');
+                if (colonIndex > -1) {
+                    result.options[1] = line.substring(colonIndex + 1).trim();
+                    console.log('Option 2:', result.options[1]); // Debug log
+                }
+            } else if (lowerLine.startsWith('option 3:')) {
+                const colonIndex = line.indexOf(':');
+                if (colonIndex > -1) {
+                    result.options[2] = line.substring(colonIndex + 1).trim();
+                    console.log('Option 3:', result.options[2]); // Debug log
+                }
+            } else if (lowerLine.startsWith('option 4:')) {
+                const colonIndex = line.indexOf(':');
+                if (colonIndex > -1) {
+                    result.options[3] = line.substring(colonIndex + 1).trim();
+                    console.log('Option 4:', result.options[3]); // Debug log
+                }
+            } else if (lowerLine.startsWith('correct answer:')) {
+                const colonIndex = line.indexOf(':');
+                if (colonIndex > -1) {
+                    result.correct = line.substring(colonIndex + 1).trim();
+                    console.log('Correct answer:', result.correct); // Debug log
+                }
+            }
+        }
+        
+        // If we have at least a question or any options, consider it successful
+        if (result.question || result.options.some(opt => opt !== '') || result.correct) {
+            result.success = true;
+            console.log('Parsing successful with question or options'); // Debug log
+        }
+    }
+    
+    console.log('Final parsing result:', result); // Debug log
+    console.log('=== PARSING END ==='); // Debug log
+    return result;
+}
+
+// Complex format parser (fallback) - Improved version
+function parseComplexFormat(lines, sourceField) {
+    const questionTextarea = document.getElementById('questionTextarea');
+    const opt1 = document.getElementById('opt1');
+    const opt2 = document.getElementById('opt2');
+    const opt3 = document.getElementById('opt3');
+    const opt4 = document.getElementById('opt4');
+    const correct = document.getElementById('correctAnswer');
+    
+    // Process each line to find options and correct answer
+    let questionText = '';
+    let option1 = '';
+    let option2 = '';
+    let option3 = '';
+    let option4 = '';
+    let correctAnswer = '';
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const lowerLine = line.toLowerCase().trim();
+        
+        if (lowerLine.startsWith('your question:')) {
+            const colonIndex = line.indexOf(':');
+            if (colonIndex > -1) {
+                questionText = line.substring(colonIndex + 1).trim();
+            }
+        } else if (lowerLine.startsWith('option 1:')) {
+            const colonIndex = line.indexOf(':');
+            if (colonIndex > -1) {
+                option1 = line.substring(colonIndex + 1).trim();
+            }
+        } else if (lowerLine.startsWith('option 2:')) {
+            const colonIndex = line.indexOf(':');
+            if (colonIndex > -1) {
+                option2 = line.substring(colonIndex + 1).trim();
+            }
+        } else if (lowerLine.startsWith('option 3:')) {
+            const colonIndex = line.indexOf(':');
+            if (colonIndex > -1) {
+                option3 = line.substring(colonIndex + 1).trim();
+            }
+        } else if (lowerLine.startsWith('option 4:')) {
+            const colonIndex = line.indexOf(':');
+            if (colonIndex > -1) {
+                option4 = line.substring(colonIndex + 1).trim();
+            }
+        } else if (lowerLine.startsWith('correct answer:')) {
+            const colonIndex = line.indexOf(':');
+            if (colonIndex > -1) {
+                correctAnswer = line.substring(colonIndex + 1).trim();
+            }
+        }
+    }
+    
+    // Populate form fields
+    if (questionText || option1 || option2 || option3 || option4) {
+        if (questionText && sourceField === 'question') {
+            questionTextarea.value = questionText;
+        }
+        if (option1) opt1.value = option1;
+        if (option2) opt2.value = option2;
+        if (option3) opt3.value = option3;
+        if (option4) opt4.value = option4;
+        if (correctAnswer) correct.value = correctAnswer;
+        
+        showModal('Success', 'Question parsed successfully!\n\n' + 
+            (questionText ? 'Question: ' + questionText + '\n' : '') +
+            'Option 1: ' + option1 + '\n' + 
+            'Option 2: ' + option2 + '\n' + 
+            'Option 3: ' + option3 + '\n' + 
+            'Option 4: ' + option4 + '\n' + 
+            'Correct: ' + correctAnswer);
+    }
+}
+
+
+
+function initializeSmartParsing() {
+    const questionTextarea = document.getElementById('questionTextarea');
+    const opt1 = document.getElementById('opt1');
+    const opt2 = document.getElementById('opt2');
+    const opt3 = document.getElementById('opt3');
+    const opt4 = document.getElementById('opt4');
+    
+    // Store timeout references
+    let questionTimeout = null;
+    let optTimeouts = [null, null, null, null];
+    
+    // Function to clear and set timeout
+    function setParseTimeout(textarea, sourceField, timeoutRef) {
+        // Clear existing timeout
+        if (timeoutRef) {
+            clearTimeout(timeoutRef);
+        }
+        
+        // Set new timeout for 5 seconds
+        timeoutRef = setTimeout(() => {
+            const text = textarea.value.trim();
+            if (text) {
+                // Check if text contains parsing patterns
+                if (containsParsingPatterns(text)) {
+                    parseMultiLineInput(text, sourceField);
+                }
+            }
+        }, 5000); // 5 seconds
+        
+        return timeoutRef;
+    }
+    
+    // Function to check if text contains parsing patterns
+    function containsParsingPatterns(text) {
+        const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
+        
+        // Check for function name patterns
+        const functionPatterns = ['input()', 'read()', 'get()', 'scan()'];
+        let hasFunctionPatterns = false;
+        
+        lines.forEach(line => {
+            functionPatterns.forEach(pattern => {
+                if (line.toLowerCase().includes(pattern.toLowerCase())) {
+                    hasFunctionPatterns = true;
+                }
+            });
+        });
+        
+        // Check for question patterns - more flexible
+        const questionPatterns = [
+            /what.*question/i,
+            /what.*function/i,
+            /what.*correct/i,
+            /what.*way/i,
+            /your.*question/i,
+            /question:/i,
+            /q:/i,
+            /option\s*[:\-]?\s*→/i,
+            /correct\s*[:\-]?\s*answer/i
+        ];
+        
+        const hasQuestionPattern = lines.some(line => 
+            questionPatterns.some(pattern => pattern.test(line))
+        );
+        
+        // Check for arrow patterns (→)
+        const hasArrowPattern = lines.some(line => line.includes('→'));
+        
+        // Check for colon patterns with option keywords
+        const optionKeywords = ['first option', 'second option', 'third option', 'fourth option', 'option 1', 'option 2', 'option 3', 'option 4'];
+        const hasOptionPattern = lines.some(line => 
+            optionKeywords.some(keyword => line.toLowerCase().includes(keyword.toLowerCase()))
+        );
+        
+        return hasFunctionPatterns || hasQuestionPattern || hasArrowPattern || hasOptionPattern;
+    }
+    
+    // Add event listeners for automatic parsing
+    if (questionTextarea) {
+        questionTextarea.addEventListener('input', function() {
+            questionTimeout = setParseTimeout(this, 'question', questionTimeout);
+        });
+        
+        questionTextarea.addEventListener('paste', function() {
+            // Give a moment for paste to complete
+            setTimeout(() => {
+                questionTimeout = setParseTimeout(this, 'question', questionTimeout);
+            }, 100);
+        });
+    }
+    
+    // Add event listeners for option textareas
+    [opt1, opt2, opt3, opt4].forEach((opt, index) => {
+        if (opt) {
+            opt.addEventListener('input', function() {
+                optTimeouts[index] = setParseTimeout(this, 'opt' + (index + 1), optTimeouts[index]);
+            });
+            
+            opt.addEventListener('paste', function() {
+                // Give a moment for paste to complete
+                setTimeout(() => {
+                    optTimeouts[index] = setParseTimeout(this, 'opt' + (index + 1), optTimeouts[index]);
+                }, 100);
+            });
+        }
+    });
+}
+
 function updateCorrectOptionLabels() {
     for (let i = 1; i <= 4; i++) {
         const optInput = document.getElementById(`opt${i}`);
@@ -2270,6 +2650,8 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleOptions(); // Initialize the correct answer container visibility
     updateCorrectOptionLabels();
     syncCourseDropdowns();
+    initializeSmartParsing(); // Initialize smart parsing functionality
+    initializeMultipleSelectCheckboxes();
     initializeTrueFalseSelection(); // Initialize True/False dropdown event handler
     
     // Initialize drop target input event listeners for immediate updates
@@ -2283,6 +2665,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const addQuestionForm = document.getElementById('addQuestionForm');
     if (addQuestionForm) {
         addQuestionForm.addEventListener('submit', function(e) {
+            // Trigger immediate parsing if there's content in the question textarea
+            const questionTextarea = document.getElementById('questionTextarea');
+            if (questionTextarea && questionTextarea.value.trim()) {
+                // Parse immediately to ensure content is processed before validation
+                const lines = questionTextarea.value.trim().split('\n').map(line => line.trim()).filter(line => line !== '');
+                if (lines.length >= 5) {
+                    // Check if it looks like our special format
+                    const hasYourQuestion = lines.some(line => line.toLowerCase().startsWith('your question:'));
+                    const hasOptions = lines.some(line => 
+                        line.toLowerCase().startsWith('option 1:') ||
+                        line.toLowerCase().startsWith('option 2:') ||
+                        line.toLowerCase().startsWith('option 3:') ||
+                        line.toLowerCase().startsWith('option 4:')
+                    );
+                    const hasCorrectAnswer = lines.some(line => line.toLowerCase().startsWith('correct answer:'));
+                    
+                    if (hasYourQuestion && hasOptions && hasCorrectAnswer) {
+                        // Parse immediately before validation
+                        parseFromQuestionTextarea(lines);
+                    }
+                }
+            }
+            
             const qType = document.getElementById("questionTypeSelect").value;
             const questionText = document.getElementById('questionTextarea').value.trim();
             const imageFile = document.getElementById('imageFile').files[0];

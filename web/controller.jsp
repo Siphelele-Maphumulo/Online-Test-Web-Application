@@ -1231,13 +1231,11 @@ try {
                 session.setAttribute("last_course_name", courseName);
                 session.setAttribute("last_question_type", questionType);
                 
-                // Clean up multipart items attribute to prevent reuse
-                request.removeAttribute("multipartItems");
-                
+                // Redirect to success page with modal
                 if (!courseName.isEmpty()) {
-                    response.sendRedirect("showall.jsp?coursename=" + courseName);
+                    response.sendRedirect("question-success.jsp?coursename=" + java.net.URLEncoder.encode(courseName, "UTF-8"));
                 } else {
-                    response.sendRedirect("showall.jsp");
+                    response.sendRedirect("question-success.jsp");
                 }
                 return;
             } catch (Exception e) {
@@ -1337,16 +1335,15 @@ try {
             }
             
             session.setAttribute("message","Question added successfully");
-            
             // Save last selections to session
             session.setAttribute("last_course_name", courseName);
             session.setAttribute("last_question_type", questionType);
-            
+
             courseName = nz(request.getParameter("coursename"), "");
             if (!courseName.isEmpty()) {
-                response.sendRedirect("showall.jsp?coursename=" + courseName);
+                response.sendRedirect("question-success.jsp?coursename=" + java.net.URLEncoder.encode(courseName, "UTF-8")+"&questionType="+questionType);
             } else {
-                response.sendRedirect("showall.jsp");
+                response.sendRedirect("question-success.jsp?questionType="+questionType);
             }
             return;
         }

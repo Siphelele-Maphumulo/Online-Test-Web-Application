@@ -1301,11 +1301,21 @@ public int addNewQuestionReturnId(String questionText, String opt1, String opt2,
     ResultSet rsKeys = null;
     try {
         String sql;
+        int marks = 1; // Default marks
+
+        // Set marks based on question type
+        if ("MultipleSelect".equalsIgnoreCase(questionType)) {
+            marks = 2; // 2 marks for MultipleSelect (1 mark per correct answer)
+        } else if ("TrueFalse".equalsIgnoreCase(questionType)) {
+            marks = 1; // 1 mark for True/False
+        } else {
+            marks = 1; // Default 1 mark for other types
+        }
 
         // Handle different question types
         if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
             // For drag-and-drop questions, insert empty strings for opt fields since they're required
-            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path, marks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             pstm.setString(1, questionText);
             pstm.setString(2, ""); // opt1 - empty for drag-drop
@@ -1316,8 +1326,9 @@ public int addNewQuestionReturnId(String questionText, String opt1, String opt2,
             pstm.setString(7, courseName);
             pstm.setString(8, questionType);
             pstm.setString(9, imagePath);
+            pstm.setInt(10, marks);
         } else if ("TrueFalse".equalsIgnoreCase(questionType)) {
-            sql = "INSERT INTO questions (question, opt1, opt2, correct, course_name, question_type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO questions (question, opt1, opt2, correct, course_name, question_type, image_path, marks) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             pstm.setString(1, questionText);
             pstm.setString(2, "True");  // Hardcoded options for True/False
@@ -1326,9 +1337,10 @@ public int addNewQuestionReturnId(String questionText, String opt1, String opt2,
             pstm.setString(5, courseName);
             pstm.setString(6, questionType);
             pstm.setString(7, imagePath);
+            pstm.setInt(8, marks);
         } else {
             // Otherwise, handle multiple-choice questions
-            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path, marks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             pstm.setString(1, questionText);
             pstm.setString(2, opt1);
@@ -1339,6 +1351,7 @@ public int addNewQuestionReturnId(String questionText, String opt1, String opt2,
             pstm.setString(7, courseName);
             pstm.setString(8, questionType);
             pstm.setString(9, imagePath);
+            pstm.setInt(10, marks);
         }
 
         // Execute the update
@@ -2567,6 +2580,111 @@ public ArrayList getAllQuestions(String courseName) {
         String sql = "SELECT * FROM questions WHERE LOWER(TRIM(course_name)) = LOWER(TRIM(?))";
         pstm = conn.prepareStatement(sql);
         pstm.setString(1, courseName);
+        rs = pstm.executeQuery();
+        
+        Questions question;
+        while (rs.next()) {
+            question = new Questions(
+                rs.getInt("question_id"),
+                rs.getString("question"),
+                rs.getString("opt1"),
+                rs.getString("opt2"),
+                rs.getString("opt3"),
+                rs.getString("opt4"),
+                rs.getString("correct"),
+                rs.getString("course_name"),
+                rs.getString("question_type"),
+                rs.getString("image_path")
+            );
+            
+            // Populate advanced fields from current row
+            try {
+                question.setExtraData(rs.getString("extra_data"));
+                question.setDragItemsJson(rs.getString("drag_items"));
+                question.setDropTargetsJson(rs.getString("drop_targets"));
+                question.setCorrectTargetsJson(rs.getString("drag_correct_targets"));
+                question.setTotalMarks(rs.getInt("marks"));
+            } catch (SQLException sqle) {
+                // Columns might not exist yet
+            }
+            
+            list.add(question);
+        }
+    } catch (SQLException ex) {
+        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error in getAllQuestions", ex);
+    } finally {
+        try {
+            if (rs != null) rs.close();
+            if (pstm != null) pstm.close();
+        } catch (SQLException e) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources in getAllQuestions", e);
+        }
+    }
+
+    // Now populate nested relational data AFTER closing the main ResultSet
+    for (Object obj : list) {
+        Questions q = (Questions) obj;
+        if ("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType())) {
+            q.setDragItems(getDragItemsByQuestionIdOld(q.getQuestionId()));
+            q.setDropTargets(getDropTargetsByQuestionIdOld(q.getQuestionId()));
+        }
+    }
+    return list;
+}
+
+// Enhanced getAllQuestions method with search, filters, and sorting
+public ArrayList getAllQuestions(String courseName, String searchTerm, String questionTypeFilter, String sortBy) {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getAllQuestions", e);
+        return new ArrayList();
+    }
+    
+    ArrayList list = new ArrayList();
+    PreparedStatement pstm = null;
+    ResultSet rs = null;
+    
+    try {
+        // Build dynamic SQL query
+        StringBuilder sql = new StringBuilder("SELECT * FROM questions WHERE LOWER(TRIM(course_name)) = LOWER(TRIM(?))");
+        
+        // Add search condition if provided
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            sql.append(" AND (LOWER(question) LIKE LOWER(?) OR LOWER(opt1) LIKE LOWER(?) OR LOWER(opt2) LIKE LOWER(?) OR LOWER(opt3) LIKE LOWER(?) OR LOWER(opt4) LIKE LOWER(?))");
+        }
+        
+        // Add question type filter if provided
+        if (questionTypeFilter != null && !questionTypeFilter.trim().isEmpty() && !"all".equalsIgnoreCase(questionTypeFilter)) {
+            sql.append(" AND question_type = ?");
+        }
+        
+        // Add sorting
+        if (sortBy == null || sortBy.isEmpty() || "desc".equalsIgnoreCase(sortBy)) {
+            sql.append(" ORDER BY question_id DESC"); // Descending order (newest first)
+        } else {
+            sql.append(" ORDER BY question_id ASC"); // Ascending order (oldest first)
+        }
+        
+        pstm = conn.prepareStatement(sql.toString());
+        
+        // Set parameters
+        int paramIndex = 1;
+        pstm.setString(paramIndex++, courseName);
+        
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            String searchPattern = "%" + searchTerm.trim() + "%";
+            pstm.setString(paramIndex++, searchPattern);
+            pstm.setString(paramIndex++, searchPattern);
+            pstm.setString(paramIndex++, searchPattern);
+            pstm.setString(paramIndex++, searchPattern);
+            pstm.setString(paramIndex++, searchPattern);
+        }
+        
+        if (questionTypeFilter != null && !questionTypeFilter.trim().isEmpty() && !"all".equalsIgnoreCase(questionTypeFilter)) {
+            pstm.setString(paramIndex++, questionTypeFilter);
+        }
+        
         rs = pstm.executeQuery();
         
         Questions question;

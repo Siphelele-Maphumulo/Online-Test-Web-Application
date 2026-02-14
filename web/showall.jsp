@@ -57,7 +57,12 @@ String csrfToken = java.util.UUID.randomUUID().toString();
 session.setAttribute("csrf_token", csrfToken);
 
 String courseName = request.getParameter("coursename");
-ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName) : new ArrayList();
+String searchTerm = request.getParameter("search");
+String questionTypeFilter = request.getParameter("type");
+String sortBy = request.getParameter("sort");
+
+// Use enhanced getAllQuestions method with search, filters, and descending order
+ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchTerm, questionTypeFilter, sortBy) : new ArrayList();
 %>
 
 <!-- Your existing CSS -->
@@ -246,6 +251,285 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName) : new A
     .btn-cancel { background: #eee; color: #666; padding: 8px 16px; border-radius: 6px; cursor: pointer; border: none; }
     .btn-confirm-del { background: var(--error); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; border: none; }
 
+    /* Search and Filter Styles */
+    .search-filter-section {
+        background: var(--white);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--medium-gray);
+    }
+
+    .search-filter-form {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+
+    .search-row {
+        display: flex;
+        gap: var(--spacing-md);
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .search-box {
+        position: relative;
+        flex: 1;
+        min-width: 300px;
+        max-width: 500px;
+    }
+
+    .search-box i {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--dark-gray);
+        z-index: 2;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 12px 16px 12px 45px;
+        border: 2px solid var(--medium-gray);
+        border-radius: var(--radius-md);
+        font-size: 14px;
+        transition: all var(--transition-fast);
+        background: var(--white);
+        color: var(--text-dark);
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+    }
+
+    .clear-search {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: var(--dark-gray);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 50%;
+        transition: all var(--transition-fast);
+        opacity: 0.6;
+    }
+
+    .clear-search:hover {
+        opacity: 1;
+        background: var(--light-gray);
+    }
+
+    .filter-controls {
+        display: flex;
+        gap: var(--spacing-sm);
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .filter-select {
+        padding: 12px 16px;
+        border: 2px solid var(--medium-gray);
+        border-radius: var(--radius-md);
+        font-size: 14px;
+        background: var(--white);
+        color: var(--text-dark);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        min-width: 150px;
+    }
+
+    .filter-select:focus {
+        outline: none;
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+    }
+
+    .btn-search {
+        padding: 12px 20px;
+        background: var(--accent-blue);
+        color: var(--white);
+        border: none;
+        border-radius: var(--radius-md);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+    }
+
+    .btn-search:hover {
+        background: #3b82f6;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
+    }
+
+    .active-filters {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        flex-wrap: wrap;
+        padding: var(--spacing-sm);
+        background: var(--light-gray);
+        border-radius: var(--radius-sm);
+        border-left: 3px solid var(--accent-blue);
+    }
+
+    .filter-label {
+        font-size: 13px;
+        color: var(--dark-gray);
+        font-weight: 600;
+    }
+
+    .filter-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+        padding: 4px 8px;
+        background: var(--accent-blue);
+        color: var(--white);
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .remove-filter {
+        color: var(--white);
+        text-decoration: none;
+        opacity: 0.8;
+        transition: opacity var(--transition-fast);
+        display: flex;
+        align-items: center;
+    }
+
+    .remove-filter:hover {
+        opacity: 1;
+    }
+
+    .clear-all-filters {
+        color: var(--error);
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 600;
+        transition: color var(--transition-fast);
+    }
+
+    .clear-all-filters:hover {
+        color: #b91c1c;
+        text-decoration: underline;
+    }
+
+    /* Floating Scroll Button */
+    .floating-scroll {
+        position: fixed;
+        bottom: 30px;
+        right: 5px;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .floating-scroll.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .scroll-btn {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #476287;
+        color: var(--white);
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8px;
+        box-shadow: var(--shadow-lg);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .scroll-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 8px 25px rgba(9, 41, 77, 0.3);
+    }
+
+    .scroll-btn:active {
+        transform: scale(0.95);
+    }
+
+    .scroll-btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.4s ease, height 0.4s ease;
+    }
+
+    .scroll-btn:active::before {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .floating-scroll {
+            bottom: 20px;
+            right: 20px;
+        }
+
+        .scroll-btn {
+            width: 45px;
+            height: 45px;
+            font-size: 16px;
+        }
+        
+        .search-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .search-box {
+            min-width: auto;
+            max-width: none;
+        }
+
+        .filter-controls {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .filter-select,
+        .btn-search {
+            width: 100%;
+        }
+
+        .active-filters {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
 </style>
 
 <div class="dashboard-container">
@@ -314,6 +598,71 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName) : new A
             </header>
 
             <% if (courseName != null && !courseName.isEmpty()) { %>
+                <!-- Search and Filter Section -->
+                <div class="search-filter-section">
+                    <form method="GET" action="showall.jsp" class="search-filter-form">
+                        <input type="hidden" name="coursename" value="<%= courseName %>">
+                        
+                        <div class="search-row">
+                            <div class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input type="text" 
+                                       name="search" 
+                                       placeholder="Search questions, options..." 
+                                       value="<%= searchTerm != null ? searchTerm : "" %>"
+                                       class="search-input">
+                                <button type="button" class="clear-search" onclick="clearSearch()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="filter-controls">
+                                <select name="type" class="filter-select" onchange="this.form.submit()">
+                                    <option value="all" <%= "all".equalsIgnoreCase(questionTypeFilter) ? "selected" : "" %>>All Types</option>
+                                    <option value="MCQ" <%= "MCQ".equalsIgnoreCase(questionTypeFilter) ? "selected" : "" %>>Multiple Choice</option>
+                                    <option value="MultipleSelect" <%= "MultipleSelect".equalsIgnoreCase(questionTypeFilter) ? "selected" : "" %>>Multiple Select</option>
+                                    <option value="TrueFalse" <%= "TrueFalse".equalsIgnoreCase(questionTypeFilter) ? "selected" : "" %>>True/False</option>
+                                    <option value="Code" <%= "Code".equalsIgnoreCase(questionTypeFilter) ? "selected" : "" %>>Code Snippet</option>
+                                    <option value="DRAG_AND_DROP" <%= "DRAG_AND_DROP".equalsIgnoreCase(questionTypeFilter) ? "selected" : "" %>>Drag & Drop</option>
+                                </select>
+                                
+                                <select name="sort" class="filter-select" onchange="this.form.submit()">
+                                    <option value="desc" <%= "desc".equalsIgnoreCase(sortBy) || sortBy == null ? "selected" : "" %>>Newest First</option>
+                                    <option value="asc" <%= "asc".equalsIgnoreCase(sortBy) ? "selected" : "" %>>Oldest First</option>
+                                </select>
+                                
+                                <button type="submit" class="btn-search">
+                                    <i class="fas fa-filter"></i> Apply
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <% if (searchTerm != null && !searchTerm.trim().isEmpty() || 
+                             (questionTypeFilter != null && !questionTypeFilter.trim().isEmpty() && !"all".equalsIgnoreCase(questionTypeFilter)) ) { %>
+                            <div class="active-filters">
+                                <span class="filter-label">Active filters:</span>
+                                <% if (searchTerm != null && !searchTerm.trim().isEmpty()) { %>
+                                    <span class="filter-tag">
+                                        Search: "<%= searchTerm %>"
+                                        <a href="showall.jsp?coursename=<%= courseName %>&type=<%= questionTypeFilter != null ? questionTypeFilter : "all" %>&sort=<%= sortBy != null ? sortBy : "desc" %>" class="remove-filter">
+                                            <i class="fas fa-times"></i>
+                                        </a>
+                                    </span>
+                                <% } %>
+                                <% if (questionTypeFilter != null && !questionTypeFilter.trim().isEmpty() && !"all".equalsIgnoreCase(questionTypeFilter)) { %>
+                                    <span class="filter-tag">
+                                        Type: <%= questionTypeFilter %>
+                                        <a href="showall.jsp?coursename=<%= courseName %>&search=<%= searchTerm != null ? searchTerm : "" %>&sort=<%= sortBy != null ? sortBy : "desc" %>" class="remove-filter">
+                                            <i class="fas fa-times"></i>
+                                        </a>
+                                    </span>
+                                <% } %>
+                                <a href="showall.jsp?coursename=<%= courseName %>" class="clear-all-filters">Clear all</a>
+                            </div>
+                        <% } %>
+                    </form>
+                </div>
+
                 <div class="course-banner">
                     <div class="course-info">
                         <h2><%= courseName %></h2>
@@ -459,6 +808,16 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName) : new A
     </div>
 </div>
 
+<!-- Floating Scroll Buttons -->
+<div class="floating-scroll" id="floatingScroll">
+    <button class="scroll-btn" id="scrollUpBtn" title="Scroll to Top">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+    <button class="scroll-btn" id="scrollDownBtn" title="Scroll to Bottom">
+        <i class="fas fa-chevron-down"></i>
+    </button>
+</div>
+
 <script>
     let questionToDelete = null;
     let courseToDeleteFrom = null;
@@ -480,6 +839,76 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName) : new A
         document.getElementById('deleteModal').style.display = 'none';
         questionToDelete = null;
         courseToDeleteFrom = null;
+    }
+
+    function clearSearch() {
+        const searchInput = document.querySelector('.search-input');
+        if (searchInput) {
+            searchInput.value = '';
+            // Submit form to clear search results
+            searchInput.form.submit();
+        }
+    }
+
+    // Floating scroll buttons functionality
+    function initScrollButtons() {
+        const floatingScroll = document.getElementById('floatingScroll');
+        const scrollUpBtn = document.getElementById('scrollUpBtn');
+        const scrollDownBtn = document.getElementById('scrollDownBtn');
+        
+        if (!floatingScroll || !scrollUpBtn || !scrollDownBtn) return;
+        
+        // Show/hide floating buttons based on scroll position
+        function toggleScrollButtons() {
+            const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+            const documentHeight = document.documentElement.scrollHeight;
+            const windowHeight = window.innerHeight;
+            
+            // Show buttons when user scrolls down at least 200px
+            if (scrollPosition > 200) {
+                floatingScroll.classList.add('visible');
+            } else {
+                floatingScroll.classList.remove('visible');
+            }
+            
+            // Hide scroll down button when at bottom
+            if (scrollPosition + windowHeight >= documentHeight - 100) {
+                scrollDownBtn.style.display = 'none';
+            } else {
+                scrollDownBtn.style.display = 'flex';
+            }
+            
+            // Hide scroll up button when at top
+            if (scrollPosition < 100) {
+                scrollUpBtn.style.display = 'none';
+            } else {
+                scrollUpBtn.style.display = 'flex';
+            }
+        }
+        
+        // Scroll to top function
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+        
+        // Scroll to bottom function
+        function scrollToBottom() {
+            window.scrollTo({
+                top: document.documentElement.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+        
+        // Event listeners
+        scrollUpBtn.addEventListener('click', scrollToTop);
+        scrollDownBtn.addEventListener('click', scrollToBottom);
+        window.addEventListener('scroll', toggleScrollButtons);
+        
+        // Initial check
+        toggleScrollButtons();
     }
 
     document.getElementById('confirmDelBtn').onclick = function() {
@@ -512,5 +941,21 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName) : new A
         if (event.key === 'Escape') {
             hideDeleteModal();
         }
+    });
+
+    // Add search on Enter key functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.querySelector('.search-input');
+        if (searchInput) {
+            searchInput.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    this.form.submit();
+                }
+            });
+        }
+        
+        // Initialize scroll buttons
+        initScrollButtons();
     });
 </script>
