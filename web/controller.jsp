@@ -1037,6 +1037,7 @@ try {
                 String questionType = "";
                 String correctMultiple = "";
                 String imagePath = null;
+                boolean isAjax = false;
                 
                 for (FileItem item : items) {
                     if (item.isFormField()) {
@@ -1044,7 +1045,9 @@ try {
                         String fieldName = item.getFieldName();
                         String fieldValue = item.getString("UTF-8");
                         
-                        if ("question".equals(fieldName)) {
+                        if ("ajax".equals(fieldName)) {
+                            isAjax = "true".equalsIgnoreCase(fieldValue);
+                        } else if ("question".equals(fieldName)) {
                             questionText = nz(fieldValue, "");
                         } else if ("opt1".equals(fieldName)) {
                             opt1 = nz(fieldValue, "");
@@ -1231,6 +1234,12 @@ try {
                 session.setAttribute("last_course_name", courseName);
                 session.setAttribute("last_question_type", questionType);
                 
+                if (isAjax) {
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"success\": true, \"message\": \"Question added successfully\", \"qid\": " + newQuestionIdInserted + "}");
+                    return;
+                }
+
                 // Redirect to success page with modal
                 if (!courseName.isEmpty()) {
                     response.sendRedirect("question-success.jsp?coursename=" + java.net.URLEncoder.encode(courseName, "UTF-8"));
@@ -1258,6 +1267,7 @@ try {
             String correctAnswer = nz(request.getParameter("correct"), "");
             String courseName    = nz(request.getParameter("coursename"), "");
             String questionType  = nz(request.getParameter("questionType"), "");
+            boolean isAjax = "true".equalsIgnoreCase(request.getParameter("ajax"));
             
             if ("MultipleSelect".equalsIgnoreCase(questionType)) {
                 String correctMultiple = nz(request.getParameter("correctMultiple"), "");
@@ -1338,6 +1348,12 @@ try {
             // Save last selections to session
             session.setAttribute("last_course_name", courseName);
             session.setAttribute("last_question_type", questionType);
+
+            if (isAjax) {
+                response.setContentType("application/json");
+                response.getWriter().write("{\"success\": true, \"message\": \"Question added successfully\", \"qid\": " + newQuestionIdInserted + "}");
+                return;
+            }
 
             courseName = nz(request.getParameter("coursename"), "");
             if (!courseName.isEmpty()) {
