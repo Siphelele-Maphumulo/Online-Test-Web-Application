@@ -542,7 +542,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     }
     
     .question-card.multi-selected {
-        outline: 3px solid var(--accent-blue);
+        background-color: rgba(250, 150, 150, 0.479);
         outline-offset: -3px;
         position: relative;
     }
@@ -554,7 +554,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
         left: 0;
         right: 0;
         bottom: 0;
-        background-color: rgba(74, 144, 226, 0.1);
+        background-color: rgba(226, 79, 74, 0.1);
         z-index: 1;
         pointer-events: none;
     }
@@ -577,13 +577,13 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     }
     
     .multi-select-toggle.checked {
-        background: var(--accent-blue);
-        border-color: var(--accent-blue);
+        background: var(--white);
+        border-color: red;
     }
     
     .multi-select-toggle.checked::after {
         content: '✓';
-        color: white;
+        border-color: red;
         font-size: 12px;
         font-weight: bold;
     }
@@ -591,9 +591,9 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     /* Floating delete button */
     .floating-delete-selected {
         position: fixed;
-        top: 50%;
+        bottom: 30px;
         left: 50%;
-        transform: translate(-50%, -50%);
+        transform: translateX(-50%);
         z-index: 1000;
         background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%);
         color: white;
@@ -610,7 +610,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     }
     
     .floating-delete-selected:hover {
-        transform: translate(-50%, -50%) scale(1.05);
+        transform: translateX(-50%) scale(1.05);
         box-shadow: 0 12px 30px rgba(220, 38, 38, 0.5);
     }
     
