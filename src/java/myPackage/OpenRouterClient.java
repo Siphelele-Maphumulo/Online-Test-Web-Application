@@ -16,17 +16,24 @@ import org.json.JSONException;
 public class OpenRouterClient {
     private static final Logger LOGGER = Logger.getLogger(OpenRouterClient.class.getName());
     private static final String API_URL = "https://openrouter.ai/api/v1/chat/completions";
-    private static final String API_KEY = System.getenv("OPENROUTER_API_KEY");
 
     public static String generateQuestions(String text, String questionType, int numQuestions, boolean isMarkingGuideline) {
-        if (API_KEY == null || API_KEY.trim().isEmpty()) {
-            LOGGER.severe("OPENROUTER_API_KEY not set in environment.");
+        String apiKey = OpenRouterConfig.getApiKey();
+
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            LOGGER.severe("OPENROUTER_API_KEY not found in any configuration source.");
+            LOGGER.severe("Checked: system property 'openrouter.api.key', environment variable, and openrouter.properties");
             return null;
+        }
+
+        // Log first few chars of key for debugging (partially masked for security)
+        if (apiKey.length() > 10) {
+            LOGGER.info("API Key found: " + apiKey.substring(0, 7) + "...");
         }
 
         try {
             JSONObject payload = new JSONObject();
-            payload.put("model", "openai/gpt-4o-mini");
+            payload.put("model", OpenRouterConfig.getModel());
             payload.put("temperature", 0.3);
             payload.put("max_tokens", 2500);
 
@@ -34,7 +41,7 @@ public class OpenRouterClient {
 
             JSONObject systemMessage = new JSONObject();
             systemMessage.put("role", "system");
-            systemMessage.put("content", "You are an expert Accounting examiner and examiner. You specialize in generating high-quality exam questions from marking guidelines.");
+            systemMessage.put("content", "You are an expert Accounting examiner. You specialize in generating high-quality exam questions from marking guidelines.");
             messages.put(systemMessage);
 
             JSONObject userMessage = new JSONObject();
@@ -44,10 +51,17 @@ public class OpenRouterClient {
 
             payload.put("messages", messages);
 
-            String response = sendRequest(payload.toString());
-            if (response == null) return null;
+            LOGGER.info("Sending request to OpenRouter API (" + OpenRouterConfig.getModel() + ")...");
+            String response = sendRequest(payload.toString(), apiKey);
 
+            if (response == null) {
+                LOGGER.severe("Received null response from API");
+                return null;
+            }
+
+            LOGGER.info("Received response from API, extracting content...");
             return extractContent(response);
+
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error calling OpenRouter API", e);
             return null;
@@ -99,41 +113,59 @@ public class OpenRouterClient {
                "TEXT:\n" + text;
     }
 
-    private static String sendRequest(String jsonPayload) throws Exception {
+    private static String sendRequest(String jsonPayload, String apiKey) throws Exception {
         URL url = new URL(API_URL);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
         conn.setRequestMethod("POST");
-        conn.setRequestProperty("Authorization", "Bearer " + API_KEY);
+        conn.setRequestProperty("Authorization", "Bearer " + apiKey);
         conn.setRequestProperty("Content-Type", "application/json");
         conn.setRequestProperty("HTTP-Referer", "https://codesa-institute.co.za");
         conn.setRequestProperty("X-Title", "Accounting Question Generator");
 
         conn.setDoOutput(true);
+        conn.setConnectTimeout(30000); // 30 seconds timeout
+        conn.setReadTimeout(60000); // 60 seconds timeout
 
         try (OutputStream os = conn.getOutputStream()) {
             os.write(jsonPayload.getBytes(StandardCharsets.UTF_8));
+            os.flush();
         }
 
         int responseCode = conn.getResponseCode();
-        InputStream is = (responseCode >= 200 && responseCode < 300) ? conn.getInputStream() : conn.getErrorStream();
+        LOGGER.info("API Response Code: " + responseCode);
 
+        InputStream is;
+        if (responseCode >= 200 && responseCode < 300) {
+            is = conn.getInputStream();
+        } else {
+            is = conn.getErrorStream();
+            if (is == null) {
+                LOGGER.severe("API Error (" + responseCode + ") and error stream is null");
+                return null;
+            }
+            // Read error stream for debugging
+            StringBuilder errorResponse = new StringBuilder();
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    errorResponse.append(line);
+                }
+            }
+            LOGGER.severe("API Error Response (" + responseCode + "): " + errorResponse.toString());
+            return null;
+        }
+
+        StringBuilder response = new StringBuilder();
         try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-            StringBuilder response = new StringBuilder();
             String line;
             while ((line = br.readLine()) != null) {
                 response.append(line);
             }
-
-            if (responseCode >= 400) {
-                LOGGER.severe("API Error (" + responseCode + "): " + response.toString());
-                return null;
-            }
-
-            return response.toString();
-        } finally {
-            conn.disconnect();
         }
+
+        conn.disconnect();
+        return response.toString();
     }
 
     private static String extractContent(String response) {
@@ -146,14 +178,32 @@ public class OpenRouterClient {
                     if (choice.has("message")) {
                         JSONObject message = choice.getJSONObject("message");
                         if (message.has("content")) {
-                            return message.getString("content");
+                            String content = message.getString("content");
+                            LOGGER.info("Extracted content length: " + content.length());
+
+                            // Try to extract JSON array from content
+                            return extractJsonArray(content);
                         }
                     }
                 }
             }
         } catch (JSONException e) {
             LOGGER.log(Level.SEVERE, "Failed to parse API response JSON", e);
+            LOGGER.severe("Response was: " + response);
         }
         return null;
+    }
+
+    private static String extractJsonArray(String text) {
+        // Find the first [ and last ]
+        int start = text.indexOf('[');
+        int end = text.lastIndexOf(']');
+        if (start != -1 && end != -1 && end > start) {
+            String json = text.substring(start, end + 1);
+            LOGGER.info("Extracted JSON array: " + json.substring(0, Math.min(100, json.length())) + "...");
+            return json;
+        }
+        LOGGER.warning("No JSON array found in content");
+        return text;
     }
 }

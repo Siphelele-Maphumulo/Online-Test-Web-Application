@@ -1,0 +1,104 @@
+<%@page import="myPackage.OpenRouterClient"%>
+<%@page import="myPackage.OpenRouterConfig"%>
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OpenRouter API Test</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; background-color: #f8fafc; color: #1e293b; line-height: 1.5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        h1 { margin-top: 0; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
+        .success { color: #15803d; background: #f0fdf4; padding: 15px; border-radius: 8px; border-left: 4px solid #22c55e; margin-bottom: 20px; }
+        .error { color: #b91c1c; background: #fef2f2; padding: 15px; border-radius: 8px; border-left: 4px solid #ef4444; margin-bottom: 20px; }
+        .info { color: #1d4ed8; background: #eff6ff; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6; margin-bottom: 20px; }
+        pre { background: #1e293b; color: #e2e8f0; padding: 15px; border-radius: 8px; overflow-x: auto; font-family: 'ui-monospace', 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, Consolas, monospace; font-size: 14px; }
+        code { background: #f1f5f9; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>OpenRouter API Connection Test</h1>
+
+        <%
+            String apiKey = OpenRouterConfig.getApiKey();
+            if (apiKey == null) {
+        %>
+            <div class="error">
+                <h3>❌ API Key Not Found</h3>
+                <p>Could not find OpenRouter API key in any of these locations:</p>
+                <ul>
+                    <li>System property: <code>openrouter.api.key</code></li>
+                    <li>Environment variable: <code>OPENROUTER_API_KEY</code></li>
+                    <li>Properties file: <code>/WEB-INF/classes/openrouter.properties</code></li>
+                </ul>
+                <p>Please ensure you have configured the API key in <code>src/resources/openrouter.properties</code> and rebuilt the project.</p>
+            </div>
+        <%
+            } else {
+                String maskedKey = apiKey.length() > 10 ?
+                    apiKey.substring(0, 7) + "..." + apiKey.substring(apiKey.length() - 5) :
+                    "Invalid Key Format";
+        %>
+            <div class="success">
+                <h3>✅ API Key Configuration Found</h3>
+                <p>Retrieved key from configuration sources.</p>
+                <p>Key (masked): <code><%= maskedKey %></code></p>
+                <p>Model configured: <code><%= OpenRouterConfig.getModel() %></code></p>
+            </div>
+
+            <div class="info">
+                <h3>🔍 Testing API Connection...</h3>
+                <p>Sending a sample request to <code>openrouter.ai</code> to verify end-to-end communication.</p>
+            </div>
+
+            <%
+                String testText = "Calculate: Taxation paid WORKINGS: 148000 + 1736000 + 220000 = 2104000 ANSWER: 2104000";
+                long startTime = System.currentTimeMillis();
+                String result = OpenRouterClient.generateQuestions(testText, "MCQ", 1, true);
+                long duration = System.currentTimeMillis() - startTime;
+
+                if (result == null) {
+            %>
+                <div class="error">
+                    <h3>❌ API Call Failed</h3>
+                    <p><code>OpenRouterClient.generateQuestions</code> returned <code>null</code>.</p>
+                    <p>Possible causes:</p>
+                    <ul>
+                        <li>Invalid API Key</li>
+                        <li>Network connectivity issues</li>
+                        <li>Incorrect model name in configuration</li>
+                        <li>OpenRouter service downtime</li>
+                    </ul>
+                    <p>Check the server (Tomcat/Console) logs for detailed stack traces.</p>
+                </div>
+            <%
+                } else {
+            %>
+                <div class="success">
+                    <h3>✅ API Call Successful!</h3>
+                    <p>Response received in <strong><%= duration %>ms</strong>.</p>
+                    <p>Extracted JSON Response:</p>
+                    <pre><%= result %></pre>
+                </div>
+            <%
+                }
+            }
+        %>
+
+        <h3>Debug Environment Information:</h3>
+        <pre>
+System Property 'openrouter.api.key': <%= System.getProperty("openrouter.api.key", "not set") %>
+Environment Variable 'OPENROUTER_API_KEY': <%= System.getenv("OPENROUTER_API_KEY") != null ? "found" : "not set" %>
+OpenRouterConfig.class Classpath Location: <%= OpenRouterConfig.class.getProtectionDomain().getCodeSource().getLocation() %>
+openrouter.properties on Classpath: <%= OpenRouterConfig.class.getClassLoader().getResource("openrouter.properties") != null ? "found" : "not found" %>
+        </pre>
+
+        <p style="font-size: 0.875rem; color: #64748b; text-align: center; margin-top: 40px;">
+            Diagnostic Page - Exam Management System
+        </p>
+    </div>
+</body>
+</html>
