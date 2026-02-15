@@ -2977,14 +2977,19 @@ function loadQuestionIntoForm(q) {
         if (opt3) opt3.value = q.options[2] || '';
         if (opt4) opt4.value = q.options[3] || '';
         
-        // Delay a bit to let updateCorrectOptionLabels and toggleOptions finish
+        // Update checkbox values and labels immediately
+        updateCorrectOptionLabels();
+        
+        // Delay a bit to let the DOM update
         setTimeout(() => {
             document.querySelectorAll('.correct-checkbox').forEach((cb, idx) => {
                 const optVal = q.options[idx] || '';
+                // Set the checkbox value to the actual option text
+                cb.value = optVal;
                 cb.checked = optVal && correctParts.includes(optVal);
             });
             updateCorrectAnswerField();
-        }, 100);
+        }, 50);
     } else {
         if (opt1) opt1.value = q.options[0] || '';
         if (opt2) opt2.value = q.options[1] || '';
@@ -3413,6 +3418,12 @@ function updateCorrectOptionLabels() {
         const label = document.querySelector(`label[for="correctOpt${i}"]`);
 
         if (optInput && checkbox && label) {
+            // Initialize checkbox value and label
+            const value = optInput.value.trim();
+            label.textContent = value || `Option ${i}`;
+            checkbox.value = value;
+            checkbox.disabled = !value;
+            
             optInput.addEventListener('input', () => {
                 const value = optInput.value.trim();
                 label.textContent = value || `Option ${i}`;
@@ -3427,10 +3438,17 @@ function updateCorrectOptionLabels() {
 }
 
 function updateCorrectAnswerField() {
-    const selectedAnswers = Array.from(document.querySelectorAll('.correct-checkbox:checked'))
-        .map(cb => cb.value)
-        .join('|');
-    document.getElementById('correctAnswer').value = selectedAnswers;
+    const selectedAnswers = [];
+    document.querySelectorAll('.correct-checkbox:checked').forEach(cb => {
+        // Get the associated option input to get the actual text
+        const checkboxId = cb.id;
+        const optionNum = checkboxId.replace('correctOpt', '');
+        const optionInput = document.getElementById(`opt${optionNum}`);
+        if (optionInput && optionInput.value.trim()) {
+            selectedAnswers.push(optionInput.value.trim());
+        }
+    });
+    document.getElementById('correctAnswer').value = selectedAnswers.join('|');
 }
 
 function resetForm() {
