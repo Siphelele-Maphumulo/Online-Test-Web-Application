@@ -188,7 +188,7 @@
         padding: var(--spacing-xl);
         overflow-y: auto;
         background: transparent;
-        margin-left: 180px;
+        margin-left: 200px;
         min-height: 100vh;
     }
     
@@ -1904,6 +1904,72 @@
     .drag-drop-container.vertical-layout {
         grid-template-columns: 1fr;
     }
+
+    /* Landscape / Code Box Layout */
+    .drag-drop-container.landscape-layout {
+        grid-template-columns: 200px 1fr;
+        gap: 20px;
+        align-items: start;
+    }
+
+    .landscape-layout .draggable-items-panel {
+        padding: 15px;
+        background: #f1f5f9;
+        border: 1px solid var(--medium-gray);
+        border-radius: var(--radius-md);
+    }
+
+    .landscape-layout .drop-targets-panel {
+        padding: 15px;
+        background: #ffffff;
+        border: 2px solid #e2e8f0;
+        border-style: solid; /* Override dashed */
+        display: flex;
+        flex-direction: column;
+    }
+
+    .landscape-layout .drop-targets-list {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 0;
+    }
+
+    .landscape-layout .drop-target {
+        min-height: 45px;
+        min-width: 60px;
+        padding: 5px;
+        border: 2px dashed #cbd5e1;
+        background: #f8fafc;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        flex: 0 1 auto;
+    }
+
+    .landscape-layout .drop-target-header {
+        font-size: 10px;
+        margin-bottom: 2px;
+        text-align: center;
+    }
+
+    .landscape-layout .drag-item {
+        padding: 8px 12px;
+        font-size: 13px;
+        margin-bottom: 8px;
+    }
+
+    .landscape-layout .dropped-item {
+        padding: 4px 8px;
+        font-size: 12px;
+        min-width: 60px;
+    }
+
+    .landscape-layout .placeholder {
+        font-size: 11px;
+    }
     
     .draggable-items-panel {
         background: #f5f7fa;
@@ -2097,7 +2163,7 @@
     
     @media (min-width: 1440px) {
         .content-area {
-            max-width: calc(100% - 250px);
+            max-width: calc(100% - 200px);
         }
     }
 
@@ -2943,7 +3009,7 @@
 
                 /* --- TIMER MANAGEMENT --- */
                 function startTimer() {
-                    var timerEl = document.getElementById('remainingTime');
+                    var timerEl = document.getElementById('remainingTimeHeader');
                     if(!timerEl) {
                         console.warn('Timer element not found, timer disabled');
                         return;
@@ -3283,12 +3349,27 @@ function initializeDragDropQuestions() {
         // Check for orientation in extra_data
         try {
             var extraDataStr = questionContainer.getAttribute('data-extra-data');
+            var isLandscape = false;
+
             if (extraDataStr) {
                 var extraData = JSON.parse(extraDataStr);
                 if (extraData.orientation === 'vertical') {
                     var container = questionContainer.querySelector('.drag-drop-container');
                     if (container) container.classList.add('vertical-layout');
+                } else if (extraData.orientation === 'landscape' || extraData.orientation === 'horizontal') {
+                    isLandscape = true;
                 }
+            }
+
+            // Auto-detect landscape based on keywords or structure if not explicitly set
+            var questionText = card.querySelector('.question-text') ? card.querySelector('.question-text').textContent.toLowerCase() : '';
+            if (questionText.includes('code') || questionText.includes('line') || questionText.includes('order')) {
+                isLandscape = true;
+            }
+
+            if (isLandscape) {
+                var container = questionContainer.querySelector('.drag-drop-container');
+                if (container) container.classList.add('landscape-layout');
             }
         } catch (e) {
             console.log('Error parsing extra data for orientation');

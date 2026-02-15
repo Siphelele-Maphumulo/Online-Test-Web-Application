@@ -5451,9 +5451,19 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
                 throw new RuntimeException("No drag items found for question: " + questionId);
             }
             
-            // Calculate marks per match (equal distribution)
+            // Calculate marks per match (equal distribution based on correct mappings only)
+            int correctMappingsCount = 0;
+            for (DragItem item : dragItems) {
+                if (item.getCorrectTargetId() != null && item.getCorrectTargetId() > 0) {
+                    correctMappingsCount++;
+                }
+            }
+
             float marksPerCorrectMatch = 0;
-            if (dragItems.size() > 0) {
+            if (correctMappingsCount > 0) {
+                marksPerCorrectMatch = (float) question.getTotalMarks() / correctMappingsCount;
+            } else if (dragItems.size() > 0) {
+                // Fallback to total items if no correct mappings defined (unlikely for well-defined questions)
                 marksPerCorrectMatch = (float) question.getTotalMarks() / dragItems.size();
             }
             
