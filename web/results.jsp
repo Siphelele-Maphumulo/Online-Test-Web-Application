@@ -1445,10 +1445,16 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                 int obtainedMarks = examDetails.getObtMarks();
                 int totalMarks = examDetails.gettMarks();
                 
-                // Calculate percentage
+                // Calculate percentage (Weighted Marks Percentage)
                 double percentage = 0;
                 if (totalMarks > 0) {
                     percentage = (double) obtainedMarks / totalMarks * 100;
+                }
+
+                // Calculate accuracy (Correct Questions / Total Questions)
+                double accuracyRate = 0;
+                if (!answersList.isEmpty()) {
+                    accuracyRate = (double) correctAnswers / answersList.size() * 100;
                 }
                 
                 // Get result status from database (populated in getResultByExamId)
@@ -1505,7 +1511,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                   <div style="color: var(--dark-gray); font-weight: 600;">Incorrect Answers</div>
                 </div>
                 <div>
-                  <div style="font-size: 1.5rem; font-weight: 700; color: var(--info);"><%= String.format("%.1f", percentage) %>%</div>
+                  <div style="font-size: 1.5rem; font-weight: 700; color: var(--info);"><%= String.format("%.1f", accuracyRate) %>%</div>
                   <div style="color: var(--dark-gray); font-weight: 600;">Accuracy Rate</div>
                 </div>
               </div>

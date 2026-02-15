@@ -1930,10 +1930,9 @@
 
     .landscape-layout .drop-targets-list {
         display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
+        flex-direction: column;
         gap: 10px;
-        align-items: center;
+        align-items: stretch;
         padding: 10px 0;
     }
 
