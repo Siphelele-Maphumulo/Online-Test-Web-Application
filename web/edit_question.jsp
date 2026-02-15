@@ -1200,16 +1200,29 @@
                     
                     <!-- Drag and Drop Section - FIXED LAYOUT -->
                     <div id="editDragDropOptions" style="display: none;">
-                        <!-- Total Marks Field - Full Width -->
-                        <div class="form-group" style="margin-bottom: 20px;">
-                            <label class="form-label">
-                                <i class="fas fa-star" style="color: var(--warning);"></i>
-                                Total Marks
-                            </label>
-                            <input type="number" id="totalMarksInput" name="totalMarks" class="form-control" 
-                                   value="1" min="1" max="100" required 
-                                   style="max-width: 150px;">
-                            <small class="form-hint">Total marks for this drag-and-drop question</small>
+                        <!-- Total Marks and Orientation - Row -->
+                        <div class="form-grid" style="margin-bottom: 20px;">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="fas fa-star" style="color: var(--warning);"></i>
+                                    Total Marks
+                                </label>
+                                <input type="number" id="totalMarksInput" name="totalMarks" class="form-control" 
+                                       value="1" min="1" max="100" required>
+                                <small class="form-hint">Total marks for this drag-and-drop question</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="fas fa-columns" style="color: var(--info);"></i>
+                                    Orientation
+                                </label>
+                                <select name="orientation" id="editOrientationSelect" class="form-select">
+                                    <option value="horizontal">Horizontal (Current)</option>
+                                    <option value="vertical">Vertical</option>
+                                </select>
+                                <small class="form-hint">How items and targets are laid out</small>
+                            </div>
                         </div>
 
                         <!-- Drag and Drop Editor Container -->
@@ -2607,6 +2620,17 @@ window.addEventListener('DOMContentLoaded', function() {
         if ('<%= questionType %>' === 'DRAG_AND_DROP') {
             if (typeof initializeDragDrop === 'function') {
                 initializeDragDrop();
+            }
+            
+            // Set orientation from extra_data
+            try {
+                const extraDataStr = '<%= questionToEdit.getExtraData() != null ? questionToEdit.getExtraData().replace("'", "\\'") : "{}" %>';
+                const extraData = JSON.parse(extraDataStr);
+                if (extraData && extraData.orientation) {
+                    document.getElementById('editOrientationSelect').value = extraData.orientation;
+                }
+            } catch (e) {
+                console.error('Error parsing extra_data for orientation:', e);
             }
         }
     });

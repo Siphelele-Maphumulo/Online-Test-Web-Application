@@ -40,6 +40,11 @@
                    .replace("\"", "&quot;")
                    .replace("'", "&#x27;");
     }
+    
+    // Null-coalescing function: returns value if non-null/non-empty, otherwise fallback
+    public String nz(String v, String fallback) {
+        return (v != null && !v.trim().isEmpty()) ? v.trim() : fallback;
+    }
 
     // Helper method to format duration in minutes to readable format
     private String formatDuration(int minutes) {
@@ -370,37 +375,122 @@
         gap: 6px;
     }
     
-    /* Fixed Bottom Timer & Progress Bar */
-    .fixed-bottom-panel {
-        position: fixed;
-        bottom: 0;
-        left: 20%;
+    /* Exam Header Styles - TOP BAR */
+    .exam-header-container {
+        position: sticky;
+        top: 0;
+        left: 0;
         right: 0;
+        z-index: 1000;
         background: var(--white);
-        border-top: 1px solid var(--medium-gray);
-        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-        z-index: 100;
-        padding: var(--spacing-md);
     }
-    
-    .timer-progress-wrapper {
+
+    .top-progress-bar-row {
+        background: #2c3e50;
+        color: white;
+        padding: 10px 20px;
         display: flex;
+        align-items: center;
         justify-content: space-between;
-        align-items: center;
-        max-width: 1200px;
-        margin: 0 auto;
-        gap: var(--spacing-lg);
+        gap: 20px;
     }
-    
-    .timer-section {
+
+    .progress-info-left {
+        font-weight: 600;
+        font-size: 14px;
+        white-space: nowrap;
+    }
+
+    .progress-container-center {
+        flex: 1;
+        height: 12px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: #7fb069;
+        width: 0%;
+        transition: width 0.3s ease;
+    }
+
+    .time-left-right {
+        font-weight: 600;
+        font-size: 14px;
+        white-space: nowrap;
+    }
+
+    /* Sub-header Navigation Row */
+    .nav-header-row {
+        background: white;
+        border-bottom: 1px solid var(--border-color);
+        padding: 10px 20px;
         display: flex;
         align-items: center;
-        gap: var(--spacing-md);
+        justify-content: space-between;
+        box-shadow: var(--shadow-sm);
     }
-    
-    .progress-section {
-        flex: 1;
-        max-width: 400px;
+
+    .utility-icons {
+        display: flex;
+        gap: 15px;
+    }
+
+    .util-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 20px;
+        color: var(--text-dark);
+        transition: color 0.2s;
+    }
+
+    .util-btn:hover {
+        color: var(--accent-blue);
+    }
+
+    .question-counter {
+        font-size: 24px;
+        font-weight: 500;
+        color: var(--text-dark);
+    }
+
+    .nav-buttons {
+        display: flex;
+        gap: 10px;
+    }
+
+    .exam-nav-btn {
+        background: #92AB2F;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 4px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background 0.2s;
+    }
+
+    .exam-nav-btn:hover {
+        background: #7FB069;
+    }
+
+    .exam-nav-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+
+    .exam-nav-btn.btn-prev i {
+        margin-right: 5px;
+    }
+
+    .exam-nav-btn.btn-next i {
+        margin-left: 5px;
     }
     
     /* Questions Container */
@@ -1591,8 +1681,8 @@
             flex-direction: column;
         }
         
-        .fixed-bottom-panel {
-            padding-right: 20%;
+    .exam-header-container {
+        position: static;
         }
         
         .timer-progress-wrapper {
@@ -1811,6 +1901,10 @@
         background: white;
     }
     
+    .drag-drop-container.vertical-layout {
+        grid-template-columns: 1fr;
+    }
+    
     .draggable-items-panel {
         background: #f5f7fa;
         border-radius: 10px;
@@ -2006,6 +2100,142 @@
             max-width: calc(100% - 250px);
         }
     }
+
+    /* Scientific Calculator Styles */
+    .calculator-modal {
+        display: none;
+        position: fixed;
+        top: 150px;
+        left: 250px;
+        z-index: 2000;
+        background: #f1f3f4;
+        border-radius: 8px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        width: 320px;
+        padding: 15px;
+        border: 1px solid #ccc;
+    }
+
+    .calc-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #ddd;
+        cursor: move;
+    }
+
+    .calc-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #555;
+    }
+
+    .calc-display {
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 10px;
+        text-align: right;
+        font-family: 'Consolas', monospace;
+        margin-bottom: 15px;
+    }
+
+    .calc-history {
+        font-size: 12px;
+        color: #888;
+        min-height: 1.2em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .calc-main-val {
+        font-size: 24px;
+        font-weight: 500;
+        word-wrap: break-word;
+        min-height: 1.2em;
+    }
+
+    .calc-buttons {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+    }
+
+    .calc-btn {
+        padding: 10px;
+        border: 1px solid #dcdcdc;
+        border-radius: 4px;
+        background: #fff;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: background 0.1s;
+    }
+
+    .calc-btn:hover {
+        background: #f8f8f8;
+    }
+
+    .calc-btn.op {
+        background: #f1f3f4;
+        color: #1a73e8;
+    }
+
+    .calc-btn.eq {
+        background: #1a73e8;
+        color: white;
+        grid-column: span 2;
+    }
+
+    .calc-btn.sci {
+        font-size: 12px;
+        color: #555;
+    }
+
+    /* Rough Paper Styles */
+    .rough-paper-modal {
+        display: none;
+        position: fixed;
+        top: 150px;
+        right: 50px;
+        z-index: 2000;
+        background: #fff9c4;
+        border-radius: 4px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        width: 400px;
+        padding: 0;
+        border: 1px solid #fbc02d;
+    }
+
+    .rough-header {
+        background: #fbc02d;
+        color: #333;
+        padding: 8px 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: move;
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    .rough-content {
+        padding: 10px;
+    }
+
+    .rough-textarea {
+        width: 100%;
+        height: 300px;
+        border: none;
+        background: transparent;
+        resize: both;
+        font-family: 'Courier New', monospace;
+        font-size: 16px;
+        line-height: 1.5;
+        outline: none;
+    }
 </style>
 
 <div class="exam-wrapper">
@@ -2032,9 +2262,34 @@
             ArrayList<Questions> questionsList = pDAO.getQuestions(courseName, 20);
             int totalQ = questionsList.size();
         %>
-            <!-- EXAM ACTIVE -->
-            <div class="page-header">
-                <div class="page-title"><i class="fas fa-file-alt"></i> <%= courseName %> Exam</div>
+            <!-- EXAM ACTIVE HEADER -->
+            <div class="exam-header-container">
+                <div class="top-progress-bar-row">
+                    <div class="progress-info-left">Exam Progress (<span id="examProgressPctHeader">0%</span>)</div>
+                    <div class="progress-container-center">
+                        <div class="progress-fill" id="progressBarHeader"></div>
+                    </div>
+                    <div class="time-left-right">Time Left: <span id="remainingTimeHeader">--:--</span></div>
+                </div>
+                <div class="nav-header-row">
+                    <div class="utility-icons">
+                        <button type="button" class="util-btn" onclick="toggleCalculator()" title="Scientific Calculator">
+                            <i class="fas fa-calculator"></i>
+                        </button>
+                        <button type="button" class="util-btn" onclick="toggleRoughPaper()" title="Rough Paper">
+                            <i class="fas fa-sticky-note"></i>
+                        </button>
+                    </div>
+                    <div class="question-counter">Question <span id="currentQNum">1</span>/<%= totalQ %></div>
+                    <div class="nav-buttons">
+                        <button type="button" class="exam-nav-btn btn-prev" id="prevBtn" onclick="prevQuestion()" disabled>
+                            <i class="fas fa-arrow-left"></i> Prev
+                        </button>
+                        <button type="button" class="exam-nav-btn btn-next" id="nextBtn" onclick="nextQuestion()">
+                            Next <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <form id="myform" action="controller.jsp" method="post">
@@ -2159,7 +2414,8 @@
                             %>
                                 <div class="drag-drop-question" 
                                      data-items-json="<%= escapeHtmlAttr(itemsArray.toString()) %>" 
-                                     data-targets-json="<%= escapeHtmlAttr(targetsArray.toString()) %>">
+                                     data-targets-json="<%= escapeHtmlAttr(targetsArray.toString()) %>"
+                                     data-extra-data="<%= escapeHtmlAttr(nz(q.getExtraData(), "{}")) %>">
                                     <div class="drag-drop-instructions">
                                         <i class="fas fa-hand-rock"></i>
                                         <div>
@@ -2314,19 +2570,7 @@
                     </div>
                 </div>
 
-                <!-- FIXED BOTTOM PANEL -->
-                <div class="fixed-bottom-panel">
-                    <div class="timer-progress-wrapper">
-                        <div class="timer-section">
-                            <div class="stats-badge timer-badge"><i class="fas fa-clock"></i><span id="remainingTime">--:--</span></div>
-                            <span style="font-weight:600;color:var(--text-dark);">Time Remaining</span>
-                        </div>
-                        <div class="progress-section">
-                            <div class="progress-label"><span>Progress</span><span id="progressLabel">0%</span></div>
-                            <div class="progress"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
-                        </div>
-                    </div>
-                </div>
+                <!-- FIXED BOTTOM PANEL REMOVED -->
             </form>
 
             <!-- SCRIPT BLOCK -->
@@ -2339,6 +2583,157 @@
                 var examDuration = <%= pDAO.getExamDuration(courseName) %>;
                 var totalQuestions = <%= totalQ %>;
                 var currentCourseName = '<%= courseName %>';
+                var currentQuestionIndex = 0;
+
+                /* --- CALCULATOR LOGIC --- */
+                var calcInputStr = "";
+                
+                function toggleCalculator() {
+                    var modal = document.getElementById('calculatorModal');
+                    if (modal.style.display === 'block') {
+                        modal.style.display = 'none';
+                    } else {
+                        modal.style.display = 'block';
+                    }
+                }
+
+                function calcInput(val) {
+                    calcInputStr += val;
+                    document.getElementById('calcDisplay').textContent = calcInputStr.replace(/Math\.PI/g, '?').replace(/Math\.E/g, 'e');
+                }
+
+                function calcAction(action) {
+                    var display = document.getElementById('calcDisplay');
+                    var history = document.getElementById('calcHistory');
+
+                    if (action === 'clear') {
+                        calcInputStr = "";
+                        display.textContent = "0";
+                        history.textContent = "";
+                    } else if (action === 'backspace') {
+                        calcInputStr = calcInputStr.slice(0, -1);
+                        display.textContent = calcInputStr || "0";
+                    } else if (action === 'equal') {
+                        try {
+                            var result = eval(calcInputStr);
+                            history.textContent = calcInputStr.replace(/Math\.PI/g, '?').replace(/Math\.E/g, 'e') + " =";
+                            calcInputStr = result.toString();
+                            display.textContent = calcInputStr;
+                        } catch (e) {
+                            display.textContent = "Error";
+                            calcInputStr = "";
+                        }
+                    } else if (['sin', 'cos', 'tan', 'log', 'ln', 'sqrt'].includes(action)) {
+                        try {
+                            var val = eval(calcInputStr || "0");
+                            var res = 0;
+                            // Convert degrees to radians for trigonometric functions
+                            var rad = val * (Math.PI / 180);
+                            switch(action) {
+                                case 'sin': res = Math.sin(rad); break;
+                                case 'cos': res = Math.cos(rad); break;
+                                case 'tan': res = Math.tan(rad); break;
+                                case 'log': res = Math.log10(val); break;
+                                case 'ln': res = Math.log(val); break;
+                                case 'sqrt': res = Math.sqrt(val); break;
+                            }
+                            history.textContent = action + "(" + val + (['sin','cos','tan'].includes(action) ? "�" : "") + ") =";
+                            // Round to 8 decimal places to avoid floating point issues
+                            res = Math.round(res * 100000000) / 100000000;
+                            calcInputStr = res.toString();
+                            display.textContent = calcInputStr;
+                        } catch (e) {
+                            display.textContent = "Error";
+                        }
+                    } else if (action === 'pow') {
+                        calcInputStr += "**";
+                        display.textContent = calcInputStr;
+                    }
+                }
+
+                // Drag functionality for calculator
+                function initCalcDraggable() {
+                    dragElement(document.getElementById("calculatorModal"));
+                }
+
+                function dragElement(elmnt) {
+                    var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+                    var header = document.getElementById("calcHeader");
+                    if (header) {
+                        header.onmousedown = dragMouseDown;
+                    } else {
+                        elmnt.onmousedown = dragMouseDown;
+                    }
+
+                    function dragMouseDown(e) {
+                        e = e || window.event;
+                        e.preventDefault();
+                        pos3 = e.clientX;
+                        pos4 = e.clientY;
+                        document.onmouseup = closeDragElement;
+                        document.onmousemove = elementDrag;
+                    }
+
+                    function elementDrag(e) {
+                        e = e || window.event;
+                        e.preventDefault();
+                        pos1 = pos3 - e.clientX;
+                        pos2 = pos4 - e.clientY;
+                        pos3 = e.clientX;
+                        pos4 = e.clientY;
+                        elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+                        elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+                    }
+
+                    function closeDragElement() {
+                        document.onmouseup = null;
+                        document.onmousemove = null;
+                    }
+                }
+
+                /* --- ROUGH PAPER LOGIC --- */
+                function toggleRoughPaper() {
+                    var modal = document.getElementById('roughPaperModal');
+                    if (modal.style.display === 'block') {
+                        modal.style.display = 'none';
+                    } else {
+                        modal.style.display = 'block';
+                    }
+                }
+
+                function initRoughPaper() {
+                    var textarea = document.getElementById('roughTextarea');
+                    if (!textarea) return;
+                    
+                    var saved = sessionStorage.getItem('exam_rough_notes');
+                    if (saved) textarea.value = saved;
+
+                    textarea.addEventListener('input', function() {
+                        sessionStorage.setItem('exam_rough_notes', this.value);
+                    });
+                    
+                    var roughModal = document.getElementById("roughPaperModal");
+                    var roughHeader = document.getElementById("roughHeader");
+                    
+                    // Simple drag implementation for rough paper
+                    if (roughHeader) {
+                        roughHeader.onmousedown = function(e) {
+                            var pos1 = 0, pos2 = 0, pos3 = e.clientX, pos4 = e.clientY;
+                            document.onmouseup = function() {
+                                document.onmouseup = null;
+                                document.onmousemove = null;
+                            };
+                            document.onmousemove = function(e) {
+                                pos1 = pos3 - e.clientX;
+                                pos2 = pos4 - e.clientY;
+                                pos3 = e.clientX;
+                                pos4 = e.clientY;
+                                roughModal.style.top = (roughModal.offsetTop - pos2) + "px";
+                                roughModal.style.left = (roughModal.offsetLeft - pos1) + "px";
+                            };
+                        };
+                    }
+                }
 
                 /* --- MULTI-SELECT HIDDEN FIELD --- */
                 function updateHiddenForMulti(qindex){
@@ -2388,6 +2783,62 @@
                     dirty = true;
                 });
 
+                function showQuestion(index) {
+                    var cards = document.querySelectorAll('.question-card');
+                    cards.forEach(function(card, idx) {
+                        if (idx === index) {
+                            card.style.display = 'block';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+
+                    // Update counter
+                    var currentQNumEl = document.getElementById('currentQNum');
+                    if (currentQNumEl) currentQNumEl.textContent = index + 1;
+
+                    // Update buttons
+                    var prevBtn = document.getElementById('prevBtn');
+                    var nextBtn = document.getElementById('nextBtn');
+                    var submitSection = document.querySelector('.submit-section');
+
+                    if (prevBtn) prevBtn.disabled = (index === 0);
+                    
+                    if (index === totalQuestions - 1) {
+                        if (nextBtn) {
+                            nextBtn.innerHTML = 'Finish <i class="fas fa-flag-checkered"></i>';
+                            nextBtn.style.background = '#059669';
+                        }
+                        if (submitSection) submitSection.style.display = 'flex';
+                    } else {
+                        if (nextBtn) {
+                            nextBtn.innerHTML = 'Next <i class="fas fa-arrow-right"></i>';
+                            nextBtn.style.background = '#92AB2F';
+                        }
+                        if (submitSection) submitSection.style.display = 'none';
+                    }
+                    
+                    currentQuestionIndex = index;
+                    updateProgress();
+                }
+
+                function nextQuestion() {
+                    if (currentQuestionIndex < totalQuestions - 1) {
+                        showQuestion(currentQuestionIndex + 1);
+                        window.scrollTo(0, 0);
+                    } else {
+                        // On last question, show submit section if not already visible
+                        document.querySelector('.submit-section').scrollIntoView({ behavior: 'smooth' });
+                    }
+                }
+
+                function prevQuestion() {
+                    if (currentQuestionIndex > 0) {
+                        showQuestion(currentQuestionIndex - 1);
+                        window.scrollTo(0, 0);
+                    }
+                }
+
                 function updateProgress(){
                     var cards = document.querySelectorAll('.question-card');
                     var answered = 0;
@@ -2419,14 +2870,18 @@
                     
                     // Update progress bars
                     var progressBar = document.getElementById('progressBar');
+                    var progressBarHeader = document.getElementById('progressBarHeader');
                     var modalProgressBar = document.getElementById('modalProgressBar');
                     if(progressBar) progressBar.style.width = pct + '%';
+                    if(progressBarHeader) progressBarHeader.style.width = pct + '%';
                     if(modalProgressBar) modalProgressBar.style.width = pct + '%';
                     
                     // Update labels
                     var progressLabel = document.getElementById('progressLabel');
+                    var examProgressPctHeader = document.getElementById('examProgressPctHeader');
                     var progressPercent = document.querySelector('.progress-percent');
                     if(progressLabel) progressLabel.textContent = pct + '%';
+                    if(examProgressPctHeader) examProgressPctHeader.textContent = pct + '%';
                     if(progressPercent) progressPercent.textContent = pct + '%';
                     
                     // Update counters
@@ -2520,7 +2975,11 @@
                     function updateTimerDisplay() {
                         var minutes = Math.floor(time / 60);
                         var seconds = time % 60;
-                        timerEl.textContent = fmt(minutes) + ':' + fmt(seconds);
+                        var formattedTime = fmt(minutes) + ':' + fmt(seconds);
+                        timerEl.textContent = formattedTime;
+                        
+                        var headerTimer = document.getElementById('remainingTimeHeader');
+                        if (headerTimer) headerTimer.textContent = formattedTime;
                         
                         // Color coding
                         if (timerEl.classList) {
@@ -2763,8 +3222,10 @@
                 /* --- INITIALIZATION --- */
                 document.addEventListener('DOMContentLoaded', function() {
                     // Initialize components
-                    updateProgress();
+                    showQuestion(0);
                     startTimer();
+                    initCalcDraggable();
+                    initRoughPaper();
                     setupNavigationProtection();
                     setupProgressModal();
                     
@@ -2819,6 +3280,20 @@ function initializeDragDropQuestions() {
             targetsData = [];
         }
         
+        // Check for orientation in extra_data
+        try {
+            var extraDataStr = questionContainer.getAttribute('data-extra-data');
+            if (extraDataStr) {
+                var extraData = JSON.parse(extraDataStr);
+                if (extraData.orientation === 'vertical') {
+                    var container = questionContainer.querySelector('.drag-drop-container');
+                    if (container) container.classList.add('vertical-layout');
+                }
+            }
+        } catch (e) {
+            console.log('Error parsing extra data for orientation');
+        }
+
         // Call render function
         renderDragDropInterface(questionIndex, dragItemsContainer, dropTargetsContainer, itemsData, targetsData);
     });
@@ -3449,6 +3924,64 @@ if (document.readyState === 'loading') {
     });
 </script>
         <% } %>
+
+        <!-- Scientific Calculator -->
+        <div id="calculatorModal" class="calculator-modal">
+            <div class="calc-header" id="calcHeader">
+                <div class="calc-title"><i class="fas fa-calculator"></i> Scientific Calculator</div>
+                <button type="button" class="close-modal" onclick="toggleCalculator()" style="color: #666; font-size: 20px; border:none; background:none; cursor:pointer;">&times;</button>
+            </div>
+            <div class="calc-display">
+                <div id="calcHistory" class="calc-history"></div>
+                <div id="calcDisplay" class="calc-main-val">0</div>
+            </div>
+            <div class="calc-buttons">
+                <button type="button" class="calc-btn sci" onclick="calcAction('sin')">sin</button>
+                <button type="button" class="calc-btn sci" onclick="calcAction('cos')">cos</button>
+                <button type="button" class="calc-btn sci" onclick="calcAction('tan')">tan</button>
+                <button type="button" class="calc-btn sci" onclick="calcAction('sqrt')">?</button>
+                
+                <button type="button" class="calc-btn sci" onclick="calcAction('log')">log</button>
+                <button type="button" class="calc-btn sci" onclick="calcAction('ln')">ln</button>
+                <button type="button" class="calc-btn sci" onclick="calcAction('pow')">x^y</button>
+                <button type="button" class="calc-btn op" onclick="calcAction('clear')">AC</button>
+
+                <button type="button" class="calc-btn" onclick="calcInput('7')">7</button>
+                <button type="button" class="calc-btn" onclick="calcInput('8')">8</button>
+                <button type="button" class="calc-btn" onclick="calcInput('9')">9</button>
+                <button type="button" class="calc-btn op" onclick="calcInput('/')">/</button>
+
+                <button type="button" class="calc-btn" onclick="calcInput('4')">4</button>
+                <button type="button" class="calc-btn" onclick="calcInput('5')">5</button>
+                <button type="button" class="calc-btn" onclick="calcInput('6')">6</button>
+                <button type="button" class="calc-btn op" onclick="calcInput('*')">&times;</button>
+
+                <button type="button" class="calc-btn" onclick="calcInput('1')">1</button>
+                <button type="button" class="calc-btn" onclick="calcInput('2')">2</button>
+                <button type="button" class="calc-btn" onclick="calcInput('3')">3</button>
+                <button type="button" class="calc-btn op" onclick="calcInput('-')">-</button>
+
+                <button type="button" class="calc-btn" onclick="calcInput('0')">0</button>
+                <button type="button" class="calc-btn" onclick="calcInput('.')">.</button>
+                <button type="button" class="calc-btn op" onclick="calcInput('+')">+</button>
+                <button type="button" class="calc-btn op" onclick="calcAction('backspace')"><i class="fas fa-backspace"></i></button>
+                
+                <button type="button" class="calc-btn sci" onclick="calcInput('Math.PI')">?</button>
+                <button type="button" class="calc-btn sci" onclick="calcInput('Math.E')">e</button>
+                <button type="button" class="calc-btn eq" onclick="calcAction('equal')">=</button>
+            </div>
+        </div>
+
+        <!-- Rough Paper -->
+        <div id="roughPaperModal" class="rough-paper-modal">
+            <div class="rough-header" id="roughHeader">
+                <div><i class="fas fa-sticky-note"></i> Rough Paper</div>
+                <button type="button" onclick="toggleRoughPaper()" style="border:none; background:none; cursor:pointer; font-size: 18px;">&times;</button>
+            </div>
+            <div class="rough-content">
+                <textarea id="roughTextarea" class="rough-textarea" placeholder="Use this space for your rough work... (auto-saves)"></textarea>
+            </div>
+        </div>
     </main>
 </div>
 

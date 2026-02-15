@@ -1528,13 +1528,27 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                     
                     <!-- Drag and Drop Options -->
                     <div id="dragDropOptions" style="display:none;">
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-arrows-alt" style="color: var(--accent-blue);"></i>
-                                Total Marks
-                            </label>
-                            <input type="number" name="totalMarks" class="form-control" value="1" min="1" max="100" required>
-                            <small class="form-hint">Total marks for this question</small>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="fas fa-arrows-alt" style="color: var(--accent-blue);"></i>
+                                    Total Marks
+                                </label>
+                                <input type="number" name="totalMarks" class="form-control" value="1" min="1" max="100" required>
+                                <small class="form-hint">Total marks for this question</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="fas fa-columns" style="color: var(--info);"></i>
+                                    Orientation
+                                </label>
+                                <select name="orientation" class="form-select">
+                                    <option value="horizontal">Horizontal (Current)</option>
+                                    <option value="vertical">Vertical</option>
+                                </select>
+                                <small class="form-hint">How items and targets are laid out</small>
+                            </div>
                         </div>
                         
                         <div class="form-group">
