@@ -1437,53 +1437,86 @@ try {
 
         try {
             String aiResponse = OpenRouterClient.generateQuestions(text, questionType, numQuestions, isMarkingGuideline);
-            if (aiResponse != null) {
-                // Clean AI response if it contains markdown
-                if (aiResponse.contains("```json")) {
-                    aiResponse = aiResponse.substring(aiResponse.indexOf("```json") + 7);
-                    aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
-                } else if (aiResponse.contains("```")) {
-                    aiResponse = aiResponse.substring(aiResponse.indexOf("```") + 3);
+            if (aiResponse == null || aiResponse.trim().isEmpty()) {
+                outJSON.print("{\"success\": false, \"message\": \"AI generation failed or returned empty response.\"}");
+                return;
+            }
+
+            // Clean AI response if it contains markdown
+            if (aiResponse.contains("```json")) {
+                aiResponse = aiResponse.substring(aiResponse.indexOf("```json") + 7);
+                if (aiResponse.contains("```")) {
                     aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
                 }
+            } else if (aiResponse.contains("```")) {
+                aiResponse = aiResponse.substring(aiResponse.indexOf("```") + 3);
+                if (aiResponse.contains("```")) {
+                    aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
+                }
+            }
 
-                aiResponse = aiResponse.trim();
+            aiResponse = aiResponse.trim();
 
-                try {
-                    // Validate JSON
-                    if (aiResponse.startsWith("[")) {
-                        JSONArray questionsArr = new JSONArray(aiResponse);
+            try {
+                // Try to parse as JSONArray first (preferred)
+                if (aiResponse.startsWith("[")) {
+                    JSONArray questionsArr = new JSONArray(aiResponse);
+                    JSONObject result = new JSONObject();
+                    result.put("success", true);
+                    result.put("questions", questionsArr);
+                    outJSON.print(result.toString());
+                } else if (aiResponse.startsWith("{")) {
+                    JSONObject resObj = new JSONObject(aiResponse);
+                    if (resObj.has("questions")) {
+                        resObj.put("success", true);
+                        outJSON.print(resObj.toString());
+                    } else if (resObj.has("question")) {
+                        // Single question wrapped in object
+                        JSONArray arr = new JSONArray();
+                        arr.put(resObj);
                         JSONObject result = new JSONObject();
                         result.put("success", true);
-                        result.put("questions", questionsArr);
+                        result.put("questions", arr);
                         outJSON.print(result.toString());
-                    } else if (aiResponse.startsWith("{")) {
-                        JSONObject resObj = new JSONObject(aiResponse);
-                        if (!resObj.has("questions") && resObj.has("question")) {
-                            // Single question wrapped in object
-                            JSONArray arr = new JSONArray();
-                            arr.put(resObj);
-                            JSONObject result = new JSONObject();
-                            result.put("success", true);
-                            result.put("questions", arr);
-                            outJSON.print(result.toString());
-                        } else {
-                            resObj.put("success", true);
-                            outJSON.print(resObj.toString());
+                    } else {
+                        outJSON.print("{\"success\": false, \"message\": \"AI returned JSON but no questions were found.\"}");
+                    }
+                } else {
+                    // Try to find JSON within the text if it didn't start with [ or {
+                    int firstBracket = aiResponse.indexOf("[");
+                    int firstBrace = aiResponse.indexOf("{");
+                    int start = -1;
+                    if (firstBracket != -1 && (firstBrace == -1 || firstBracket < firstBrace)) start = firstBracket;
+                    else if (firstBrace != -1) start = firstBrace;
+
+                    if (start != -1) {
+                        String potentialJson = aiResponse.substring(start);
+                        try {
+                            if (potentialJson.startsWith("[")) {
+                                JSONArray arr = new JSONArray(potentialJson);
+                                JSONObject result = new JSONObject();
+                                result.put("success", true);
+                                result.put("questions", arr);
+                                outJSON.print(result.toString());
+                            } else {
+                                JSONObject obj = new JSONObject(potentialJson);
+                                obj.put("success", true);
+                                outJSON.print(obj.toString());
+                            }
+                        } catch (JSONException je) {
+                            outJSON.print("{\"success\": false, \"message\": \"Found potential JSON but failed to parse: " + je.getMessage() + "\"}");
                         }
                     } else {
                         outJSON.print("{\"success\": false, \"message\": \"AI returned non-JSON response.\"}");
                     }
-                } catch (Exception e) {
-                    LOGGER.log(Level.WARNING, "Failed to parse AI response: " + aiResponse, e);
-                    outJSON.print("{\"success\": false, \"message\": \"AI returned invalid JSON format.\"}");
                 }
-            } else {
-                outJSON.print("{\"success\": false, \"message\": \"AI generation failed.\"}");
+            } catch (JSONException e) {
+                LOGGER.log(Level.WARNING, "JSON Parsing Error. Response was: " + aiResponse, e);
+                outJSON.print("{\"success\": false, \"message\": \"Failed to parse AI JSON response: " + e.getMessage() + "\"}");
             }
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error in ai_generate", e);
-            outJSON.print("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+            LOGGER.log(Level.SEVERE, "Unexpected error in ai_generate", e);
+            outJSON.print("{\"success\": false, \"message\": \"Internal Error: " + e.getMessage() + "\"}");
         }
         return;
 

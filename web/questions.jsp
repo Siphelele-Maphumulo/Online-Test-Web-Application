@@ -1894,7 +1894,10 @@ function generateQuestionsWithAI(text, courseName) {
         body: formData.toString()
     })
     .then(async response => {
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Server Error (${response.status}): ${errorText.substring(0, 100)}`);
+        }
         const data = await response.json();
         if (data.success && data.questions) {
             progressBar.style.width = '100%';
@@ -1906,7 +1909,7 @@ function generateQuestionsWithAI(text, courseName) {
                 question: q.question,
                 options: q.options || ['', '', '', ''],
                 correct: q.correct,
-                type: q.type || 'MCQ'
+                type: q.type || (q.options && q.options.length === 2 ? 'TrueFalse' : 'MCQ')
             }));
 
             setTimeout(() => {
@@ -1914,7 +1917,7 @@ function generateQuestionsWithAI(text, courseName) {
                 resetFileUploadProgress();
             }, 1000);
         } else {
-            throw new Error(data.message || 'AI failed to generate questions');
+            throw new Error(data.message || 'AI failed to generate questions. The response was not in the expected format.');
         }
     })
     .catch(error => {
@@ -2848,10 +2851,11 @@ function sanitizeSingleAnswer(answerText, options) {
     
     // 4. Fuzzy match
     for (let opt of options) {
-        if (opt && opt.length > 2) {
-            if (text.toLowerCase() === opt.toLowerCase()) return opt;
-            if (text.toLowerCase().includes(opt.toLowerCase()) || opt.toLowerCase().includes(text.toLowerCase())) {
-                return opt;
+        const trimmedOpt = opt ? opt.trim() : "";
+        if (trimmedOpt && trimmedOpt.length > 2) {
+            if (text.toLowerCase() === trimmedOpt.toLowerCase()) return trimmedOpt;
+            if (text.toLowerCase().includes(trimmedOpt.toLowerCase()) || trimmedOpt.toLowerCase().includes(text.toLowerCase())) {
+                return trimmedOpt;
             }
         }
     }
@@ -2948,9 +2952,9 @@ function showMultipleQuestionsModal(questions) {
 function getMatchStatus(q) {
     if (!q.correct) return { isValid: false, message: 'Missing answer' };
     
-    const options = q.options.filter(opt => opt && opt.trim() !== '');
+    const options = q.options.filter(opt => opt && opt.trim() !== '').map(opt => opt.trim());
     if (q.type === 'MCQ' || q.type === 'Code') {
-        const match = options.some(opt => opt.trim() === q.correct.trim());
+        const match = options.some(opt => opt === q.correct.trim());
         return match ? { isValid: true, message: 'Matches option' } : { isValid: false, message: 'No match' };
     } else if (q.type === 'MultipleSelect') {
         const correctParts = q.correct.split('|').map(p => p.trim());
@@ -3549,9 +3553,13 @@ function updateCorrectAnswerField() {
         const optionInput = document.getElementById(`opt${optionNum}`);
         if (optionInput && optionInput.value.trim()) {
             selectedAnswers.push(optionInput.value.trim());
+        } else if (cb.value && cb.value !== 'on') {
+            selectedAnswers.push(cb.value.trim());
         }
     });
-    document.getElementById('correctAnswer').value = selectedAnswers.join('|');
+    // Filter out any "on" values that might have slipped in and join
+    const filteredAnswers = selectedAnswers.filter(ans => ans && ans.toLowerCase() !== 'on');
+    document.getElementById('correctAnswer').value = filteredAnswers.join('|');
 }
 
 function resetForm() {
