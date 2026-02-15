@@ -3783,16 +3783,16 @@ public ArrayList<Exams> getAllExamsWithResults() {
 }
 
 
-private int getObtMarks(int examId, int tMarks, int size) {
-    if (size == 0) {
-        return 0;
-    }
-
+/**
+ * Calculates raw marks for an exam.
+ * Returns an array where [0] is obtained marks and [1] is total possible marks.
+ */
+public float[] getRawMarks(int examId) {
     try {
         ensureConnection();
     } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Connection error in getObtMarks", e);
-        return 0;
+        LOGGER.log(Level.SEVERE, "Connection error in getRawMarks", e);
+        return new float[]{0, 0};
     }
 
     float totalPossibleMarks = 0;
@@ -3856,23 +3856,11 @@ private int getObtMarks(int examId, int tMarks, int size) {
         rs.close();
         pstm.close();
         
-        if (totalPossibleMarks == 0) {
-            return 0;
-        }
-
-        // Scale marks proportionally to total exam marks
-        float finalMarks = (totalObtainedMarks / totalPossibleMarks) * tMarks;
-        int roundedMarks = Math.round(finalMarks);
-        
-        LOGGER.info("Exam " + examId + " marks: " + roundedMarks + 
-                   " (" + totalObtainedMarks + "/" + totalPossibleMarks + 
-                   " = " + (totalObtainedMarks/totalPossibleMarks*100) + "%)");
-        
-        return roundedMarks;
+        return new float[]{totalObtainedMarks, totalPossibleMarks};
         
     } catch (SQLException ex) {
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-        return 0;
+        return new float[]{0, 0};
     }
 }
 
@@ -3885,34 +3873,46 @@ public void calculateResult(int eid, int tMarks, String endTime, int size) {
     }
     
     try {
-        // First, calculate obtained marks
-        int obt = getObtMarks(eid, tMarks, size);
+        // First, calculate raw obtained and total possible marks
+        float[] marks = getRawMarks(eid);
+        float obtRaw = marks[0];
+        float totalRaw = marks[1];
+
+        // If totalRaw is 0 (should not happen in real exams), fallback to the passed tMarks
+        if (totalRaw == 0) totalRaw = tMarks;
         
-        // Calculate percentage
+        // Calculate percentage based on raw marks
         float percentage = 0;
-        if (tMarks > 0) {
-            percentage = ((float) obt / tMarks) * 100;
+        if (totalRaw > 0) {
+            percentage = (obtRaw / totalRaw) * 100;
         }
         
         // Determine result status based on percentage (45% passing threshold)
         String resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
         
+        // Round for DB storage (since schema is INT)
+        int obtRounded = Math.round(obtRaw);
+        int totalRounded = Math.round(totalRaw);
+
         // CRITICAL: Log the actual values being saved
-        LOGGER.info("=== SAVING EXAM RESULTS ===");
+        LOGGER.info("=== SAVING EXAM RESULTS (UNSCALED) ===");
         LOGGER.info("Exam ID: " + eid);
-        LOGGER.info("Obtained Marks: " + obt + "/" + tMarks);
+        LOGGER.info("Raw Obtained: " + obtRaw);
+        LOGGER.info("Raw Total: " + totalRaw);
+        LOGGER.info("Saved Obtained: " + obtRounded);
+        LOGGER.info("Saved Total: " + totalRounded);
         LOGGER.info("Percentage: " + String.format("%.1f", percentage) + "%");
         LOGGER.info("Result Status: " + resultStatus);
         LOGGER.info("===========================");
         
-        // Update exams table with both status and result_status
-        // Ensure both obt_marks and result_status are updated correctly
-        String sql = "UPDATE exams SET obt_marks=?, end_time=?, status='completed', result_status=? WHERE exam_id=?";
+        // Update exams table with unscaled obt_marks, total_marks, end_time, and status
+        String sql = "UPDATE exams SET obt_marks=?, total_marks=?, end_time=?, status='completed', result_status=? WHERE exam_id=?";
         PreparedStatement pstm = conn.prepareStatement(sql);
-        pstm.setInt(1, obt);
-        pstm.setString(2, endTime);
-        pstm.setString(3, resultStatus);
-        pstm.setInt(4, eid);
+        pstm.setInt(1, obtRounded);
+        pstm.setInt(2, totalRounded);
+        pstm.setString(3, endTime);
+        pstm.setString(4, resultStatus);
+        pstm.setInt(5, eid);
         
         int rowsUpdated = pstm.executeUpdate();
         LOGGER.info("Rows updated: " + rowsUpdated);
