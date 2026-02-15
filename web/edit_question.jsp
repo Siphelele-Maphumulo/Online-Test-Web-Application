@@ -1860,10 +1860,11 @@
         
         // 4. Fuzzy match
         for (let opt of options) {
-            if (opt && opt.length > 2) {
-                if (text.toLowerCase() === opt.toLowerCase()) return opt;
-                if (text.toLowerCase().includes(opt.toLowerCase()) || opt.toLowerCase().includes(text.toLowerCase())) {
-                    return opt;
+            const trimmedOpt = opt ? opt.trim() : "";
+            if (trimmedOpt && trimmedOpt.length > 2) {
+                if (text.toLowerCase() === trimmedOpt.toLowerCase()) return trimmedOpt;
+                if (text.toLowerCase().includes(trimmedOpt.toLowerCase()) || trimmedOpt.toLowerCase().includes(text.toLowerCase())) {
+                    return trimmedOpt;
                 }
             }
         }
@@ -2139,10 +2140,13 @@
                             const optionInput = document.getElementById(optionId);
                             if (optionInput && optionInput.value.trim()) {
                                 selectedValues.push(optionInput.value.trim());
+                            } else if (checkbox.value && checkbox.value !== 'on') {
+                                selectedValues.push(checkbox.value.trim());
                             }
                         });
                         
-                        correct.value = selectedValues.join('|');
+                        const filteredValues = selectedValues.filter(ans => ans && ans.toLowerCase() !== 'on');
+                        correct.value = filteredValues.join('|');
                     });
                 });
             }, 50);
@@ -2573,12 +2577,15 @@ window.addEventListener('DOMContentLoaded', function() {
                     const optionInput = document.getElementById(optionId);
                     if (optionInput && optionInput.value.trim()) {
                         selectedValues.push(optionInput.value.trim());
+                    } else if (checkbox.value && checkbox.value !== 'on') {
+                        selectedValues.push(checkbox.value.trim());
                     }
                 });
                 
+                const filteredValues = selectedValues.filter(ans => ans && ans.toLowerCase() !== 'on');
                 const correctAnswerField = document.getElementById('editCorrectAnswer');
                 if (correctAnswerField) {
-                    correctAnswerField.value = selectedValues.join('|');
+                    correctAnswerField.value = filteredValues.join('|');
                 }
             });
         });

@@ -1,221 +1,231 @@
+package myPackage;
 
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
-
+import java.nio.charset.StandardCharsets;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.JSONException;
 
 public class OpenRouterClient {
+    private static final Logger LOGGER = Logger.getLogger(OpenRouterClient.class.getName());
+    private static final String API_URL = "https://openrouter.ai/api/v1/chat/completions";
     
-    private static final String OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-    private static final String API_KEY = System.getenv("OPENROUTER_API_KEY"); // Get API key from environment variable
-    
-    public static String generateQuestions(String text, String questionType, int numQuestions) {
-        // Check if API key is available
-        if (API_KEY == null || API_KEY.trim().isEmpty()) {
-            // Return a sample response when API key is not configured
-            System.out.println("OpenRouter API key not configured. Returning sample response.");
-            return generateSampleResponse(questionType, numQuestions);
+    public static String generateQuestions(String text, String questionType, int numQuestions, boolean isMarkingGuideline) {
+        String apiKey = OpenRouterConfig.getApiKey();
+        
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            LOGGER.severe("OPENROUTER_API_KEY not found in any configuration source.");
+            LOGGER.severe("Checked: system property 'openrouter.api.key', environment variable, and openrouter.properties");
+            return null;
         }
         
+        // Log first few chars of key for debugging (remove or mask in production)
+        if (apiKey.length() > 10) {
+            LOGGER.info("API Key found: " + apiKey.substring(0, 10) + "...");
+        }
+
         try {
-            // Create the prompt for generating questions
-            String prompt = createPrompt(text, questionType, numQuestions);
+            JSONObject payload = new JSONObject();
+            payload.put("model", OpenRouterConfig.getModel());
+            payload.put("temperature", 0.3);
+            payload.put("max_tokens", 2500);
+
+            JSONArray messages = new JSONArray();
+
+            JSONObject systemMessage = new JSONObject();
+            systemMessage.put("role", "system");
+            systemMessage.put("content", "You are an expert Accounting examiner. You specialize in generating high-quality exam questions from marking guidelines.");
+            messages.put(systemMessage);
+
+            JSONObject userMessage = new JSONObject();
+            userMessage.put("role", "user");
+            userMessage.put("content", isMarkingGuideline ? createMarkingGuidelinePrompt(text, numQuestions) : createStandardPrompt(text, questionType, numQuestions));
+            messages.put(userMessage);
+
+            payload.put("messages", messages);
+
+            LOGGER.info("Sending request to OpenRouter API (" + OpenRouterConfig.getModel() + ")...");
+            String response = sendRequest(payload.toString(), apiKey);
             
-            // Create the request payload
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("model", "mistralai/mistral-7b-instruct"); // Using a free model
+            if (response == null) {
+                LOGGER.severe("Received null response from API");
+                return null;
+            }
             
-            // Structure the message according to OpenRouter API
-            Map<String, Object> message = new HashMap<>();
-            message.put("role", "user");
-            message.put("content", prompt);
-            
-            payload.put("messages", new Object[]{message});
-            
-            // Add headers
-            Map<String, String> headers = new HashMap<>();
-            headers.put("Authorization", "Bearer " + API_KEY);
-            headers.put("Content-Type", "application/json");
-            // Add required headers for OpenRouter
-            headers.put("HTTP-Referer", "https://yourdomain.com"); // Replace with your domain
-            headers.put("X-Title", "Online Test Generator"); // Replace with your app name
-            
-            // Make the API call
-            String response = makeApiCall(payload, headers);
-            
-            // Extract the response text from the JSON response
-            return extractResponseText(response);
+            LOGGER.info("Received response from API, extracting content...");
+            return extractContent(response);
             
         } catch (Exception e) {
-            System.err.println("Error generating questions with OpenRouter: " + e.getMessage());
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error calling OpenRouter API", e);
             return null;
         }
     }
-    
-    private static String createPrompt(String text, String questionType, int numQuestions) {
-        StringBuilder prompt = new StringBuilder();
-        prompt.append("Generate ").append(numQuestions).append(" ").append(questionType).append(" questions based on the following text:\n\n");
-        prompt.append(text).append("\n\n");
-        
-        if ("MCQ".equalsIgnoreCase(questionType)) {
-            prompt.append("Format the response as a JSON array of objects with the following structure:\n");
-            prompt.append("[{\n");
-            prompt.append("  \"question\": \"The question text\",\n");
-            prompt.append("  \"options\": [\"Option A\", \"Option B\", \"Option C\", \"Option D\"],\n");
-            prompt.append("  \"correct\": \"The correct option\"\n");
-            prompt.append("}]\n");
-        } else if ("TrueFalse".equalsIgnoreCase(questionType)) {
-            prompt.append("Format the response as a JSON array of objects with the following structure:\n");
-            prompt.append("[{\n");
-            prompt.append("  \"question\": \"The true/false question text\",\n");
-            prompt.append("  \"options\": [\"True\", \"False\"],\n");
-            prompt.append("  \"correct\": \"True or False\"\n");
-            prompt.append("}]\n");
-        } else {
-            // Default to MCQ format
-            prompt.append("Format the response as a JSON array of objects with the following structure:\n");
-            prompt.append("[{\n");
-            prompt.append("  \"question\": \"The question text\",\n");
-            prompt.append("  \"options\": [\"Option A\", \"Option B\", \"Option C\", \"Option D\"],\n");
-            prompt.append("  \"correct\": \"The correct option\"\n");
-            prompt.append("}]\n");
-        }
-        
-        prompt.append("Ensure the response is valid JSON format only, with no additional text or explanations.");
-        
-        return prompt.toString();
+
+    private static String createMarkingGuidelinePrompt(String text, int count) {
+        return "You are an expert Accounting examiner.\n\n" +
+               "TASK:\n" +
+               "1. Analyze the provided Accounting Marking Guideline text.\n" +
+               "2. Extract examinable concepts (Calculations, Theory, Financial Indicators).\n" +
+               "3. Generate approximately " + count + " multiple-choice questions similar to national exam format.\n" +
+               "4. Extract the correct numerical answer from the 'ANSWER' or final results section.\n" +
+               "5. Use the 'WORKINGS' section to identify common accounting errors and use those to generate plausible distractors.\n" +
+               "6. Create 3 plausible distractors for each question.\n" +
+               "7. Maintain exam-level difficulty.\n\n" +
+               "FORMAT STRICTLY AS JSON ARRAY:\n" +
+               "[\n" +
+               "  {\n" +
+               "    \"question\": \"The specific calculation or theory question stem\",\n" +
+               "    \"options\": [\"Correct Answer\", \"Distractor 1\", \"Distractor 2\", \"Distractor 3\"],\n" +
+               "    \"correct\": \"Correct Answer\",\n" +
+               "    \"type\": \"MCQ\"\n" +
+               "  }\n" +
+               "]\n\n" +
+               "RULES:\n" +
+               "- Exactly 4 options.\n" +
+               "- Correct answer must match one option exactly.\n" +
+               "- For multiple correct answers (MultipleSelect), separate them with | in the correct field: \"ans1|ans2\".\n" +
+               "- Return ONLY the JSON array. No preamble, no explanation, no markdown blocks.\n" +
+               "- Numerical values must be precise as per the guidelines.\n\n" +
+               "TEXT:\n" + text;
     }
-    
-    private static String makeApiCall(Map<String, Object> payload, Map<String, String> headers) throws Exception {
-        URL url = new URL(OPENROUTER_API_URL);
+
+    private static String createStandardPrompt(String text, String type, int count) {
+        return "Generate " + count + " " + type + " questions based on the following text.\n\n" +
+               "FORMAT STRICTLY AS JSON ARRAY:\n" +
+               "[\n" +
+               "  {\n" +
+               "    \"question\": \"...\",\n" +
+               "    \"options\": " + ("TrueFalse".equalsIgnoreCase(type) ? "[\"True\", \"False\"]" : "[\"Option A\", \"Option B\", \"Option C\", \"Option D\"]") + ",\n" +
+               "    \"correct\": \"...\",\n" +
+               "    \"type\": \"" + type + "\"\n" +
+               "  }\n" +
+               "]\n\n" +
+               "RULES:\n" +
+               "- Return ONLY valid JSON array.\n" +
+               "- No extra text.\n\n" +
+               "TEXT:\n" + text;
+    }
+
+    private static String sendRequest(String jsonPayload, String apiKey) throws Exception {
+        URL url = new URL(API_URL);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        
-        // Set request method
+
         conn.setRequestMethod("POST");
-        
-        // Set headers
-        for (Map.Entry<String, String> header : headers.entrySet()) {
-            conn.setRequestProperty(header.getKey(), header.getValue());
-        }
-        
-        // Enable output and input streams
+        conn.setRequestProperty("Authorization", "Bearer " + apiKey);
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("HTTP-Referer", "https://codesa-institute.co.za");
+        conn.setRequestProperty("X-Title", "Accounting Question Generator");
+
         conn.setDoOutput(true);
-        
-        // Write the payload
-        String payloadString = mapToJson(payload);
+        conn.setConnectTimeout(30000); // 30 seconds timeout
+        conn.setReadTimeout(60000); // 60 seconds timeout
+
         try (OutputStream os = conn.getOutputStream()) {
-            byte[] input = payloadString.getBytes("utf-8");
-            os.write(input, 0, input.length);
+            os.write(jsonPayload.getBytes(StandardCharsets.UTF_8));
+            os.flush();
         }
-        
-        // Get response
+
         int responseCode = conn.getResponseCode();
-        StringBuilder response = new StringBuilder();
+        LOGGER.info("API Response Code: " + responseCode);
         
-        try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(conn.getInputStream(), "utf-8"))) {
-            String responseLine;
-            while ((responseLine = br.readLine()) != null) {
-                response.append(responseLine.trim());
+        InputStream is;
+        if (responseCode >= 200 && responseCode < 300) {
+            is = conn.getInputStream();
+        } else {
+            is = conn.getErrorStream();
+            if (is == null) {
+                LOGGER.severe("API Error (" + responseCode + ") and error stream is null");
+                return null;
+            }
+            // Read error stream for debugging
+            StringBuilder errorResponse = new StringBuilder();
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    errorResponse.append(line);
+                }
+            }
+            LOGGER.severe("API Error Response (" + responseCode + "): " + errorResponse.toString());
+            throw new IOException("API returned error code " + responseCode + ": " + errorResponse.toString());
+        }
+
+        StringBuilder response = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                response.append(line);
             }
         }
         
         conn.disconnect();
-        
-        if (responseCode >= 200 && responseCode < 300) {
-            return response.toString();
-        } else {
-            System.err.println("API call failed with response code: " + responseCode);
-            System.err.println("Response: " + response.toString());
-            return null;
-        }
-    }
-    
-    private static String mapToJson(Map<String, Object> map) {
-        StringBuilder json = new StringBuilder();
-        json.append("{");
-        
-        boolean first = true;
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            if (!first) {
-                json.append(",");
-            }
-            json.append("\"").append(entry.getKey()).append("\":");
-            
-            if (entry.getValue() instanceof String) {
-                json.append("\"").append(escapeJson((String) entry.getValue())).append("\"");
-            } else {
-                json.append(entry.getValue().toString());
-            }
-            
-            first = false;
-        }
-        
-        json.append("}");
-        return json.toString();
-    }
-    
-    private static String escapeJson(String str) {
-        if (str == null) {
-            return null;
-        }
-        return str.replace("\\", "\\\\")
-                  .replace("\"", "\\\"")
-                  .replace("\b", "\\b")
-                  .replace("\f", "\\f")
-                  .replace("\n", "\\n")
-                  .replace("\r", "\\r")
-                  .replace("\t", "\\t");
-    }
-    
-    private static String extractResponseText(String jsonResponse) {
-        // Properly extract the content from the JSON response
-        try {
-            // Look for the choices array and message -> content 
-            int choicesIndex = jsonResponse.indexOf("\"choices\"");
-            if (choicesIndex != -1) {
-                int contentIndex = jsonResponse.indexOf("\"content\":\"");
-                if (contentIndex != -1) {
-                    contentIndex += 11; // Length of "\"content\":\""
-                    int endIndex = jsonResponse.indexOf("\"", contentIndex);
-                    if (endIndex != -1) {
-                        return jsonResponse.substring(contentIndex, endIndex);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Error extracting response text: " + e.getMessage());
-        }
-        return jsonResponse;
-    }
-    
-    private static String generateSampleResponse(String questionType, int numQuestions) {
-        StringBuilder response = new StringBuilder();
-        response.append("[");
-        
-        for (int i = 0; i < numQuestions; i++) {
-            if (i > 0) response.append(",");
-            
-            response.append("{\n");
-            response.append("  \"question\": \"Sample ").append(questionType).append(" question #").append(i + 1).append("\",\n");
-            
-            if ("TrueFalse".equalsIgnoreCase(questionType)) {
-                response.append("  \"options\": [\"True\", \"False\"],\n");
-                response.append("  \"correct\": \"").append(Math.random() > 0.5 ? "True" : "False").append("\"\n");
-            } else {
-                response.append("  \"options\": [\"Option A\", \"Option B\", \"Option C\", \"Option D\"],\n");
-                response.append("  \"correct\": \"Option ").append((char)('A' + (int)(Math.random() * 4))).append("\"\n");
-            }
-            
-            response.append("}");
-        }
-        
-        response.append("]");
         return response.toString();
+    }
+
+    private static String extractContent(String response) {
+        try {
+            LOGGER.info("Attempting to parse response: " + response.substring(0, Math.min(response.length(), 500)) + "...");
+
+            JSONObject root = new JSONObject(response);
+            if (root.has("choices")) {
+                JSONArray choices = root.getJSONArray("choices");
+                if (choices.length() > 0) {
+                    JSONObject choice = choices.getJSONObject(0);
+                    if (choice.has("message")) {
+                        JSONObject message = choice.getJSONObject("message");
+                        if (message.has("content")) {
+                            String content = message.getString("content");
+                            LOGGER.info("Extracted content length: " + content.length());
+                            
+                            // Try to extract JSON array from content
+                            return extractJsonArray(content);
+                        } else {
+                            LOGGER.severe("Response JSON missing 'content' field in 'message'.");
+                            LOGGER.severe("Parsed JSON structure (partial): " + root.toString(2));
+                            return null;
+                        }
+                    } else {
+                        LOGGER.severe("Response JSON missing 'message' field in 'choices[0]'.");
+                        LOGGER.severe("Parsed JSON structure (partial): " + root.toString(2));
+                        return null;
+                    }
+                } else {
+                    LOGGER.severe("Response JSON 'choices' array is empty.");
+                    LOGGER.severe("Parsed JSON structure (partial): " + root.toString(2));
+                    return null;
+                }
+            } else {
+                LOGGER.severe("Response JSON missing 'choices' array.");
+                LOGGER.severe("Parsed JSON structure (partial): " + root.toString(2));
+                return null;
+            }
+        } catch (JSONException e) {
+            LOGGER.log(Level.SEVERE, "Failed to parse API response JSON", e);
+            LOGGER.severe("Response string was: " + response);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Unexpected error during content extraction", e);
+            LOGGER.severe("Response string was: " + response);
+        }
+        return null;
+    }
+    
+    private static String extractJsonArray(String text) {
+        // Find the first [ and last ]
+        int start = text.indexOf('[');
+        int end = text.lastIndexOf(']');
+        if (start != -1 && end != -1 && end > start) {
+            String json = text.substring(start, end + 1);
+            LOGGER.info("Extracted JSON array: " + json.substring(0, Math.min(100, json.length())) + "...");
+            return json;
+        }
+        LOGGER.warning("No JSON array found in content");
+        return text;
     }
 }

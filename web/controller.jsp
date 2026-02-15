@@ -17,6 +17,7 @@
 <%@ page import="myPackage.classes.Questions" %>
 <%@ page import="org.mindrot.jbcrypt.BCrypt" %>
 <%@ page import="org.json.JSONObject" %>
+<%@ page import="org.json.JSONArray" %>
 <%@ page import="org.apache.pdfbox.pdmodel.PDDocument" %>
 <%@ page import="org.apache.pdfbox.text.PDFTextStripper" %>
 <%@ page import="org.json.JSONException" %>
@@ -1414,19 +1415,116 @@ try {
             response.getWriter().write("{\"success\": false, \"message\": \"Failed to submit answers\"}");
             return;
         }
+    } else if ("ai_generate".equalsIgnoreCase(operation)) {
+        response.setContentType("application/json");
+        PrintWriter outJSON = response.getWriter();
+        String text = nz(request.getParameter("text"), "");
+        String questionType = nz(request.getParameter("questionType"), "MCQ");
+        boolean isMarkingGuideline = "true".equalsIgnoreCase(request.getParameter("isMarkingGuideline"));
+        
+        if (text.isEmpty()) {
+            outJSON.print("{\"success\": false, \"message\": \"No text provided for AI generation.\"}");
+            return;
+        }
+        
+        int numQuestions = 10;
+        String numQsParam = request.getParameter("numQuestions");
+        if (numQsParam != null && !numQsParam.trim().isEmpty()) {
+            try {
+                numQuestions = Integer.parseInt(numQsParam.trim());
+            } catch (NumberFormatException e) {}
+        }
+        
+        try {
+            String aiResponse = OpenRouterClient.generateQuestions(text, questionType, numQuestions, isMarkingGuideline);
+            if (aiResponse == null || aiResponse.trim().isEmpty()) {
+                outJSON.print("{\"success\": false, \"message\": \"AI generation failed or returned empty response.\"}");
+                return;
+            }
+
+            // Clean AI response if it contains markdown
+            if (aiResponse.contains("```json")) {
+                aiResponse = aiResponse.substring(aiResponse.indexOf("```json") + 7);
+                if (aiResponse.contains("```")) {
+                    aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
+                }
+            } else if (aiResponse.contains("```")) {
+                aiResponse = aiResponse.substring(aiResponse.indexOf("```") + 3);
+                if (aiResponse.contains("```")) {
+                    aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
+                }
+            }
+            
+            aiResponse = aiResponse.trim();
+            
+            try {
+                // Try to parse as JSONArray first (preferred)
+                if (aiResponse.startsWith("[")) {
+                    JSONArray questionsArr = new JSONArray(aiResponse);
+                    JSONObject result = new JSONObject();
+                    result.put("success", true);
+                    result.put("questions", questionsArr);
+                    outJSON.print(result.toString());
+                } else if (aiResponse.startsWith("{")) {
+                    JSONObject resObj = new JSONObject(aiResponse);
+                    if (resObj.has("questions")) {
+                        resObj.put("success", true);
+                        outJSON.print(resObj.toString());
+                    } else if (resObj.has("question")) {
+                        // Single question wrapped in object
+                        JSONArray arr = new JSONArray();
+                        arr.put(resObj);
+                        JSONObject result = new JSONObject();
+                        result.put("success", true);
+                        result.put("questions", arr);
+                        outJSON.print(result.toString());
+                    } else {
+                        outJSON.print("{\"success\": false, \"message\": \"AI returned JSON but no questions were found.\"}");
+                    }
+                } else {
+                    // Try to find JSON within the text if it didn't start with [ or {
+                    int firstBracket = aiResponse.indexOf("[");
+                    int firstBrace = aiResponse.indexOf("{");
+                    int start = -1;
+                    if (firstBracket != -1 && (firstBrace == -1 || firstBracket < firstBrace)) start = firstBracket;
+                    else if (firstBrace != -1) start = firstBrace;
+                    
+                    if (start != -1) {
+                        String potentialJson = aiResponse.substring(start);
+                        try {
+                            if (potentialJson.startsWith("[")) {
+                                JSONArray arr = new JSONArray(potentialJson);
+                                JSONObject result = new JSONObject();
+                                result.put("success", true);
+                                result.put("questions", arr);
+                                outJSON.print(result.toString());
+                            } else {
+                                JSONObject obj = new JSONObject(potentialJson);
+                                obj.put("success", true);
+                                outJSON.print(obj.toString());
+                            }
+                        } catch (JSONException je) {
+                            outJSON.print("{\"success\": false, \"message\": \"Found potential JSON but failed to parse: " + je.getMessage() + "\"}");
+                        }
+                    } else {
+                        outJSON.print("{\"success\": false, \"message\": \"AI returned non-JSON response.\"}");
+                    }
+                }
+            } catch (JSONException e) {
+                LOGGER.log(Level.WARNING, "JSON Parsing Error. Response was: " + aiResponse, e);
+                outJSON.print("{\"success\": false, \"message\": \"Failed to parse AI JSON response: " + e.getMessage() + "\"}");
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Unexpected error in ai_generate", e);
+            outJSON.print("{\"success\": false, \"message\": \"Internal Error: " + e.getMessage() + "\"}");
+        }
+        return;
+
     } else if ("extract_text".equalsIgnoreCase(operation)) {
         response.setContentType("application/json");
         PrintWriter outJSON = response.getWriter();
         
         try {
-            // Check if PDFBox is available
-            try {
-                Class.forName("org.apache.pdfbox.pdmodel.PDDocument");
-            } catch (ClassNotFoundException e) {
-                outJSON.print("{\"success\": false, \"message\": \"PDF processing libraries not found on server.\"}");
-                return;
-            }
-
             if (ServletFileUpload.isMultipartContent(request)) {
                 List<FileItem> items = (List<FileItem>) request.getAttribute("multipartItems");
                 if (items == null) {
@@ -1442,35 +1540,7 @@ try {
                     if (!item.isFormField() && ("questionFile".equals(item.getFieldName()) || "pdfFile".equals(item.getFieldName()))) {
                         foundFile = true;
                         byte[] pdfBytes = item.get();
-                        PDDocument document = null;
-                        
-                        try {
-                            // Use reflection to load PDF for cross-version compatibility (2.x vs 3.x)
-                            try {
-                                // PDFBox 2.x/3.x try load(byte[])
-                                java.lang.reflect.Method m = PDDocument.class.getMethod("load", byte[].class);
-                                document = (PDDocument) m.invoke(null, pdfBytes);
-                            } catch (Exception ex) {
-                                // PDFBox 3.x specific fallback
-                                try {
-                                    Class<?> loaderClass = Class.forName("org.apache.pdfbox.Loader");
-                                    java.lang.reflect.Method loadMethod = loaderClass.getMethod("loadPDF", byte[].class);
-                                    document = (PDDocument) loadMethod.invoke(null, pdfBytes);
-                                } catch (Exception ex2) {
-                                    // InputStream fallback
-                                    java.io.InputStream in = new java.io.ByteArrayInputStream(pdfBytes);
-                                    java.lang.reflect.Method m = PDDocument.class.getMethod("load", java.io.InputStream.class);
-                                    document = (PDDocument) m.invoke(null, in);
-                                }
-                            }
-
-                            if (document != null) {
-                                PDFTextStripper stripper = new PDFTextStripper();
-                                extractedText = stripper.getText(document);
-                            }
-                        } finally {
-                            if (document != null) document.close();
-                        }
+                        extractedText = PDFExtractor.extractCleanText(pdfBytes);
                         break;
                     }
                 }
@@ -1487,7 +1557,7 @@ try {
                 outJSON.print("{\"success\": false, \"message\": \"Request is not multipart.\"}");
             }
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error extracting text", e);
+            LOGGER.log(Level.SEVERE, "Error extracting text using PDFExtractor", e);
             outJSON.print("{\"success\": false, \"message\": \"Extraction error: " + e.getMessage() + "\"}");
         }
         return;
