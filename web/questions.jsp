@@ -43,10 +43,10 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
 %>
 
 <!-- Modal for validation messages -->
-<div id="validationModal" class="modal" style="display: none;">
+<div id="qValidationModal" class="modal" style="display: none;">
     <div class="modal-content">
         <div class="modal-header error-header">
-            <h3 id="modalTitle">
+            <h3 id="qModalTitle">
                 <i class="fas fa-exclamation-triangle"></i> Validation Error
             </h3>
             <span class="close-modal" onclick="closeModal()">&times;</span>
@@ -59,10 +59,10 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
 
             <div class="error-details">
                 <p><strong>Entered Correct Answer:</strong></p>
-                <div id="enteredAnswer" class="highlight-box"></div>
+                <div id="qEnteredAnswer" class="highlight-box"></div>
 
                 <p><strong>Available Options:</strong></p>
-                <ul id="optionsList" class="options-list"></ul>
+                <ul id="qOptionsList" class="options-list"></ul>
             </div>
 
             <div class="error-instruction">
@@ -1581,19 +1581,19 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                         <div id="multipleCorrectContainer" style="display:none;">
                             <div class="options-grid">
                                 <div class="form-check">
-                                    <input type="checkbox" id="correctOpt1" class="form-check-input correct-checkbox">
+                                    <input type="checkbox" id="correctOpt1" class="form-check-input correct-checkbox" value="">
                                     <label for="correctOpt1" class="form-check-label">Option 1</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" id="correctOpt2" class="form-check-input correct-checkbox">
+                                    <input type="checkbox" id="correctOpt2" class="form-check-input correct-checkbox" value="">
                                     <label for="correctOpt2" class="form-check-label">Option 2</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" id="correctOpt3" class="form-check-input correct-checkbox">
+                                    <input type="checkbox" id="correctOpt3" class="form-check-input correct-checkbox" value="">
                                     <label for="correctOpt3" class="form-check-label">Option 3</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" id="correctOpt4" class="form-check-input correct-checkbox">
+                                    <input type="checkbox" id="correctOpt4" class="form-check-input correct-checkbox" value="">
                                     <label for="correctOpt4" class="form-check-label">Option 4</label>
                                 </div>
                             </div>
@@ -1954,7 +1954,7 @@ function showModal(title, message) {
 }
 
 function closeModal() {
-    document.getElementById('validationModal').style.display = 'none';
+    document.getElementById('qValidationModal').style.display = 'none';
 }
 
 // Function to populate and show the enhanced validation modal
@@ -1962,13 +1962,13 @@ function showValidationModal(correctValue, opts, questionType = "MCQ") {
     // Set modal title based on question type
     const titleIcon = '<i class="fas fa-exclamation-triangle"></i>';
     const titleText = questionType === "Code" ? "Expected Output Mismatch" : "Correct Answer Mismatch";
-    document.getElementById("modalTitle").innerHTML = titleIcon + " " + titleText;
+    document.getElementById("qModalTitle").innerHTML = titleIcon + " " + titleText;
 
     // Show entered answer
-    document.getElementById("enteredAnswer").textContent = `"${correctValue}"`;
+    document.getElementById("qEnteredAnswer").textContent = `"${correctValue}"`;
 
     // Populate options list
-    const optionsList = document.getElementById("optionsList");
+    const optionsList = document.getElementById("qOptionsList");
     optionsList.innerHTML = "";
 
     opts.forEach((opt, index) => {
@@ -1978,7 +1978,7 @@ function showValidationModal(correctValue, opts, questionType = "MCQ") {
     });
 
     // Update error summary based on question type
-    const summary = document.querySelector(".error-summary");
+    const summary = document.querySelector("#qValidationModal .error-summary");
     if (questionType === "Code") {
         summary.textContent = "The expected output does not match any of the provided options.";
     } else {
@@ -1986,7 +1986,7 @@ function showValidationModal(correctValue, opts, questionType = "MCQ") {
     }
 
     // Show the modal
-    document.getElementById("validationModal").style.display = "block";
+    document.getElementById("qValidationModal").style.display = "block";
 }
 
 // Drag and drop functionality for generic file upload
@@ -2719,41 +2719,60 @@ function parseMultipleQuestions(text) {
 function sanitizeCorrectAnswer(q) {
     if (!q || !q.correct) return "";
     const correctText = q.correct.trim();
-    const options = q.options || [];
+    const options = (q.options || []).map(opt => opt ? opt.trim() : "");
+
+    // If it's a MultipleSelect question or contains pipes, process parts separately
+    if (correctText.includes('|')) {
+        const parts = correctText.split('|').map(p => p.trim()).filter(p => p !== "");
+        const sanitizedParts = parts.map(part => {
+            return sanitizeSingleAnswer(part, options);
+        });
+        return [...new Set(sanitizedParts)].join('|');
+    }
+
+    return sanitizeSingleAnswer(correctText, options);
+}
+
+/**
+ * Internal helper to sanitize a single answer string against options
+ */
+function sanitizeSingleAnswer(answerText, options) {
+    if (!answerText) return "";
+    const text = answerText.trim();
     
     // 1. Check for exact match
-    if (options.includes(correctText)) return correctText;
+    if (options.includes(text)) return text;
     
-    // 2. Check for "Option X: text" format in correct answer
-    const optionMatch = correctText.match(/Option\s+(\d+)[:\s]*(.*)/i);
+    // 2. Check for "Option X: text" format
+    const optionMatch = text.match(/Option\s+(\d+)[:\s]*(.*)/i);
     if (optionMatch) {
         const index = parseInt(optionMatch[1]) - 1;
         const textAfterPrefix = optionMatch[2].trim();
         
         if (index >= 0 && index < options.length && options[index]) {
-            // If the text after prefix matches the option, or if no text provided, return option text
             if (!textAfterPrefix || options[index].includes(textAfterPrefix) || textAfterPrefix.includes(options[index])) {
                 return options[index];
             }
         }
     }
     
-    // 3. Check if correct answer contains a number (1-4), use that option if no prefix but just "1"
-    if (correctText.length === 1 && !isNaN(correctText)) {
-        const num = parseInt(correctText);
+    // 3. Check for single number (1-4)
+    if (text.length === 1 && !isNaN(text)) {
+        const num = parseInt(text);
         if (num >= 1 && num <= 4 && options[num-1]) return options[num-1];
     }
     
-    // 4. Check if any option is contained in the correct answer or vice versa (fuzzy)
+    // 4. Fuzzy match
     for (let opt of options) {
         if (opt && opt.length > 2) {
-            if (correctText.toLowerCase().includes(opt.toLowerCase()) || opt.toLowerCase().includes(correctText.toLowerCase())) {
+            if (text.toLowerCase() === opt.toLowerCase()) return opt;
+            if (text.toLowerCase().includes(opt.toLowerCase()) || opt.toLowerCase().includes(text.toLowerCase())) {
                 return opt;
             }
         }
     }
     
-    return correctText;
+    return text;
 }
 
 // Modal for displaying and editing multiple questions
@@ -3577,6 +3596,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (selectedCount !== 2) {
                     errorMsg = "Select exactly 2 correct answers.";
                     isValid = false;
+                } else {
+                    // Ensure the correct answer field is updated before submission
+                    updateCorrectAnswerField();
                 }
             } else {
                 // For MCQ questions (but not True/False, MultipleSelect, or Code)
@@ -3671,7 +3693,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Close modal when clicking outside
     window.onclick = (event) => {
-        const modal = document.getElementById('validationModal');
+        const modal = document.getElementById('qValidationModal');
         if (event.target == modal) closeModal();
         
         // Also close multiple questions modal if clicked outside
