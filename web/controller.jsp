@@ -1523,16 +1523,8 @@ try {
     } else if ("extract_text".equalsIgnoreCase(operation)) {
         response.setContentType("application/json");
         PrintWriter outJSON = response.getWriter();
-        
-        try {
-            // Check if PDFBox is available
-            try {
-                Class.forName("org.apache.pdfbox.pdmodel.PDDocument");
-            } catch (ClassNotFoundException e) {
-                outJSON.print("{\"success\": false, \"message\": \"PDF processing libraries not found on server.\"}");
-                return;
-            }
 
+        try {
             if (ServletFileUpload.isMultipartContent(request)) {
                 List<FileItem> items = (List<FileItem>) request.getAttribute("multipartItems");
                 if (items == null) {
@@ -1548,36 +1540,7 @@ try {
                     if (!item.isFormField() && ("questionFile".equals(item.getFieldName()) || "pdfFile".equals(item.getFieldName()))) {
                         foundFile = true;
                         byte[] pdfBytes = item.get();
-                        PDDocument document = null;
-                        
-                        try {
-                            // Use reflection to load PDF for cross-version compatibility (2.x vs 3.x)
-                            try {
-                                // PDFBox 2.x/3.x try load(byte[])
-                                java.lang.reflect.Method m = PDDocument.class.getMethod("load", byte[].class);
-                                document = (PDDocument) m.invoke(null, pdfBytes);
-                            } catch (Exception ex) {
-                                // PDFBox 3.x specific fallback
-                                try {
-                                    Class<?> loaderClass = Class.forName("org.apache.pdfbox.Loader");
-                                    java.lang.reflect.Method loadMethod = loaderClass.getMethod("loadPDF", byte[].class);
-                                    document = (PDDocument) loadMethod.invoke(null, pdfBytes);
-                                } catch (Exception ex2) {
-                                    // InputStream fallback
-                                    java.io.InputStream in = new java.io.ByteArrayInputStream(pdfBytes);
-                                    java.lang.reflect.Method m = PDDocument.class.getMethod("load", java.io.InputStream.class);
-                                    document = (PDDocument) m.invoke(null, in);
-                                }
-                            }
-
-                            if (document != null) {
-                                PDFTextStripper stripper = new PDFTextStripper();
-                                stripper.setSortByPosition(true); // Preserve layout better for tables
-                                extractedText = stripper.getText(document);
-                            }
-                        } finally {
-                            if (document != null) document.close();
-                        }
+                        extractedText = PDFExtractor.extractCleanText(pdfBytes);
                         break;
                     }
                 }
@@ -1594,7 +1557,7 @@ try {
                 outJSON.print("{\"success\": false, \"message\": \"Request is not multipart.\"}");
             }
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error extracting text", e);
+            LOGGER.log(Level.SEVERE, "Error extracting text using PDFExtractor", e);
             outJSON.print("{\"success\": false, \"message\": \"Extraction error: " + e.getMessage() + "\"}");
         }
         return;

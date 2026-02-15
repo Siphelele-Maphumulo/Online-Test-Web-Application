@@ -1884,7 +1884,7 @@ function generateQuestionsWithAI(text, courseName) {
     formData.append('text', text);
     formData.append('questionType', 'MCQ');
     formData.append('isMarkingGuideline', 'true');
-    formData.append('numQuestions', '15');
+    formData.append('numQuestions', '30');
 
     fetch('controller.jsp', {
         method: 'POST',
