@@ -1959,13 +1959,23 @@
         });
     }
     
+    // Add this function to update option labels
     function updateEditCorrectOptionLabels() {
         for (let i = 1; i <= 4; i++) {
             const optInput = document.getElementById(`editOpt${i}`);
+            const checkbox = document.getElementById(`editCorrectOpt${i}`);
             const label = document.querySelector(`label[for="editCorrectOpt${i}"]`);
-            if (optInput && label) {
+            
+            if (optInput && checkbox && label) {
                 const value = optInput.value.trim();
                 label.textContent = value || `Option ${i}`;
+                checkbox.value = value;
+                checkbox.disabled = !value;
+                
+                // If option is empty, uncheck it
+                if (!value && checkbox.checked) {
+                    checkbox.checked = false;
+                }
             }
         }
     }
@@ -1983,6 +1993,7 @@
         
         document.getElementById("questionTypeHidden").value = qType;
     
+        // Hide all option containers first
         mcq.style.display = "none";
         single.style.display = "none";
         multiple.style.display = "none";
@@ -1993,96 +2004,122 @@
         // Remove required attributes from all elements
         correct.required = false;
         if (trueFalseSelect) trueFalseSelect.required = false;
+        document.getElementById('editOpt1').required = false;
+        document.getElementById('editOpt2').required = false;
+        document.getElementById('editOpt3').required = false;
+        document.getElementById('editOpt4').required = false;
     
+        // Handle each question type
         if (qType === "TrueFalse") {
+            // Show True/False container
             trueFalse.style.display = "block";
-            single.style.display = "none";  // Hide the regular correct answer textarea
-            multiple.style.display = "none";  // Hide multiple select checkboxes
-            if (trueFalseSelect) trueFalseSelect.required = true;
-            // Don't require options for True/False questions
-            document.getElementById('editOpt1').required = false;
-            document.getElementById('editOpt2').required = false;
-            document.getElementById('editOpt3').required = false;
-            document.getElementById('editOpt4').required = false;
+            trueFalseSelect.required = true;
             
-            // Add event listener to update correct answer when True/False selection changes
-            if (trueFalseSelect) {
-                trueFalseSelect.addEventListener('change', function() {
-                    const correctAnswerField = document.getElementById('editCorrectAnswer');
-                    if (correctAnswerField) {
-                        correctAnswerField.value = this.value;
-                    }
-                });
-                
-                // Initialize correct answer field with current selection
-                if (trueFalseSelect.value) {
-                    const correctAnswerField = document.getElementById('editCorrectAnswer');
-                    if (correctAnswerField) {
-                        correctAnswerField.value = trueFalseSelect.value;
-                    }
-                }
+            // Hide MCQ options
+            mcq.style.display = "none";
+            
+            // Set the correct answer in the hidden field when selection changes
+            trueFalseSelect.addEventListener('change', function() {
+                correct.value = this.value;
+            });
+            
+            // Initialize with current value
+            if (trueFalseSelect.value) {
+                correct.value = trueFalseSelect.value;
             }
+            
         } else if (qType === "DRAG_AND_DROP") {
             // Show drag and drop section
-            if (dragDrop) {
-                dragDrop.style.display = "block";
-                console.log('Drag drop section shown');
-            }
-            if (dragDropEditor) {
-                dragDropEditor.style.display = "grid";
-                console.log('Drag drop editor shown');
-            }
-            // Hide all correct answer containers for drag/drop questions
-            single.style.display = "none";
-            multiple.style.display = "none";
-            trueFalse.style.display = "none";
-            // Hide MCQ options completely for drag/drop questions
+            dragDrop.style.display = "block";
+            dragDropEditor.style.display = "grid";
+            
+            // Hide MCQ options
             mcq.style.display = "none";
-            // Don't require options for drag/drop questions
-            document.getElementById('editOpt1').required = false;
-            document.getElementById('editOpt2').required = false;
-            document.getElementById('editOpt3').required = false;
-            document.getElementById('editOpt4').required = false;
-            correct.required = false;
-            // Initialize drag-drop if switching to it
+            
+            // Initialize drag-drop data
             if (typeof initializeDragDrop === 'function') {
-                initializeDragDrop();
-                console.log('initializeDragDrop called');
-            }
-        } else {
-            mcq.style.display = "block";
-            if (qType === "MultipleSelect") {
-                multiple.style.display = "block";
-                single.style.display = "none";  // Hide the regular correct answer textarea
-                trueFalse.style.display = "none";  // Hide True/False select
-                // Small delay to ensure DOM is ready before initializing
                 setTimeout(() => {
-                    updateEditCorrectOptionLabels();
-                    initializeMultipleSelectCheckboxes();
-                }, 50);
-            } else if (qType === "Code") {
-                single.style.display = "block";
-                multiple.style.display = "none";  // Hide multiple select checkboxes
-                trueFalse.style.display = "none";  // Hide True/False select
-                correct.placeholder = "Expected output";
-                correct.required = true;
-                // Don't require options for Code questions
-                document.getElementById('editOpt1').required = false;
-                document.getElementById('editOpt2').required = false;
-                document.getElementById('editOpt3').required = false;
-                document.getElementById('editOpt4').required = false;
-            } else {
-                single.style.display = "block";
-                multiple.style.display = "none";  // Hide multiple select checkboxes
-                trueFalse.style.display = "none";  // Hide True/False select
-                correct.placeholder = "Correct Answer";
-                correct.required = true;
-                // Require options for other question types except True/False
-                document.getElementById('editOpt1').required = true;
-                document.getElementById('editOpt2').required = true;
-                document.getElementById('editOpt3').required = false;
-                document.getElementById('editOpt4').required = false;
+                    initializeDragDrop();
+                    // Prepare initial data
+                    if (typeof prepareDragDropDataForSubmit === 'function') {
+                        prepareDragDropDataForSubmit();
+                    }
+                }, 100);
             }
+            
+        } else if (qType === "MultipleSelect") {
+            // Show MCQ options and multiple select container
+            mcq.style.display = "block";
+            multiple.style.display = "block";
+            
+            // Require first two options
+            document.getElementById('editOpt1').required = true;
+            document.getElementById('editOpt2').required = true;
+            
+            // Update labels and initialize checkboxes
+            setTimeout(() => {
+                updateEditCorrectOptionLabels();
+                initializeMultipleSelectCheckboxes();
+                
+                // Update correct answer field when checkboxes change
+                document.querySelectorAll('.edit-correct-checkbox').forEach(cb => {
+                    // Remove existing event listeners to avoid duplicates
+                    const newCb = cb.cloneNode(true);
+                    cb.parentNode.replaceChild(newCb, cb);
+                    
+                    newCb.addEventListener('change', function() {
+                        if (document.querySelectorAll('.edit-correct-checkbox:checked').length > 2) {
+                            this.checked = false;
+                            alert("You can only select 2 correct answers.");
+                            return;
+                        }
+                        
+                        const selectedValues = [];
+                        document.querySelectorAll('.edit-correct-checkbox:checked').forEach(checkbox => {
+                            if (checkbox.value.trim()) {
+                                selectedValues.push(checkbox.value.trim());
+                            }
+                        });
+                        
+                        correct.value = selectedValues.join('|');
+                    });
+                });
+            }, 50);
+            
+        } else {
+            // MCQ or Code type
+            mcq.style.display = "block";
+            single.style.display = "block";
+            
+            // Require first two options
+            document.getElementById('editOpt1').required = true;
+            document.getElementById('editOpt2').required = true;
+            
+            // Set placeholder based on type
+            correct.placeholder = qType === 'Code' ? "Expected output" : "Correct Answer";
+            correct.required = true;
+            
+            // For MCQ, ensure correct answer matches one of the options
+            if (qType === "MCQ") {
+                const currentCorrect = correct.value;
+                const opts = [
+                    document.getElementById('editOpt1').value.trim(),
+                    document.getElementById('editOpt2').value.trim(),
+                    document.getElementById('editOpt3').value.trim(),
+                    document.getElementById('editOpt4').value.trim()
+                ].filter(Boolean);
+                
+                // If current correct answer doesn't match any option, clear it
+                if (currentCorrect && opts.length > 0 && !opts.includes(currentCorrect)) {
+                    correct.value = '';
+                }
+            }
+        }
+    
+        // Update code preview if needed
+        const questionText = document.getElementById("editQuestionTextarea").value;
+        if (typeof updateCodePreview === 'function') {
+            updateCodePreview(questionText, qType);
         }
     }
 
@@ -2143,79 +2180,69 @@ window.addEventListener('DOMContentLoaded', function() {
     updateCodePreview(initialQuestionText, initialQuestionType);
 });
 
+    // Add this new function to initialize multiple select checkboxes properly
     function initializeMultipleSelectCheckboxes() {
-        // First update the labels and values
+        // First update the labels
         updateEditCorrectOptionLabels();
         
-        // Then initialize checkbox states
-        const correctAnswers = document.getElementById('editCorrectAnswer').value.split('|');
+        // Get current correct answers
+        const correctField = document.getElementById('editCorrectAnswer');
+        const currentCorrect = correctField.value;
+        const correctAnswers = currentCorrect ? currentCorrect.split('|') : [];
+        
+        // Reset all checkboxes
         document.querySelectorAll('.edit-correct-checkbox').forEach(cb => {
-            const optionValue = cb.value.trim();
-            if (optionValue && correctAnswers.includes(optionValue)) {
-                cb.checked = true;
-            } else {
-                cb.checked = false;
-            }
+            cb.checked = false;
         });
+        
+        // Check the ones that match current correct answers
+        if (correctAnswers.length > 0) {
+            document.querySelectorAll('.edit-correct-checkbox').forEach(cb => {
+                if (cb.value && correctAnswers.includes(cb.value)) {
+                    cb.checked = true;
+                }
+            });
+        }
     }
 
+    // Add this function to validate before submit
     function validateAndSubmit(event) {
         event.preventDefault();
-        
-        // Trigger immediate parsing if there's content in the question textarea
-        const questionTextarea = document.getElementById('editQuestionTextarea');
-        if (questionTextarea && questionTextarea.value.trim()) {
-            const text = questionTextarea.value.trim();
-            // Check if text contains parsing patterns
-            if (containsParsingPatterns(text)) {
-                // Parse immediately to ensure content is processed before validation
-                const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
-                parseFromQuestionTextarea(lines, true); // Silent parsing
-            }
-        }
-        
-        // Check if question suggests code snippet type immediately after parsing
-        checkForCodeSnippetEdit();
         
         const qType = document.getElementById("questionTypeSelect").value;
         let msg = '';
 
-        // Check if there's an image file uploaded
+        // Check if there's an image
         const imageFileInput = document.getElementById('editImageFile');
         const hasImageFile = imageFileInput && imageFileInput.files.length > 0;
-        
-        // Check if there's a current image (already uploaded previously)
-        const currentImagePathElement = document.getElementById('currentImagePath');
-        const hasCurrentImage = currentImagePathElement && currentImagePathElement.value && currentImagePathElement.value.trim() !== '';
-        
-        // Check if image should be removed
-        const removeImageElement = document.querySelector('input[name="removeImage"][value="true"]');
-        const willRemoveImage = removeImageElement !== null;
-        
-        // Only validate question text if no image is present (either newly uploaded or previously uploaded and not being removed)
+        const currentImagePath = document.getElementById('currentImagePath').value;
+        const hasCurrentImage = currentImagePath && currentImagePath.trim() !== '';
+        const willRemoveImage = document.querySelector('input[name="removeImage"]') !== null;
         const hasImage = (hasImageFile || (hasCurrentImage && !willRemoveImage));
-        
-        if (!hasImage) {
-            // Only validate question text if no image is present
-            const questionText = document.getElementById('editQuestionTextarea').value.trim();
-            if (!questionText) {
-                msg = "Question text is required when no image is uploaded.";
-            }
+
+        // Question text validation
+        const questionText = document.getElementById('editQuestionTextarea').value.trim();
+        if (!hasImage && !questionText) {
+            msg = "Question text is required when no image is uploaded.";
         }
 
+        // Type-specific validation
         if (qType === "TrueFalse") {
             const correctValue = document.getElementById('editTrueFalseSelect').value;
             if (!correctValue) {
                 msg = "Please select the correct answer for True/False question.";
+            } else {
+                document.getElementById('editCorrectAnswer').value = correctValue;
             }
-        } else if (qType === "DRAG_AND_DROP") {
-            // 🔹 STEP 9 — Prepare drag drop data for submit
-            prepareDragDropDataForSubmit();
             
-            // Efficient validation for D&D
-            const dragItems = collectDragItemsFromUI();
-            const dropTargets = collectDropTargetsFromUI();
-            const correctTargets = collectCorrectPairingsFromUI();
+        } else if (qType === "DRAG_AND_DROP") {
+            if (typeof prepareDragDropDataForSubmit === 'function') {
+                prepareDragDropDataForSubmit();
+            }
+            
+            const dragItems = typeof collectDragItemsFromUI === 'function' ? collectDragItemsFromUI() : [];
+            const dropTargets = typeof collectDropTargetsFromUI === 'function' ? collectDropTargetsFromUI() : [];
+            const correctTargets = typeof collectCorrectPairingsFromUI === 'function' ? collectCorrectPairingsFromUI() : [];
             
             if (dragItems.length < 1) {
                 msg = "At least 1 draggable item is required.";
@@ -2227,8 +2254,22 @@ window.addEventListener('DOMContentLoaded', function() {
                     msg = "All draggable items must have a correct target assigned.";
                 }
             }
+            
+        } else if (qType === "MultipleSelect") {
+            const opt1 = document.getElementById('editOpt1').value.trim();
+            const opt2 = document.getElementById('editOpt2').value.trim();
+            
+            if (!opt1 || !opt2) {
+                msg = "At least Option 1 and Option 2 are required.";
+            } else {
+                const selectedCount = document.querySelectorAll('.edit-correct-checkbox:checked').length;
+                if (selectedCount !== 2) {
+                    msg = "Select exactly 2 correct answers.";
+                }
+            }
+            
         } else {
-            // MCQ, MultipleSelect, Code
+            // MCQ or Code
             const opt1 = document.getElementById('editOpt1').value.trim();
             const opt2 = document.getElementById('editOpt2').value.trim();
             
@@ -2241,23 +2282,12 @@ window.addEventListener('DOMContentLoaded', function() {
                     
                 if (new Set(opts).size !== opts.length) {
                     msg = "Options must be unique.";
-                } else if (qType === "MultipleSelect") {
-                    const selectedCount = document.querySelectorAll('.edit-correct-checkbox:checked').length;
-                    if (selectedCount !== 2) {
-                        msg = "Select exactly 2 correct answers.";
-                    } else {
-                        const selectedAnswers = Array.from(document.querySelectorAll('.edit-correct-checkbox:checked'))
-                            .map(cb => cb.value)
-                            .join('|');
-                        document.getElementById('editCorrectAnswer').value = selectedAnswers;
-                    }
-                } else {
+                }
+                
+                if (qType === "MCQ") {
                     const correctValue = document.getElementById('editCorrectAnswer').value.trim();
                     if (correctValue && !opts.includes(correctValue)) {
-                        msg = "Correct answer mismatch!\n\n" +
-                            "The correct answer (\"" + correctValue + "\") must match one of the provided options exactly.\n\n" +
-                            "Available Options:\n" + opts.map((opt, i) => (i + 1) + ". " + opt).join("\n") + "\n\n" +
-                            "Please ensure the correct answer matches one of the options above.";
+                        msg = "Correct answer must match one of the provided options exactly.";
                     }
                 }
             }
@@ -2275,7 +2305,6 @@ window.addEventListener('DOMContentLoaded', function() {
         
         // Submit the form
         document.getElementById('editQuestionForm').submit();
-        
         return true;
     }
 
@@ -2411,8 +2440,10 @@ window.addEventListener('DOMContentLoaded', function() {
     }
     
 
+    // Additional Setup for DOMContentLoaded:
+    // Make sure your DOMContentLoaded event handler includes proper initialization:
     document.addEventListener('DOMContentLoaded', function() {
-        // First, toggle the edit options to show the correct layout
+        // Initial toggle based on current type
         toggleEditOptions();
         
         // Initialize option values for checkboxes
@@ -2449,6 +2480,7 @@ window.addEventListener('DOMContentLoaded', function() {
             }, 100);
         }
 
+        // Add event listeners for checkboxes
         document.querySelectorAll('.edit-correct-checkbox').forEach(cb => {
             cb.addEventListener('change', function() {
                 if (document.querySelectorAll('.edit-correct-checkbox:checked').length > 2) {
@@ -2472,14 +2504,18 @@ window.addEventListener('DOMContentLoaded', function() {
             });
         });
 
+        // Add event listeners
         document.getElementById('questionTypeSelect').addEventListener('change', toggleEditOptions);
         document.getElementById('editQuestionForm').addEventListener('submit', validateAndSubmit);
         
-        // Initialize image upload functionality
-        initEditImageUpload();
+        // Initialize other functionalities
+        if (typeof initEditImageUpload === 'function') {
+            initEditImageUpload();
+        }
         
-        // Initialize smart parsing functionality
-        initializeSmartParsing();
+        if (typeof initializeSmartParsing === 'function') {
+            initializeSmartParsing();
+        }
         
         // Initialize drag-drop if current question type is DRAG_AND_DROP
         if ('<%= questionType %>' === 'DRAG_AND_DROP') {
@@ -2487,6 +2523,5 @@ window.addEventListener('DOMContentLoaded', function() {
                 initializeDragDrop();
             }
         }
-        
     });
 </script>
