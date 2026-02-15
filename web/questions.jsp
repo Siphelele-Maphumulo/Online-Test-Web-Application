@@ -1364,13 +1364,14 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                         <div class="form-check" style="border: none; background: transparent; padding: 0;">
                             <input type="checkbox" id="aiGenerationToggle" class="form-check-input" style="width: 20px; height: 20px;">
                             <label for="aiGenerationToggle" class="form-check-label" style="font-weight: 600; color: var(--primary-blue); font-size: 15px; margin-left: 10px;">
-                                <i class="fas fa-robot"></i> Use AI to extract questions from Marking Guideline (Accounting)
+                                <i class="fas fa-robot"></i> Use Code SA AI-Bot to extract questions from uploaded file
                             </label>
                         </div>
                         <p class="form-hint" style="margin-top: 8px; margin-left: 30px;">
-                            Perfect for Accounting marking guidelines. AI will intelligently identify questions, workings, and answers, and generate plausible MCQ options automatically.
+                            Code SA AI-Bot will intelligently analyze your uploaded file (PDF, Word, Docx), identify questions and answers, and automatically generate high-quality MCQ options for you.
                         </p>
                     </div>
+
                     
                     <!-- Progress and Status Elements -->
                     <div id="fileUploadProgress" class="progress" style="display: none; margin: 15px 0;">
