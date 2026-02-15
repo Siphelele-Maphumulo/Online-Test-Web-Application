@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.sql.Types;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 // Add these imports at the top of your DatabaseClass.java
 import myPackage.classes.Result;
 
@@ -87,9 +89,16 @@ public class DatabaseClass {
             pstm.setString(2, toJsonArray(dropTargets));
             pstm.setString(3, toJsonArray(correctTargets));
             if (totalMarks != null) {
+                // Default to number of targets if marks is 1 (default) and we have multiple targets
+                // Following rubric: 1 mark per target matched unless stated
+                if (totalMarks == 1 && dropTargets != null && dropTargets.size() > 1) {
+                    totalMarks = dropTargets.size();
+                }
                 pstm.setBigDecimal(4, new BigDecimal(totalMarks));
             } else {
-                pstm.setNull(4, Types.DECIMAL);
+                // If not stated, default to number of targets
+                int calculatedMarks = (dropTargets != null) ? dropTargets.size() : 1;
+                pstm.setBigDecimal(4, new BigDecimal(calculatedMarks));
             }
             pstm.setInt(5, questionId);
 
@@ -119,9 +128,28 @@ public class DatabaseClass {
             pstm.setString(2, dropTargetsJson);
             pstm.setString(3, correctTargetsJson);
             if (totalMarks != null) {
+                // Default to number of targets if marks is 1 (default) and we have multiple targets
+                if (totalMarks == 1 && dropTargetsJson != null && dropTargetsJson.startsWith("[")) {
+                    try {
+                        org.json.JSONArray targetsArr = new org.json.JSONArray(dropTargetsJson);
+                        if (targetsArr.length() > 1) {
+                            totalMarks = targetsArr.length();
+                        }
+                    } catch (org.json.JSONException e) {
+                        // Keep as 1 if JSON parsing fails
+                    }
+                }
                 pstm.setBigDecimal(4, new BigDecimal(totalMarks));
             } else {
-                pstm.setNull(4, Types.DECIMAL);
+                // If not stated, try to determine from targets
+                int calculatedMarks = 1;
+                if (dropTargetsJson != null && dropTargetsJson.startsWith("[")) {
+                    try {
+                        org.json.JSONArray targetsArr = new org.json.JSONArray(dropTargetsJson);
+                        calculatedMarks = Math.max(1, targetsArr.length());
+                    } catch (org.json.JSONException e) {}
+                }
+                pstm.setBigDecimal(4, new BigDecimal(calculatedMarks));
             }
             pstm.setInt(5, questionId);
 
@@ -1307,11 +1335,15 @@ public int addNewQuestionReturnId(String questionText, String opt1, String opt2,
         String sql;
         int marks = 1; // Default marks
 
-        // Set marks based on question type
+        // Set marks based on question type rubric
         if ("MultipleSelect".equalsIgnoreCase(questionType)) {
-            marks = 2; // 2 marks for MultipleSelect (1 mark per correct answer)
+            marks = 2; // 2 marks for MultipleSelect (1 mark per correct selection)
         } else if ("TrueFalse".equalsIgnoreCase(questionType)) {
             marks = 1; // 1 mark for True/False
+        } else if ("MCQ".equalsIgnoreCase(questionType)) {
+            marks = 1; // 1 mark for MCQ
+        } else if ("FillInTheBlank".equalsIgnoreCase(questionType) || "FillInTheWord".equalsIgnoreCase(questionType)) {
+            marks = 1; // 1 mark for Fill in the missing word
         } else {
             marks = 1; // Default 1 mark for other types
         }
@@ -3088,11 +3120,11 @@ private String getAnswerStatus(String ans, String correct) {
                 }
             }
             
-            // Determine status
+            // Determine status and include marks for partial scoring
             if (correctMatches == totalMatches && totalMatches > 0) {
                 return "correct";
             } else if (correctMatches > 0) {
-                return "partial";
+                return "partial:" + (float)correctMatches;
             } else {
                 return "incorrect";
             }
@@ -3102,23 +3134,34 @@ private String getAnswerStatus(String ans, String correct) {
     }
     
     if (correctAnswer.contains("|")) {
-        // Normalize multi-select answers by splitting, trimming, sorting, and rejoining
+        // Normalize multi-select answers and support partial marks
         String[] ansParts = userAnswer.split("\\|");
-        for (int i = 0; i < ansParts.length; i++) {
-            ansParts[i] = ansParts[i].trim();
+        Set<String> userSet = new HashSet<>();
+        for (String p : ansParts) {
+            if (!p.trim().isEmpty()) userSet.add(p.trim().toLowerCase());
         }
-        java.util.Arrays.sort(ansParts);
         
         String[] correctParts = correctAnswer.split("\\|");
-        for (int i = 0; i < correctParts.length; i++) {
-            correctParts[i] = correctParts[i].trim();
+        Set<String> correctSet = new HashSet<>();
+        for (String p : correctParts) {
+            if (!p.trim().isEmpty()) correctSet.add(p.trim().toLowerCase());
         }
-        java.util.Arrays.sort(correctParts);
         
-        String normalizedAns = String.join("|", ansParts);
-        String normalizedCorrect = String.join("|", correctParts);
+        int matchCount = 0;
+        for (String u : userSet) {
+            if (correctSet.contains(u)) {
+                matchCount++;
+            }
+        }
 
-        return normalizedAns.equals(normalizedCorrect) ? "correct" : "incorrect";
+        if (matchCount == correctSet.size() && userSet.size() == correctSet.size()) {
+            return "correct";
+        } else if (matchCount > 0) {
+            // Return partial status with the score (1 mark per correct selection)
+            return "partial:" + (float)matchCount;
+        } else {
+            return "incorrect";
+        }
     } else {
         // Simple case-insensitive comparison for single answers
         return userAnswer.equalsIgnoreCase(correctAnswer) ? "correct" : "incorrect";
@@ -3799,6 +3842,14 @@ private int getObtMarks(int examId, int tMarks, int size) {
                 // For regular questions, check status
                 if ("correct".equals(status)) {
                     totalObtainedMarks += questionWeight;
+                } else if (status != null && status.startsWith("partial:")) {
+                    try {
+                        // Extract marks from status string (e.g. "partial:1.0")
+                        float partialObtained = Float.parseFloat(status.substring(8));
+                        totalObtainedMarks += partialObtained;
+                    } catch (NumberFormatException e) {
+                        LOGGER.log(Level.WARNING, "Error parsing partial marks from status: " + status, e);
+                    }
                 }
             }
         }
