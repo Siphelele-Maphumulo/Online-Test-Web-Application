@@ -1178,19 +1178,19 @@
                         <div id="editMultipleCorrectContainer" style="display:none;">
                             <div class="options-grid">
                                 <div class="form-check">
-                                    <input type="checkbox" id="editCorrectOpt1" class="form-check-input edit-correct-checkbox">
+                                    <input type="checkbox" id="editCorrectOpt1" class="form-check-input edit-correct-checkbox" value="">
                                     <label for="editCorrectOpt1" class="form-check-label">Option 1</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" id="editCorrectOpt2" class="form-check-input edit-correct-checkbox">
+                                    <input type="checkbox" id="editCorrectOpt2" class="form-check-input edit-correct-checkbox" value="">
                                     <label for="editCorrectOpt2" class="form-check-label">Option 2</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" id="editCorrectOpt3" class="form-check-input edit-correct-checkbox">
+                                    <input type="checkbox" id="editCorrectOpt3" class="form-check-input edit-correct-checkbox" value="">
                                     <label for="editCorrectOpt3" class="form-check-label">Option 3</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" id="editCorrectOpt4" class="form-check-input edit-correct-checkbox">
+                                    <input type="checkbox" id="editCorrectOpt4" class="form-check-input edit-correct-checkbox" value="">
                                     <label for="editCorrectOpt4" class="form-check-label">Option 4</label>
                                 </div>
                             </div>
@@ -1816,13 +1816,32 @@
     function sanitizeCorrectAnswer(q) {
         if (!q || !q.correct) return "";
         const correctText = q.correct.trim();
-        const options = q.options || [];
+        const options = (q.options || []).map(opt => opt ? opt.trim() : "");
+        
+        // If it's a MultipleSelect question or contains pipes, process parts separately
+        if (correctText.includes('|')) {
+            const parts = correctText.split('|').map(p => p.trim()).filter(p => p !== "");
+            const sanitizedParts = parts.map(part => {
+                return sanitizeSingleAnswer(part, options);
+            });
+            return [...new Set(sanitizedParts)].join('|');
+        }
+        
+        return sanitizeSingleAnswer(correctText, options);
+    }
+
+    /**
+     * Internal helper to sanitize a single answer string against options
+     */
+    function sanitizeSingleAnswer(answerText, options) {
+        if (!answerText) return "";
+        const text = answerText.trim();
         
         // 1. Check for exact match
-        if (options.includes(correctText)) return correctText;
+        if (options.includes(text)) return text;
         
-        // 2. Check for "Option X: text" format in correct answer
-        const optionMatch = correctText.match(/Option\s+(\d+)[:\s]*(.*)/i);
+        // 2. Check for "Option X: text" format
+        const optionMatch = text.match(/Option\s+(\d+)[:\s]*(.*)/i);
         if (optionMatch) {
             const index = parseInt(optionMatch[1]) - 1;
             const textAfterPrefix = optionMatch[2].trim();
@@ -1833,22 +1852,23 @@
             }
         }
         
-        // 3. Check if correct answer contains a number (1-4), use that option if no prefix but just "1"
-        if (correctText.length === 1 && !isNaN(correctText)) {
-            const num = parseInt(correctText);
+        // 3. Check for single number (1-4)
+        if (text.length === 1 && !isNaN(text)) {
+            const num = parseInt(text);
             if (num >= 1 && num <= 4 && options[num-1]) return options[num-1];
         }
         
-        // 4. Check if any option is contained in the correct answer or vice versa (fuzzy)
+        // 4. Fuzzy match
         for (let opt of options) {
             if (opt && opt.length > 2) {
-                if (correctText.toLowerCase().includes(opt.toLowerCase()) || opt.toLowerCase().includes(correctText.toLowerCase())) {
+                if (text.toLowerCase() === opt.toLowerCase()) return opt;
+                if (text.toLowerCase().includes(opt.toLowerCase()) || opt.toLowerCase().includes(text.toLowerCase())) {
                     return opt;
                 }
             }
         }
         
-        return correctText;
+        return text;
     }
 
     // Function to check if text contains parsing patterns
@@ -2115,8 +2135,10 @@
                         
                         const selectedValues = [];
                         document.querySelectorAll('.edit-correct-checkbox:checked').forEach(checkbox => {
-                            if (checkbox.value.trim()) {
-                                selectedValues.push(checkbox.value.trim());
+                            const optionId = checkbox.id.replace('editCorrectOpt', 'editOpt');
+                            const optionInput = document.getElementById(optionId);
+                            if (optionInput && optionInput.value.trim()) {
+                                selectedValues.push(optionInput.value.trim());
                             }
                         });
                         
@@ -2547,8 +2569,10 @@ window.addEventListener('DOMContentLoaded', function() {
                 // Update the correct answer field with selected values
                 const selectedValues = [];
                 document.querySelectorAll('.edit-correct-checkbox:checked').forEach(checkbox => {
-                    if (checkbox.value.trim()) {
-                        selectedValues.push(checkbox.value.trim());
+                    const optionId = checkbox.id.replace('editCorrectOpt', 'editOpt');
+                    const optionInput = document.getElementById(optionId);
+                    if (optionInput && optionInput.value.trim()) {
+                        selectedValues.push(optionInput.value.trim());
                     }
                 });
                 
