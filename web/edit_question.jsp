@@ -1996,6 +1996,8 @@
     
         if (qType === "TrueFalse") {
             trueFalse.style.display = "block";
+            single.style.display = "none";  // Hide the regular correct answer textarea
+            multiple.style.display = "none";  // Hide multiple select checkboxes
             if (trueFalseSelect) trueFalseSelect.required = true;
             // Don't require options for True/False questions
             document.getElementById('editOpt1').required = false;
@@ -2030,6 +2032,10 @@
                 dragDropEditor.style.display = "grid";
                 console.log('Drag drop editor shown');
             }
+            // Hide all correct answer containers for drag/drop questions
+            single.style.display = "none";
+            multiple.style.display = "none";
+            trueFalse.style.display = "none";
             // Hide MCQ options completely for drag/drop questions
             mcq.style.display = "none";
             // Don't require options for drag/drop questions
@@ -2047,14 +2053,29 @@
             mcq.style.display = "block";
             if (qType === "MultipleSelect") {
                 multiple.style.display = "block";
+                single.style.display = "none";  // Hide the regular correct answer textarea
+                trueFalse.style.display = "none";  // Hide True/False select
                 // Small delay to ensure DOM is ready before initializing
                 setTimeout(() => {
                     updateEditCorrectOptionLabels();
                     initializeMultipleSelectCheckboxes();
                 }, 50);
+            } else if (qType === "Code") {
+                single.style.display = "block";
+                multiple.style.display = "none";  // Hide multiple select checkboxes
+                trueFalse.style.display = "none";  // Hide True/False select
+                correct.placeholder = "Expected output";
+                correct.required = true;
+                // Don't require options for Code questions
+                document.getElementById('editOpt1').required = false;
+                document.getElementById('editOpt2').required = false;
+                document.getElementById('editOpt3').required = false;
+                document.getElementById('editOpt4').required = false;
             } else {
                 single.style.display = "block";
-                correct.placeholder = qType === 'Code' ? "Expected output" : "Correct Answer";
+                multiple.style.display = "none";  // Hide multiple select checkboxes
+                trueFalse.style.display = "none";  // Hide True/False select
+                correct.placeholder = "Correct Answer";
                 correct.required = true;
                 // Require options for other question types except True/False
                 document.getElementById('editOpt1').required = true;
