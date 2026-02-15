@@ -1123,7 +1123,7 @@
 
                         <div class="form-group">
                             <label class="form-label"><i class="fas fa-question" style="color: var(--info);"></i>Question Type</label>
-                            <select id="questionTypeSelect" class="form-select" onchange="toggleEditOptions()">
+                            <select id="questionTypeSelect" class="form-select" onchange="if(typeof toggleEditOptions === 'function') toggleEditOptions()">
                                 <option value="MCQ" <%= "MCQ".equals(questionType) ? "selected" : "" %>>Multiple Choice (Single Answer)</option>
                                 <option value="MultipleSelect" <%= "MultipleSelect".equals(questionType) ? "selected" : "" %>>Multiple Select (Choose Two)</option>
                                 <option value="TrueFalse" <%= "TrueFalse".equals(questionType) ? "selected" : "" %>>True / False</option>
@@ -1745,9 +1745,9 @@
             if (correctAnswer) correct.value = correctAnswer;
 
             // Auto-detect and sanitize
-            const opts = [option1, option2, option3, option4];
-            const detectedType = detectQuestionType(questionText, opts, correctAnswer);
-            const sanitizedCorrect = sanitizeCorrectAnswer({ correct: correctAnswer, options: opts });
+            const optionsArray = [option1, option2, option3, option4];
+            const detectedType = detectQuestionType(questionText, optionsArray, correctAnswer);
+            const sanitizedCorrect = sanitizeCorrectAnswer({ correct: correctAnswer, options: optionsArray });
             
             if (sanitizedCorrect) {
                 correct.value = sanitizedCorrect;
@@ -2191,7 +2191,7 @@ function checkForCodeSnippetEdit() {
     if ((lines.length > 3 || hasCodeIndicators) && questionType !== 'Code') {
         if (confirm("This question appears to contain code or multiple lines. Would you like to change the question type to 'Code Snippet'?")) {
             document.getElementById("questionTypeSelect").value = "Code";
-            toggleEditOptions();
+            if (typeof toggleEditOptions === 'function') toggleEditOptions();
         }
     }
     
@@ -2499,7 +2499,7 @@ window.addEventListener('DOMContentLoaded', function() {
     // Make sure your DOMContentLoaded event handler includes proper initialization:
     document.addEventListener('DOMContentLoaded', function() {
         // Initial toggle based on current type
-        toggleEditOptions();
+        if (typeof toggleEditOptions === 'function') toggleEditOptions();
         
         // Initialize option values for checkboxes
         for (let i = 1; i <= 4; i++) {
