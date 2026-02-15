@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.sql.Types;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 // Add these imports at the top of your DatabaseClass.java
 import myPackage.classes.Result;
 
@@ -87,9 +89,16 @@ public class DatabaseClass {
             pstm.setString(2, toJsonArray(dropTargets));
             pstm.setString(3, toJsonArray(correctTargets));
             if (totalMarks != null) {
+                // Default to number of targets if marks is 1 (default) and we have multiple targets
+                // Following rubric: 1 mark per target matched unless stated
+                if (totalMarks == 1 && dropTargets != null && dropTargets.size() > 1) {
+                    totalMarks = dropTargets.size();
+                }
                 pstm.setBigDecimal(4, new BigDecimal(totalMarks));
             } else {
-                pstm.setNull(4, Types.DECIMAL);
+                // If not stated, default to number of targets
+                int calculatedMarks = (dropTargets != null) ? dropTargets.size() : 1;
+                pstm.setBigDecimal(4, new BigDecimal(calculatedMarks));
             }
             pstm.setInt(5, questionId);
 
@@ -119,9 +128,28 @@ public class DatabaseClass {
             pstm.setString(2, dropTargetsJson);
             pstm.setString(3, correctTargetsJson);
             if (totalMarks != null) {
+                // Default to number of targets if marks is 1 (default) and we have multiple targets
+                if (totalMarks == 1 && dropTargetsJson != null && dropTargetsJson.startsWith("[")) {
+                    try {
+                        org.json.JSONArray targetsArr = new org.json.JSONArray(dropTargetsJson);
+                        if (targetsArr.length() > 1) {
+                            totalMarks = targetsArr.length();
+                        }
+                    } catch (org.json.JSONException e) {
+                        // Keep as 1 if JSON parsing fails
+                    }
+                }
                 pstm.setBigDecimal(4, new BigDecimal(totalMarks));
             } else {
-                pstm.setNull(4, Types.DECIMAL);
+                // If not stated, try to determine from targets
+                int calculatedMarks = 1;
+                if (dropTargetsJson != null && dropTargetsJson.startsWith("[")) {
+                    try {
+                        org.json.JSONArray targetsArr = new org.json.JSONArray(dropTargetsJson);
+                        calculatedMarks = Math.max(1, targetsArr.length());
+                    } catch (org.json.JSONException e) {}
+                }
+                pstm.setBigDecimal(4, new BigDecimal(calculatedMarks));
             }
             pstm.setInt(5, questionId);
 
@@ -1307,11 +1335,15 @@ public int addNewQuestionReturnId(String questionText, String opt1, String opt2,
         String sql;
         int marks = 1; // Default marks
 
-        // Set marks based on question type
+        // Set marks based on question type rubric
         if ("MultipleSelect".equalsIgnoreCase(questionType)) {
-            marks = 2; // 2 marks for MultipleSelect (1 mark per correct answer)
+            marks = 2; // 2 marks for MultipleSelect (1 mark per correct selection)
         } else if ("TrueFalse".equalsIgnoreCase(questionType)) {
             marks = 1; // 1 mark for True/False
+        } else if ("MCQ".equalsIgnoreCase(questionType)) {
+            marks = 1; // 1 mark for MCQ
+        } else if ("FillInTheBlank".equalsIgnoreCase(questionType) || "FillInTheWord".equalsIgnoreCase(questionType)) {
+            marks = 1; // 1 mark for Fill in the missing word
         } else {
             marks = 1; // Default 1 mark for other types
         }
@@ -3088,11 +3120,11 @@ private String getAnswerStatus(String ans, String correct) {
                 }
             }
             
-            // Determine status
+            // Determine status and include marks for partial scoring
             if (correctMatches == totalMatches && totalMatches > 0) {
                 return "correct";
             } else if (correctMatches > 0) {
-                return "partial";
+                return "partial:" + (float)correctMatches;
             } else {
                 return "incorrect";
             }
@@ -3102,23 +3134,34 @@ private String getAnswerStatus(String ans, String correct) {
     }
     
     if (correctAnswer.contains("|")) {
-        // Normalize multi-select answers by splitting, trimming, sorting, and rejoining
+        // Normalize multi-select answers and support partial marks
         String[] ansParts = userAnswer.split("\\|");
-        for (int i = 0; i < ansParts.length; i++) {
-            ansParts[i] = ansParts[i].trim();
+        Set<String> userSet = new HashSet<>();
+        for (String p : ansParts) {
+            if (!p.trim().isEmpty()) userSet.add(p.trim().toLowerCase());
         }
-        java.util.Arrays.sort(ansParts);
         
         String[] correctParts = correctAnswer.split("\\|");
-        for (int i = 0; i < correctParts.length; i++) {
-            correctParts[i] = correctParts[i].trim();
+        Set<String> correctSet = new HashSet<>();
+        for (String p : correctParts) {
+            if (!p.trim().isEmpty()) correctSet.add(p.trim().toLowerCase());
         }
-        java.util.Arrays.sort(correctParts);
         
-        String normalizedAns = String.join("|", ansParts);
-        String normalizedCorrect = String.join("|", correctParts);
-
-        return normalizedAns.equals(normalizedCorrect) ? "correct" : "incorrect";
+        int matchCount = 0;
+        for (String u : userSet) {
+            if (correctSet.contains(u)) {
+                matchCount++;
+            }
+        }
+        
+        if (matchCount == correctSet.size() && userSet.size() == correctSet.size()) {
+            return "correct";
+        } else if (matchCount > 0) {
+            // Return partial status with the score (1 mark per correct selection)
+            return "partial:" + (float)matchCount;
+        } else {
+            return "incorrect";
+        }
     } else {
         // Simple case-insensitive comparison for single answers
         return userAnswer.equalsIgnoreCase(correctAnswer) ? "correct" : "incorrect";
@@ -3740,16 +3783,16 @@ public ArrayList<Exams> getAllExamsWithResults() {
 }
 
 
-private int getObtMarks(int examId, int tMarks, int size) {
-    if (size == 0) {
-        return 0;
-    }
-
+/**
+ * Calculates raw marks for an exam.
+ * Returns an array where [0] is obtained marks and [1] is total possible marks.
+ */
+public float[] getRawMarks(int examId) {
     try {
         ensureConnection();
     } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Connection error in getObtMarks", e);
-        return 0;
+        LOGGER.log(Level.SEVERE, "Connection error in getRawMarks", e);
+        return new float[]{0, 0};
     }
 
     float totalPossibleMarks = 0;
@@ -3799,29 +3842,25 @@ private int getObtMarks(int examId, int tMarks, int size) {
                 // For regular questions, check status
                 if ("correct".equals(status)) {
                     totalObtainedMarks += questionWeight;
+                } else if (status != null && status.startsWith("partial:")) {
+                    try {
+                        // Extract marks from status string (e.g. "partial:1.0")
+                        float partialObtained = Float.parseFloat(status.substring(8));
+                        totalObtainedMarks += partialObtained;
+                    } catch (NumberFormatException e) {
+                        LOGGER.log(Level.WARNING, "Error parsing partial marks from status: " + status, e);
+                    }
                 }
             }
         }
         rs.close();
         pstm.close();
         
-        if (totalPossibleMarks == 0) {
-            return 0;
-        }
-
-        // Scale marks proportionally to total exam marks
-        float finalMarks = (totalObtainedMarks / totalPossibleMarks) * tMarks;
-        int roundedMarks = Math.round(finalMarks);
-        
-        LOGGER.info("Exam " + examId + " marks: " + roundedMarks + 
-                   " (" + totalObtainedMarks + "/" + totalPossibleMarks + 
-                   " = " + (totalObtainedMarks/totalPossibleMarks*100) + "%)");
-        
-        return roundedMarks;
+        return new float[]{totalObtainedMarks, totalPossibleMarks};
         
     } catch (SQLException ex) {
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-        return 0;
+        return new float[]{0, 0};
     }
 }
 
@@ -3834,34 +3873,46 @@ public void calculateResult(int eid, int tMarks, String endTime, int size) {
     }
     
     try {
-        // First, calculate obtained marks
-        int obt = getObtMarks(eid, tMarks, size);
+        // First, calculate raw obtained and total possible marks
+        float[] marks = getRawMarks(eid);
+        float obtRaw = marks[0];
+        float totalRaw = marks[1];
         
-        // Calculate percentage
+        // If totalRaw is 0 (should not happen in real exams), fallback to the passed tMarks
+        if (totalRaw == 0) totalRaw = tMarks;
+        
+        // Calculate percentage based on raw marks
         float percentage = 0;
-        if (tMarks > 0) {
-            percentage = ((float) obt / tMarks) * 100;
+        if (totalRaw > 0) {
+            percentage = (obtRaw / totalRaw) * 100;
         }
         
         // Determine result status based on percentage (45% passing threshold)
         String resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
         
+        // Round for DB storage (since schema is INT)
+        int obtRounded = Math.round(obtRaw);
+        int totalRounded = Math.round(totalRaw);
+
         // CRITICAL: Log the actual values being saved
-        LOGGER.info("=== SAVING EXAM RESULTS ===");
+        LOGGER.info("=== SAVING EXAM RESULTS (UNSCALED) ===");
         LOGGER.info("Exam ID: " + eid);
-        LOGGER.info("Obtained Marks: " + obt + "/" + tMarks);
+        LOGGER.info("Raw Obtained: " + obtRaw);
+        LOGGER.info("Raw Total: " + totalRaw);
+        LOGGER.info("Saved Obtained: " + obtRounded);
+        LOGGER.info("Saved Total: " + totalRounded);
         LOGGER.info("Percentage: " + String.format("%.1f", percentage) + "%");
         LOGGER.info("Result Status: " + resultStatus);
         LOGGER.info("===========================");
         
-        // Update exams table with both status and result_status
-        // Ensure both obt_marks and result_status are updated correctly
-        String sql = "UPDATE exams SET obt_marks=?, end_time=?, status='completed', result_status=? WHERE exam_id=?";
+        // Update exams table with unscaled obt_marks, total_marks, end_time, and status
+        String sql = "UPDATE exams SET obt_marks=?, total_marks=?, end_time=?, status='completed', result_status=? WHERE exam_id=?";
         PreparedStatement pstm = conn.prepareStatement(sql);
-        pstm.setInt(1, obt);
-        pstm.setString(2, endTime);
-        pstm.setString(3, resultStatus);
-        pstm.setInt(4, eid);
+        pstm.setInt(1, obtRounded);
+        pstm.setInt(2, totalRounded);
+        pstm.setString(3, endTime);
+        pstm.setString(4, resultStatus);
+        pstm.setInt(5, eid);
         
         int rowsUpdated = pstm.executeUpdate();
         LOGGER.info("Rows updated: " + rowsUpdated);
@@ -5453,8 +5504,42 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             
             // Calculate marks per match (equal distribution based on correct mappings only)
             int correctMappingsCount = 0;
+            
+            // Try to get correct targets from question's JSON field as primary source
+            java.util.Map<Integer, Integer> jsonCorrectTargets = new java.util.HashMap<>();
+            String correctTargetsJson = question.getCorrectTargetsJson();
+            LOGGER.info("Q" + questionId + ": JSON field value = '" + correctTargetsJson + "'");
+            if (correctTargetsJson != null && !correctTargetsJson.isEmpty()) {
+                try {
+                    org.json.JSONObject jsonObj = new org.json.JSONObject(correctTargetsJson);
+                    java.util.Iterator<String> keys = jsonObj.keys();
+                    while (keys.hasNext()) {
+                        String key = keys.next();
+                        // Format: "target_X" : "item_Y" - need to extract IDs
+                        if (key.startsWith("target_")) {
+                            int targetId = Integer.parseInt(key.substring(7));
+                            String value = jsonObj.getString(key);
+                            if (value.startsWith("item_")) {
+                                int itemId = Integer.parseInt(value.substring(5));
+                                jsonCorrectTargets.put(itemId, targetId);
+                                LOGGER.info("Q" + questionId + ": Parsed from JSON -> item " + itemId + " should go to target " + targetId);
+                            }
+                        }
+                    }
+                    LOGGER.info("Q" + questionId + ": Loaded " + jsonCorrectTargets.size() + " correct targets from JSON");
+                } catch (Exception e) {
+                    LOGGER.warning("Error parsing correct targets JSON for Q" + questionId + ": " + e.getMessage());
+                }
+            } else {
+                LOGGER.warning("Q" + questionId + ": drag_correct_targets JSON field is empty or null!");
+            }
+            
             for (DragItem item : dragItems) {
+                // Check both database column and JSON field
                 if (item.getCorrectTargetId() != null && item.getCorrectTargetId() > 0) {
+                    correctMappingsCount++;
+                } else if (jsonCorrectTargets.containsKey(item.getId())) {
+                    // Use JSON as fallback
                     correctMappingsCount++;
                 }
             }
@@ -5485,10 +5570,27 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
                 Integer selectedTargetId = selectedMatches.get(item.getId());
                 boolean isCorrect = false;
                 
-                // FIX: Check if correct_target_id exists and matches selected target
-                if (item.getCorrectTargetId() != null && selectedTargetId != null) {
-                    isCorrect = item.getCorrectTargetId().equals(selectedTargetId);
+                // Check if correct_target_id exists and matches selected target
+                // Also try JSON fallback
+                LOGGER.info("Q" + questionId + ": Checking item.id=" + item.getId() + 
+                           " (text: '" + item.getItemText() + "'), selectedTargetId=" + selectedTargetId +
+                           ", db_correctTargetId=" + item.getCorrectTargetId() +
+                           ", json_correctTargetId=" + jsonCorrectTargets.get(item.getId()));
+                
+                if (selectedTargetId != null) {
+                    if (item.getCorrectTargetId() != null && item.getCorrectTargetId() > 0) {
+                        // Primary: use database column
+                        isCorrect = item.getCorrectTargetId().equals(selectedTargetId);
+                    } else if (jsonCorrectTargets.containsKey(item.getId())) {
+                        // Fallback: use JSON field
+                        Integer jsonTargetId = jsonCorrectTargets.get(item.getId());
+                        if (jsonTargetId != null) {
+                            isCorrect = jsonTargetId.equals(selectedTargetId);
+                        }
+                    }
                 }
+                
+                LOGGER.info("Q" + questionId + ": isCorrect = " + isCorrect);
                 
                 float marksObtained = isCorrect ? marksPerCorrectMatch : 0;
                 
@@ -5591,5 +5693,3 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
     }
 }
     
-
-

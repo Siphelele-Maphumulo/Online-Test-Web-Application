@@ -81,6 +81,7 @@ function populateDropTargets(targets) {
 function addDropTarget() {
     addDropTargetToUI("");
     updateCorrectPairingsUI();
+    updateDragDropMarks();
 }
 
 function addDropTargetToUI(targetText) {
@@ -191,8 +192,20 @@ function updateCorrectPairingsUI() {
 function removeItem(btn) {
     const item = btn.closest(".drag-item, .drop-target");
     if (item) {
+        const isTarget = item.classList.contains("drop-target");
         item.remove();
         updateCorrectPairingsUI();
+        if (isTarget) {
+            updateDragDropMarks();
+        }
+    }
+}
+
+function updateDragDropMarks() {
+    const targetCount = document.querySelectorAll("#dropTargetsContainer .drop-target").length;
+    const totalMarksInput = document.getElementById("totalMarksInput");
+    if (totalMarksInput) {
+        totalMarksInput.value = Math.max(1, targetCount);
     }
 }
 

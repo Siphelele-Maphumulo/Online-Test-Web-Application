@@ -3547,6 +3547,25 @@ function handleDragLeave(e) {
     }
 }
 
+function createDroppedItem(qIdx, targetId, itemId, text) {
+    var el = document.createElement('div');
+    el.className = 'dropped-item';
+    el.draggable = true;
+    el.id = 'q' + qIdx + '_dropped_' + itemId;
+    el.setAttribute('data-item-id', itemId);
+    el.setAttribute('data-text', text);
+    el.innerHTML = '<span>' + text + '</span>' +
+                  '<button type="button" class="remove-btn" title="Remove">&times;</button>';
+    
+    el.addEventListener('dragstart', handleDragStart);
+    el.addEventListener('dragend', handleDragEnd);
+    
+    el.querySelector('.remove-btn').onclick = function() {
+        removeItemFromTarget(qIdx, targetId, itemId, text);
+    };
+    return el;
+}
+
 function handleDrop(e) {
     e.preventDefault();
     var target = e.target.closest('.drop-target');
@@ -3564,29 +3583,60 @@ function handleDrop(e) {
     var itemDataId = draggedEl.getAttribute('data-item-id');
     var itemText = draggedEl.getAttribute('data-text');
     
-    // Remove existing item if present
+    // Handle item moving from another target
+    var sourceTargetId = null;
+    if (draggedEl.classList.contains('dropped-item')) {
+        var sourceTarget = draggedEl.closest('.drop-target');
+        if (sourceTarget) {
+            sourceTargetId = sourceTarget.getAttribute('data-target-id');
+            // Remove from source target mapping
+            if (userMappings[qIdx]) delete userMappings[qIdx][sourceTargetId];
+            draggedEl.remove();
+            // Show placeholder in source target if empty
+            if (!sourceTarget.querySelector('.dropped-item') && !sourceTarget.querySelector('.placeholder')) {
+                var ph = document.createElement('div');
+                ph.className = 'placeholder';
+                ph.textContent = 'Drop here';
+                sourceTarget.appendChild(ph);
+            }
+        }
+    } else {
+        // From pool - hide original
+        draggedEl.style.display = 'none';
+    }
+
+    // Swapping logic: if target already has an item
     if (target.querySelector('.dropped-item')) {
         var existingDropped = target.querySelector('.dropped-item');
-        restoreItemToPool(qIdx, existingDropped.getAttribute('data-item-id'), existingDropped.getAttribute('data-text'));
-        target.innerHTML = '<div class="drop-target-header">' + target.querySelector('.drop-target-header').textContent + '</div>';
+        var existingId = existingDropped.getAttribute('data-item-id');
+        var existingText = existingDropped.getAttribute('data-text');
+        
+        if (sourceTargetId) {
+            // Swap: move existing item to source target
+            var sourceTarget = document.getElementById('q' + qIdx + '_target_' + sourceTargetId);
+            if (sourceTarget) {
+                // Remove placeholder from source target if it was just added
+                var ph = sourceTarget.querySelector('.placeholder');
+                if (ph) ph.remove();
+                
+                var swappedEl = createDroppedItem(qIdx, sourceTargetId, existingId, existingText);
+                sourceTarget.appendChild(swappedEl);
+                userMappings[qIdx][sourceTargetId] = existingId;
+            }
+        } else {
+            // Move existing back to pool if new item came from pool
+            restoreItemToPool(qIdx, existingId, existingText);
+        }
+        existingDropped.remove();
     }
     
-    // Add new item
-    var droppedEl = document.createElement('div');
-    droppedEl.className = 'dropped-item';
-    droppedEl.setAttribute('data-item-id', itemDataId);
-    droppedEl.setAttribute('data-text', itemText);
-    droppedEl.innerHTML = '<span>' + itemText + '</span>' +
-                          '<button type="button" class="remove-btn" title="Remove">&times;</button>';
-    
-    droppedEl.querySelector('.remove-btn').onclick = function() {
-        removeItemFromTarget(qIdx, targetId, itemDataId, itemText);
-    };
-    
+    // Add new item to target
+    var droppedEl = createDroppedItem(qIdx, targetId, itemDataId, itemText);
     target.appendChild(droppedEl);
     
-    // Hide original item
-    draggedEl.style.display = 'none';
+    // Remove placeholder
+    var placeholder = target.querySelector('.placeholder');
+    if (placeholder) placeholder.remove();
     
     // Update mappings
     if (!userMappings[qIdx]) userMappings[qIdx] = {};

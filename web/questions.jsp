@@ -3906,12 +3906,26 @@ function addDropTarget() {
     newInput.addEventListener('change', updateDragDropTargetOptions);
     
     updateDragDropTargetOptions();
+    
+    // Auto-update marks (1 per target)
+    updateDragDropMarks();
 }
 
 function removeDropTarget(button) {
     const targetRow = button.closest('.drop-target-row');
     targetRow.remove();
     updateDragDropTargetOptions();
+    
+    // Auto-update marks
+    updateDragDropMarks();
+}
+
+function updateDragDropMarks() {
+    const targetCount = document.querySelectorAll('#dropTargetsContainer .drop-target-row').length;
+    const totalMarksInput = document.querySelector('input[name="totalMarks"]');
+    if (totalMarksInput) {
+        totalMarksInput.value = Math.max(1, targetCount);
+    }
 }
 
 function updateDragDropTargetOptions() {

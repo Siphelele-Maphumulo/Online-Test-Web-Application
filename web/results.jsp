@@ -1505,7 +1505,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                   <div style="color: var(--dark-gray); font-weight: 600;">Incorrect Answers</div>
                 </div>
                 <div>
-                  <div style="font-size: 1.5rem; font-weight: 700; color: var(--info);"><%= String.format("%.0f", (double) correctAnswers / answersList.size() * 100) %>%</div>
+                  <div style="font-size: 1.5rem; font-weight: 700; color: var(--info);"><%= String.format("%.1f", percentage) %>%</div>
                   <div style="color: var(--dark-gray); font-weight: 600;">Accuracy Rate</div>
                 </div>
               </div>
@@ -1555,6 +1555,19 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                 boolean isDragDrop = "DRAG_AND_DROP".equalsIgnoreCase(questionType) || 
                                     (a.getAnswer() != null && a.getAnswer().startsWith("{"));
                 
+                // Calculate question score and max marks
+                float qScore = 0;
+                float qMaxMarks = (questionObj != null) ? questionObj.getTotalMarks() : 1.0f;
+                if (qMaxMarks <= 0) qMaxMarks = 1.0f;
+
+                if (a.getStatus().equals("correct")) {
+                    qScore = qMaxMarks;
+                } else if (a.getStatus().startsWith("partial:")) {
+                    try {
+                        qScore = Float.parseFloat(a.getStatus().substring(8));
+                    } catch (Exception e) { qScore = 0; }
+                }
+
                 // Extract and format question text with code snippets
                 String fullQuestion = a.getQuestion();
                 String questionPart = "";
@@ -1734,8 +1747,8 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                       <!-- Score Display -->
                       <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--medium-gray);">
                         <div style="text-align: center;">
-                          <div style="font-size: 14px; font-weight: 600; color: <%= isCorrect ? "var(--success)" : "var(--error)" %>;">
-                            <%= isCorrect ? "Full Score" : "Partial Score" %>
+                          <div style="font-size: 14px; font-weight: 600; color: <%= isCorrect ? "var(--success)" : (qScore > 0 ? "var(--warning)" : "var(--error)") %>;">
+                            <%= isCorrect ? "Full Score" : (qScore > 0 ? "Partial Score" : "Incorrect") %>: <%= qScore %> / <%= qMaxMarks %>
                           </div>
                           <div style="font-size: 12px; color: var(--dark-gray); margin-top: 4px;">
                             <%= a.getAnswer() %>
@@ -1761,6 +1774,12 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                     </div>
                     <div style="color: var(--success); font-weight: 600; background: var(--white); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--success);">
                       <%= escapeHtml(a.getCorrectAnswer() != null ? a.getCorrectAnswer() : "N/A") %>
+                    </div>
+                  </div>
+                  <!-- Score for regular question -->
+                  <div style="grid-column: 1 / -1; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--medium-gray); text-align: center;">
+                    <div style="font-size: 14px; font-weight: 600; color: <%= isCorrect ? "var(--success)" : (qScore > 0 ? "var(--warning)" : "var(--error)") %>;">
+                      <%= isCorrect ? "Correct" : (qScore > 0 ? "Partial Score" : "Incorrect") %>: <%= qScore %> / <%= qMaxMarks %>
                     </div>
                   </div>
                 <% } %>
