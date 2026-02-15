@@ -2018,14 +2018,37 @@
             // Hide MCQ options
             mcq.style.display = "none";
             
+            // Automatically set True/False options
+            const opt1 = document.getElementById('editOpt1');
+            const opt2 = document.getElementById('editOpt2');
+            const opt3 = document.getElementById('editOpt3');
+            const opt4 = document.getElementById('editOpt4');
+            
+            // Set True/False options
+            if (opt1) opt1.value = 'True';
+            if (opt2) opt2.value = 'False';
+            if (opt3) opt3.value = '';
+            if (opt4) opt4.value = '';
+            
+            // Update the select options to match
+            const trueOption = document.querySelector('#editTrueFalseSelect option[value="True"]');
+            const falseOption = document.querySelector('#editTrueFalseSelect option[value="False"]');
+            
+            if (trueOption) trueOption.textContent = 'True';
+            if (falseOption) falseOption.textContent = 'False';
+            
             // Set the correct answer in the hidden field when selection changes
             trueFalseSelect.addEventListener('change', function() {
                 correct.value = this.value;
             });
             
-            // Initialize with current value
+            // Initialize with current value or default to True
             if (trueFalseSelect.value) {
                 correct.value = trueFalseSelect.value;
+            } else {
+                // Default to True if no value is set
+                trueFalseSelect.value = 'True';
+                correct.value = 'True';
             }
             
         } else if (qType === "DRAG_AND_DROP") {
@@ -2055,6 +2078,22 @@
             // Require first two options
             document.getElementById('editOpt1').required = true;
             document.getElementById('editOpt2').required = true;
+            
+            // Clear True/False specific options if they exist
+            const opt1 = document.getElementById('editOpt1');
+            const opt2 = document.getElementById('editOpt2');
+            const opt3 = document.getElementById('editOpt3');
+            const opt4 = document.getElementById('editOpt4');
+            
+            // If switching from True/False, clear the options
+            if (opt1 && opt1.value === 'True' && opt2 && opt2.value === 'False') {
+                // Only clear if both are exactly True/False
+                if (opt3.value === '' && opt4.value === '') {
+                    opt1.value = '';
+                    opt2.value = '';
+                    correct.value = '';
+                }
+            }
             
             // Update labels and initialize checkboxes
             setTimeout(() => {
@@ -2094,6 +2133,22 @@
             // Require first two options
             document.getElementById('editOpt1').required = true;
             document.getElementById('editOpt2').required = true;
+            
+            // Clear True/False specific options if they exist
+            const opt1 = document.getElementById('editOpt1');
+            const opt2 = document.getElementById('editOpt2');
+            const opt3 = document.getElementById('editOpt3');
+            const opt4 = document.getElementById('editOpt4');
+            
+            // If switching from True/False, clear the options
+            if (opt1 && opt1.value === 'True' && opt2 && opt2.value === 'False') {
+                // Only clear if both are exactly True/False
+                if (opt3.value === '' && opt4.value === '') {
+                    opt1.value = '';
+                    opt2.value = '';
+                    correct.value = '';
+                }
+            }
             
             // Set placeholder based on type
             correct.placeholder = qType === 'Code' ? "Expected output" : "Correct Answer";
