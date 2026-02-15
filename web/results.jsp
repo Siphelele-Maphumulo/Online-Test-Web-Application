@@ -1734,11 +1734,30 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                       <!-- Score Display -->
                       <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--medium-gray);">
                         <div style="text-align: center;">
-                          <div style="font-size: 14px; font-weight: 600; color: <%= isCorrect ? "var(--success)" : "var(--error)" %>;">
-                            <%= isCorrect ? "Full Score" : "Partial Score" %>
+                          <%
+                            float obtainedForQ = 0;
+                            for (myPackage.classes.DragDropAnswer ddAns : studentAnswers) {
+                                obtainedForQ += ddAns.getMarksObtained();
+                            }
+                            int qTotalMarks = (questionObj != null) ? questionObj.getTotalMarks() : 1;
+                            if (qTotalMarks == 0) qTotalMarks = 1;
+
+                            String scoreStatus = "Incorrect";
+                            String scoreColor = "var(--error)";
+                            if (isCorrect) {
+                                scoreStatus = "Full Score";
+                                scoreColor = "var(--success)";
+                            } else if (obtainedForQ > 0) {
+                                scoreStatus = "Partial Score";
+                                scoreColor = "var(--info)";
+                            }
+                          %>
+                          <div style="font-size: 16px; font-weight: 700; color: <%= scoreColor %>;">
+                            <i class="fas <%= isCorrect ? "fa-check-double" : (obtainedForQ > 0 ? "fa-check" : "fa-times") %>"></i>
+                            <%= scoreStatus %>: <%= String.format("%.1f", obtainedForQ) %> / <%= qTotalMarks %>
                           </div>
-                          <div style="font-size: 12px; color: var(--dark-gray); margin-top: 4px;">
-                            <%= a.getAnswer() %>
+                          <div style="font-size: 11px; color: var(--dark-gray); margin-top: 4px; font-family: monospace;">
+                            Response: <%= a.getAnswer() %>
                           </div>
                         </div>
                       </div>

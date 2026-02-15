@@ -2053,7 +2053,7 @@
         border-color: #5D8E2;
     }
     
-    .drag-item.dragging {
+    .drag-item.dragging, .dropped-item.dragging {
         opacity: 0.7;
         box-shadow: 0 8px 15px rgba(0,0,0,0.2);
         cursor: grabbing;
@@ -3394,6 +3394,27 @@ function shuffleArray(array) {
 function renderDragDropInterface(qIdx, dragContainer, dropContainer, items, targets) {
     console.log('Rendering drag-drop for question ' + (parseInt(qIdx) + 1));
     
+    // Add drop handler to pool for returning items
+    dragContainer.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    });
+
+    dragContainer.addEventListener('drop', function(e) {
+        e.preventDefault();
+        var itemId = e.dataTransfer.getData('text/plain');
+        var sourceTargetId = e.dataTransfer.getData('source-target-id');
+        if (!sourceTargetId) return; // Already in pool
+
+        var draggedEl = document.getElementById(itemId);
+        if (!draggedEl) return;
+
+        var itemDataId = draggedEl.getAttribute('data-item-id');
+        var itemText = draggedEl.getAttribute('data-text');
+
+        removeItemFromTarget(qIdx, sourceTargetId, itemDataId, itemText);
+    });
+
     // Handle simple string arrays
     var normalizedItems = [];
     for (var i = 0; i < items.length; i++) {
@@ -3513,6 +3534,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function handleDragStart(e) {
     e.target.classList.add('dragging');
     e.dataTransfer.setData('text/plain', e.target.id);
+    e.dataTransfer.setData('source-pool', 'true');
     e.dataTransfer.effectAllowed = 'move';
 }
 
@@ -3554,6 +3576,8 @@ function handleDrop(e) {
     target.classList.remove('waiting');
     
     var itemId = e.dataTransfer.getData('text/plain');
+    var sourceTargetId = e.dataTransfer.getData('source-target-id');
+
     var draggedEl = document.getElementById(itemId);
     if (!draggedEl) return;
     
@@ -3562,29 +3586,69 @@ function handleDrop(e) {
     var itemDataId = draggedEl.getAttribute('data-item-id');
     var itemText = draggedEl.getAttribute('data-text');
     
-    // Remove existing item if present
+    // If moving from one target to another, clean up source target
+    if (sourceTargetId && sourceTargetId !== targetId) {
+        if (userMappings[qIdx]) {
+            delete userMappings[qIdx][sourceTargetId];
+        }
+        var sourceTargetEl = document.getElementById('q' + qIdx + '_target_' + sourceTargetId);
+        if (sourceTargetEl) {
+            var oldDropped = sourceTargetEl.querySelector('.dropped-item');
+            if (oldDropped) oldDropped.remove();
+            if (!sourceTargetEl.querySelector('.placeholder')) {
+                var placeholder = document.createElement('div');
+                placeholder.className = 'placeholder';
+                placeholder.textContent = 'Drop here';
+                sourceTargetEl.appendChild(placeholder);
+            }
+        }
+    }
+
+    // Remove existing item in DESTINATION if present
     if (target.querySelector('.dropped-item')) {
         var existingDropped = target.querySelector('.dropped-item');
         restoreItemToPool(qIdx, existingDropped.getAttribute('data-item-id'), existingDropped.getAttribute('data-text'));
-        target.innerHTML = '<div class="drop-target-header">' + target.querySelector('.drop-target-header').textContent + '</div>';
+
+        // Remove the element but keep the header
+        var header = target.querySelector('.drop-target-header');
+        target.innerHTML = '';
+        if (header) target.appendChild(header);
     }
     
+    // Clean up destination placeholder
+    var placeholder = target.querySelector('.placeholder');
+    if (placeholder) placeholder.remove();
+
     // Add new item
     var droppedEl = document.createElement('div');
     droppedEl.className = 'dropped-item';
+    droppedEl.draggable = true;
+    droppedEl.id = 'dropped_q' + qIdx + '_item_' + itemDataId;
     droppedEl.setAttribute('data-item-id', itemDataId);
     droppedEl.setAttribute('data-text', itemText);
     droppedEl.innerHTML = '<span>' + itemText + '</span>' +
                           '<button type="button" class="remove-btn" title="Remove">&times;</button>';
     
+    droppedEl.addEventListener('dragstart', function(ev) {
+        ev.target.classList.add('dragging');
+        ev.dataTransfer.setData('text/plain', ev.target.id);
+        ev.dataTransfer.setData('source-target-id', targetId);
+        ev.dataTransfer.effectAllowed = 'move';
+    });
+
+    droppedEl.addEventListener('dragend', function(ev) {
+        ev.target.classList.remove('dragging');
+    });
+
     droppedEl.querySelector('.remove-btn').onclick = function() {
         removeItemFromTarget(qIdx, targetId, itemDataId, itemText);
     };
     
     target.appendChild(droppedEl);
     
-    // Hide original item
-    draggedEl.style.display = 'none';
+    // Hide original item in pool
+    var poolItem = document.getElementById('q' + qIdx + '_item_' + itemDataId);
+    if (poolItem) poolItem.style.display = 'none';
     
     // Update mappings
     if (!userMappings[qIdx]) userMappings[qIdx] = {};
