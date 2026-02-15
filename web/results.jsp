@@ -513,7 +513,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
         border-radius: var(--radius-lg);
         box-shadow: var(--shadow-md);
         border: 1px solid var(--border-color);
-        margin-bottom: var(--spacing-xl);
+        margin-bottom: 0;
         overflow: hidden;
         transition: transform var(--transition-normal), box-shadow var(--transition-normal);
     }
@@ -554,7 +554,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
     /* Search Container */
     .search-container {
         position: relative;
-        margin-bottom: var(--spacing-lg);
+        margin-bottom: 5px;
         max-width: 400px;
     }
     
@@ -595,8 +595,8 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
     .results-summary {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: var(--spacing-lg);
-        margin-bottom: var(--spacing-xl);
+        gap: 5px;
+        margin-bottom: 0;
     }
     
     .summary-item {
@@ -657,7 +657,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
         box-shadow: var(--shadow-md);
         border: 1px solid var(--border-color);
         background: var(--white);
-        margin-top: var(--spacing-lg);
+        margin-top: 5px;
     }
     
     .results-table {
@@ -1445,10 +1445,16 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                 int obtainedMarks = examDetails.getObtMarks();
                 int totalMarks = examDetails.gettMarks();
                 
-                // Calculate percentage
+                // Calculate percentage (Weighted Marks Percentage)
                 double percentage = 0;
                 if (totalMarks > 0) {
                     percentage = (double) obtainedMarks / totalMarks * 100;
+                }
+
+                // Calculate accuracy (Correct Questions / Total Questions)
+                double accuracyRate = 0;
+                if (!answersList.isEmpty()) {
+                    accuracyRate = (double) correctAnswers / answersList.size() * 100;
                 }
                 
                 // Get result status from database (populated in getResultByExamId)
@@ -1505,7 +1511,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                   <div style="color: var(--dark-gray); font-weight: 600;">Incorrect Answers</div>
                 </div>
                 <div>
-                  <div style="font-size: 1.5rem; font-weight: 700; color: var(--info);"><%= String.format("%.1f", percentage) %>%</div>
+                  <div style="font-size: 1.5rem; font-weight: 700; color: var(--info);"><%= String.format("%.1f", accuracyRate) %>%</div>
                   <div style="color: var(--dark-gray); font-weight: 600;">Accuracy Rate</div>
                 </div>
               </div>
@@ -1750,9 +1756,9 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                           <div style="font-size: 14px; font-weight: 600; color: <%= isCorrect ? "var(--success)" : (qScore > 0 ? "var(--warning)" : "var(--error)") %>;">
                             <%= isCorrect ? "Full Score" : (qScore > 0 ? "Partial Score" : "Incorrect") %>: <%= qScore %> / <%= qMaxMarks %>
                           </div>
-                          <div style="font-size: 12px; color: var(--dark-gray); margin-top: 4px;">
+                          <!-- <div style="font-size: 12px; color: var(--dark-gray); margin-top: 4px;">
                             <%= a.getAnswer() %>
-                          </div>
+                          </div> -->
                         </div>
                       </div>
                     </div>
@@ -1764,7 +1770,14 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                       <i class="fas fa-user-edit"></i> Your Answer
                     </div>
                     <div style="color: <%= isCorrect ? "var(--success)" : "var(--error)" %>; font-weight: 600; background: var(--white); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid <%= isCorrect ? "var(--success)" : "var(--error)" %>;">
-                      <%= escapeHtml(a.getAnswer() != null ? a.getAnswer() : "No Answer") %>
+                      <% 
+                        // Hide raw JSON display for drag-drop questions
+                        String answerDisplay = a.getAnswer();
+                        if (answerDisplay != null && answerDisplay.startsWith("{")) {
+                            answerDisplay = "[Drag and Drop Answer]";
+                        }
+                      %>
+                      <%= escapeHtml(answerDisplay != null ? answerDisplay : "No Answer") %>
                     </div>
                   </div>
                   
@@ -1773,7 +1786,14 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                       <i class="fas fa-check-circle"></i> Correct Answer
                     </div>
                     <div style="color: var(--success); font-weight: 600; background: var(--white); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--success);">
-                      <%= escapeHtml(a.getCorrectAnswer() != null ? a.getCorrectAnswer() : "N/A") %>
+                      <% 
+                        // Hide raw JSON display for drag-drop questions
+                        String correctAnswerDisplay = a.getCorrectAnswer();
+                        if (correctAnswerDisplay != null && correctAnswerDisplay.startsWith("{")) {
+                            correctAnswerDisplay = "[Drag and Drop Answer]";
+                        }
+                      %>
+                      <%= escapeHtml(correctAnswerDisplay != null ? correctAnswerDisplay : "N/A") %>
                     </div>
                   </div>
                   <!-- Score for regular question -->

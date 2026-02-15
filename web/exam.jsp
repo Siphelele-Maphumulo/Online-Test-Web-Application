@@ -186,10 +186,12 @@
     .main-content {
         flex: 1;
         padding: var(--spacing-xl);
+        padding-top: 100px;
         overflow-y: auto;
         background: transparent;
-        margin-left: 200px;
+        margin-left: 0px;
         min-height: 100vh;
+        min-width: 100vh;
     }
     
     /* Responsive Design - Adjust for mobile */
@@ -325,8 +327,8 @@
     .page-header {
         background: linear-gradient(135deg, var(--white) 0%, #fafcff 100%);
         border-radius: var(--radius-lg);
-        padding: var(--spacing-xl);
-        margin-bottom: var(--spacing-xl);
+        padding: 15px 20px;
+        margin-bottom: 10px;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -377,16 +379,18 @@
     
     /* Exam Header Styles - TOP BAR */
     .exam-header-container {
-        position: sticky;
+        position: fixed;
         top: 0;
-        left: 0;
+        left: 15%;
         right: 0;
+        width: 85%;
         z-index: 1000;
         background: var(--white);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.15);
     }
 
     .top-progress-bar-row {
-        background: #2c3e50;
+        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
         color: white;
         padding: 10px 20px;
         display: flex;
@@ -425,12 +429,12 @@
     /* Sub-header Navigation Row */
     .nav-header-row {
         background: white;
-        border-bottom: 1px solid var(--border-color);
+        border-bottom: 2px solid var(--primary-blue);
         padding: 10px 20px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        box-shadow: var(--shadow-sm);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
 
     .utility-icons {
@@ -497,8 +501,9 @@
     .questions-container {
         display: flex;
         flex-direction: column;
-        gap: var(--spacing-lg);
-        margin-bottom: 140px;
+        gap: 15px;
+        margin-bottom: 20px;
+        margin-top: -90px;
     }
     
     /* Question Card */
@@ -1115,6 +1120,144 @@
         display: flex;
         align-items: center;
         justify-content: center;
+    }
+    
+    /* ALERT MODALS */
+    .alert-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 400;
+        backdrop-filter: blur(4px);
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .alert-modal.active {
+        display: flex;
+    }
+    
+    .alert-modal-content {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        max-width: 420px;
+        width: 90%;
+        text-align: center;
+        animation: modalSlideIn 0.3s ease-out;
+        overflow: hidden;
+    }
+    
+    .alert-modal-warning {
+        border-top: 5px solid #f59e0b;
+    }
+    
+    .alert-modal-danger {
+        border-top: 5px solid #ef4444;
+    }
+    
+    .alert-modal-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 30px auto 20px;
+        animation: pulse 2s infinite;
+    }
+    
+    .alert-modal-warning .alert-modal-icon {
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        color: #f59e0b;
+        font-size: 32px;
+    }
+    
+    .alert-modal-danger .alert-modal-icon {
+        background: linear-gradient(135deg, #fee2e2, #fecaca);
+        color: #ef4444;
+        font-size: 32px;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+    
+    .alert-modal-body {
+        padding: 0 30px 25px;
+    }
+    
+    .alert-modal-body h3 {
+        margin: 0 0 10px;
+        font-size: 22px;
+        font-weight: 700;
+        color: #1f2937;
+    }
+    
+    .alert-modal-body p {
+        margin: 0 0 10px;
+        font-size: 15px;
+        color: #6b7280;
+        line-height: 1.5;
+    }
+    
+    .alert-modal-timer {
+        font-size: 13px !important;
+        color: #9ca3af !important;
+        margin-top: 15px !important;
+    }
+    
+    .alert-modal-timer span {
+        font-weight: 700;
+        color: #f59e0b !important;
+    }
+    
+    .alert-modal-warning-text {
+        font-size: 13px !important;
+        color: #ef4444 !important;
+    }
+    
+    .alert-modal-footer {
+        padding: 20px 30px 30px;
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+    }
+    
+    .btn-alert-secondary,
+    .btn-alert-danger {
+        padding: 12px 28px;
+        border-radius: var(--radius-md);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        border: none;
+    }
+    
+    .btn-alert-secondary {
+        background: #f3f4f6;
+        color: #4b5563;
+    }
+    
+    .btn-alert-secondary:hover {
+        background: #e5e7eb;
+    }
+    
+    .btn-alert-danger {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: white;
+    }
+    
+    .btn-alert-danger:hover {
+        background: linear-gradient(135deg, #dc2626, #b91c1c);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
     }
     
     .modal-content {
@@ -1918,6 +2061,15 @@
         border: 1px solid var(--medium-gray);
         border-radius: var(--radius-md);
     }
+    
+    /* Keep drag items vertical in landscape mode */
+    .landscape-layout .drag-items-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+        padding: 10px;
+    }
 
     .landscape-layout .drop-targets-panel {
         padding: 15px;
@@ -1931,44 +2083,53 @@
     .landscape-layout .drop-targets-list {
         display: flex;
         flex-direction: row;
-        flex-wrap: wrap;
-        gap: 10px;
-        align-items: center;
-        padding: 10px 0;
+        gap: 8px;
+        align-items: stretch;
+        padding: 10px;
+        justify-content: flex-start;
+        overflow-x: auto;
+        flex-wrap: nowrap;
     }
 
     .landscape-layout .drop-target {
-        min-height: 45px;
-        min-width: 60px;
-        padding: 5px;
+        min-height: 60px;
+        min-width: 80px;
+        padding: 8px;
         border: 2px dashed #cbd5e1;
         background: #f8fafc;
         display: flex;
         flex-direction: column;
         justify-content: center;
-        flex: 0 1 auto;
+        flex: 0 0 auto;
     }
     
     .landscape-layout .drop-target-header {
-        font-size: 10px;
-        margin-bottom: 2px;
+        font-size: 11px;
+        margin-bottom: 4px;
         text-align: center;
+        white-space: nowrap;
     }
 
     .landscape-layout .drag-item {
-        padding: 8px 12px;
+        padding: 10px 15px;
         font-size: 13px;
         margin-bottom: 8px;
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .landscape-layout .dropped-item {
-        padding: 4px 8px;
+        padding: 6px 10px;
         font-size: 12px;
         min-width: 60px;
+        display: block;
+        margin: 4px 0;
     }
 
     .landscape-layout .placeholder {
         font-size: 11px;
+        padding: 4px;
     }
     
     .draggable-items-panel {
@@ -2173,11 +2334,12 @@
         position: fixed;
         top: 150px;
         left: 250px;
-        z-index: 2000;
+        z-index: 1000;
         background: #f1f3f4;
         border-radius: 8px;
         box-shadow: 0 8px 30px rgba(0,0,0,0.3);
         width: 320px;
+        height: 220px;
         padding: 15px;
         border: 1px solid #ccc;
     }
@@ -2266,7 +2428,7 @@
         position: fixed;
         top: 150px;
         right: 50px;
-        z-index: 2000;
+        z-index: 1000;
         background: #fff9c4;
         border-radius: 4px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.2);
@@ -2599,6 +2761,38 @@
                         <div class="modal-footer">
                             <button type="button" class="btn-secondary close-modal">Continue Exam</button>
                             <button type="button" id="modalSubmitBtn" class="btn-primary"><i class="fas fa-paper-plane"></i> Submit Exam</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TIME UP MODAL -->
+                <div id="timeUpModal" class="alert-modal">
+                    <div class="alert-modal-content alert-modal-warning">
+                        <div class="alert-modal-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="alert-modal-body">
+                            <h3>Time is Up!</h3>
+                            <p>Your exam will be submitted automatically.</p>
+                            <p class="alert-modal-timer">Submitting in <span id="timeUpCountdown">3</span> seconds...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONFIRM SUBMIT MODAL -->
+                <div id="confirmSubmitModal" class="alert-modal">
+                    <div class="alert-modal-content alert-modal-danger">
+                        <div class="alert-modal-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="alert-modal-body">
+                            <h3>Confirm Submission</h3>
+                            <p>Are you sure you want to submit your exam?</p>
+                            <p class="alert-modal-warning-text">This action cannot be undone.</p>
+                        </div>
+                        <div class="alert-modal-footer">
+                            <button type="button" class="btn-alert-secondary" onclick="closeConfirmSubmitModal()">Cancel</button>
+                            <button type="button" class="btn-alert-danger" id="confirmSubmitBtn">Submit Exam</button>
                         </div>
                     </div>
                 </div>
@@ -3084,14 +3278,34 @@
                         if(qindex) updateHiddenForMulti(qindex);
                     });
                     
-                    // Alert user
-                    alert('Time is up! Your exam will be submitted automatically.');
+                    // Handle Drag and Drop answers - save before auto-submit
+                    const dragDropAnswers = getDragDropAnswers();
+                    Object.keys(dragDropAnswers).forEach(qindex => {
+                        const mappings = dragDropAnswers[qindex];
+                        const formattedMappings = {};
+                        for (let tId in mappings) {
+                            formattedMappings['target_' + tId] = 'item_' + mappings[tId];
+                        }
+                        const ansValue = JSON.stringify(formattedMappings);
+                        
+                        let hiddenAns = document.querySelector('input[name="ans' + qindex + '"]');
+                        if (!hiddenAns) {
+                            hiddenAns = document.createElement('input');
+                            hiddenAns.type = 'hidden';
+                            hiddenAns.name = 'ans' + qindex;
+                            document.getElementById('myform').appendChild(hiddenAns);
+                        }
+                        hiddenAns.value = ansValue;
+                    });
+                    
+                    // Show time up modal
+                    showTimeUpModal();
                     
                     // Clean up and submit
                     cleanupExam();
                     setTimeout(function() {
                         document.getElementById('myform').submit();
-                    }, 1000);
+                    }, 3000);
                 }
 
                 /* --- EXAM SUBMISSION --- */
@@ -3152,28 +3366,8 @@
                         }
                     }
                     
-                    // Final confirmation
-                    if(confirm("Are you sure you want to submit your exam? This action cannot be undone.")) {
-                        cleanupExam();
-                        
-                        // Show loading state
-                        var btn = document.getElementById('submitBtn');
-                        if(btn) {
-                            btn.disabled = true;
-                            if (btn.classList) {
-                                btn.classList.add('loading');
-                            }
-                            var btnText = btn.querySelector('.btn-text');
-                            var btnLoading = btn.querySelector('.btn-loading');
-                            if(btnText) btnText.style.display = 'none';
-                            if(btnLoading) btnLoading.style.display = 'inline';
-                        }
-                        
-                        // Submit form
-                        setTimeout(function() {
-                            document.getElementById('myform').submit();
-                        }, 500);
-                    }
+                    // Final confirmation - show modal
+                    showConfirmSubmitModal();
                 }
 
                 /* --- CLEANUP FUNCTION --- */
@@ -3279,6 +3473,69 @@
                                 submitExam();
                             });
                         }
+                    }
+                }
+                
+                /* --- TIME UP MODAL FUNCTIONS --- */
+                function showTimeUpModal() {
+                    var modal = document.getElementById('timeUpModal');
+                    if (modal) {
+                        modal.classList.add('active');
+                        
+                        // Countdown
+                        var countdown = 3;
+                        var countdownEl = document.getElementById('timeUpCountdown');
+                        var interval = setInterval(function() {
+                            countdown--;
+                            if (countdownEl) countdownEl.textContent = countdown;
+                            if (countdown <= 0) {
+                                clearInterval(interval);
+                            }
+                        }, 1000);
+                    }
+                }
+                
+                /* --- CONFIRM SUBMIT MODAL FUNCTIONS --- */
+                function showConfirmSubmitModal() {
+                    var modal = document.getElementById('confirmSubmitModal');
+                    var confirmBtn = document.getElementById('confirmSubmitBtn');
+                    
+                    if (modal) {
+                        modal.classList.add('active');
+                        
+                        // Set up confirm button handler
+                        if (confirmBtn) {
+                            confirmBtn.onclick = function() {
+                                closeConfirmSubmitModal();
+                                
+                                cleanupExam();
+                                
+                                // Show loading state
+                                var btn = document.getElementById('submitBtn');
+                                if(btn) {
+                                    btn.disabled = true;
+                                    if (btn.classList) {
+                                        btn.classList.add('loading');
+                                    }
+                                    var btnText = btn.querySelector('.btn-text');
+                                    var btnLoading = btn.querySelector('.btn-loading');
+                                    if(btnText) btnText.style.display = 'none';
+                                    if(btnLoading) btnLoading.style.display = 'inline';
+                                }
+                                
+                                // Submit form
+                                setTimeout(function() {
+                                    document.getElementById('myform').submit();
+                                }, 500);
+                            };
+                        }
+                    }
+                }
+                
+                function closeConfirmSubmitModal() {
+                    var modal = document.getElementById('confirmSubmitModal');
+                    if (modal) {
+                        modal.classList.remove('active');
                     }
                 }
 
@@ -3811,7 +4068,8 @@ if (document.readyState === 'loading') {
                 </div>
                                 <!-- Action Buttons -->
                 <div style="text-align: center; margin-top: 20px;">
-                    <a href="std-page.jsp?pgprt=2&eid=<%= result.getExamId() %>" class="action-btn" style="background: linear-gradient(135deg, #4a90e2, #357abd); margin-right: 10px;">
+                    <% String viewEid = (result != null) ? String.valueOf(result.getExamId()) : request.getParameter("eid"); %>
+                    <a href="std-page.jsp?pgprt=2&eid=<%= viewEid %>" class="action-btn" style="background: linear-gradient(135deg, #4a90e2, #357abd); margin-right: 10px;">
                         <i class="fas fa-eye"></i>
                         View Details
                     </a>

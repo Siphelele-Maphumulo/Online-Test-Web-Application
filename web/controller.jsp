@@ -907,6 +907,30 @@ try {
                         pDAO.updateQuestion(question);
 
                         if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
+                            // SYNC RELATIONAL TABLES FOR ACCURATE SCORING
+                            if (!dragItemsHidden.isEmpty() && !dropTargetsHidden.isEmpty() && !correctTargetsHidden.isEmpty()) {
+                                try {
+                                    org.json.JSONArray itemsArr = new org.json.JSONArray(dragItemsHidden);
+                                    org.json.JSONArray targetsArr = new org.json.JSONArray(dropTargetsHidden);
+                                    org.json.JSONArray mappingsArr = new org.json.JSONArray(correctTargetsHidden);
+                                    
+                                    java.util.List<String> dragItemsList = new java.util.ArrayList<>();
+                                    java.util.List<String> dropTargetsList = new java.util.ArrayList<>();
+                                    java.util.List<String> dragCorrectTargetsList = new java.util.ArrayList<>();
+                                    
+                                    for(int i=0; i<itemsArr.length(); i++) dragItemsList.add(itemsArr.getString(i));
+                                    for(int i=0; i<targetsArr.length(); i++) dropTargetsList.add(targetsArr.getString(i));
+                                    for(int i=0; i<mappingsArr.length(); i++) dragCorrectTargetsList.add(mappingsArr.getString(i));
+                                    
+                                    // Clear old relational data and re-add fresh data
+                                    pDAO.clearDragDropQuestionData(question.getQuestionId());
+                                    pDAO.addDragDropData(question.getQuestionId(), dragItemsList, dropTargetsList, dragCorrectTargetsList);
+                                    application.log("Successfully synced relational tables for edited question ID: " + question.getQuestionId());
+                                } catch (Exception e) {
+                                    application.log("FAILED to sync relational tables for question ID " + question.getQuestionId() + ": " + e.getMessage());
+                                }
+                            }
+                            
                             // Simply update JSON columns directly without re-encoding
                             pDAO.updateDragDropQuestionJson(question.getQuestionId(), dragItemsHidden, dropTargetsHidden, correctTargetsHidden, totalMarks);
                             application.log("=== EDIT DRAG DROP PROCESSING END (SIMPLE JSON) ===");
