@@ -2082,13 +2082,11 @@
 
     .landscape-layout .drop-targets-list {
         display: flex;
-        flex-direction: row;
+        flex-direction: column;
         gap: 8px;
         align-items: stretch;
         padding: 10px;
         justify-content: flex-start;
-        overflow-x: auto;
-        flex-wrap: nowrap;
     }
 
     .landscape-layout .drop-target {
@@ -2233,10 +2231,58 @@
         gap: 10px;
         transition: all 0.2s;
     }
+
+    .drop-target.target-reordering {
+        opacity: 0.5;
+        border: 2px solid var(--accent-blue);
+    }
+
+    /* Inline style for code blocks with targets */
+    .drop-target.inline-target {
+        display: block;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        padding: 10px 15px;
+        min-height: auto;
+        margin-bottom: 5px;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        line-height: 1.6;
+        white-space: pre-wrap;
+    }
+
+    .drop-target.inline-target .drop-zone-inline {
+        display: inline-flex;
+        min-width: 120px;
+        min-height: 34px;
+        border: 2px dashed #94a3b8;
+        border-radius: 4px;
+        background: #f1f5f9;
+        vertical-align: middle;
+        margin: 0 5px;
+        padding: 2px;
+        transition: all 0.2s;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .drop-target.inline-target .drop-zone-inline.drag-over {
+        border-color: var(--accent-blue);
+        background: #eff6ff;
+    }
+
+    .drop-target.inline-target .dropped-item {
+        margin: 0;
+        padding: 4px 10px;
+        font-size: 13px;
+        border-radius: 4px;
+    }
     
     .drop-target.waiting {
         border: 2px dashed #92AB2F;
-        animation: blinkBorder 1.5s infinite;
+    }
+
+    .drop-target.inline-target.waiting .drop-zone-inline {
+        border-color: #92AB2F;
     }
     
     @keyframes blinkBorder {
@@ -2250,6 +2296,7 @@
         font-weight: 600;
         color: var(--dark-gray);
         margin-bottom: 5px;
+        white-space: pre-wrap;
     }
     
     .drop-target.drag-over {
@@ -3669,7 +3716,7 @@ function renderDragDropInterface(qIdx, dragContainer, dropContainer, items, targ
     
     // RANDOMIZE: Shuffle only items (targets stay in original order)
     var shuffledItems = shuffleArray(normalizedItems.slice());
-    // Keep targets in original order - only shuffle draggable items
+    // Keep targets in original order - but we allow manual reordering now
     var orderedTargets = normalizedTargets.slice();
     
     // Render Items (randomized order)
@@ -3690,26 +3737,40 @@ function renderDragDropInterface(qIdx, dragContainer, dropContainer, items, targ
         dragContainer.appendChild(el);
     }
     
-    // Render Targets (original order - not shuffled, but reorderable via drag)
+    // Render Targets
     dropContainer.innerHTML = '';
     for (var i = 0; i < orderedTargets.length; i++) {
         var target = orderedTargets[i];
         var el = document.createElement('div');
-        el.className = 'drop-target';
         el.id = 'q' + qIdx + '_target_' + target.id;
         el.setAttribute('data-target-id', target.id);
+        el.draggable = true; // Targets are now draggable for reordering
         
-        // Targets are NOT draggable - only receive dropped items
+        // Handle [[target]] placeholder
+        var label = target.label || "";
+        var parts = label.split('[[target]]');
         
-        el.innerHTML = '<div class="drop-target-header">' + target.label + '</div>' +
-                       '<div class="placeholder">Drop here</div>';
+        if (parts.length > 1) {
+            el.className = 'drop-target inline-target';
+            el.innerHTML = '<span>' + parts[0] + '</span>' +
+                           '<div class="drop-zone-inline"><div class="placeholder">Drop</div></div>' +
+                           '<span>' + (parts[1] || "") + '</span>';
+        } else {
+            el.className = 'drop-target';
+            el.innerHTML = '<div class="drop-target-header">' + label + '</div>' +
+                           '<div class="placeholder">Drop here</div>';
+        }
         
-        // Only add item drop listeners (not target reorder)
+        // Listeners for item drops
         el.addEventListener('dragover', handleDragOver);
         el.addEventListener('dragenter', handleDragEnter);
         el.addEventListener('dragleave', handleDragLeave);
         el.addEventListener('drop', handleDrop);
         
+        // Listeners for target reordering
+        el.addEventListener('dragstart', handleTargetDragStart);
+        el.addEventListener('dragend', handleTargetDragEnd);
+
         dropContainer.appendChild(el);
     }
     
@@ -3769,9 +3830,27 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // DRAG HANDLERS
+let draggedTargetRow = null;
+
+function handleTargetDragStart(e) {
+    if (e.target.classList.contains('dropped-item') || e.target.closest('.dropped-item')) return;
+    draggedTargetRow = this;
+    this.classList.add('target-reordering');
+    e.dataTransfer.setData('text/target-id', this.id);
+    e.dataTransfer.effectAllowed = 'move';
+
+    // Create a ghost image or just let it be
+}
+
+function handleTargetDragEnd(e) {
+    this.classList.remove('target-reordering');
+    draggedTargetRow = null;
+}
+
 function handleDragStart(e) {
     e.target.classList.add('dragging');
     e.dataTransfer.setData('text/plain', e.target.id);
+    e.dataTransfer.setData('text/type', 'item');
     e.dataTransfer.effectAllowed = 'move';
 }
 
@@ -3782,21 +3861,43 @@ function handleDragEnd(e) {
 function handleDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+
+    // Handle target reordering shifting
+    if (draggedTargetRow && this !== draggedTargetRow && this.classList.contains('drop-target')) {
+        if (this.parentNode === draggedTargetRow.parentNode) {
+            const container = this.parentNode;
+            const children = Array.from(container.children);
+            const draggedIndex = children.indexOf(draggedTargetRow);
+            const targetIndex = children.indexOf(this);
+
+            if (draggedIndex < targetIndex) {
+                container.insertBefore(draggedTargetRow, this.nextSibling);
+            } else {
+                container.insertBefore(draggedTargetRow, this);
+            }
+        }
+    }
 }
 
 function handleDragEnter(e) {
     e.preventDefault();
+    if (draggedTargetRow) return; // Don't highlight for target reordering
+
     var target = e.target.closest('.drop-target');
     if (target) {
-        target.classList.add('drag-over');
+        var zone = target.querySelector('.drop-zone-inline') || target;
+        zone.classList.add('drag-over');
         target.classList.remove('waiting');
     }
 }
 
 function handleDragLeave(e) {
+    if (draggedTargetRow) return;
+
     var target = e.target.closest('.drop-target');
     if (target) {
-        target.classList.remove('drag-over');
+        var zone = target.querySelector('.drop-zone-inline') || target;
+        zone.classList.remove('drag-over');
         // Add waiting state back if target doesn't have items
         if (!target.querySelector('.dropped-item')) {
             target.classList.add('waiting');
@@ -3825,15 +3926,22 @@ function createDroppedItem(qIdx, targetId, itemId, text) {
 
 function handleDrop(e) {
     e.preventDefault();
+
+    if (draggedTargetRow) {
+        // Target reordering drop - handled in dragover for shifting
+        return;
+    }
+
     var target = e.target.closest('.drop-target');
     if (!target) return;
     
-    target.classList.remove('drag-over');
+    var zone = target.querySelector('.drop-zone-inline') || target;
+    zone.classList.remove('drag-over');
     target.classList.remove('waiting');
     
     var itemId = e.dataTransfer.getData('text/plain');
     var draggedEl = document.getElementById(itemId);
-    if (!draggedEl) return;
+    if (!draggedEl || !draggedEl.classList.contains('drag-item') && !draggedEl.classList.contains('dropped-item')) return;
     
     var qIdx = target.id.split('_')[0].substring(1);
     var targetId = target.getAttribute('data-target-id');
@@ -3872,12 +3980,13 @@ function handleDrop(e) {
             // Swap: move existing item to source target
             var sourceTarget = document.getElementById('q' + qIdx + '_target_' + sourceTargetId);
             if (sourceTarget) {
+                var sZone = sourceTarget.querySelector('.drop-zone-inline') || sourceTarget;
                 // Remove placeholder from source target if it was just added
-                var ph = sourceTarget.querySelector('.placeholder');
+                var ph = sZone.querySelector('.placeholder');
                 if (ph) ph.remove();
                 
                 var swappedEl = createDroppedItem(qIdx, sourceTargetId, existingId, existingText);
-                sourceTarget.appendChild(swappedEl);
+                sZone.appendChild(swappedEl);
                 userMappings[qIdx][sourceTargetId] = existingId;
             }
         } else {
@@ -3889,10 +3998,10 @@ function handleDrop(e) {
     
     // Add new item to target
     var droppedEl = createDroppedItem(qIdx, targetId, itemDataId, itemText);
-    target.appendChild(droppedEl);
+    zone.appendChild(droppedEl);
     
     // Remove placeholder
-    var placeholder = target.querySelector('.placeholder');
+    var placeholder = zone.querySelector('.placeholder');
     if (placeholder) placeholder.remove();
     
     // Update mappings
@@ -3911,10 +4020,19 @@ function handleDrop(e) {
 function updateWaitingStates() {
     var allTargets = document.querySelectorAll('.drop-target');
     allTargets.forEach(function(target) {
-        if (!target.querySelector('.dropped-item')) {
+        var zone = target.querySelector('.drop-zone-inline') || target;
+        if (!zone.querySelector('.dropped-item')) {
             target.classList.add('waiting');
+            if (!zone.querySelector('.placeholder')) {
+                 var ph = document.createElement('div');
+                 ph.className = 'placeholder';
+                 ph.textContent = target.classList.contains('inline-target') ? 'Drop' : 'Drop here';
+                 zone.appendChild(ph);
+            }
         } else {
             target.classList.remove('waiting');
+            var ph = zone.querySelector('.placeholder');
+            if (ph) ph.remove();
         }
     });
 }
@@ -3930,13 +4048,14 @@ function restoreItemToPool(qIdx, itemId, text) {
 function removeItemFromTarget(qIdx, targetId, itemId, text) {
     var target = document.getElementById('q' + qIdx + '_target_' + targetId);
     if (target) {
-        var droppedItem = target.querySelector('.dropped-item');
+        var zone = target.querySelector('.drop-zone-inline') || target;
+        var droppedItem = zone.querySelector('.dropped-item');
         if (droppedItem) droppedItem.remove();
-        if (!target.querySelector('.placeholder')) {
+        if (!zone.querySelector('.placeholder')) {
             var placeholder = document.createElement('div');
             placeholder.className = 'placeholder';
-            placeholder.textContent = 'Drop here';
-            target.appendChild(placeholder);
+            placeholder.textContent = target.classList.contains('inline-target') ? 'Drop' : 'Drop here';
+            zone.appendChild(placeholder);
         }
     }
     
