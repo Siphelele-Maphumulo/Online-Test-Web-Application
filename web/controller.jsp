@@ -17,6 +17,7 @@
 <%@ page import="myPackage.classes.Questions" %>
 <%@ page import="org.mindrot.jbcrypt.BCrypt" %>
 <%@ page import="org.json.JSONObject" %>
+<%@ page import="org.json.JSONArray" %>
 <%@ page import="org.apache.pdfbox.pdmodel.PDDocument" %>
 <%@ page import="org.apache.pdfbox.text.PDFTextStripper" %>
 <%@ page import="org.json.JSONException" %>
@@ -1414,6 +1415,78 @@ try {
             response.getWriter().write("{\"success\": false, \"message\": \"Failed to submit answers\"}");
             return;
         }
+    } else if ("ai_generate".equalsIgnoreCase(operation)) {
+        response.setContentType("application/json");
+        PrintWriter outJSON = response.getWriter();
+        String text = nz(request.getParameter("text"), "");
+        String questionType = nz(request.getParameter("questionType"), "MCQ");
+        boolean isMarkingGuideline = "true".equalsIgnoreCase(request.getParameter("isMarkingGuideline"));
+
+        if (text.isEmpty()) {
+            outJSON.print("{\"success\": false, \"message\": \"No text provided for AI generation.\"}");
+            return;
+        }
+
+        int numQuestions = 10;
+        String numQsParam = request.getParameter("numQuestions");
+        if (numQsParam != null && !numQsParam.trim().isEmpty()) {
+            try {
+                numQuestions = Integer.parseInt(numQsParam.trim());
+            } catch (NumberFormatException e) {}
+        }
+
+        try {
+            String aiResponse = OpenRouterClient.generateQuestions(text, questionType, numQuestions, isMarkingGuideline);
+            if (aiResponse != null) {
+                // Clean AI response if it contains markdown
+                if (aiResponse.contains("```json")) {
+                    aiResponse = aiResponse.substring(aiResponse.indexOf("```json") + 7);
+                    aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
+                } else if (aiResponse.contains("```")) {
+                    aiResponse = aiResponse.substring(aiResponse.indexOf("```") + 3);
+                    aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
+                }
+
+                aiResponse = aiResponse.trim();
+
+                try {
+                    // Validate JSON
+                    if (aiResponse.startsWith("[")) {
+                        JSONArray questionsArr = new JSONArray(aiResponse);
+                        JSONObject result = new JSONObject();
+                        result.put("success", true);
+                        result.put("questions", questionsArr);
+                        outJSON.print(result.toString());
+                    } else if (aiResponse.startsWith("{")) {
+                        JSONObject resObj = new JSONObject(aiResponse);
+                        if (!resObj.has("questions") && resObj.has("question")) {
+                            // Single question wrapped in object
+                            JSONArray arr = new JSONArray();
+                            arr.put(resObj);
+                            JSONObject result = new JSONObject();
+                            result.put("success", true);
+                            result.put("questions", arr);
+                            outJSON.print(result.toString());
+                        } else {
+                            resObj.put("success", true);
+                            outJSON.print(resObj.toString());
+                        }
+                    } else {
+                        outJSON.print("{\"success\": false, \"message\": \"AI returned non-JSON response.\"}");
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Failed to parse AI response: " + aiResponse, e);
+                    outJSON.print("{\"success\": false, \"message\": \"AI returned invalid JSON format.\"}");
+                }
+            } else {
+                outJSON.print("{\"success\": false, \"message\": \"AI generation failed.\"}");
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error in ai_generate", e);
+            outJSON.print("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+        }
+        return;
+
     } else if ("extract_text".equalsIgnoreCase(operation)) {
         response.setContentType("application/json");
         PrintWriter outJSON = response.getWriter();
@@ -1466,6 +1539,7 @@ try {
 
                             if (document != null) {
                                 PDFTextStripper stripper = new PDFTextStripper();
+                                stripper.setSortByPosition(true); // Preserve layout better for tables
                                 extractedText = stripper.getText(document);
                             }
                         } finally {

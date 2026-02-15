@@ -1359,6 +1359,19 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                         </div>
                     </div>
                     
+                    <!-- AI Generation Toggle -->
+                    <div class="form-group" style="margin-top: 15px; padding: 15px; background: #f0f7ff; border-radius: 8px; border-left: 4px solid var(--accent-blue);">
+                        <div class="form-check" style="border: none; background: transparent; padding: 0;">
+                            <input type="checkbox" id="aiGenerationToggle" class="form-check-input" style="width: 20px; height: 20px;">
+                            <label for="aiGenerationToggle" class="form-check-label" style="font-weight: 600; color: var(--primary-blue); font-size: 15px; margin-left: 10px;">
+                                <i class="fas fa-robot"></i> Use AI to extract questions from Marking Guideline (Accounting)
+                            </label>
+                        </div>
+                        <p class="form-hint" style="margin-top: 8px; margin-left: 30px;">
+                            Perfect for Accounting marking guidelines. AI will intelligently identify questions, workings, and answers, and generate plausible MCQ options automatically.
+                        </p>
+                    </div>
+
                     <!-- Progress and Status Elements -->
                     <div id="fileUploadProgress" class="progress" style="display: none; margin: 15px 0;">
                         <div class="progress-bar" style="width: 0%;">0%</div>
@@ -1793,14 +1806,22 @@ function handleFileUploadAndParsing() {
     processBtn.disabled = true;
     processBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
     
+    const useAI = document.getElementById('aiGenerationToggle').checked;
+
     if (fileName.endsWith('.txt')) {
         // Process text file client-side
         const reader = new FileReader();
         reader.onload = function(e) {
-            progressBar.style.width = '60%';
-            progressBar.textContent = '60%';
+            progressBar.style.width = '40%';
+            progressBar.textContent = '40%';
             const text = e.target.result;
-            processExtractedText(text, courseSelect.value);
+            if (useAI) {
+                generateQuestionsWithAI(text, courseSelect.value);
+            } else {
+                progressBar.style.width = '100%';
+                progressBar.textContent = '100%';
+                processExtractedText(text, courseSelect.value);
+            }
         };
         reader.onerror = function() {
             showToast('error', 'File Error', 'Failed to read the text file.');
@@ -1822,9 +1843,15 @@ function handleFileUploadAndParsing() {
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
             if (data.success) {
-                progressBar.style.width = '60%';
-                progressBar.textContent = '60%';
-                processExtractedText(data.extractedText, courseSelect.value);
+                progressBar.style.width = '40%';
+                progressBar.textContent = '40%';
+                if (useAI) {
+                    generateQuestionsWithAI(data.extractedText, courseSelect.value);
+                } else {
+                    progressBar.style.width = '100%';
+                    progressBar.textContent = '100%';
+                    processExtractedText(data.extractedText, courseSelect.value);
+                }
             } else {
                 throw new Error(data.message || 'Failed to extract text from PDF');
             }
@@ -1840,6 +1867,63 @@ function handleFileUploadAndParsing() {
         showToast('error', 'Invalid File', 'Only .txt and .pdf files are supported.');
         resetFileUploadProgress();
     }
+}
+
+function generateQuestionsWithAI(text, courseName) {
+    const statusDiv = document.getElementById('fileUploadStatus');
+    const progressBar = document.querySelector('#fileUploadProgress .progress-bar');
+    const processBtn = document.getElementById('processFileBtn');
+
+    statusDiv.innerHTML = '<div class="alert"><i class="fas fa-robot fa-spin"></i> AI is intelligently parsing marking guidelines and generating options...</div>';
+    progressBar.style.width = '70%';
+    progressBar.textContent = '70%';
+
+    const formData = new URLSearchParams();
+    formData.append('page', 'questions');
+    formData.append('operation', 'ai_generate');
+    formData.append('text', text);
+    formData.append('questionType', 'MCQ');
+    formData.append('isMarkingGuideline', 'true');
+    formData.append('numQuestions', '15');
+
+    fetch('controller.jsp', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString()
+    })
+    .then(async response => {
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        if (data.success && data.questions) {
+            progressBar.style.width = '100%';
+            progressBar.textContent = '100%';
+            statusDiv.innerHTML = `<div class="alert" style="background: #d4edda; color: #155724;"><i class="fas fa-check-circle"></i> AI successfully generated ${data.questions.length} questions.</div>`;
+
+            // Map AI format to our internal format if needed
+            const formattedQuestions = data.questions.map(q => ({
+                question: q.question,
+                options: q.options || ['', '', '', ''],
+                correct: q.correct,
+                type: q.type || 'MCQ'
+            }));
+
+            setTimeout(() => {
+                showMultipleQuestionsModal(formattedQuestions);
+                resetFileUploadProgress();
+            }, 1000);
+        } else {
+            throw new Error(data.message || 'AI failed to generate questions');
+        }
+    })
+    .catch(error => {
+        console.error('AI Generation Error:', error);
+        statusDiv.innerHTML = `<div class="alert" style="background: #f8d7da; color: #721c24;"><i class="fas fa-exclamation-triangle"></i> AI Error: ${error.message}</div>`;
+        progressBar.style.backgroundColor = '#dc3545';
+        processBtn.disabled = false;
+        processBtn.innerHTML = '<i class="fas fa-magic"></i> Extract & Parse Questions';
+    });
 }
 
 function processExtractedText(text, courseName) {
