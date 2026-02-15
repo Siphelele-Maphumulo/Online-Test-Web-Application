@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -26,9 +27,9 @@ public class OpenRouterClient {
             return null;
         }
 
-        // Log first few chars of key for debugging (partially masked for security)
+        // Log first few chars of key for debugging (remove or mask in production)
         if (apiKey.length() > 10) {
-            LOGGER.info("API Key found: " + apiKey.substring(0, 7) + "...");
+            LOGGER.info("API Key found: " + apiKey.substring(0, 10) + "...");
         }
 
         try {
@@ -153,7 +154,7 @@ public class OpenRouterClient {
                 }
             }
             LOGGER.severe("API Error Response (" + responseCode + "): " + errorResponse.toString());
-            return null;
+            throw new IOException("API returned error code " + responseCode + ": " + errorResponse.toString());
         }
 
         StringBuilder response = new StringBuilder();
@@ -170,6 +171,8 @@ public class OpenRouterClient {
 
     private static String extractContent(String response) {
         try {
+            LOGGER.info("Attempting to parse response: " + response.substring(0, Math.min(response.length(), 500)) + "...");
+
             JSONObject root = new JSONObject(response);
             if (root.has("choices")) {
                 JSONArray choices = root.getJSONArray("choices");
@@ -183,13 +186,32 @@ public class OpenRouterClient {
 
                             // Try to extract JSON array from content
                             return extractJsonArray(content);
+                        } else {
+                            LOGGER.severe("Response JSON missing 'content' field in 'message'.");
+                            LOGGER.severe("Parsed JSON structure (partial): " + root.toString(2));
+                            return null;
                         }
+                    } else {
+                        LOGGER.severe("Response JSON missing 'message' field in 'choices[0]'.");
+                        LOGGER.severe("Parsed JSON structure (partial): " + root.toString(2));
+                        return null;
                     }
+                } else {
+                    LOGGER.severe("Response JSON 'choices' array is empty.");
+                    LOGGER.severe("Parsed JSON structure (partial): " + root.toString(2));
+                    return null;
                 }
+            } else {
+                LOGGER.severe("Response JSON missing 'choices' array.");
+                LOGGER.severe("Parsed JSON structure (partial): " + root.toString(2));
+                return null;
             }
         } catch (JSONException e) {
             LOGGER.log(Level.SEVERE, "Failed to parse API response JSON", e);
-            LOGGER.severe("Response was: " + response);
+            LOGGER.severe("Response string was: " + response);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Unexpected error during content extraction", e);
+            LOGGER.severe("Response string was: " + response);
         }
         return null;
     }

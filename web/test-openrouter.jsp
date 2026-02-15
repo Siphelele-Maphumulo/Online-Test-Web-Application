@@ -34,71 +34,64 @@
                     <li>Environment variable: <code>OPENROUTER_API_KEY</code></li>
                     <li>Properties file: <code>/WEB-INF/classes/openrouter.properties</code></li>
                 </ul>
-                <p>Please ensure you have configured the API key in <code>src/resources/openrouter.properties</code> and rebuilt the project.</p>
+                <p>Please check your configuration.</p>
             </div>
         <%
             } else {
                 String maskedKey = apiKey.length() > 10 ?
-                    apiKey.substring(0, 7) + "..." + apiKey.substring(apiKey.length() - 5) :
+                    apiKey.substring(0, 10) + "..." + apiKey.substring(apiKey.length() - 5) :
                     "Invalid Key Format";
         %>
             <div class="success">
-                <h3>✅ API Key Configuration Found</h3>
-                <p>Retrieved key from configuration sources.</p>
-                <p>Key (masked): <code><%= maskedKey %></code></p>
+                <h3>✅ API Key Found</h3>
+                <p>Key: <code><%= maskedKey %></code></p>
                 <p>Model configured: <code><%= OpenRouterConfig.getModel() %></code></p>
             </div>
 
             <div class="info">
-                <h3>🔍 Testing API Connection...</h3>
-                <p>Sending a sample request to <code>openrouter.ai</code> to verify end-to-end communication.</p>
+                <h3>🔍 Testing API with sample text...</h3>
+                <p>Sending sample text to OpenRouter to verify connection...</p>
             </div>
 
             <%
-                String testText = "Calculate: Taxation paid WORKINGS: 148000 + 1736000 + 220000 = 2104000 ANSWER: 2104000";
-                long startTime = System.currentTimeMillis();
-                String result = OpenRouterClient.generateQuestions(testText, "MCQ", 1, true);
-                long duration = System.currentTimeMillis() - startTime;
+                try {
+                    String testText = "Calculate: Taxation paid WORKINGS: 148000 + 1736000 + 220000 = 2104000 ANSWER: 2104000";
+                    String result = OpenRouterClient.generateQuestions(testText, "MCQ", 2, true);
 
-                if (result == null) {
+                    if (result == null) {
             %>
                 <div class="error">
                     <h3>❌ API Call Failed</h3>
-                    <p><code>OpenRouterClient.generateQuestions</code> returned <code>null</code>.</p>
-                    <p>Possible causes:</p>
-                    <ul>
-                        <li>Invalid API Key</li>
-                        <li>Network connectivity issues</li>
-                        <li>Incorrect model name in configuration</li>
-                        <li>OpenRouter service downtime</li>
-                    </ul>
-                    <p>Check the server (Tomcat/Console) logs for detailed stack traces.</p>
+                    <p><code>OpenRouterClient.generateQuestions</code> returned <code>null</code>. Check Tomcat logs for detailed error.</p>
                 </div>
             <%
-                } else {
+                    } else {
             %>
                 <div class="success">
                     <h3>✅ API Call Successful!</h3>
-                    <p>Response received in <strong><%= duration %>ms</strong>.</p>
-                    <p>Extracted JSON Response:</p>
+                    <p>Response received:</p>
                     <pre><%= result %></pre>
+                </div>
+            <%
+                    }
+                } catch (Exception e) {
+            %>
+                <div class="error">
+                    <h3>❌ Unexpected Exception During Test</h3>
+                    <p><%= e.getMessage() %></p>
+                    <pre><% e.printStackTrace(new java.io.PrintWriter(out)); %></pre>
                 </div>
             <%
                 }
             }
         %>
 
-        <h3>Debug Environment Information:</h3>
+        <h3>Debug Information:</h3>
         <pre>
 System Property 'openrouter.api.key': <%= System.getProperty("openrouter.api.key", "not set") %>
 Environment Variable 'OPENROUTER_API_KEY': <%= System.getenv("OPENROUTER_API_KEY") != null ? "found" : "not set" %>
-OpenRouterConfig.class Classpath Location: <%= OpenRouterConfig.class.getProtectionDomain().getCodeSource().getLocation() %>
-openrouter.properties on Classpath: <%= OpenRouterConfig.class.getClassLoader().getResource("openrouter.properties") != null ? "found" : "not found" %>
+Classpath Location of Config: <%= OpenRouterConfig.class.getResource("/openrouter.properties") != null ? "found" : "not found" %>
         </pre>
-
-        <p style="font-size: 0.875rem; color: #64748b; text-align: center; margin-top: 40px;">
-            Diagnostic Page - Exam Management System
-        </p>
     </div>
 </body>
 </html>
