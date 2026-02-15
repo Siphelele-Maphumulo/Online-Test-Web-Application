@@ -2925,16 +2925,44 @@ private String getCorrectAnswer(int qid) {
                 org.json.JSONObject correctJson = new org.json.JSONObject();
                 try {
                     ArrayList<DragItem> dragItems = getDragItemsByQuestionIdOld(qid);
-                    for (DragItem di : dragItems) {
-                        if (di.getCorrectTargetId() != null && di.getCorrectTargetId() > 0) {
-                            // Use target_ format for consistency
-                            correctJson.put("target_" + di.getCorrectTargetId(), "item_" + di.getId());
+                    if (dragItems != null && !dragItems.isEmpty()) {
+                        for (DragItem di : dragItems) {
+                            if (di.getCorrectTargetId() != null && di.getCorrectTargetId() > 0) {
+                                // Use target_ format for consistency
+                                correctJson.put("target_" + di.getCorrectTargetId(), "item_" + di.getId());
+                            }
+                        }
+                    }
+
+                    // Fallback to JSON columns if relational data is empty
+                    if (correctJson.length() == 0) {
+                        String sql2 = "SELECT drag_correct_targets FROM questions WHERE question_id = ?";
+                        try (PreparedStatement pstm2 = conn.prepareStatement(sql2)) {
+                            pstm2.setInt(1, qid);
+                            try (ResultSet rs2 = pstm2.executeQuery()) {
+                                if (rs2.next()) {
+                                    String jsonStr = rs2.getString("drag_correct_targets");
+                                    if (jsonStr != null && !jsonStr.trim().isEmpty()) {
+                                        // Robust parsing: handles both object format and array format
+                                        if (jsonStr.startsWith("{")) {
+                                            correctJson = new org.json.JSONObject(jsonStr);
+                                        } else if (jsonStr.startsWith("[")) {
+                                            // If it's an array of labels, we might not be able to map to IDs easily here
+                                            // but at least we don't throw an error.
+                                            // Relational data should be the source of truth anyway.
+                                            LOGGER.warning("drag_correct_targets is an array for Q" + qid + ". Relational data missing.");
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 } catch (Exception e) {
-                    LOGGER.log(Level.WARNING, "Error building drag drop correct targets JSON: " + e.getMessage());
+                    LOGGER.log(Level.WARNING, "Error building drag drop correct targets JSON for Q" + qid + ": " + e.getMessage());
                 }
-                return correctJson.toString();
+
+                // Ensure we return at least empty JSON object string if nothing else found
+                return correctJson.length() > 0 ? correctJson.toString() : "{}";
             }
             
             // Handle null from DB and trim whitespace
@@ -5547,9 +5575,13 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             float marksPerCorrectMatch = 0;
             if (correctMappingsCount > 0) {
                 marksPerCorrectMatch = (float) question.getTotalMarks() / correctMappingsCount;
+                LOGGER.info("Q" + questionId + ": Distributed " + question.getTotalMarks() + " marks across " + correctMappingsCount + " mappings (" + marksPerCorrectMatch + " each)");
             } else if (dragItems.size() > 0) {
                 // Fallback to total items if no correct mappings defined (unlikely for well-defined questions)
                 marksPerCorrectMatch = (float) question.getTotalMarks() / dragItems.size();
+                LOGGER.warning("Q" + questionId + ": No correct mappings found! Falling back to " + dragItems.size() + " items for marks distribution (" + marksPerCorrectMatch + " each)");
+            } else {
+                LOGGER.severe("Q" + questionId + ": No items found for this question!");
             }
             
             // Delete any existing answers for this question
