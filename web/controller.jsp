@@ -858,6 +858,7 @@ try {
                         String dragItemsHidden = "";
                         String dropTargetsHidden = "";
                         String correctTargetsHidden = "";
+                        String orientation = "horizontal";
                         Integer totalMarks = null;
                         
                         if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
@@ -882,12 +883,19 @@ try {
                                         dropTargetsHidden = fieldValue;
                                     } else if ("correctTargetsHidden".equals(fieldName)) {
                                         correctTargetsHidden = fieldValue;
+                                    } else if ("orientation".equals(fieldName)) {
+                                        orientation = fieldValue;
                                     }
                                 }
                             }
                             
                             application.log("Collected JSON Data - DragItems: " + dragItemsHidden.length() + " chars");
                             
+                            // Store orientation in extra_data
+                            JSONObject extraDataObj = new JSONObject();
+                            extraDataObj.put("orientation", orientation);
+                            question.setExtraData(extraDataObj.toString());
+
                             // For drag-drop questions, keep opts/correct empty (not used) to satisfy NOT NULL constraints.
                             question.setOpt1("");
                             question.setOpt2("");
@@ -1039,6 +1047,7 @@ try {
                 String courseName = "";
                 String questionType = "";
                 String correctMultiple = "";
+                String orientation = "horizontal";
                 String imagePath = null;
                 boolean isAjax = false;
                 
@@ -1068,6 +1077,8 @@ try {
                             questionType = nz(fieldValue, "");
                         } else if ("correctMultiple".equals(fieldName)) {
                             correctMultiple = nz(fieldValue, "");
+                        } else if ("orientation".equals(fieldName)) {
+                            orientation = fieldValue;
                         }
                     } else {
                         // Process file upload field - ONLY ACCEPT IMAGES
@@ -1130,8 +1141,15 @@ try {
                     if (!correctMultiple.isEmpty()) correctAnswer = correctMultiple;
                 }
                 
+                String extraData = null;
+                if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
+                    JSONObject extraDataObj = new JSONObject();
+                    extraDataObj.put("orientation", orientation);
+                    extraData = extraDataObj.toString();
+                }
+
                 // Insert question FIRST and capture new question ID
-                int newQuestionIdInserted = pDAO.addNewQuestionReturnId(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, imagePath);
+                int newQuestionIdInserted = pDAO.addNewQuestionReturnId(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, imagePath, extraData);
                 
                 application.log("=== AFTER QUESTION INSERT ===");
                 application.log("Question Type: " + questionType);
@@ -1270,6 +1288,7 @@ try {
             String correctAnswer = nz(request.getParameter("correct"), "");
             String courseName    = nz(request.getParameter("coursename"), "");
             String questionType  = nz(request.getParameter("questionType"), "");
+            String orientation   = nz(request.getParameter("orientation"), "horizontal");
             boolean isAjax = "true".equalsIgnoreCase(request.getParameter("ajax"));
             
             if ("MultipleSelect".equalsIgnoreCase(questionType)) {
@@ -1277,7 +1296,14 @@ try {
                 if (!correctMultiple.isEmpty()) correctAnswer = correctMultiple;
             }
             
-            int newQuestionIdInserted = pDAO.addNewQuestionReturnId(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null);
+            String extraData = null;
+            if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
+                JSONObject extraDataObj = new JSONObject();
+                extraDataObj.put("orientation", orientation);
+                extraData = extraDataObj.toString();
+            }
+
+            int newQuestionIdInserted = pDAO.addNewQuestionReturnId(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null, extraData);
             
             // Save drag and drop data using proper relational tables for DRAG_AND_DROP type
             if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {

@@ -1290,6 +1290,10 @@ public void addNewQuestion(String questionText, String opt1, String opt2, String
 }
 
 public int addNewQuestionReturnId(String questionText, String opt1, String opt2, String opt3, String opt4, String correctAnswer, String courseName, String questionType, String imagePath) {
+    return addNewQuestionReturnId(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, imagePath, null);
+}
+
+public int addNewQuestionReturnId(String questionText, String opt1, String opt2, String opt3, String opt4, String correctAnswer, String courseName, String questionType, String imagePath, String extraData) {
     try {
         ensureConnection();
     } catch (SQLException e) {
@@ -1315,7 +1319,7 @@ public int addNewQuestionReturnId(String questionText, String opt1, String opt2,
         // Handle different question types
         if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
             // For drag-and-drop questions, insert empty strings for opt fields since they're required
-            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path, marks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path, marks, extra_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             pstm.setString(1, questionText);
             pstm.setString(2, ""); // opt1 - empty for drag-drop
@@ -1327,8 +1331,9 @@ public int addNewQuestionReturnId(String questionText, String opt1, String opt2,
             pstm.setString(8, questionType);
             pstm.setString(9, imagePath);
             pstm.setInt(10, marks);
+            pstm.setString(11, extraData);
         } else if ("TrueFalse".equalsIgnoreCase(questionType)) {
-            sql = "INSERT INTO questions (question, opt1, opt2, correct, course_name, question_type, image_path, marks) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO questions (question, opt1, opt2, correct, course_name, question_type, image_path, marks, extra_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             pstm.setString(1, questionText);
             pstm.setString(2, "True");  // Hardcoded options for True/False
@@ -1338,9 +1343,10 @@ public int addNewQuestionReturnId(String questionText, String opt1, String opt2,
             pstm.setString(6, questionType);
             pstm.setString(7, imagePath);
             pstm.setInt(8, marks);
+            pstm.setString(9, extraData);
         } else {
             // Otherwise, handle multiple-choice questions
-            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path, marks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path, marks, extra_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             pstm.setString(1, questionText);
             pstm.setString(2, opt1);
@@ -1352,6 +1358,7 @@ public int addNewQuestionReturnId(String questionText, String opt1, String opt2,
             pstm.setString(8, questionType);
             pstm.setString(9, imagePath);
             pstm.setInt(10, marks);
+            pstm.setString(11, extraData);
         }
 
         // Execute the update
@@ -1717,7 +1724,7 @@ public boolean updateQuestion(Questions question) {
         return false;
     }
     
-    String sql = "UPDATE questions SET question=?, opt1=?, opt2=?, opt3=?, opt4=?, correct=?, course_name=?, question_type=?, image_path=? WHERE question_id=?";
+    String sql = "UPDATE questions SET question=?, opt1=?, opt2=?, opt3=?, opt4=?, correct=?, course_name=?, question_type=?, image_path=?, extra_data=? WHERE question_id=?";
     try (PreparedStatement pstm = conn.prepareStatement(sql)) {
         pstm.setString(1, question.getQuestion());
         pstm.setString(2, question.getOpt1());
@@ -1728,7 +1735,8 @@ public boolean updateQuestion(Questions question) {
         pstm.setString(7, question.getCourseName());
         pstm.setString(8, question.getQuestionType());
         pstm.setString(9, question.getImagePath());
-        pstm.setInt(10, question.getQuestionId());
+        pstm.setString(10, question.getExtraData());
+        pstm.setInt(11, question.getQuestionId());
 
         int rowsAffected = pstm.executeUpdate();
         return rowsAffected > 0;
