@@ -1787,6 +1787,7 @@ try {
                     
                     // Handle drag-drop questions - FIXED JSON PARSING
                     if ("dragdrop".equals(qtype)) {
+                        application.log("Processing drag-drop question " + qid + ": ans=" + ans);
                         if (ans != null && !ans.trim().isEmpty() && ans.startsWith("{")) {
                             try {
                                 // Parse JSON mapping from format: {"target_15":"item_14","target_16":"item_15"}
@@ -1823,16 +1824,21 @@ try {
                                     if (targetId != null && itemId != null) {
                                         // IMPORTANT: Map is itemId -> targetId
                                         dragDropMatches.put(itemId, targetId);
+                                        application.log("Drag-drop match: item " + itemId + " -> target " + targetId);
                                     }
                                 }
                                 
                                 if (!dragDropMatches.isEmpty() && userId > 0) {
                                     float marks = pDAO.submitDragDropAnswers(eId, qid, String.valueOf(userId), dragDropMatches);
                                     application.log("Drag-drop marks for Q" + qid + ": " + marks);
+                                } else {
+                                    application.log("Drag-drop: No matches found or invalid userId. Matches: " + dragDropMatches.size() + ", userId: " + userId);
                                 }
                             } catch (Exception e) {
-                                application.log("Error processing drag-drop JSON: " + e.getMessage());
+                                application.log("Error processing drag-drop JSON for Q" + qid + ": " + e.getMessage());
                             }
+                        } else {
+                            application.log("Drag-drop answer empty or invalid format for Q" + qid + ": " + ans);
                         }
                     }
                     

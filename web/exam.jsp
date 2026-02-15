@@ -188,7 +188,7 @@
         padding: var(--spacing-xl);
         overflow-y: auto;
         background: transparent;
-        margin-left: 180px;
+        margin-left: 200px;
         min-height: 100vh;
     }
     
@@ -1904,6 +1904,72 @@
     .drag-drop-container.vertical-layout {
         grid-template-columns: 1fr;
     }
+
+    /* Landscape / Code Box Layout */
+    .drag-drop-container.landscape-layout {
+        grid-template-columns: 200px 1fr;
+        gap: 20px;
+        align-items: start;
+    }
+
+    .landscape-layout .draggable-items-panel {
+        padding: 15px;
+        background: #f1f5f9;
+        border: 1px solid var(--medium-gray);
+        border-radius: var(--radius-md);
+    }
+
+    .landscape-layout .drop-targets-panel {
+        padding: 15px;
+        background: #ffffff;
+        border: 2px solid #e2e8f0;
+        border-style: solid; /* Override dashed */
+        display: flex;
+        flex-direction: column;
+    }
+
+    .landscape-layout .drop-targets-list {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 0;
+    }
+
+    .landscape-layout .drop-target {
+        min-height: 45px;
+        min-width: 60px;
+        padding: 5px;
+        border: 2px dashed #cbd5e1;
+        background: #f8fafc;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        flex: 0 1 auto;
+    }
+    
+    .landscape-layout .drop-target-header {
+        font-size: 10px;
+        margin-bottom: 2px;
+        text-align: center;
+    }
+
+    .landscape-layout .drag-item {
+        padding: 8px 12px;
+        font-size: 13px;
+        margin-bottom: 8px;
+    }
+
+    .landscape-layout .dropped-item {
+        padding: 4px 8px;
+        font-size: 12px;
+        min-width: 60px;
+    }
+
+    .landscape-layout .placeholder {
+        font-size: 11px;
+    }
     
     .draggable-items-panel {
         background: #f5f7fa;
@@ -2097,7 +2163,7 @@
     
     @media (min-width: 1440px) {
         .content-area {
-            max-width: calc(100% - 250px);
+            max-width: calc(100% - 200px);
         }
     }
 
@@ -2440,9 +2506,6 @@
                                         <div class="drop-targets-panel">
                                             <div class="panel-header">
                                                 <i class="fas fa-bullseye"></i> Drop Targets
-                                                <button type="button" class="shuffle-btn" onclick="shuffleDropTargets(<%= i %>)" title="Shuffle Targets">
-                                                    <i class="fas fa-random"></i>
-                                                </button>
                                             </div>
                                             <div class="drop-targets-list" id="dropTargets_<%= i %>">
                                                 <!-- Drop targets will be loaded dynamically -->
@@ -2637,7 +2700,7 @@
                                 case 'ln': res = Math.log(val); break;
                                 case 'sqrt': res = Math.sqrt(val); break;
                             }
-                            history.textContent = action + "(" + val + (['sin','cos','tan'].includes(action) ? "�" : "") + ") =";
+                            history.textContent = action + "(" + val + (['sin','cos','tan'].includes(action) ? "?" : "") + ") =";
                             // Round to 8 decimal places to avoid floating point issues
                             res = Math.round(res * 100000000) / 100000000;
                             calcInputStr = res.toString();
@@ -2943,7 +3006,7 @@
 
                 /* --- TIMER MANAGEMENT --- */
                 function startTimer() {
-                    var timerEl = document.getElementById('remainingTime');
+                    var timerEl = document.getElementById('remainingTimeHeader');
                     if(!timerEl) {
                         console.warn('Timer element not found, timer disabled');
                         return;
@@ -3283,12 +3346,27 @@ function initializeDragDropQuestions() {
         // Check for orientation in extra_data
         try {
             var extraDataStr = questionContainer.getAttribute('data-extra-data');
+            var isLandscape = false;
+            
             if (extraDataStr) {
                 var extraData = JSON.parse(extraDataStr);
                 if (extraData.orientation === 'vertical') {
                     var container = questionContainer.querySelector('.drag-drop-container');
                     if (container) container.classList.add('vertical-layout');
+                } else if (extraData.orientation === 'landscape' || extraData.orientation === 'horizontal') {
+                    isLandscape = true;
                 }
+            }
+            
+            // Auto-detect landscape based on keywords or structure if not explicitly set
+            var questionText = card.querySelector('.question-text') ? card.querySelector('.question-text').textContent.toLowerCase() : '';
+            if (questionText.includes('code') || questionText.includes('line') || questionText.includes('order')) {
+                isLandscape = true;
+            }
+            
+            if (isLandscape) {
+                var container = questionContainer.querySelector('.drag-drop-container');
+                if (container) container.classList.add('landscape-layout');
             }
         } catch (e) {
             console.log('Error parsing extra data for orientation');
@@ -3332,9 +3410,10 @@ function renderDragDropInterface(qIdx, dragContainer, dropContainer, items, targ
         }
     }
     
-    // RANDOMIZE: Shuffle both items and targets
+    // RANDOMIZE: Shuffle only items (targets stay in original order)
     var shuffledItems = shuffleArray(normalizedItems.slice());
-    var shuffledTargets = shuffleArray(normalizedTargets.slice());
+    // Keep targets in original order - only shuffle draggable items
+    var orderedTargets = normalizedTargets.slice();
     
     // Render Items (randomized order)
     dragContainer.innerHTML = '';
@@ -3354,17 +3433,21 @@ function renderDragDropInterface(qIdx, dragContainer, dropContainer, items, targ
         dragContainer.appendChild(el);
     }
     
-    // Render Targets (randomized order)
+    // Render Targets (original order - not shuffled, but reorderable via drag)
     dropContainer.innerHTML = '';
-    for (var i = 0; i < shuffledTargets.length; i++) {
-        var target = shuffledTargets[i];
+    for (var i = 0; i < orderedTargets.length; i++) {
+        var target = orderedTargets[i];
         var el = document.createElement('div');
         el.className = 'drop-target';
         el.id = 'q' + qIdx + '_target_' + target.id;
         el.setAttribute('data-target-id', target.id);
+        
+        // Targets are NOT draggable - only receive dropped items
+        
         el.innerHTML = '<div class="drop-target-header">' + target.label + '</div>' +
                        '<div class="placeholder">Drop here</div>';
         
+        // Only add item drop listeners (not target reorder)
         el.addEventListener('dragover', handleDragOver);
         el.addEventListener('dragenter', handleDragEnter);
         el.addEventListener('dragleave', handleDragLeave);
