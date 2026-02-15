@@ -895,6 +895,20 @@
     transition: all 0.2s ease;
 }
 
+.row-draggable {
+    cursor: move;
+}
+
+.row-dragging {
+    opacity: 0.4;
+    border: 2px dashed var(--accent-blue);
+}
+
+.drag-handle {
+    cursor: move;
+    color: var(--dark-gray);
+}
+
 .drag-item:hover, .drop-target:hover, .pairing-item:hover {
     box-shadow: 0 3px 8px rgba(0,0,0,0.1);
     border-color: var(--primary-blue);
@@ -914,7 +928,7 @@
     color: var(--warning);
 }
 
-.drag-item input, .drop-target input {
+.drag-item textarea, .drop-target textarea {
     flex: 1;
     border: 1px solid transparent;
     background: #f8f9fa;
@@ -922,9 +936,12 @@
     border-radius: 6px;
     font-size: 0.9rem;
     transition: all 0.2s ease;
+    resize: none;
+    overflow: hidden;
+    min-height: 38px;
 }
 
-.drag-item input:focus, .drop-target input:focus {
+.drag-item textarea:focus, .drop-target textarea:focus {
     background: white;
     border-color: var(--primary-blue);
     outline: none;

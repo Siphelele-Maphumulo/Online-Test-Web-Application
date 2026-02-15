@@ -1077,8 +1077,20 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
     border-color: var(--accent-blue);
 }
 
-.drag-item-row input, .drop-target-row input {
+.drag-item-row textarea, .drop-target-row textarea {
     flex: 1;
+    resize: none;
+    overflow: hidden;
+    min-height: 38px;
+}
+
+.drag-handle {
+    cursor: move;
+}
+
+.drag-item-row.row-dragging, .drop-target-row.row-dragging {
+    opacity: 0.4;
+    border: 2px dashed var(--accent-blue);
 }
 
 .drag-item-row select {
@@ -1557,8 +1569,9 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                 Draggable Items
                             </label>
                             <div id="dragItemsContainer">
-                                <div class="drag-item-row" data-item-index="0">
-                                    <input type="text" name="dragItem_text_0" class="form-control" placeholder="Enter draggable item text">
+                                <div class="drag-item-row" data-item-index="0" draggable="true" ondragstart="handleQuestionRowDragStart(event)" ondragover="handleQuestionRowDragOver(event)" ondrop="handleQuestionRowDrop(event)" ondragend="handleQuestionRowDragEnd(event)">
+                                    <i class="fas fa-grip-vertical mr-2 text-muted drag-handle"></i>
+                                    <textarea name="dragItem_text_0" class="form-control" rows="1" placeholder="Enter draggable item text" oninput="autoResize(this)"></textarea>
                                     <select name="dragItem_target_0" class="form-select">
                                         <option value="">Select correct target</option>
                                     </select>
@@ -1576,8 +1589,9 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                 Drop Targets
                             </label>
                             <div id="dropTargetsContainer">
-                                <div class="drop-target-row" data-target-index="0">
-                                    <input type="text" name="dropTarget_0" class="form-control" placeholder="Enter drop target label">
+                                <div class="drop-target-row" data-target-index="0" draggable="true" ondragstart="handleQuestionRowDragStart(event)" ondragover="handleQuestionRowDragOver(event)" ondrop="handleQuestionRowDrop(event)" ondragend="handleQuestionRowDragEnd(event)">
+                                    <i class="fas fa-bullseye mr-2 text-muted drag-handle"></i>
+                                    <textarea name="dropTarget_0" class="form-control" rows="1" placeholder="Enter drop target label (use [[target]] for box position)" oninput="autoResize(this); updateDragDropTargetOptions()"></textarea>
                                     <button type="button" class="btn btn-outline btn-sm" onclick="removeDropTarget(this)">Remove</button>
                                 </div>
                             </div>
@@ -3859,6 +3873,11 @@ document.addEventListener('DOMContentLoaded', function() {
 let dragItemIndex = 0;
 let dropTargetIndex = 0;
 
+function autoResize(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+}
+
 function addDragItem() {
     const container = document.getElementById('dragItemsContainer');
     const newIndex = ++dragItemIndex;
@@ -3866,9 +3885,16 @@ function addDragItem() {
     const itemRow = document.createElement('div');
     itemRow.className = 'drag-item-row';
     itemRow.setAttribute('data-item-index', newIndex);
+    itemRow.draggable = true;
+
+    itemRow.addEventListener('dragstart', handleQuestionRowDragStart);
+    itemRow.addEventListener('dragover', handleQuestionRowDragOver);
+    itemRow.addEventListener('drop', handleQuestionRowDrop);
+    itemRow.addEventListener('dragend', handleQuestionRowDragEnd);
     
     itemRow.innerHTML = `
-        <input type="text" name="dragItem_text_${newIndex}" class="form-control" placeholder="Enter draggable item text">
+        <i class="fas fa-grip-vertical mr-2 text-muted drag-handle"></i>
+        <textarea name="dragItem_text_${newIndex}" class="form-control" rows="1" placeholder="Enter draggable item text" oninput="autoResize(this)"></textarea>
         <select name="dragItem_target_${newIndex}" class="form-select">
             <option value="">Select correct target</option>
         </select>
@@ -3892,23 +3918,69 @@ function addDropTarget() {
     const targetRow = document.createElement('div');
     targetRow.className = 'drop-target-row';
     targetRow.setAttribute('data-target-index', newIndex);
+    targetRow.draggable = true;
+
+    targetRow.addEventListener('dragstart', handleQuestionRowDragStart);
+    targetRow.addEventListener('dragover', handleQuestionRowDragOver);
+    targetRow.addEventListener('drop', handleQuestionRowDrop);
+    targetRow.addEventListener('dragend', handleQuestionRowDragEnd);
     
     targetRow.innerHTML = `
-        <input type="text" name="dropTarget_${newIndex}" class="form-control" placeholder="Enter drop target label">
+        <i class="fas fa-bullseye mr-2 text-muted drag-handle"></i>
+        <textarea name="dropTarget_${newIndex}" class="form-control" rows="1" placeholder="Enter drop target label (use [[target]] for box position)" oninput="autoResize(this); updateDragDropTargetOptions()"></textarea>
         <button type="button" class="btn btn-outline btn-sm" onclick="removeDropTarget(this)">Remove</button>
     `;
     
     container.appendChild(targetRow);
     
-    // Add change event listener to the new input to update drag item options immediately
-    const newInput = targetRow.querySelector('input[type="text"]');
-    newInput.addEventListener('input', updateDragDropTargetOptions);
-    newInput.addEventListener('change', updateDragDropTargetOptions);
-    
     updateDragDropTargetOptions();
     
     // Auto-update marks (1 per target)
     updateDragDropMarks();
+}
+
+// Reordering logic for Add Question form
+let draggedQRow = null;
+
+function handleQuestionRowDragStart(e) {
+    draggedQRow = this;
+    this.style.opacity = '0.4';
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleQuestionRowDragOver(e) {
+    if (e.preventDefault) {
+        e.preventDefault();
+    }
+    e.dataTransfer.dropEffect = 'move';
+
+    if (this !== draggedQRow && this.parentNode === draggedQRow.parentNode) {
+        const container = this.parentNode;
+        const children = Array.from(container.children);
+        const draggedIndex = children.indexOf(draggedQRow);
+        const targetIndex = children.indexOf(this);
+
+        if (draggedIndex < targetIndex) {
+            container.insertBefore(draggedQRow, this.nextSibling);
+        } else {
+            container.insertBefore(draggedQRow, this);
+        }
+    }
+
+    return false;
+}
+
+function handleQuestionRowDrop(e) {
+    if (e.stopPropagation) {
+        e.stopPropagation();
+    }
+    updateDragDropTargetOptions();
+    return false;
+}
+
+function handleQuestionRowDragEnd(e) {
+    this.style.opacity = '1';
+    draggedQRow = null;
 }
 
 function removeDropTarget(button) {
@@ -3929,7 +4001,7 @@ function updateDragDropMarks() {
 }
 
 function updateDragDropTargetOptions() {
-    const targetInputs = document.querySelectorAll('#dropTargetsContainer input[type="text"]');
+    const targetInputs = document.querySelectorAll('#dropTargetsContainer textarea');
     const targetOptions = [];
     
     targetInputs.forEach(input => {
