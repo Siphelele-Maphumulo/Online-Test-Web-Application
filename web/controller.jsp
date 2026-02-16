@@ -906,6 +906,8 @@ try {
                             application.log("=== EDIT REARRANGE PROCESSING START ===");
                             String rearrangeItemsHidden = "";
                             String rearrangeStyle = "vertical";
+                            java.util.List<String> rearrangeItemsList = new java.util.ArrayList<>();
+                            java.util.Map<Integer, String> itemsMap = new java.util.TreeMap<>();
                             
                             for (FileItem item : items) {
                                 if (item.isFormField()) {
@@ -914,6 +916,11 @@ try {
                                     
                                     if ("rearrangeItemsHidden".equals(fieldName)) {
                                         rearrangeItemsHidden = fieldValue;
+                                    } else if (fieldName.startsWith("rearrangeItem_")) {
+                                        int idx = Integer.parseInt(fieldName.substring(14));
+                                        if (!fieldValue.trim().isEmpty()) {
+                                            itemsMap.put(idx, fieldValue.trim());
+                                        }
                                     } else if ("rearrangeStyle".equals(fieldName)) {
                                         rearrangeStyle = fieldValue;
                                     } else if ("totalMarks".equals(fieldName)) {
@@ -924,6 +931,12 @@ try {
                                 }
                             }
                             
+                            // If rearrangeItemsHidden is empty, try to use itemsMap
+                            if (rearrangeItemsHidden.isEmpty() && !itemsMap.isEmpty()) {
+                                for (String val : itemsMap.values()) rearrangeItemsList.add(val);
+                                rearrangeItemsHidden = pDAO.toJsonArray(rearrangeItemsList);
+                            }
+
                             // Store style in extra_data
                             JSONObject extraDataObj = new JSONObject();
                             extraDataObj.put("style", rearrangeStyle);
@@ -1371,6 +1384,7 @@ try {
                             application.log("=== ENTERING REARRANGE SECTION ===");
                             try {
                                 int newQuestionId = newQuestionIdInserted;
+                                String rearrangeItemsHidden = "";
                                 java.util.List<String> rearrangeItemsList = new java.util.ArrayList<>();
                                 String displayStyle = "vertical";
                                 Integer totalMarks = null;
@@ -1383,7 +1397,9 @@ try {
                                         String fieldName = item.getFieldName();
                                         String fieldValue = item.getString("UTF-8");
                                         
-                                        if (fieldName.startsWith("rearrangeItem_")) {
+                                        if ("rearrangeItemsHidden".equals(fieldName)) {
+                                            rearrangeItemsHidden = fieldValue;
+                                        } else if (fieldName.startsWith("rearrangeItem_")) {
                                             int idx = Integer.parseInt(fieldName.substring(14));
                                             if (!fieldValue.trim().isEmpty()) {
                                                 itemsMap.put(idx, fieldValue.trim());
@@ -1398,8 +1414,12 @@ try {
                                     }
                                 }
                                 
-                                for (String val : itemsMap.values()) {
-                                    rearrangeItemsList.add(val);
+                                if (rearrangeItemsHidden != null && !rearrangeItemsHidden.trim().isEmpty()) {
+                                    org.json.JSONArray itemsArr = new org.json.JSONArray(rearrangeItemsHidden);
+                                    for(int i=0; i<itemsArr.length(); i++) rearrangeItemsList.add(itemsArr.getString(i));
+                                } else {
+                                    for (String val : itemsMap.values()) rearrangeItemsList.add(val);
+                                    rearrangeItemsHidden = pDAO.toJsonArray(rearrangeItemsList);
                                 }
                                 
                                 // Update extra_data with display style
@@ -1408,6 +1428,7 @@ try {
                                 
                                 Questions q = pDAO.getQuestionById(newQuestionId);
                                 q.setExtraData(extraDataObj.toString());
+                                pDAO.updateQuestion(q);
                                 
                                 // Save items to relational table
                                 pDAO.addRearrangeData(newQuestionId, rearrangeItemsList);
@@ -2051,6 +2072,23 @@ try {
                             }
                         } else {
                             application.log("Drag-drop answer empty or invalid format for Q" + qid + ": " + ans);
+                        }
+                    } else if ("rearrange".equals(qtype)) {
+                        application.log("Processing rearrange question " + qid + ": ans=" + ans);
+                        if (ans != null && !ans.trim().isEmpty() && ans.startsWith("[")) {
+                            try {
+                                java.util.ArrayList<Integer> orderedIds = new java.util.ArrayList<>();
+                                org.json.JSONArray userArr = new org.json.JSONArray(ans);
+                                for (int j = 0; j < userArr.length(); j++) {
+                                    orderedIds.add(userArr.getInt(j));
+                                }
+                                if (!orderedIds.isEmpty() && userId > 0) {
+                                    float marks = pDAO.submitRearrangeAnswer(eId, qid, String.valueOf(userId), orderedIds);
+                                    application.log("Rearrange marks for Q" + qid + ": " + marks);
+                                }
+                            } catch (Exception e) {
+                                application.log("Error processing rearrange JSON for Q" + qid + ": " + e.getMessage());
+                            }
                         }
                     }
                     

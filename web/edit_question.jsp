@@ -80,7 +80,7 @@
     String dragCorrectTargetsJson = "[]";
     String rearrangeItemsJson_db = "[]";
 
-    if (("DRAG_AND_DROP".equals(questionType) || "REARRANGE".equals(questionType)) && questionToEdit != null) {
+    if (("DRAG_AND_DROP".equals(questionType) || "REARRANGE".equals(questionType) || "RE_ARRANGE".equals(questionType)) && questionToEdit != null) {
         try {
             // Get marks from the question object
             if (questionToEdit.getTotalMarks() > 0) {
@@ -101,7 +101,7 @@
                 dragCorrectTargetsJson = (val != null && !val.trim().isEmpty() && !val.equals("null")) ? val : "[]";
             }
 
-            if ("REARRANGE".equals(questionType)) {
+            if ("REARRANGE".equals(questionType) || "RE_ARRANGE".equals(questionType)) {
                 ArrayList<myPackage.classes.RearrangeItem> rItems = pDAO.getRearrangeItems(questionId);
                 JSONArray rArray = new JSONArray();
                 for (myPackage.classes.RearrangeItem ri : rItems) {
@@ -1297,6 +1297,7 @@
                                 <option value="MCQ" <%= "MCQ".equals(questionType) ? "selected" : "" %>>Multiple Choice (Single Answer)</option>
                                 <option value="MultipleSelect" <%= "MultipleSelect".equals(questionType) ? "selected" : "" %>>Multiple Select (Choose Two)</option>
                                 <option value="TrueFalse" <%= "TrueFalse".equals(questionType) ? "selected" : "" %>>True / False</option>
+                                <option value="FillInTheBlank" <%= "FillInTheBlank".equalsIgnoreCase(questionType) ? "selected" : "" %>>Fill In The Blank</option>
                                 <option value="Code" <%= "Code".equals(questionType) ? "selected" : "" %>>Code Snippet</option>
                                 <option value="DRAG_AND_DROP" <%= "DRAG_AND_DROP".equals(questionType) ? "selected" : "" %>>Drag and Drop</option>
                                 <option value="REARRANGE" <%= "REARRANGE".equals(questionType) ? "selected" : "" %>>Rearrange (Order Items)</option>
@@ -2359,6 +2360,13 @@
                 initializeRearrangeEdit();
             }, 100);
 
+        } else if (qType === "FillInTheBlank") {
+            // Show correct answer only, hide MCQ options
+            mcq.style.display = "none";
+            single.style.display = "block";
+            correct.required = true;
+            correct.placeholder = "Enter the accepted answer";
+
         } else if (qType === "MultipleSelect") {
             // Show MCQ options and multiple select container
             mcq.style.display = "block";
@@ -2610,6 +2618,12 @@ window.addEventListener('DOMContentLoaded', function() {
             if (items.length < 2) {
                 msg = "At least 2 items are required for rearrange questions.";
             }
+        } else if (qType === "FillInTheBlank") {
+            const correctValue = document.getElementById('editCorrectAnswer').value.trim();
+            if (!correctValue) {
+                msg = "Accepted answer is required for Fill In The Blank question.";
+            }
+
         } else if (qType === "MultipleSelect") {
             const opt1 = document.getElementById('editOpt1').value.trim();
             const opt2 = document.getElementById('editOpt2').value.trim();
@@ -2988,7 +3002,6 @@ window.addEventListener('DOMContentLoaded', function() {
 
     function addRearrangeItemToUI(text) {
         const container = document.getElementById("rearrangeItemsContainer");
-        const index = container.querySelectorAll(".drag-item").length + 1;
         const div = document.createElement("div");
         div.className = "drag-item row-draggable";
         div.draggable = true;
@@ -3003,8 +3016,8 @@ window.addEventListener('DOMContentLoaded', function() {
         
         div.innerHTML = 
             '<i class="fas fa-grip-vertical drag-handle"></i>' +
-            '<textarea name="rearrangeItem_' + index + '" class="form-control" rows="1" placeholder="Item text..." oninput="autoResize(this); updateRearrangePreviewEdit();">' + escapedText + '</textarea>' +
-            '<button type="button" class="remove-btn" onclick="this.parentElement.remove(); updateRearrangePreviewEdit();">×</button>';
+            '<textarea class="form-control" rows="1" placeholder="Item text..." oninput="autoResize(this); updateRearrangePreviewEdit();">' + escapedText + '</textarea>' +
+            '<button type="button" class="remove-btn" onclick="this.parentElement.remove(); updateRearrangePreviewEdit(); updateRearrangeNames();">×</button>';
         
         div.addEventListener('dragstart', handleRowDragStart);
         div.addEventListener('dragover', handleRowDragOver);
@@ -3014,8 +3027,20 @@ window.addEventListener('DOMContentLoaded', function() {
         container.appendChild(div);
         autoResize(div.querySelector('textarea'));
         
-        // Update preview
+        // Update names and preview
+        updateRearrangeNames();
         updateRearrangePreviewEdit();
+    }
+
+    function updateRearrangeNames() {
+        const container = document.getElementById("rearrangeItemsContainer");
+        const rows = container.querySelectorAll(".drag-item");
+        rows.forEach((row, index) => {
+            const textarea = row.querySelector("textarea");
+            if (textarea) {
+                textarea.name = "rearrangeItem_" + (index + 1);
+            }
+        });
     }
 
     function collectRearrangeItemsFromUI() {
@@ -3064,6 +3089,7 @@ window.addEventListener('DOMContentLoaded', function() {
     function handleRowDragEnd(e) {
         this.classList.remove('dragging');
         draggedRow = null;
+        updateRearrangeNames();
     }
 
     function getDragAfterElement(container, y) {
