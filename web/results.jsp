@@ -185,10 +185,12 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
     .main-content {
         flex: 1;
         padding: var(--spacing-xl);
+        padding-top: 100px;
         overflow-y: auto;
         background: transparent;
-        margin-left: 180px;
+        margin-left: 0px;
         min-height: 100vh;
+        min-width: 100vh;
     }
     .results-panel {
         margin-left: -30px;
@@ -1323,6 +1325,239 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
     
     *:focus:not(.focus-visible) {
         outline: none;
+    }
+    
+    /* Floating Delete Button Styles */
+    .floating-delete-selected {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 15px 30px;
+        font-size: 16px;
+        font-weight: 600;
+        box-shadow: 0 10px 25px rgba(220, 38, 38, 0.4);
+        cursor: pointer;
+        display: none;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+    
+    .floating-delete-selected:hover {
+        transform: translateX(-50%) scale(1.05);
+        box-shadow: 0 12px 30px rgba(220, 38, 38, 0.5);
+    }
+    
+    .floating-delete-selected.show {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .floating-delete-selected i {
+        font-size: 18px;
+    }
+    
+    /* Modal Styles */
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+    }
+    
+    .modal-box {
+        background: white;
+        border-radius: 12px;
+        padding: 0;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    
+    .modal-header {
+        padding: 20px 24px 16px;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--primary-blue);
+    }
+    
+    .modal-body {
+        padding: 20px 24px;
+        color: var(--dark-gray);
+        line-height: 1.5;
+    }
+    
+    .modal-footer {
+        padding: 16px 24px 20px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+    }
+    
+    .btn-cancel {
+        padding: 8px 16px;
+        border: 1px solid #d1d5db;
+        background: white;
+        color: var(--dark-gray);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-cancel:hover {
+        background: #f9fafb;
+        border-color: #9ca3af;
+    }
+    
+    .btn-confirm-del {
+        padding: 8px 16px;
+        border: none;
+        background: var(--error);
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-confirm-del:hover {
+        background: #b91c1c;
+    }
+    
+    /* Multi-select functionality */
+    .multi-select-checkbox {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 10;
+        opacity: 0;
+        pointer-events: none;
+    }
+    
+    .question-card.multi-selected {
+        background-color: rgba(250, 150, 150, 0.479);
+        outline-offset: -3px;
+        position: relative;
+    }
+    
+    .question-card.multi-selected::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(226, 79, 74, 0.1);
+        z-index: 1;
+        pointer-events: none;
+    }
+    
+    .multi-select-toggle {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 20;
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--dark-gray);
+        border-radius: 4px;
+        background: var(--white);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+    
+    .multi-select-toggle.checked {
+        background: var(--white);
+        border-color: red;
+    }
+    
+    .multi-select-toggle.checked::after {
+        content: '✓';
+        border-color: red;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    /* Floating delete button */
+    .floating-delete-selected {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 15px 30px;
+        font-size: 16px;
+        font-weight: 600;
+        box-shadow: 0 10px 25px rgba(220, 38, 38, 0.4);
+        cursor: pointer;
+        display: none;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+    
+    .floating-delete-selected:hover {
+        transform: translateX(-50%) scale(1.05);
+        box-shadow: 0 12px 30px rgba(220, 38, 38, 0.5);
+    }
+    
+    .floating-delete-selected.show {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .floating-delete-selected i {
+        font-size: 18px;
+    }
+    
+    /* Checkbox container to avoid interfering with card clicks */
+    .checkbox-container {
+        position: relative;
+        display: inline-block;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .floating-scroll {
+            bottom: 80px;
+            right: 15px;
+        }
+        
+        .scroll-btn {
+            width: 35px;
+            height: 35px;
+            font-size: 14px;
+        }
+        
+        .floating-delete-selected {
+            bottom: 20px;
+            padding: 12px 24px;
+            font-size: 14px;
+        }
     }
 </style>
 
@@ -2595,4 +2830,134 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
   
   // Initialize quick filters after page loads
   setTimeout(addQuickFilters, 100);
+  
+  // Delete Modal Functions
+  function showDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'flex';
+  }
+  
+  function hideDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+  }
+  
+  function showDeleteSelectedModal(count) {
+    document.getElementById('deleteCount').textContent = count;
+    document.getElementById('deleteSelectedModal').style.display = 'flex';
+  }
+  
+  function hideDeleteSelectedModal() {
+    document.getElementById('deleteSelectedModal').style.display = 'none';
+  }
+  
+  function deleteSelectedQuestions() {
+    const selectedCount = document.getElementById('selectedCount').textContent;
+    if (selectedCount > 0) {
+      showDeleteSelectedModal(selectedCount);
+    }
+  }
+  
+  function confirmDeleteSelected() {
+    // Add your deletion logic here
+    console.log('Deleting selected questions...');
+    hideDeleteSelectedModal();
+    // Reset selection
+    document.getElementById('selectedCount').textContent = '0';
+    document.getElementById('floatingDeleteBtn').classList.remove('show');
+  }
+  
+  // Scroll Button Functions
+  function initScrollButtons() {
+    const scrollUpBtn = document.getElementById('scrollUpBtn');
+    const scrollDownBtn = document.getElementById('scrollDownBtn');
+    const floatingScroll = document.getElementById('floatingScroll');
+    
+    if (!scrollUpBtn || !scrollDownBtn || !floatingScroll) return;
+    
+    function scrollToTop() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
+    
+    function scrollToBottom() {
+        window.scrollTo({
+            top: document.documentElement.scrollHeight - window.innerHeight,
+            behavior: 'smooth'
+        });
+    }
+    
+    function toggleScrollButtons() {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollHeight = document.documentElement.scrollHeight;
+        const clientHeight = window.innerHeight;
+        
+        // Show buttons if page is scrollable
+        if (scrollHeight > clientHeight) {
+            floatingScroll.classList.add('visible');
+        } else {
+            floatingScroll.classList.remove('visible');
+        }
+    }
+    
+    // Event listeners
+    scrollUpBtn.addEventListener('click', scrollToTop);
+    scrollDownBtn.addEventListener('click', scrollToBottom);
+    window.addEventListener('scroll', toggleScrollButtons);
+    window.addEventListener('resize', toggleScrollButtons);
+    
+    // Initial check
+    toggleScrollButtons();
+  }
+  
+  // Initialize scroll buttons when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initScrollButtons);
+  } else {
+    initScrollButtons();
+  }
 </script>
+
+<!-- Floating Delete Selected Button -->
+<button id="floatingDeleteBtn" class="floating-delete-selected" onclick="deleteSelectedQuestions()">
+    <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
+</button>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-box">
+        <div class="modal-header">Confirm Deletion</div>
+        <div class="modal-body">
+            Are you sure you want to delete this question? This action cannot be undone.
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="hideDeleteModal()">Cancel</button>
+            <button class="btn-confirm-del" id="confirmDelBtn">Delete Question</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Selected Confirmation Modal -->
+<div id="deleteSelectedModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-box">
+        <div class="modal-header">Confirm Bulk Deletion</div>
+        <div class="modal-body">
+            Are you sure you want to delete <span id="deleteCount" style="font-weight: bold;">0</span> selected question(s)?
+            <div style="color: #dc3545; font-weight: 500; margin-top: 10px;">This action cannot be undone.</div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="hideDeleteSelectedModal()">Cancel</button>
+            <button class="btn-confirm-del" onclick="confirmDeleteSelected()">Delete Selected</button>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Scroll Buttons -->
+<div class="floating-scroll" id="floatingScroll">
+    <button class="scroll-btn" id="scrollUpBtn" title="Scroll to Top">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+    <button class="scroll-btn" id="scrollDownBtn" title="Scroll to Bottom">
+        <i class="fas fa-chevron-down"></i>
+    </button>
+</div>
