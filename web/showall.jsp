@@ -875,41 +875,44 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
                                     </div>
                                 <% } else if (isRearrange) { 
                                     // Handle rearrange questions
-                                    org.json.JSONArray itemsArray = new org.json.JSONArray();
+                                    java.util.List<String> displayItems = new java.util.ArrayList<>();
                                     if (q.getRearrangeItems() != null && !q.getRearrangeItems().isEmpty()) {
                                         for (myPackage.classes.RearrangeItem ri : q.getRearrangeItems()) {
-                                            org.json.JSONObject jo = new org.json.JSONObject();
-                                            jo.put("id", ri.getId());
-                                            jo.put("text", ri.getItemText());
-                                            jo.put("correctPosition", ri.getCorrectPosition());
-                                            itemsArray.put(jo);
+                                            displayItems.add(ri.getItemText());
                                         }
                                     } else if (q.getRearrangeItemsJson() != null && !q.getRearrangeItemsJson().isEmpty()) {
                                         // Fallback to JSON column if relational list is empty
                                         try {
-                                            itemsArray = new org.json.JSONArray(q.getRearrangeItemsJson());
+                                            org.json.JSONArray itemsArray = new org.json.JSONArray(q.getRearrangeItemsJson());
+                                            for (int j = 0; j < itemsArray.length(); j++) {
+                                                Object obj = itemsArray.get(j);
+                                                if (obj instanceof org.json.JSONObject) {
+                                                    displayItems.add(((org.json.JSONObject)obj).optString("text", ""));
+                                                } else {
+                                                    displayItems.add(obj.toString());
+                                                }
+                                            }
                                         } catch (Exception e) {
                                             // Silently handle JSON parsing errors
                                         }
                                     }
-                                    String[] items = parseSimpleJsonArray(itemsArray.toString());
                                 %>
                                     <div class="rearrange-preview">
                                         <h4><i class="fas fa-sort-amount-down"></i> Correct Sequence Order</h4>
                                         <div class="rearrange-items-container">
-                                            <% for (int j = 0; j < items.length; j++) { 
+                                            <% for (int j = 0; j < displayItems.size(); j++) { 
                                                 int position = j + 1; // Positions start from 1
                                             %>
                                                 <div class="rearrange-item">
                                                     <span class="rearrange-item-number">#<%= position %></span>
-                                                    <span class="rearrange-item-text"><%= items[j] %></span>
+                                                    <span class="rearrange-item-text"><%= displayItems.get(j) %></span>
                                                 </div>
                                             <% } %>
                                         </div>
                                         <div class="dd-targets-pool">
                                             <span style="font-size: 12px; color: #94a3b8; display: block; margin-bottom: 8px;">Students must arrange these items in the correct order:</span>
-                                            <% for (int j = 0; j < items.length; j++) { %>
-                                                <span class="target-badge">#<%= j + 1 %> <%= items[j] %></span>
+                                            <% for (int j = 0; j < displayItems.size(); j++) { %>
+                                                <span class="target-badge">#<%= j + 1 %> <%= displayItems.get(j) %></span>
                                             <% } %>
                                         </div>
                                     </div>

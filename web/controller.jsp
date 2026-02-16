@@ -902,6 +902,67 @@ try {
                             question.setOpt3("");
                             question.setOpt4("");
                             question.setCorrect("");
+                        } else if ("REARRANGE".equalsIgnoreCase(questionType)) {
+                            application.log("=== EDIT REARRANGE PROCESSING START ===");
+                            String rearrangeItemsHidden = "";
+                            String rearrangeStyle = "vertical";
+                            
+                            for (FileItem item : items) {
+                                if (item.isFormField()) {
+                                    String fieldName = item.getFieldName();
+                                    String fieldValue = item.getString("UTF-8");
+                                    
+                                    if ("rearrangeItemsHidden".equals(fieldName)) {
+                                        rearrangeItemsHidden = fieldValue;
+                                    } else if ("rearrangeStyle".equals(fieldName)) {
+                                        rearrangeStyle = fieldValue;
+                                    } else if ("totalMarks".equals(fieldName)) {
+                                        try {
+                                            totalMarks = Integer.parseInt(fieldValue.trim());
+                                        } catch (Exception e) {}
+                                    }
+                                }
+                            }
+                            
+                            // Store style in extra_data
+                            JSONObject extraDataObj = new JSONObject();
+                            extraDataObj.put("style", rearrangeStyle);
+                            question.setExtraData(extraDataObj.toString());
+                            
+                            // Clear opts/correct
+                            question.setOpt1("");
+                            question.setOpt2("");
+                            question.setOpt3("");
+                            question.setOpt4("");
+                            question.setCorrect("");
+                            
+                            // Update question first
+                            pDAO.updateQuestion(question);
+                            
+                            // Sync relational table
+                            if (!rearrangeItemsHidden.isEmpty()) {
+                                try {
+                                    org.json.JSONArray itemsArr = new org.json.JSONArray(rearrangeItemsHidden);
+                                    java.util.List<String> itemsList = new java.util.ArrayList<>();
+                                    for(int i=0; i<itemsArr.length(); i++) itemsList.add(itemsArr.getString(i));
+                                    
+                                    pDAO.clearRearrangeData(question.getQuestionId());
+                                    pDAO.addRearrangeData(question.getQuestionId(), itemsList);
+                                    
+                                    // Update JSON fallback
+                                    pDAO.updateRearrangeQuestionJson(question.getQuestionId(), rearrangeItemsHidden, totalMarks);
+                                } catch (Exception e) {
+                                    application.log("Error syncing rearrange items: " + e.getMessage());
+                                }
+                            }
+                            
+                            application.log("=== EDIT REARRANGE PROCESSING END ===");
+                            
+                            session.setAttribute("message","Question updated successfully");
+                            request.removeAttribute("multipartItems");
+                            if (!courseName.isEmpty()) response.sendRedirect("showall.jsp?coursename=" + courseName);
+                            else response.sendRedirect("showall.jsp");
+                            return;
                         }
                         
                         pDAO.updateQuestion(question);
@@ -996,6 +1057,41 @@ try {
                     }
                     
                     pDAO.updateQuestion(question);
+                    
+                    if ("REARRANGE".equalsIgnoreCase(questionType)) {
+                        java.util.List<String> rearrangeItemsList = new java.util.ArrayList<>();
+                        java.util.Map<Integer, String> itemsMap = new java.util.TreeMap<>();
+                        
+                        Enumeration<String> paramNames = request.getParameterNames();
+                        while (paramNames.hasMoreElements()) {
+                            String paramName = paramNames.nextElement();
+                            if (paramName.startsWith("rearrangeItem_")) {
+                                int idx = Integer.parseInt(paramName.substring(14));
+                                String val = request.getParameter(paramName);
+                                if (val != null && !val.trim().isEmpty()) {
+                                    itemsMap.put(idx, val.trim());
+                                }
+                            }
+                        }
+                        for (String val : itemsMap.values()) rearrangeItemsList.add(val);
+                        
+                        pDAO.clearRearrangeData(question.getQuestionId());
+                        pDAO.addRearrangeData(question.getQuestionId(), rearrangeItemsList);
+                        
+                        String displayStyle = nz(request.getParameter("rearrangeStyle"), "vertical");
+                        org.json.JSONObject extraDataObj = new org.json.JSONObject();
+                        extraDataObj.put("style", displayStyle);
+                        question.setExtraData(extraDataObj.toString());
+                        
+                        Integer totalMarks = null;
+                        try {
+                            String tmParam = request.getParameter("totalMarks");
+                            if (tmParam != null) totalMarks = Integer.parseInt(tmParam);
+                        } catch (Exception e) {}
+                        
+                        pDAO.updateRearrangeQuestionJson(question.getQuestionId(), pDAO.toJsonArray(rearrangeItemsList), totalMarks);
+                    }
+                    
                     session.setAttribute("message","Question updated successfully");
                     
                     // Clean up multipart items attribute if it exists (for consistency)
@@ -1271,6 +1367,59 @@ try {
                         session.setAttribute("error", "Question saved but drag drop data had errors: " + e.getMessage());
                         application.log("Error saving drag drop data: " + e.getMessage());
                     }
+                        } else if ("REARRANGE".equalsIgnoreCase(questionType)) {
+                            application.log("=== ENTERING REARRANGE SECTION ===");
+                            try {
+                                int newQuestionId = newQuestionIdInserted;
+                                java.util.List<String> rearrangeItemsList = new java.util.ArrayList<>();
+                                String displayStyle = "vertical";
+                                Integer totalMarks = null;
+                                
+                                // Collect items in order
+                                java.util.Map<Integer, String> itemsMap = new java.util.TreeMap<>();
+                                
+                                for (FileItem item : items) {
+                                    if (item.isFormField()) {
+                                        String fieldName = item.getFieldName();
+                                        String fieldValue = item.getString("UTF-8");
+                                        
+                                        if (fieldName.startsWith("rearrangeItem_")) {
+                                            int idx = Integer.parseInt(fieldName.substring(14));
+                                            if (!fieldValue.trim().isEmpty()) {
+                                                itemsMap.put(idx, fieldValue.trim());
+                                            }
+                                        } else if ("rearrangeStyle".equals(fieldName)) {
+                                            displayStyle = fieldValue;
+                                        } else if ("totalMarks".equals(fieldName)) {
+                                            try {
+                                                totalMarks = Integer.parseInt(fieldValue.trim());
+                                            } catch (Exception e) {}
+                                        }
+                                    }
+                                }
+                                
+                                for (String val : itemsMap.values()) {
+                                    rearrangeItemsList.add(val);
+                                }
+                                
+                                // Update extra_data with display style
+                                org.json.JSONObject extraDataObj = new org.json.JSONObject();
+                                extraDataObj.put("style", displayStyle);
+                                
+                                Questions q = pDAO.getQuestionById(newQuestionId);
+                                q.setExtraData(extraDataObj.toString());
+                                
+                                // Save items to relational table
+                                pDAO.addRearrangeData(newQuestionId, rearrangeItemsList);
+                                
+                                // Save items as JSON in drag_items column for fallback
+                                pDAO.updateRearrangeQuestionJson(newQuestionId, pDAO.toJsonArray(rearrangeItemsList), totalMarks);
+                                
+                                application.log("=== REARRANGE DATA SAVED successfully ===");
+                            } catch (Exception e) {
+                                LOGGER.log(Level.SEVERE, "Error saving rearrange data", e);
+                                application.log("Error saving rearrange data: " + e.getMessage());
+                            }
                 }
                 
                 session.setAttribute("message","Question added successfully");
@@ -1394,6 +1543,45 @@ try {
                 } catch (Exception e) {
                     LOGGER.log(Level.SEVERE, "Error saving drag drop data", e);
                     session.setAttribute("error", "Question saved but drag drop data had errors: " + e.getMessage());
+                }
+            } else if ("REARRANGE".equalsIgnoreCase(questionType)) {
+                try {
+                    int newQuestionId = newQuestionIdInserted;
+                    java.util.List<String> rearrangeItemsList = new java.util.ArrayList<>();
+                    java.util.Map<Integer, String> itemsMap = new java.util.TreeMap<>();
+                    
+                    Enumeration<String> paramNames = request.getParameterNames();
+                    while (paramNames.hasMoreElements()) {
+                        String paramName = paramNames.nextElement();
+                        if (paramName.startsWith("rearrangeItem_")) {
+                            int idx = Integer.parseInt(paramName.substring(14));
+                            String val = request.getParameter(paramName);
+                            if (val != null && !val.trim().isEmpty()) {
+                                itemsMap.put(idx, val.trim());
+                            }
+                        }
+                    }
+                    for (String val : itemsMap.values()) rearrangeItemsList.add(val);
+                    
+                    pDAO.addRearrangeData(newQuestionId, rearrangeItemsList);
+                    
+                    String displayStyle = nz(request.getParameter("rearrangeStyle"), "vertical");
+                    org.json.JSONObject extraDataObj = new org.json.JSONObject();
+                    extraDataObj.put("style", displayStyle);
+                    
+                    Questions q = pDAO.getQuestionById(newQuestionId);
+                    q.setExtraData(extraDataObj.toString());
+                    pDAO.updateQuestion(q);
+                    
+                    Integer totalMarks = null;
+                    try {
+                        String tmParam = request.getParameter("totalMarks");
+                        if (tmParam != null) totalMarks = Integer.parseInt(tmParam);
+                    } catch (Exception e) {}
+                    
+                    pDAO.updateRearrangeQuestionJson(newQuestionId, pDAO.toJsonArray(rearrangeItemsList), totalMarks);
+                } catch (Exception e) {
+                    LOGGER.log(Level.SEVERE, "Error saving rearrange data (regular)", e);
                 }
             }
             
