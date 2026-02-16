@@ -725,6 +725,105 @@ public String escapeHtml(String input) {
         height: 100%;
     }
 
+    /* Multi-select functionality */
+    .multi-select-checkbox {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 10;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .question-card.multi-selected, .result-row.multi-selected {
+        background-color: rgba(250, 150, 150, 0.479) !important;
+        outline-offset: -3px;
+        position: relative;
+    }
+
+    .question-card.multi-selected::before, .result-row.multi-selected::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(226, 79, 74, 0.1);
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    .multi-select-toggle {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 20;
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--dark-gray);
+        border-radius: 4px;
+        background: var(--white);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+
+    .multi-select-toggle.checked {
+        background: var(--white);
+        border-color: red;
+    }
+
+    .multi-select-toggle.checked::after {
+        content: '\2713';
+        color: red;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    /* Floating delete button */
+    .floating-delete-selected {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 15px 30px;
+        font-size: 16px;
+        font-weight: 600;
+        box-shadow: 0 10px 25px rgba(220, 38, 38, 0.4);
+        cursor: pointer;
+        display: none;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+
+    .floating-delete-selected:hover {
+        transform: translateX(-50%) scale(1.05);
+        box-shadow: 0 12px 30px rgba(220, 38, 38, 0.5);
+    }
+
+    .floating-delete-selected.show {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .floating-delete-selected i {
+        font-size: 18px;
+    }
+
+    /* Checkbox container to avoid interfering with card clicks */
+    .checkbox-container {
+        position: relative;
+        display: inline-block;
+    }
+
 </style>
 
 <%@ include file="header-messages.jsp" %>
@@ -882,10 +981,6 @@ public String escapeHtml(String input) {
             <input type="hidden" name="csrf_token" value="<%= csrf_token %>">
         </form>
 
-        <!-- Scroll to Top Button -->
-        <button class="scroll-to-top" id="scrollToTopBtn" title="Scroll to top">
-            <i class="fas fa-arrow-up"></i>
-        </button>
                         
             <% if (request.getParameter("eid") == null) { %>
                 <div style="overflow-x:auto;">
@@ -942,8 +1037,11 @@ public String escapeHtml(String input) {
                                 data-percentage="<%= percentage %>"
                                 data-status="<%= status.toLowerCase() %>">
                                 <td>
-                                    <input type="checkbox" name="examIds" value="<%= examId %>" 
-                                           class="record-checkbox" onchange="updateBulkDeleteButton()">
+                                    <div class="checkbox-container">
+                                        <input type="checkbox" name="examIds" value="<%= examId %>" id="checkbox-<%= examId %>"
+                                               class="record-checkbox" onchange="toggleResultSelection(this)">
+                                        <label for="checkbox-<%= examId %>" class="multi-select-toggle"></label>
+                                    </div>
                                 </td>
                                 <td><%= fullName %></td>
                                 <td><%= studentId %></td>
@@ -1094,17 +1192,20 @@ public String escapeHtml(String input) {
     </main>
 </div>
 
-<!-- FLOATING DELETE BUTTON - MOVED OUTSIDE SCROLLING CONTAINER -->
-<div id="floatingDeleteBtn" class="floating-delete-btn inactive">
-    <button type="button" class="btn btn-danger" onclick="handleBulkDelete()">
-        <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCountBadge">0</span>)
+<!-- Floating Delete Selected Button -->
+<button id="floatingDeleteBtn" class="floating-delete-selected" onclick="handleBulkDelete()">
+    <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
+</button>
+
+<!-- Floating Scroll Buttons -->
+<div class="floating-scroll" id="floatingScroll">
+    <button class="scroll-btn" id="scrollUpBtn" title="Scroll to Top">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+    <button class="scroll-btn" id="scrollDownBtn" title="Scroll to Bottom">
+        <i class="fas fa-chevron-down"></i>
     </button>
 </div>
-
-<!-- Scroll to Top Button -->
-<button class="scroll-to-top" id="scrollToTopBtn" title="Scroll to top">
-    <i class="fas fa-arrow-up"></i>
-</button>
 <div id="confirmationModal" class="modal" style="display: none;">
     <div class="modal-content">
         <div class="modal-header">
@@ -1121,262 +1222,6 @@ public String escapeHtml(String input) {
     </div>
 </div>
 
-<style>
-/* Modal Styles */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-    animation: fadeIn 0.3s;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.modal-content {
-    background-color: #fff;
-    margin: 10% auto;
-    padding: 0;
-    border-radius: 8px;
-    width: 90%;
-    max-width: 500px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    animation: slideDown 0.3s;
-}
-
-@keyframes slideDown {
-    from { transform: translateY(-50px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-.modal-header {
-    padding: 16px 20px;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-    border-radius: 8px 8px 0 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-header h3 {
-    margin: 0;
-    color: #333;
-    font-size: 18px;
-}
-
-.close-modal {
-    color: #aaa;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    line-height: 20px;
-}
-
-.close-modal:hover {
-    color: #000;
-}
-
-.modal-body {
-    padding: 20px;
-    color: #333;
-    font-size: 16px;
-    line-height: 1.5;
-}
-
-.modal-footer {
-    padding: 16px 20px;
-    background-color: #f8f9fa;
-    border-top: 1px solid #dee2e6;
-    border-radius: 0 0 8px 8px;
-    text-align: right;
-}
-
-/* Floating delete button - PROFESSIONAL VERSION */
-.floating-delete-btn {
-    position: fixed;
-    bottom: 80px;
-    right: 30px;
-    z-index: 9999;
-    display: flex;
-    animation: floatIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 8px 20px rgba(220, 38, 38, 0.35);
-    border: none;
-    border-radius: 50px;
-    background: linear-gradient(145deg, #dc2626, #b91c1c);
-    padding: 0;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    transform-origin: center;
-    will-change: transform, opacity, box-shadow;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.floating-delete-btn button {
-    border: none;
-    border-radius: 50px;
-    background: transparent;
-    color: white;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    font-weight: 600;
-    white-space: nowrap;
-    padding: 14px 28px;
-    font-size: 15px;
-    letter-spacing: 0.5px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.3);
-}
-
-.floating-delete-btn button i {
-    font-size: 16px;
-    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
-}
-
-.floating-delete-btn:hover {
-    transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 12px 28px rgba(220, 38, 38, 0.45);
-    background: linear-gradient(145deg, #ef4444, #dc2626);
-}
-
-.floating-delete-btn:active {
-    transform: translateY(-2px) scale(0.98);
-    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
-}
-
-.floating-delete-btn.inactive {
-    opacity: 0;
-    transform: translateY(20px) scale(0.9);
-    pointer-events: none;
-    visibility: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.floating-delete-btn.active {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    pointer-events: auto;
-    visibility: visible;
-}
-
-/* Scroll to Top Button - Professional Version */
-.scroll-to-top {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    z-index: 9998;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(145deg, var(--primary-blue), var(--secondary-blue));
-    color: white;
-    border: none;
-    border-radius: 50px;
-    width: 50px;
-    height: 50px;
-    box-shadow: 0 4px 15px rgba(9, 41, 77, 0.25);
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    opacity: 0;
-    transform: translateY(20px) scale(0.9);
-    visibility: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-}
-
-.scroll-to-top.show {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    visibility: visible;
-}
-
-.scroll-to-top:hover {
-    transform: translateY(-4px) scale(1.05);
-    box-shadow: 0 8px 25px rgba(9, 41, 77, 0.35);
-    background: linear-gradient(145deg, var(--secondary-blue), var(--primary-blue));
-}
-
-.scroll-to-top:active {
-    transform: translateY(-2px) scale(0.98);
-}
-
-.scroll-to-top i {
-    font-size: 22px;
-    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
-}
-    @keyframes floatIn {
-    0% {
-        opacity: 0;
-        transform: translateY(40px) scale(0.8);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-/* Responsive adjustments for floating buttons */
-@media (max-width: 768px) {
-    .floating-delete-btn {
-        bottom: 70px;
-        right: 20px;
-    }
-    
-    .floating-delete-btn button {
-        padding: 12px 24px;
-        font-size: 14px;
-    }
-    
-    .scroll-to-top {
-        bottom: 20px;
-        right: 20px;
-        width: 45px;
-        height: 45px;
-    }
-    
-    .scroll-to-top i {
-        font-size: 20px;
-    }
-}
-
-@media (max-width: 480px) {
-    .floating-delete-btn {
-        bottom: 60px;
-        right: 15px;
-        left: 15px;
-        width: auto;
-    }
-    
-    .floating-delete-btn button {
-        width: 100%;
-        justify-content: center;
-        padding: 12px 20px;
-    }
-    
-    .scroll-to-top {
-        bottom: 15px;
-        right: 15px;
-        width: 40px;
-        height: 40px;
-    }
-}
-
-/* Remove any old bulkDeleteBtn styles if they exist */
-#bulkDeleteBtn {
-    display: none !important;
-}
-</style>
 
 <!-- Font Awesome for Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -1404,6 +1249,7 @@ public String escapeHtml(String input) {
         // Initialize functionality
         initializeCheckboxHandlers();
         initializeButtonHandlers();
+        initScrollButtons();
         
         // Apply initial filters
         applyFilters();
@@ -1670,21 +1516,89 @@ public String escapeHtml(String input) {
         form.submit();
     }
 
+    function toggleResultSelection(checkbox) {
+        const row = checkbox.closest('.result-row');
+        const toggle = checkbox.nextElementSibling;
+
+        if (checkbox.checked) {
+            row.classList.add('multi-selected');
+            if (toggle) toggle.classList.add('checked');
+        } else {
+            row.classList.remove('multi-selected');
+            if (toggle) toggle.classList.remove('checked');
+        }
+        updateBulkDeleteButton();
+    }
+
+    function initScrollButtons() {
+        const floatingScroll = document.getElementById('floatingScroll');
+        const scrollUpBtn = document.getElementById('scrollUpBtn');
+        const scrollDownBtn = document.getElementById('scrollDownBtn');
+
+        if (!floatingScroll || !scrollUpBtn || !scrollDownBtn) return;
+
+        function toggleScrollButtons() {
+            const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+            const documentHeight = document.documentElement.scrollHeight;
+            const windowHeight = window.innerHeight;
+
+            if (scrollPosition > 200) {
+                floatingScroll.classList.add('visible');
+            } else {
+                floatingScroll.classList.remove('visible');
+            }
+
+            if (scrollPosition + windowHeight >= documentHeight - 100) {
+                scrollDownBtn.style.display = 'none';
+            } else {
+                scrollDownBtn.style.display = 'flex';
+            }
+
+            if (scrollPosition < 100) {
+                scrollUpBtn.style.display = 'none';
+            } else {
+                scrollUpBtn.style.display = 'flex';
+            }
+        }
+
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        function scrollToBottom() {
+            window.scrollTo({
+                top: document.documentElement.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+
+        scrollUpBtn.addEventListener('click', scrollToTop);
+        scrollDownBtn.addEventListener('click', scrollToBottom);
+        window.addEventListener('scroll', toggleScrollButtons);
+        toggleScrollButtons();
+    }
+
     function updateBulkDeleteButton() {
         const selectedCheckboxes = document.querySelectorAll('.record-checkbox:checked');
-        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
-        const selectedCount = document.getElementById('selectedCount');
+        const floatingBtn = document.getElementById('floatingDeleteBtn');
+        const countSpan = document.getElementById('selectedCount');
         
         const selectedCountNum = selectedCheckboxes.length;
-        selectedCount.textContent = selectedCountNum;
+
+        if (countSpan) {
+            countSpan.textContent = selectedCountNum;
+        }
         
         // Show/hide bulk delete button based on selection
-        if (selectedCountNum > 0) {
-            bulkDeleteBtn.style.display = 'inline-block';
-            bulkDeleteBtn.disabled = false;
-        } else {
-            bulkDeleteBtn.style.display = 'none';
-            bulkDeleteBtn.disabled = true;
+        if (floatingBtn) {
+            if (selectedCountNum > 0) {
+                floatingBtn.classList.add('show');
+            } else {
+                floatingBtn.classList.remove('show');
+            }
         }
         
         // Update select all checkbox state
@@ -2150,105 +2064,7 @@ public String escapeHtml(String input) {
         });
     }
     
-    // Floating delete button functionality - FIXED VERSION
-    function updateFloatingDeleteButton() {
-        const selectedCheckboxes = document.querySelectorAll('.record-checkbox:checked');
-        const floatingDeleteBtn = document.getElementById('floatingDeleteBtn');
-        const selectedCountBadge = document.getElementById('selectedCountBadge');
-        
-        const selectedCountNum = selectedCheckboxes.length;
-        
-        if (selectedCountBadge) {
-            selectedCountBadge.textContent = selectedCountNum;
-        }
-        
-        // Update floating delete button state based on selection
-        if (floatingDeleteBtn) {
-            if (selectedCountNum > 0) {
-                floatingDeleteBtn.classList.add('active');
-                floatingDeleteBtn.classList.remove('inactive');
-                floatingDeleteBtn.style.visibility = 'visible';
-                floatingDeleteBtn.style.opacity = '1';
-                floatingDeleteBtn.style.pointerEvents = 'auto';
-            } else {
-                floatingDeleteBtn.classList.add('inactive');
-                floatingDeleteBtn.classList.remove('active');
-                floatingDeleteBtn.style.visibility = 'hidden';
-                floatingDeleteBtn.style.opacity = '0';
-                floatingDeleteBtn.style.pointerEvents = 'none';
-            }
-        }
-    }
     
-    function handleFloatingBulkDelete() {
-        handleBulkDelete();
-    }
-    
-    // Update the updateBulkDeleteButton function to also update floating button
-    function updateBulkDeleteButton() {
-        const selectedCheckboxes = document.querySelectorAll('.record-checkbox:checked');
-        const selectedCountBadge = document.getElementById('selectedCountBadge');
-        
-        const selectedCountNum = selectedCheckboxes.length;
-        
-        if (selectedCountBadge) {
-            selectedCountBadge.textContent = selectedCountNum;
-        }
-        
-        // Update select all checkbox state
-        const selectAll = document.getElementById('selectAll');
-        if (selectAll) {
-            const totalCheckboxes = document.querySelectorAll('.record-checkbox').length;
-            selectAll.checked = selectedCountNum === totalCheckboxes && totalCheckboxes > 0;
-            selectAll.indeterminate = selectedCountNum > 0 && selectedCountNum < totalCheckboxes;
-        }
-        
-        // Also update floating delete button
-        updateFloatingDeleteButton();
-    }
-    
-    // Add scroll to top functionality
-    const scrollToTopBtn = document.getElementById('scrollToTopBtn');
-    
-    if (scrollToTopBtn) {
-        // Show/hide scroll to top button based on scroll position
-        window.addEventListener('scroll', function() {
-            if (window.pageYOffset > 300) {  // Show after scrolling down 300px
-                scrollToTopBtn.classList.add('show');
-            } else {
-                scrollToTopBtn.classList.remove('show');
-            }
-        });
-        
-        // Scroll to top when button is clicked
-        scrollToTopBtn.addEventListener('click', function() {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        });
-    }
-    
-
-    
-    // Initialize floating delete button
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialize floating delete button state
-        updateFloatingDeleteButton();
-        
-        // Wire up floating delete button
-        const floatingDeleteBtn = document.getElementById('floatingDeleteBtn');
-        if (floatingDeleteBtn) {
-            const btn = floatingDeleteBtn.querySelector('button');
-            if (btn) {
-                btn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleBulkDelete();
-                });
-            }
-        }
-    });
     
     
     // Modal functions
