@@ -1,5 +1,9 @@
 <%@page import="myPackage.classes.User"%>
 <%@page import="java.util.ArrayList"%>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <% 
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
@@ -820,18 +824,22 @@ if (targetUser != null) {
         }
         
         /* Responsive Design */
+        @media (max-width: 992px) {
+            .sidebar {
+                display: none;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 15px;
+                width: 100%;
+                box-sizing: border-box;
+            }
+        }
+
         @media (max-width: 768px) {
             .dashboard-container {
                 flex-direction: column;
-            }
-            
-            .sidebar {
-                width: 100%;
-                height: auto;
-                position: static;
-                box-shadow: none;
-                border-right: none;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             }
             
             .sidebar-nav {

@@ -117,7 +117,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             padding: var(--spacing-xl);
             overflow-y: auto;
             background: transparent;
-            margin-left: 180px; /* Add this to push content right */
+            margin-left: 200px;
             min-height: 100vh;
         }
 
@@ -126,12 +126,12 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             .sidebar {
                 width: 100%;
                 height: auto;
-                position: static; /* Back to static on mobile */
+                position: static;
             }
 
             .content-area,
             .main-content {
-                margin-left: 0; /* Remove margin on mobile */
+                margin-left: 0;
                 padding: var(--spacing-lg);
             }
         }
@@ -451,6 +451,8 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             padding: var(--spacing-md) 0;
             border-bottom: 1px solid var(--light-gray);
             transition: background-color var(--transition-fast);
+            flex-wrap: wrap;
+            gap: 10px;
         }
         
         .info-item:hover {

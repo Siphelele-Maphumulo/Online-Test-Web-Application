@@ -631,9 +631,13 @@ for (User user : studentList) {
         }
         
         .accounts-table {
-            display: block;
+            display: table;
+            width: 100%;
+        }
+
+        .table-responsive {
             overflow-x: auto;
-            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
         }
         
         .card-header {
@@ -844,7 +848,7 @@ for (User user : studentList) {
                 </div>
             </div>
             
-            <div style="overflow-x: auto;">
+            <div class="table-responsive">
                 <table class="accounts-table" id="studentTable">
                     <thead>
                         <tr>

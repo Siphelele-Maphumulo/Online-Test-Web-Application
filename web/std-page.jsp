@@ -2,6 +2,10 @@
 <%@page import="myPackage.classes.User"%>
 <%@page import="myPackage.DatabaseClass"%>
 <%@ page isELIgnored="true" %>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
  
 <% 
@@ -67,32 +71,26 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     /* Header row - 3 column flex layout */
     .header-row {
         display: flex;
-        flex-wrap: wrap;
         align-items: center;
+        justify-content: space-between;
         width: 100%;
-        margin: 0 -10px; /* Reduced gap */
+        gap: 10px;
     }
 
     /* Logo Column - Compact size */
     .logo-col {
-        flex: 0 0 15%;
-        max-width: 15%;
-        padding: 0 10px;
+        flex: 0 0 auto;
     }
 
     /* Title Column - More space */
     .title-col {
-        flex: 0 0 70%;
-        max-width: 70%;
-        padding: 0 10px;
+        flex: 1;
         text-align: center;
     }
 
     /* User Column - Compact size */
     .user-col {
-        flex: 0 0 15%;
-        max-width: 15%;
-        padding: 0 10px;
+        flex: 0 0 auto;
     }
 
     /* Logo Styles - Smaller */
@@ -253,26 +251,25 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
     @media (max-width: 767.98px) {
         .dashboard-header {
-            padding: 4px 0; /* Very compact */
-            height: 48px;
+            padding: 4px 0;
+            height: 50px;
         }
         
         .header-container {
-            padding: 0 8px;
+            padding: 0 10px;
         }
         
         .header-logo {
-            max-height: 28px; /* Much smaller */
+            max-height: 30px;
         }
         
         .header-title {
-            font-size: 0.8125rem; /* Smaller */
+            font-size: 0.85rem;
             line-height: 1.2;
         }
         
         .header-subtitle {
-            font-size: 0.5625rem; /* Smaller */
-            margin-top: 0;
+            display: none;
         }
         
         .user-name {
@@ -284,8 +281,8 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         }
         
         .logout-btn {
-            padding: 3px 6px; /* Very compact */
-            font-size: 0.6875rem;
+            padding: 4px 8px;
+            font-size: 0.75rem;
         }
         
         .logout-btn span {
@@ -294,22 +291,6 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         
         .logout-btn i {
             margin-right: 0;
-            font-size: 0.6875rem;
-        }
-        
-        .logo-col {
-            flex: 0 0 20%;
-            max-width: 20%;
-        }
-        
-        .title-col {
-            flex: 0 0 60%;
-            max-width: 60%;
-        }
-        
-        .user-col {
-            flex: 0 0 20%;
-            max-width: 20%;
         }
         
         .dashboard-container {
@@ -673,7 +654,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 <div class="student-panel-container">
 
   <!-- MAIN CONTENT -->
-  <main class="main-content" style="margin-left: 13%; margin-top: -5%;">
+  <main class="main-content">
     <%
         if(session.getAttribute("userStatus") != null && session.getAttribute("userStatus").equals("1")) {
             String pgprt = request.getParameter("pgprt");
