@@ -166,7 +166,7 @@ public class DatabaseClass {
         }
     }
 
-    private String toJsonArray(java.util.List<String> values) {
+    public String toJsonArray(java.util.List<String> values) {
         if (values == null) {
             return "[]";
         }
@@ -1507,6 +1507,13 @@ public int addNewQuestionReturnId(String questionText, String opt1, String opt2,
             pstm.setInt(1, questionId);
             int deletedTargets = pstm.executeUpdate();
             LOGGER.log(Level.INFO, "Cleared drop_targets for questionId={0}, rows={1}", new Object[]{questionId, deletedTargets});
+            pstm.close();
+            pstm = null;
+
+            pstm = conn.prepareStatement("DELETE FROM rearrange_items WHERE question_id = ?");
+            pstm.setInt(1, questionId);
+            int deletedRearrange = pstm.executeUpdate();
+            LOGGER.log(Level.INFO, "Cleared rearrange_items for questionId={0}, rows={1}", new Object[]{questionId, deletedRearrange});
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error clearing drag-drop data for questionId=" + questionId + ": " + e.getMessage(), e);
         } finally {
@@ -1729,6 +1736,10 @@ public Questions getQuestionById(int questionId) {
                 if (("DRAG_AND_DROP".equalsIgnoreCase(question.getQuestionType()) || "RE_ARRANGE".equalsIgnoreCase(question.getQuestionType()))) {
                     question.setDragItems(getDragItemsByQuestionIdOld(question.getQuestionId()));
                     question.setDropTargets(getDropTargetsByQuestionIdOld(question.getQuestionId()));
+                } else if ("REARRANGE".equalsIgnoreCase(question.getQuestionType())) {
+                    question.setRearrangeItems(getRearrangeItems(question.getQuestionId()));
+                    // Fallback JSON for UI
+                    question.setRearrangeItemsJson(question.getDragItemsJson());
                 }
             } catch (SQLException sqle) {
                 // Columns might not exist yet
@@ -2434,6 +2445,10 @@ public ArrayList getQuestions(String courseName, int questions) {
         if (("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType()) || "RE_ARRANGE".equalsIgnoreCase(q.getQuestionType()))) {
             q.setDragItems(getDragItemsByQuestionIdOld(q.getQuestionId()));
             q.setDropTargets(getDropTargetsByQuestionIdOld(q.getQuestionId()));
+        } else if ("REARRANGE".equalsIgnoreCase(q.getQuestionType())) {
+            q.setRearrangeItems(getRearrangeItems(q.getQuestionId()));
+            // Also populate rearrangeItemsJson for fallback in UI
+            q.setRearrangeItemsJson(q.getDragItemsJson());
         }
     }
     return list;
@@ -5557,11 +5572,14 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
      */
     public ArrayList<RearrangeItem> getRearrangeItems(int questionId) {
         ArrayList<RearrangeItem> items = new ArrayList<>();
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
         try {
-            String sql = "SELECT * FROM rearrange_items WHERE question_id = ? ORDER BY id";
-            PreparedStatement pstmt = conn.prepareStatement(sql);
+            // Order by correct_position to ensure items are returned in the intended sequence
+            String sql = "SELECT * FROM rearrange_items WHERE question_id = ? ORDER BY correct_position ASC";
+            pstmt = conn.prepareStatement(sql);
             pstmt.setInt(1, questionId);
-            ResultSet rs = pstmt.executeQuery();
+            rs = pstmt.executeQuery();
             
             while (rs.next()) {
                 RearrangeItem item = new RearrangeItem();
@@ -5571,9 +5589,85 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
                 items.add(item);
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error getting rearrange items", e);
+        } finally {
+            try { if (rs != null) rs.close(); } catch (SQLException e) {}
+            try { if (pstmt != null) pstmt.close(); } catch (SQLException e) {}
         }
         return items;
+    }
+
+    public void addRearrangeData(int questionId, java.util.List<String> items) {
+        Connection conn = null;
+        PreparedStatement pstm = null;
+        try {
+            conn = getConnection();
+            String sql = "INSERT INTO rearrange_items (question_id, item_text, correct_position, item_order) VALUES (?, ?, ?, ?)";
+            pstm = conn.prepareStatement(sql);
+            for (int i = 0; i < items.size(); i++) {
+                pstm.setInt(1, questionId);
+                pstm.setString(2, items.get(i));
+                pstm.setInt(3, i + 1); // 1-based position
+                pstm.setInt(4, i + 1); // 1-based order
+                pstm.addBatch();
+            }
+            pstm.executeBatch();
+            LOGGER.log(Level.INFO, "Added {0} rearrange items for questionId={1}", new Object[]{items.size(), questionId});
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error adding rearrange data: " + e.getMessage(), e);
+        } finally {
+            try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
+            try { if (conn != null) conn.close(); } catch (SQLException e) {}
+        }
+    }
+
+    public void clearRearrangeData(int questionId) {
+        Connection conn = null;
+        PreparedStatement pstm = null;
+        try {
+            conn = getConnection();
+            String sql = "DELETE FROM rearrange_items WHERE question_id = ?";
+            pstm = conn.prepareStatement(sql);
+            pstm.setInt(1, questionId);
+            int deleted = pstm.executeUpdate();
+            LOGGER.log(Level.INFO, "Cleared rearrange items for questionId={0}, rows={1}", new Object[]{questionId, deleted});
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error clearing rearrange data for questionId=" + questionId + ": " + e.getMessage(), e);
+        } finally {
+            try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
+            try { if (conn != null) conn.close(); } catch (SQLException e) {}
+        }
+    }
+
+    public void updateRearrangeQuestionJson(int questionId, String itemsJson, Integer totalMarks) {
+        Connection conn = null;
+        PreparedStatement pstm = null;
+        try {
+            conn = getConnection();
+            // Store rearrange items in the drag_items column for consistency with other interactive types
+            String sql = "UPDATE questions SET drag_items=?, marks=? WHERE question_id=?";
+            pstm = conn.prepareStatement(sql);
+            pstm.setString(1, itemsJson);
+            if (totalMarks != null) {
+                pstm.setBigDecimal(2, new BigDecimal(totalMarks));
+            } else {
+                // Default to number of items
+                int count = 1;
+                try {
+                    org.json.JSONArray arr = new org.json.JSONArray(itemsJson);
+                    count = Math.max(1, arr.length());
+                } catch (Exception e) {}
+                pstm.setBigDecimal(2, new BigDecimal(count));
+            }
+            pstm.setInt(3, questionId);
+            pstm.executeUpdate();
+            LOGGER.log(Level.INFO, "Updated rearrange question JSON for questionId={0}", questionId);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error updating rearrange question JSON", e);
+        } finally {
+            try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
+            try { if (conn != null) conn.close(); } catch (SQLException e) {}
+        }
     }
     
     /**

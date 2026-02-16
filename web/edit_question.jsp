@@ -70,13 +70,14 @@
         currentCourseName = questionToEdit.getCourseName();
     }
     
-    // Drag and Drop data for editing
+    // Drag and Drop/Rearrange data for editing
     int totalMarks = 1;
     String dragItemsJson = "[]";
     String dropTargetsJson = "[]";
     String dragCorrectTargetsJson = "[]";
+    String rearrangeItemsJson_db = "[]";
 
-    if ("DRAG_AND_DROP".equals(questionType) && questionToEdit != null) {
+    if (("DRAG_AND_DROP".equals(questionType) || "REARRANGE".equals(questionType)) && questionToEdit != null) {
         try {
             // Get marks from the question object
             if (questionToEdit.getTotalMarks() > 0) {
@@ -95,6 +96,15 @@
                 
                 val = dragDropData.get("drag_correct_targets");
                 dragCorrectTargetsJson = (val != null && !val.trim().isEmpty() && !val.equals("null")) ? val : "[]";
+            }
+
+            if ("REARRANGE".equals(questionType)) {
+                ArrayList<myPackage.classes.RearrangeItem> rItems = pDAO.getRearrangeItems(questionId);
+                JSONArray rArray = new JSONArray();
+                for (myPackage.classes.RearrangeItem ri : rItems) {
+                    rArray.put(ri.getItemText());
+                }
+                rearrangeItemsJson_db = rArray.toString();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -1206,6 +1216,7 @@
                                 <option value="TrueFalse" <%= "TrueFalse".equals(questionType) ? "selected" : "" %>>True / False</option>
                                 <option value="Code" <%= "Code".equals(questionType) ? "selected" : "" %>>Code Snippet</option>
                                 <option value="DRAG_AND_DROP" <%= "DRAG_AND_DROP".equals(questionType) ? "selected" : "" %>>Drag and Drop</option>
+                                <option value="REARRANGE" <%= "REARRANGE".equals(questionType) ? "selected" : "" %>>Rearrange (Order Items)</option>
                             </select>
                         </div>
                     </div>
@@ -1382,6 +1393,54 @@
                         <input type="hidden" id="correctTargetsHidden" name="correctTargetsHidden" value="">
                     </div>
                     
+                    <!-- Rearrange Section -->
+                    <div id="editRearrangeOptions" style="display: none;">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="fas fa-star" style="color: var(--warning);"></i>
+                                    Total Marks
+                                </label>
+                                <input type="number" id="rearrangeTotalMarks" name="totalMarks" class="form-control"
+                                       value="1" min="1" max="100">
+                                <small class="form-hint">Total marks for this rearrange question</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="fas fa-paint-brush" style="color: var(--info);"></i>
+                                    Display Style
+                                </label>
+                                <select name="rearrangeStyle" id="editRearrangeStyleSelect" class="form-select">
+                                    <option value="vertical">Vertical (Stacked)</option>
+                                    <option value="horizontal">Horizontal (Side by Side)</option>
+                                    <option value="grid">Grid Layout</option>
+                                </select>
+                                <small class="form-hint">How items are displayed</small>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-th" style="color: var(--info);"></i>
+                                Items to Rearrange
+                            </label>
+                            <div class="alert alert-info" style="margin-bottom: 15px; font-size: 13px; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 10px;">
+                                <i class="fas fa-info-circle"></i>
+                                <span>Add items in their <strong>correct order</strong>. Students will need to rearrange them.</span>
+                            </div>
+                            <div id="rearrangeItemsContainer" class="items-list">
+                                <!-- Items will be added here -->
+                            </div>
+                            <button type="button" class="btn btn-outline add-item-btn" onclick="addRearrangeItem()">
+                                <i class="fas fa-plus-circle"></i>
+                                Add Rearrange Item
+                            </button>
+                        </div>
+
+                        <input type="hidden" id="rearrangeItemsHidden" name="rearrangeItemsHidden" value="">
+                    </div>
+
                     <!-- Image Upload Section -->
                     <div class="form-group">
                         <label class="form-label"><i class="fas fa-image" style="color: var(--info);"></i> Upload Question Image (Optional)</label>
@@ -1442,6 +1501,7 @@
     const dragItemsFromDB = <%= dragItemsJson %>;
     const dropTargetsFromDB = <%= dropTargetsJson %>;
     const correctTargetsFromDB = <%= dragCorrectTargetsJson %>;
+    const rearrangeItemsFromDB = <%= rearrangeItemsJson_db %>;
     const totalMarksFromDB = <%= totalMarks %>;
     
     console.log('=== JSON Data from DB ===');
@@ -2099,6 +2159,7 @@
         const multiple = document.getElementById("editMultipleCorrectContainer");
         const trueFalse = document.getElementById("editTrueFalseContainer");
         const dragDrop = document.getElementById("editDragDropOptions");
+        const rearrange = document.getElementById("editRearrangeOptions");
         const dragDropEditor = document.getElementById("dragDropEditor");
         const correct = document.getElementById("editCorrectAnswer");
         const trueFalseSelect = document.getElementById("editTrueFalseSelect");
@@ -2111,6 +2172,7 @@
         multiple.style.display = "none";
         trueFalse.style.display = "none";
         dragDrop.style.display = "none";
+        rearrange.style.display = "none";
         dragDropEditor.style.display = "none";
         
         // Remove required attributes from all elements
@@ -2182,6 +2244,18 @@
                 }, 100);
             }
             
+        } else if (qType === "REARRANGE") {
+            // Show rearrange section
+            rearrange.style.display = "block";
+
+            // Hide MCQ options
+            mcq.style.display = "none";
+
+            // Initialize rearrange data
+            setTimeout(() => {
+                initializeRearrangeEdit();
+            }, 100);
+
         } else if (qType === "MultipleSelect") {
             // Show MCQ options and multiple select container
             mcq.style.display = "block";
@@ -2427,6 +2501,12 @@ window.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
+        } else if (qType === "REARRANGE") {
+            prepareRearrangeDataForSubmit();
+            const items = collectRearrangeItemsFromUI();
+            if (items.length < 2) {
+                msg = "At least 2 items are required for rearrange questions.";
+            }
         } else if (qType === "MultipleSelect") {
             const opt1 = document.getElementById('editOpt1').value.trim();
             const opt2 = document.getElementById('editOpt2').value.trim();
@@ -2757,6 +2837,84 @@ window.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // Rearrange functions for edit
+    function initializeRearrangeEdit() {
+        const container = document.getElementById("rearrangeItemsContainer");
+        if (!container) return;
+        container.innerHTML = "";
+
+        if (typeof rearrangeItemsFromDB !== "undefined" && rearrangeItemsFromDB.length > 0) {
+            rearrangeItemsFromDB.forEach(item => {
+                addRearrangeItemToUI(item);
+            });
+        } else {
+            addRearrangeItemToUI("");
+            addRearrangeItemToUI("");
+        }
+
+        // Load style from extra_data
+        try {
+            const extraDataStr = '<%= questionToEdit != null && questionToEdit.getExtraData() != null ? questionToEdit.getExtraData().replace("'", "\\'") : "{}" %>';
+            const extraData = JSON.parse(extraDataStr);
+            if (extraData && extraData.style) {
+                document.getElementById('editRearrangeStyleSelect').value = extraData.style;
+            }
+        } catch (e) {
+            console.error('Error parsing extra_data for rearrange style:', e);
+        }
+
+        // Load marks
+        const marksInput = document.getElementById("rearrangeTotalMarks");
+        if (marksInput) {
+            marksInput.value = totalMarksFromDB || rearrangeItemsFromDB.length || 1;
+        }
+    }
+
+    function addRearrangeItem() {
+        addRearrangeItemToUI("");
+    }
+
+    function addRearrangeItemToUI(text) {
+        const container = document.getElementById("rearrangeItemsContainer");
+        const index = container.querySelectorAll(".drag-item").length + 1;
+        const div = document.createElement("div");
+        div.className = "drag-item row-draggable";
+        div.draggable = true;
+        div.innerHTML = `
+            <i class="fas fa-grip-vertical drag-handle"></i>
+            <textarea name="rearrangeItem_${index}" class="form-control" rows="1" placeholder="Item text..." oninput="autoResize(this)">${escapeHtml(text)}</textarea>
+            <button type="button" class="remove-btn" onclick="this.parentElement.remove()">×</button>
+        `;
+
+        div.addEventListener('dragstart', handleRowDragStart);
+        div.addEventListener('dragover', handleRowDragOver);
+        div.addEventListener('drop', handleRowDrop);
+        div.addEventListener('dragend', handleRowDragEnd);
+
+        container.appendChild(div);
+        autoResize(div.querySelector('textarea'));
+    }
+
+    function collectRearrangeItemsFromUI() {
+        const inputs = document.querySelectorAll("#rearrangeItemsContainer textarea");
+        return Array.from(inputs).map(input => input.value.trim()).filter(v => v !== "");
+    }
+
+    function prepareRearrangeDataForSubmit() {
+        const items = collectRearrangeItemsFromUI();
+        document.getElementById("rearrangeItemsHidden").value = JSON.stringify(items);
+    }
+
+    function escapeHtml(text) {
+        if (!text) return "";
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     // Test function to verify orientation functionality in edit mode
     function testEditOrientation() {
         console.log('Testing orientation functionality in edit mode:');
