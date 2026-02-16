@@ -2981,8 +2981,24 @@ private String getCorrectAnswer(int qid) {
             String result = rs.getString("correct");
             String questionType = rs.getString("question_type");
             
-            // For Drag and Drop, return the correct targets JSON in standard format
+            // For Drag and Drop or Rearrange, return the correct answer in JSON format
             if ("DRAG_AND_DROP".equalsIgnoreCase(questionType) || "REARRANGE".equalsIgnoreCase(questionType) || "RE_ARRANGE".equalsIgnoreCase(questionType)) {
+                // Special handling for REARRANGE (singular) - it uses a JSON array of IDs
+                if ("REARRANGE".equalsIgnoreCase(questionType)) {
+                    try {
+                        ArrayList<RearrangeItem> items = getRearrangeItems(qid);
+                        if (items != null && !items.isEmpty()) {
+                            org.json.JSONArray correctArr = new org.json.JSONArray();
+                            for (RearrangeItem item : items) {
+                                correctArr.put(item.getId());
+                            }
+                            return correctArr.toString();
+                        }
+                    } catch (Exception e) {
+                        LOGGER.log(Level.WARNING, "Error building rearrange correct answer for Q" + qid + ": " + e.getMessage());
+                    }
+                }
+
                 org.json.JSONObject correctJson = new org.json.JSONObject();
                 try {
                     ArrayList<DragItem> dragItems = getDragItemsByQuestionIdOld(qid);
@@ -3191,7 +3207,7 @@ private String getAnswerStatus(String ans, String correct) {
         return "incorrect";
     }
 
-    // 3. Compare based on question type (drag-drop, multi-select or single)
+    // 3. Compare based on question type (drag-drop, rearrange, multi-select or single)
     if (userAnswer.startsWith("{") && correctAnswer.startsWith("{")) {
         try {
             org.json.JSONObject userObj = new org.json.JSONObject(userAnswer);
@@ -3222,6 +3238,34 @@ private String getAnswerStatus(String ans, String correct) {
         }
     }
     
+    // Handle REARRANGE JSON arrays
+    if (userAnswer.startsWith("[") && correctAnswer.startsWith("[")) {
+        try {
+            org.json.JSONArray userArr = new org.json.JSONArray(userAnswer);
+            org.json.JSONArray correctArr = new org.json.JSONArray(correctAnswer);
+
+            int correctCount = 0;
+            int totalCount = correctArr.length();
+
+            for (int i = 0; i < totalCount && i < userArr.length(); i++) {
+                if (userArr.get(i).equals(correctArr.get(i))) {
+                    correctCount++;
+                }
+            }
+
+            if (correctCount == totalCount && totalCount > 0) {
+                return "correct";
+            } else if (correctCount > 0) {
+                // Calculate partial marks (assuming 1 mark per correct position by default)
+                return "partial:" + (float)correctCount;
+            } else {
+                return "incorrect";
+            }
+        } catch (Exception e) {
+            return "incorrect";
+        }
+    }
+
     if (correctAnswer.contains("|")) {
         // Normalize multi-select answers and support partial marks
         String[] ansParts = userAnswer.split("\\|");
@@ -3817,15 +3861,18 @@ public ArrayList<Exams> getAllExamsWithResults() {
     }
     
     ArrayList<Exams> exams = new ArrayList<>();
+    PreparedStatement ps = null;
+    ResultSet rs = null;
 
-    String query = "SELECT u.first_name, u.last_name, u.user_name, u.email, " +
-                   "e.exam_id, e.std_id, e.course_name, e.total_marks, e.obt_marks, " +
-                   "e.date, e.start_time, e.end_time, e.exam_time, e.status, e.result_status " + // ADDED
-                   "FROM exams e " +
-                   "INNER JOIN users u ON e.std_id = u.user_id";
+    try {
+        String query = "SELECT u.first_name, u.last_name, u.user_name, u.email, " +
+                       "e.exam_id, e.std_id, e.course_name, e.total_marks, e.obt_marks, " +
+                       "e.date, e.start_time, e.end_time, e.exam_time, e.status, e.result_status " +
+                       "FROM exams e " +
+                       "INNER JOIN users u ON e.std_id = u.user_id";
 
-    try (PreparedStatement ps = conn.prepareStatement(query);
-         ResultSet rs = ps.executeQuery()) {
+        ps = conn.prepareStatement(query);
+        rs = ps.executeQuery();
 
         while (rs.next()) {
             String formattedDate = rs.getDate("date") != null 
@@ -3860,7 +3907,7 @@ public ArrayList<Exams> getAllExamsWithResults() {
                 rs.getString("start_time"),
                 rs.getString("end_time"),
                 rs.getString("exam_time"),
-                resultStatus  // Use result_status
+                resultStatus
             );
             exams.add(exam);
         }
@@ -3873,8 +3920,9 @@ public ArrayList<Exams> getAllExamsWithResults() {
         } catch (SQLException ex) {
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources", ex);
         }
-        return exams;
     }
+
+    return exams;
 }
 
 public float[] getRawMarks(int examId) {

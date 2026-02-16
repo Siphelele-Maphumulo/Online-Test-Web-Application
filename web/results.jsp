@@ -1558,9 +1558,11 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                     }
                 }
                 
-                // Check if this is a drag-drop question
+                // Check if this is a drag-drop or rearrange question
                 boolean isDragDrop = "DRAG_AND_DROP".equalsIgnoreCase(questionType) || 
                                     (a.getAnswer() != null && a.getAnswer().startsWith("{"));
+                boolean isRearrange = "REARRANGE".equalsIgnoreCase(questionType) ||
+                                     (a.getAnswer() != null && a.getAnswer().startsWith("["));
                 
                 // Calculate question score and max marks
                 float qScore = 0;
@@ -1760,6 +1762,112 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                           <!-- <div style="font-size: 12px; color: var(--dark-gray); margin-top: 4px;">
                             <%= a.getAnswer() %>
                           </div> -->
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                <% } else if (isRearrange) { %>
+                  <!-- Rearrange Question Answer Display -->
+                  <div style="grid-column: 1 / -1;">
+                    <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 12px; font-size: 13px;">
+                      <i class="fas fa-sort-amount-down"></i> Rearrange Question
+                    </div>
+
+                    <div style="background: var(--light-gray); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--medium-gray);">
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <!-- Student's Answer -->
+                        <div>
+                          <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 8px; font-size: 12px;">
+                            <i class="fas fa-user-edit"></i> Your Order
+                          </div>
+                          <div style="background: var(--white); padding: 12px; border-radius: var(--radius-sm); border: 1px solid <%= isCorrect ? "var(--success)" : "var(--error)" %>;">
+                            <%
+                              try {
+                                  org.json.JSONArray userArr = new org.json.JSONArray(a.getAnswer());
+                                  for (int j = 0; j < userArr.length(); j++) {
+                                      int itemId = userArr.getInt(j);
+                                      String itemText = "Item " + itemId;
+                                      if (questionObj != null && questionObj.getRearrangeItems() != null) {
+                                          for (myPackage.classes.RearrangeItem ri : questionObj.getRearrangeItems()) {
+                                              if (ri.getId() == itemId) {
+                                                  itemText = ri.getItemText();
+                                                  break;
+                                              }
+                                          }
+                                      }
+
+                                      // Check if this item is in the correct position
+                                      boolean itemInCorrectPos = false;
+                                      try {
+                                          org.json.JSONArray correctArr = new org.json.JSONArray(a.getCorrectAnswer());
+                                          if (j < correctArr.length() && correctArr.getInt(j) == itemId) {
+                                              itemInCorrectPos = true;
+                                          }
+                                      } catch (Exception e) {}
+                            %>
+                                <div style="margin-bottom: 8px; padding: 6px; background: <%= itemInCorrectPos ? "rgba(5, 150, 105, 0.1)" : "rgba(220, 38, 38, 0.1)" %>; border-radius: 4px; font-size: 12px; display: flex; align-items: center; gap: 8px;">
+                                  <span style="background: <%= itemInCorrectPos ? "var(--success)" : "var(--error)" %>; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0;">
+                                    <%= j + 1 %>
+                                  </span>
+                                  <span style="flex: 1; white-space: pre-wrap;"><%= itemText %></span>
+                                  <i class="fas <%= itemInCorrectPos ? "fa-check" : "fa-times" %>" style="color: <%= itemInCorrectPos ? "var(--success)" : "var(--error)" %>;"></i>
+                                </div>
+                            <%
+                                  }
+                              } catch (Exception e) {
+                            %>
+                                <div style="color: var(--dark-gray); font-style: italic;">Invalid answer format</div>
+                            <%
+                              }
+                            %>
+                          </div>
+                        </div>
+
+                        <!-- Correct Answer -->
+                        <div>
+                          <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 8px; font-size: 12px;">
+                            <i class="fas fa-check-circle"></i> Correct Order
+                          </div>
+                          <div style="background: var(--white); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--success);">
+                            <%
+                              try {
+                                  org.json.JSONArray correctArr = new org.json.JSONArray(a.getCorrectAnswer());
+                                  for (int j = 0; j < correctArr.length(); j++) {
+                                      int itemId = correctArr.getInt(j);
+                                      String itemText = "Item " + itemId;
+                                      if (questionObj != null && questionObj.getRearrangeItems() != null) {
+                                          for (myPackage.classes.RearrangeItem ri : questionObj.getRearrangeItems()) {
+                                              if (ri.getId() == itemId) {
+                                                  itemText = ri.getItemText();
+                                                  break;
+                                              }
+                                          }
+                                      }
+                            %>
+                                <div style="margin-bottom: 8px; padding: 6px; background: rgba(5, 150, 105, 0.1); border-radius: 4px; font-size: 12px; display: flex; align-items: center; gap: 8px;">
+                                  <span style="background: var(--success); color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0;">
+                                    <%= j + 1 %>
+                                  </span>
+                                  <span style="flex: 1; white-space: pre-wrap;"><%= itemText %></span>
+                                </div>
+                            <%
+                                  }
+                              } catch (Exception e) {
+                            %>
+                                <div style="color: var(--dark-gray); font-style: italic;">No correct order available</div>
+                            <%
+                              }
+                            %>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Score Display -->
+                      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--medium-gray);">
+                        <div style="text-align: center;">
+                          <div style="font-size: 14px; font-weight: 600; color: <%= isCorrect ? "var(--success)" : (qScore > 0 ? "var(--warning)" : "var(--error)") %>;">
+                            <%= isCorrect ? "Full Score" : (qScore > 0 ? "Partial Score" : "Incorrect") %>: <%= qScore %> / <%= qMaxMarks %>
+                          </div>
                         </div>
                       </div>
                     </div>
