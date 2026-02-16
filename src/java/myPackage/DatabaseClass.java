@@ -2815,9 +2815,9 @@ public ArrayList getAllQuestions(String courseName, String searchTerm, String qu
         ArrayList list=new ArrayList();
         try {
             
-            // Fixed: Use GROUP BY with proper aggregation to get the latest/most relevant status
-            // This ensures we get the correct status for each question
-            String sql = "SELECT question, answer, correct_answer, " +
+            // Fixed: Group by question_id ONLY to collapse duplicate rows.
+            // We use MAX() for other columns to ensure SQL compatibility while picking representative values.
+            String sql = "SELECT MAX(question) as question, MAX(answer) as answer, MAX(correct_answer) as correct_answer, " +
                         "CASE " +
                         "    WHEN SUM(CASE WHEN status = 'correct' THEN 1 ELSE 0 END) > 0 THEN 'correct' " +
                         "    WHEN SUM(CASE WHEN status LIKE 'partial:%' THEN 1 ELSE 0 END) > 0 THEN MAX(status) " +
@@ -2826,7 +2826,7 @@ public ArrayList getAllQuestions(String courseName, String searchTerm, String qu
                         "question_id " +
                         "FROM answers " +
                         "WHERE exam_id = ? " +
-                        "GROUP BY question_id, question, answer, correct_answer " +
+                        "GROUP BY question_id " +
                         "ORDER BY question_id";
             
             PreparedStatement pstm=conn.prepareStatement(sql);
@@ -2906,33 +2906,54 @@ public void insertAnswer(int eId, int qid, String question, String ans) {
         return;
     }
     
+    PreparedStatement pstmCheck = null;
     PreparedStatement pstm = null;
+    ResultSet rs = null;
     try {
         String correct = getCorrectAnswer(qid);
         String status = getAnswerStatus(ans, correct);
-        
         String userAnswerForDb = (ans != null && !ans.trim().isEmpty()) ? ans.trim() : "N/A";
 
-        pstm = conn.prepareStatement(
-            "INSERT INTO answers (exam_id, question_id, question, answer, correct_answer, status) VALUES (?, ?, ?, ?, ?, ?)"
-        );
-        pstm.setInt(1, eId);
-        pstm.setInt(2, qid); // Add the question_id
-        pstm.setString(3, question);
-        pstm.setString(4, userAnswerForDb);
-        pstm.setString(5, correct);
-        pstm.setString(6, status);
+        // First, check if an answer already exists for this exam and question
+        String checkSql = "SELECT answer_id FROM answers WHERE exam_id = ? AND question_id = ?";
+        pstmCheck = conn.prepareStatement(checkSql);
+        pstmCheck.setInt(1, eId);
+        pstmCheck.setInt(2, qid);
+        rs = pstmCheck.executeQuery();
+
+        if (rs.next()) {
+            // Update existing answer
+            int answerId = rs.getInt("answer_id");
+            String updateSql = "UPDATE answers SET question = ?, answer = ?, correct_answer = ?, status = ? WHERE answer_id = ?";
+            pstm = conn.prepareStatement(updateSql);
+            pstm.setString(1, question);
+            pstm.setString(2, userAnswerForDb);
+            pstm.setString(3, correct);
+            pstm.setString(4, status);
+            pstm.setInt(5, answerId);
+        } else {
+            // Insert new answer
+            String insertSql = "INSERT INTO answers (exam_id, question_id, question, answer, correct_answer, status) VALUES (?, ?, ?, ?, ?, ?)";
+            pstm = conn.prepareStatement(insertSql);
+            pstm.setInt(1, eId);
+            pstm.setInt(2, qid);
+            pstm.setString(3, question);
+            pstm.setString(4, userAnswerForDb);
+            pstm.setString(5, correct);
+            pstm.setString(6, status);
+        }
+
         pstm.executeUpdate();
         
     } catch (SQLException ex) {
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
     } finally {
-        if (pstm != null) {
-            try {
-                pstm.close();
-            } catch (SQLException e) {
-                LOGGER.log(Level.SEVERE, "Failed to close PreparedStatement in insertAnswer", e);
-            }
+        try {
+            if (rs != null) rs.close();
+            if (pstmCheck != null) pstmCheck.close();
+            if (pstm != null) pstm.close();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Failed to close resources in insertAnswer", e);
         }
     }
 }
@@ -3868,18 +3889,19 @@ public float[] getRawMarks(int examId) {
     float totalObtainedMarks = 0;
 
     try {
-        // Get all answers for this exam - FIXED: Use GROUP BY to prevent double counting
+        // Get all answers for this exam - COLLAPSE DUPLICATES: Group ONLY by question_id
+        // This ensures each question is counted exactly once towards total possible marks.
         String sql = "SELECT " +
                     "CASE " +
                     "    WHEN SUM(CASE WHEN a.status = 'correct' THEN 1 ELSE 0 END) > 0 THEN 'correct' " +
                     "    WHEN SUM(CASE WHEN a.status LIKE 'partial:%' THEN 1 ELSE 0 END) > 0 THEN MAX(a.status) " +
                     "    ELSE 'incorrect' " +
                     "END as status, " +
-                    "a.answer, a.correct_answer, q.question_type, q.question_id, q.marks " +
+                    "q.question_type, q.question_id, q.marks " +
                     "FROM answers a " +
                     "JOIN questions q ON a.question_id = q.question_id " +
                     "WHERE a.exam_id = ? " +
-                    "GROUP BY a.question_id, a.answer, a.correct_answer, q.question_type, q.question_id, q.marks";
+                    "GROUP BY q.question_id, q.question_type, q.marks";
         PreparedStatement pstm = conn.prepareStatement(sql);
         pstm.setInt(1, examId);
         ResultSet rs = pstm.executeQuery();
