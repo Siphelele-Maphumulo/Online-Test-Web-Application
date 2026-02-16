@@ -579,6 +579,19 @@
     }
     
     /* Responsive Design - Consistent with profile page */
+    @media (max-width: 992px) {
+        .sidebar {
+            display: none;
+        }
+
+        .main-content {
+            margin-left: 0;
+            padding: 15px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+    }
+
     @media (max-width: 768px) {
         .dashboard-container {
             flex-direction: column;

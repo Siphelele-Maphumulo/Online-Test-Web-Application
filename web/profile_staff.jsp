@@ -226,6 +226,13 @@
             flex: 1;
             padding: var(--spacing-lg);
             overflow-y: auto;
+            margin-left: 200px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+            }
         }
         
         /* Page Header */
@@ -352,6 +359,8 @@
             padding: var(--spacing-md) 0;
             border-bottom: 1px solid var(--light-gray);
             transition: background-color var(--transition-fast);
+            flex-wrap: wrap;
+            gap: 10px;
         }
         
         .info-item:hover {

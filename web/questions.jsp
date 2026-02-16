@@ -246,6 +246,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
         position: sticky;
         top: 0;
         height: 100vh;
+        transition: width var(--transition-normal);
     }
     
     .sidebar-header {
@@ -385,6 +386,12 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
         margin-bottom: var(--spacing-lg);
     }
     
+    @media (max-width: 576px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
     .form-group {
         display: flex;
         flex-direction: column;
@@ -459,7 +466,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
     /* Options Grid */
     .options-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: var(--spacing-sm);
         margin: var(--spacing-md) 0;
     }

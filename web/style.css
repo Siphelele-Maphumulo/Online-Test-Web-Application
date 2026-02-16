@@ -4,16 +4,6 @@
     box-sizing: border-box;
 }
 
-/* Global Zoom - 80% of browser zoom */
-html {
-    zoom: 0.8;
-    -moz-transform: scale(0.8);
-    -moz-transform-origin: 0 0;
-    -o-transform: scale(0.8);
-    -o-transform-origin: 0 0;
-    -webkit-transform: scale(0.8);
-    -webkit-transform-origin: 0 0;
-}
 
 *:focus {
     outline: none;

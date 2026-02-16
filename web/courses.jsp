@@ -454,9 +454,13 @@
         }
         
         .courses-table {
-            display: block;
+            display: table;
+            width: 100%;
+        }
+
+        .table-responsive {
             overflow-x: auto;
-            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
         }
     }
     
@@ -563,7 +567,7 @@
                     Total: <%= courseCount %>
                 </div>
             </div>
-            <div style="overflow-x: auto;">
+            <div class="table-responsive">
                 <table class="courses-table">
                     <thead>
                         <tr>

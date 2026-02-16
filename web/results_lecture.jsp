@@ -18,6 +18,10 @@ public String escapeHtml(String input) {
 }
 %>
 
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <%
     // The main adm-page.jsp will handle user session checks.
     // We just need the DAO and a fresh CSRF token.
@@ -49,7 +53,7 @@ public String escapeHtml(String input) {
     top: 0;
     height: 100vh;
     overflow-x:hidden;
-    z-index: 100;
+    z-index: 1000;
   }
   
   .sidebar-background {
@@ -386,14 +390,14 @@ public String escapeHtml(String input) {
 /* Responsive design */
 @media (max-width: 992px) {
     .sidebar {
-        position: relative;
-        width: 100%;
-        height: auto;
+        display: none;
     }
     
     .content-area {
         margin-left: 0;
-        padding-bottom: 120px;
+        padding: 15px;
+        width: 100%;
+        box-sizing: border-box;
     }
     
     .results-panel {
@@ -696,6 +700,7 @@ public String escapeHtml(String input) {
                 </div>
 
                 <!-- Results Table -->
+                <div class="table-responsive">
                 <table id="results-table">
                     <thead>
                         <tr>
@@ -765,6 +770,7 @@ public String escapeHtml(String input) {
                         %>
                     </tbody>
                 </table>
+                </div>
             </form>
             
             <!-- Floating Delete Selected Button -->
@@ -808,6 +814,7 @@ public String escapeHtml(String input) {
                 <div class="results-title">Result Details</div>
             </div>
             
+            <div class="table-responsive">
             <table id="results-table">
                 <thead>
                     <tr>
@@ -849,6 +856,7 @@ public String escapeHtml(String input) {
                     %>
                 </tbody>
             </table>
+            </div>
         <% } %>
     </div>
 </div>

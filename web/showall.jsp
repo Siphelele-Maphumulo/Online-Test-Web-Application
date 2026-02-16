@@ -1,4 +1,8 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <%@page import="myPackage.classes.Questions"%>
 <%@page import="myPackage.classes.RearrangeItem"%>
 <%@page import="java.util.ArrayList"%>
@@ -186,7 +190,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     .dd-preview {
         background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px;
     }
-    .dd-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 20px; align-items: center; }
+    .dd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; align-items: center; }
     .dd-column h4 { font-size: 13px; color: #64748b; margin-top: 0; margin-bottom: 12px; text-align: center; }
     .dd-item-list { display: flex; flex-direction: column; gap: 8px; }
     .dd-pair {
@@ -514,7 +518,27 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     }
 
     /* Responsive adjustments */
+    @media (max-width: 992px) {
+        .sidebar {
+            display: none;
+        }
+
+        .main-content {
+            margin-left: 0;
+            padding: 15px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+    }
+
     @media (max-width: 768px) {
+        .dashboard-container { flex-direction: column; }
+        .sidebar { width: 100%; height: auto; position: static; }
+        .sidebar-nav { display: flex; overflow-x: auto; padding: 10px; }
+        .nav-item { padding: 10px; min-width: 80px; text-align: center; }
+        .main-content { padding: 15px; }
+        .page-header { flex-direction: column; gap: 10px; text-align: center; }
+
         .floating-scroll {
             bottom: 20px;
             right: 20px;

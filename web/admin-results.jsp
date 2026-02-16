@@ -579,9 +579,13 @@ public String escapeHtml(String input) {
         }
         
         .results-table {
-            display: block;
+            display: table; /* Reverting block to table but keeping wrapper scrollable */
+            width: 100%;
+        }
+
+        .table-responsive {
             overflow-x: auto;
-            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
         }
         
         .card-header {
@@ -983,7 +987,7 @@ public String escapeHtml(String input) {
 
                         
             <% if (request.getParameter("eid") == null) { %>
-                <div style="overflow-x:auto;">
+                <div class="table-responsive">
                     <table class="results-table" id="resultsTable">
                         <thead>
                             <tr>

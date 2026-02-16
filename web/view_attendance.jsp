@@ -165,7 +165,7 @@
                 padding: var(--spacing-xl);
                 overflow-y: auto;
                 background: transparent;
-                margin-left: 180px;
+                margin-left: 200px;
                 min-height: 100vh;
             }
 
@@ -930,6 +930,11 @@
                     margin-left: 0;
                 }
                 
+                .results-table-container {
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                }
+
                 .page-header {
                     flex-direction: column;
                     gap: var(--spacing-lg);
