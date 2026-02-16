@@ -895,6 +895,20 @@
     transition: all 0.2s ease;
 }
 
+.row-draggable {
+    cursor: move;
+}
+
+.row-dragging {
+    opacity: 0.4;
+    border: 2px dashed var(--accent-blue);
+}
+
+.drag-handle {
+    cursor: move;
+    color: var(--dark-gray);
+}
+
 .drag-item:hover, .drop-target:hover, .pairing-item:hover {
     box-shadow: 0 3px 8px rgba(0,0,0,0.1);
     border-color: var(--primary-blue);
@@ -914,7 +928,7 @@
     color: var(--warning);
 }
 
-.drag-item input, .drop-target input {
+.drag-item textarea, .drop-target textarea {
     flex: 1;
     border: 1px solid transparent;
     background: #f8f9fa;
@@ -922,9 +936,12 @@
     border-radius: 6px;
     font-size: 0.9rem;
     transition: all 0.2s ease;
+    resize: none;
+    overflow: hidden;
+    min-height: 38px;
 }
 
-.drag-item input:focus, .drop-target input:focus {
+.drag-item textarea:focus, .drop-target textarea:focus {
     background: white;
     border-color: var(--primary-blue);
     outline: none;
@@ -1030,6 +1047,66 @@
         min-height: 300px;
     }
 }
+
+/* Orientation preview styles for drag-drop editor */
+#dragDropEditor {
+    transition: all 0.3s ease;
+}
+
+#dragDropEditor.horizontal-layout {
+    /* Default horizontal layout - three column grid */
+}
+
+#dragDropEditor.horizontal-layout .drop-targets-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+}
+
+#dragDropEditor.horizontal-layout .drop-target {
+    min-width: 120px;
+    flex: 1 1 auto;
+}
+
+#dragDropEditor.vertical-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+#dragDropEditor.vertical-layout > div {
+    width: 100%;
+}
+
+#dragDropEditor.landscape-layout {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+#dragDropEditor.landscape-layout .draggable-items-panel {
+    padding: 15px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+}
+
+#dragDropEditor.landscape-layout .drop-targets-panel {
+    padding: 15px;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+#dragDropEditor.landscape-layout .drop-targets-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 </style>
 
 <div class="dashboard-container">
@@ -1218,8 +1295,9 @@
                                     Orientation
                                 </label>
                                 <select name="orientation" id="editOrientationSelect" class="form-select">
-                                    <option value="horizontal">Horizontal (Current)</option>
-                                    <option value="vertical">Vertical</option>
+                                    <option value="horizontal">Horizontal (Side by Side)</option>
+                                    <option value="vertical">Vertical (Stacked)</option>
+                                    <option value="landscape">Landscape (Code Style)</option>
                                 </select>
                                 <small class="form-hint">How items and targets are laid out</small>
                             </div>
@@ -2624,7 +2702,7 @@ window.addEventListener('DOMContentLoaded', function() {
             
             // Set orientation from extra_data
             try {
-                const extraDataStr = '<%= questionToEdit.getExtraData() != null ? questionToEdit.getExtraData().replace("'", "\\'") : "{}" %>';
+                const extraDataStr = '<%= questionToEdit.getExtraData() != null ? questionToEdit.getExtraData().replace("'", "\'") : "{}" %>';
                 const extraData = JSON.parse(extraDataStr);
                 if (extraData && extraData.orientation) {
                     document.getElementById('editOrientationSelect').value = extraData.orientation;
@@ -2632,6 +2710,82 @@ window.addEventListener('DOMContentLoaded', function() {
             } catch (e) {
                 console.error('Error parsing extra_data for orientation:', e);
             }
+                        
+            // Initialize orientation preview
+            initEditOrientationPreview();
         }
     });
+    
+    // Initialize orientation preview for drag-drop questions in edit mode
+    function initEditOrientationPreview() {
+        const orientationSelect = document.getElementById('editOrientationSelect');
+        const dragDropEditor = document.getElementById('dragDropEditor');
+        
+        if (orientationSelect && dragDropEditor) {
+            // Function to update preview
+            function updateOrientationPreview() {
+                const selectedOrientation = orientationSelect.value;
+                
+                // Remove all orientation classes
+                dragDropEditor.classList.remove('horizontal-layout', 'vertical-layout', 'landscape-layout');
+                
+                // Add selected orientation class
+                if (selectedOrientation === 'vertical') {
+                    dragDropEditor.classList.add('vertical-layout');
+                } else if (selectedOrientation === 'landscape') {
+                    dragDropEditor.classList.add('landscape-layout');
+                } else {
+                    // Default to horizontal
+                    dragDropEditor.classList.add('horizontal-layout');
+                }
+                
+                console.log('Orientation changed to:', selectedOrientation);
+                
+                // Test if drop targets are properly laid out horizontally for horizontal orientation
+                if (selectedOrientation === 'horizontal') {
+                    const dropTargetsList = dragDropEditor.querySelector('.drop-targets-list');
+                    const isHorizontal = dropTargetsList && getComputedStyle(dropTargetsList).flexDirection === 'row';
+                    console.log('Drop targets horizontal layout:', isHorizontal);
+                }
+            }
+            
+            // Add event listener
+            orientationSelect.addEventListener('change', updateOrientationPreview);
+            
+            // Initialize with current selection
+            updateOrientationPreview();
+        }
+    }
+    
+    // Test function to verify orientation functionality in edit mode
+    function testEditOrientation() {
+        console.log('Testing orientation functionality in edit mode:');
+        const orientationSelect = document.getElementById('editOrientationSelect');
+        const dragDropEditor = document.getElementById('dragDropEditor');
+        
+        if (orientationSelect && dragDropEditor) {
+            console.log('Current orientation:', orientationSelect.value);
+            console.log('Editor classes:', dragDropEditor.className);
+            
+            // Test all orientations
+            ['horizontal', 'vertical', 'landscape'].forEach(orientation => {
+                orientationSelect.value = orientation;
+                orientationSelect.dispatchEvent(new Event('change'));
+                console.log(`${orientation} layout applied:`, dragDropEditor.classList.contains(`${orientation}-layout`));
+                
+                // Check if drop targets are laid out horizontally for horizontal orientation
+                if (orientation === 'horizontal') {
+                    const dropTargetsList = dragDropEditor.querySelector('.drop-targets-list');
+                    const isHorizontal = dropTargetsList && getComputedStyle(dropTargetsList).flexDirection === 'row';
+                    console.log('Drop targets horizontal layout:', isHorizontal);
+                }
+            });
+            
+            // Reset to original value
+            orientationSelect.value = 'horizontal';
+            orientationSelect.dispatchEvent(new Event('change'));
+        } else {
+            console.log('Orientation elements not found in edit mode');
+        }
+    }
 </script>

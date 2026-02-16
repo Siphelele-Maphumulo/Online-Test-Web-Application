@@ -2,6 +2,7 @@
 <%@page import="myPackage.classes.Exams"%>
 <%@page import="myPackage.classes.Questions"%>
 <%@page import="java.util.ArrayList"%>
+<%@ page isELIgnored="true" %>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
  
 <%! 
@@ -1701,7 +1702,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                                       }
                                   }
                             %>
-                                <div style="margin-bottom: 8px; padding: 6px; background: <%= answer.isCorrect() ? "rgba(5, 150, 105, 0.1)" : "rgba(220, 38, 38, 0.1)" %>; border-radius: 4px; font-size: 12px;">
+                                <div style="margin-bottom: 8px; padding: 6px; background: <%= answer.isCorrect() ? "rgba(5, 150, 105, 0.1)" : "rgba(220, 38, 38, 0.1)" %>; border-radius: 4px; font-size: 12px; white-space: pre-wrap;">
                                   <i class="fas <%= answer.isCorrect() ? "fa-check" : "fa-times" %>" style="color: <%= answer.isCorrect() ? "var(--success)" : "var(--error)" %>;"></i>
                                   <strong><%= itemTxt %></strong> ? <%= targetTxt %> <%= answer.isCorrect() ? "(Correct)" : "(Incorrect)" %>
                                 </div>
@@ -1733,7 +1734,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                                               }
                                           }
                             %>
-                                <div style="margin-bottom: 8px; padding: 6px; background: rgba(5, 150, 105, 0.1); border-radius: 4px; font-size: 12px;">
+                                <div style="margin-bottom: 8px; padding: 6px; background: rgba(5, 150, 105, 0.1); border-radius: 4px; font-size: 12px; white-space: pre-wrap;">
                                   <i class="fas fa-check" style="color: var(--success);"></i>
                                   <strong><%= di.getItemText() %></strong> ? <%= correctTargetLabel %>
                                 </div>

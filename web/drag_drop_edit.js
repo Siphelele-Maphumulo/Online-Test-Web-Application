@@ -52,14 +52,28 @@ function addDragItemToUI(itemText) {
     if (emptyState) emptyState.remove();
 
     const div = document.createElement("div");
-    div.className = "drag-item";
+    div.className = "drag-item row-draggable";
+    div.draggable = true;
     div.innerHTML = `
-        <i class="fas fa-grip-vertical"></i>
-        <input type="text" class="form-control" value="${escapeHtml(itemText)}" placeholder="Item text..." oninput="updateCorrectPairingsUI()">
+        <i class="fas fa-grip-vertical drag-handle"></i>
+        <textarea class="form-control" rows="1" placeholder="Item text..." oninput="autoResize(this); updateCorrectPairingsUI()">${escapeHtml(itemText)}</textarea>
         <button type="button" class="remove-btn" onclick="removeItem(this)">×</button>
     `;
+    
+    // Add drag event listeners
+    div.addEventListener('dragstart', handleRowDragStart);
+    div.addEventListener('dragover', handleRowDragOver);
+    div.addEventListener('drop', handleRowDrop);
+    div.addEventListener('dragend', handleRowDragEnd);
+    
     container.appendChild(div);
+    autoResize(div.querySelector('textarea'));
     updateItemCounts();
+}
+
+function autoResize(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
 }
 
 // 🔹 STEP 6 — Populate Drop Targets Section
@@ -93,14 +107,68 @@ function addDropTargetToUI(targetText) {
     if (emptyState) emptyState.remove();
 
     const div = document.createElement("div");
-    div.className = "drop-target";
+    div.className = "drop-target row-draggable";
+    div.draggable = true;
     div.innerHTML = `
-        <i class="fas fa-bullseye"></i>
-        <input type="text" class="form-control" value="${escapeHtml(targetText)}" placeholder="Target label..." oninput="updateCorrectPairingsUI()">
+        <i class="fas fa-bullseye drag-handle"></i>
+        <textarea class="form-control" rows="1" placeholder="Target label (use [[target]] for box position)..." oninput="autoResize(this); updateCorrectPairingsUI()">${escapeHtml(targetText)}</textarea>
         <button type="button" class="remove-btn" onclick="removeItem(this)">×</button>
     `;
+    
+    // Add drag event listeners
+    div.addEventListener('dragstart', handleRowDragStart);
+    div.addEventListener('dragover', handleRowDragOver);
+    div.addEventListener('drop', handleRowDrop);
+    div.addEventListener('dragend', handleRowDragEnd);
+
     container.appendChild(div);
+    autoResize(div.querySelector('textarea'));
     updateItemCounts();
+}
+
+// Reordering Logic
+let draggedRow = null;
+
+function handleRowDragStart(e) {
+    draggedRow = this;
+    this.classList.add('row-dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', this.innerHTML);
+}
+
+function handleRowDragOver(e) {
+    if (e.preventDefault) {
+        e.preventDefault();
+    }
+    e.dataTransfer.dropEffect = 'move';
+    
+    if (this !== draggedRow && this.parentNode === draggedRow.parentNode) {
+        const container = this.parentNode;
+        const children = Array.from(container.children);
+        const draggedIndex = children.indexOf(draggedRow);
+        const targetIndex = children.indexOf(this);
+        
+        if (draggedIndex < targetIndex) {
+            container.insertBefore(draggedRow, this.nextSibling);
+        } else {
+            container.insertBefore(draggedRow, this);
+        }
+    }
+    
+    return false;
+}
+
+function handleRowDrop(e) {
+    if (e.stopPropagation) {
+        e.stopPropagation();
+    }
+    updateCorrectPairingsUI();
+    return false;
+}
+
+function handleRowDragEnd(e) {
+    this.classList.remove('row-dragging');
+    draggedRow = null;
 }
 
 // 🔹 STEP 7 — Populate Correct Pairings
@@ -227,12 +295,12 @@ function prepareDragDropDataForSubmit() {
 }
 
 function collectDragItemsFromUI() {
-    const inputs = document.querySelectorAll("#dragItemsContainer input[type='text']");
+    const inputs = document.querySelectorAll("#dragItemsContainer textarea");
     return Array.from(inputs).map(input => input.value.trim());
 }
 
 function collectDropTargetsFromUI() {
-    const inputs = document.querySelectorAll("#dropTargetsContainer input[type='text']");
+    const inputs = document.querySelectorAll("#dropTargetsContainer textarea");
     return Array.from(inputs).map(input => input.value.trim());
 }
 

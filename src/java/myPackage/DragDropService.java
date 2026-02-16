@@ -23,7 +23,7 @@ public class DragDropService {
      */
     public JSONObject getDragDropQuestion(int questionId) {
         Questions question = db.getQuestionById(questionId);
-        if (question == null || !"DRAG_AND_DROP".equalsIgnoreCase(question.getQuestionType())) {
+        if (question == null || (!"DRAG_AND_DROP".equalsIgnoreCase(question.getQuestionType()) && !"RE_ARRANGE".equalsIgnoreCase(question.getQuestionType()))) {
             return null;
         }
 

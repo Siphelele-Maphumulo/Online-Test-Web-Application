@@ -1349,7 +1349,7 @@ public int addNewQuestionReturnId(String questionText, String opt1, String opt2,
         }
 
         // Handle different question types
-        if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
+        if (("DRAG_AND_DROP".equalsIgnoreCase(questionType) || "RE_ARRANGE".equalsIgnoreCase(questionType))) {
             // For drag-and-drop questions, insert empty strings for opt fields since they're required
             sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path, marks, extra_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
@@ -1722,7 +1722,7 @@ public Questions getQuestionById(int questionId) {
                 question.setCorrectTargetsJson(rs.getString("drag_correct_targets"));
                 question.setTotalMarks(rs.getInt("marks"));
                 
-                if ("DRAG_AND_DROP".equalsIgnoreCase(question.getQuestionType())) {
+                if (("DRAG_AND_DROP".equalsIgnoreCase(question.getQuestionType()) || "RE_ARRANGE".equalsIgnoreCase(question.getQuestionType()))) {
                     question.setDragItems(getDragItemsByQuestionIdOld(question.getQuestionId()));
                     question.setDropTargets(getDropTargetsByQuestionIdOld(question.getQuestionId()));
                 }
@@ -2427,7 +2427,7 @@ public ArrayList getQuestions(String courseName, int questions) {
     // Now populate nested relational data AFTER closing the main ResultSet
     for (Object obj : list) {
         Questions q = (Questions) obj;
-        if ("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType())) {
+        if (("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType()) || "RE_ARRANGE".equalsIgnoreCase(q.getQuestionType()))) {
             q.setDragItems(getDragItemsByQuestionIdOld(q.getQuestionId()));
             q.setDropTargets(getDropTargetsByQuestionIdOld(q.getQuestionId()));
         }
@@ -2664,7 +2664,7 @@ public ArrayList getAllQuestions(String courseName) {
     // Now populate nested relational data AFTER closing the main ResultSet
     for (Object obj : list) {
         Questions q = (Questions) obj;
-        if ("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType())) {
+        if (("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType()) || "RE_ARRANGE".equalsIgnoreCase(q.getQuestionType()))) {
             q.setDragItems(getDragItemsByQuestionIdOld(q.getQuestionId()));
             q.setDropTargets(getDropTargetsByQuestionIdOld(q.getQuestionId()));
         }
@@ -2769,7 +2769,7 @@ public ArrayList getAllQuestions(String courseName, String searchTerm, String qu
     // Now populate nested relational data AFTER closing the main ResultSet
     for (Object obj : list) {
         Questions q = (Questions) obj;
-        if ("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType())) {
+        if (("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType()) || "RE_ARRANGE".equalsIgnoreCase(q.getQuestionType()))) {
             q.setDragItems(getDragItemsByQuestionIdOld(q.getQuestionId()));
             q.setDropTargets(getDropTargetsByQuestionIdOld(q.getQuestionId()));
         }
@@ -2921,7 +2921,7 @@ private String getCorrectAnswer(int qid) {
             String questionType = rs.getString("question_type");
             
             // For Drag and Drop, return the correct targets JSON in standard format
-            if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
+            if (("DRAG_AND_DROP".equalsIgnoreCase(questionType) || "RE_ARRANGE".equalsIgnoreCase(questionType))) {
                 org.json.JSONObject correctJson = new org.json.JSONObject();
                 try {
                     ArrayList<DragItem> dragItems = getDragItemsByQuestionIdOld(qid);
@@ -3846,7 +3846,7 @@ public float[] getRawMarks(int examId) {
             float questionWeight = qMarks > 0 ? qMarks : 1.0f;
             totalPossibleMarks += questionWeight;
             
-            if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
+            if (("DRAG_AND_DROP".equalsIgnoreCase(questionType) || "RE_ARRANGE".equalsIgnoreCase(questionType))) {
                 // For drag-drop questions, get marks from drag_drop_answers table
                 float obtainedForQ = 0;
                 String ddSql = "SELECT SUM(marks_obtained) as total_marks FROM drag_drop_answers WHERE exam_id = ? AND question_id = ?";
@@ -5494,7 +5494,7 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
      */
     public Questions getDragDropQuestionById(int questionId) {
         Questions question = getQuestionById(questionId);
-        if (question != null && "DRAG_AND_DROP".equals(question.getQuestionType())) {
+        if (question != null && ("DRAG_AND_DROP".equals(question.getQuestionType()) || "RE_ARRANGE".equals(question.getQuestionType()))) {
             question.setDragItems(getDragItemsByQuestionIdOld(questionId));
             question.setDropTargets(getDropTargetsByQuestionIdOld(questionId));
         }

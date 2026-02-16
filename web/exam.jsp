@@ -4,6 +4,7 @@
 <%@page import="java.util.ArrayList"%>
 <%@page import="myPackage.classes.Questions"%>
 <%@page import="myPackage.classes.Exams"%>
+<%@ page isELIgnored="true" %>
 <%
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     
@@ -2044,6 +2045,44 @@
         background: white;
     }
     
+    /* Horizontal orientation - drop targets side by side */
+    .drag-drop-container.horizontal-layout {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .horizontal-layout .drop-targets-list {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 15px;
+        align-items: center;
+        justify-content: flex-end;
+    }
+    
+    .horizontal-layout .drop-target {
+        width: 120px;
+        height: 80px;
+        flex: 0 0 auto;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .horizontal-layout .drop-target.inline-target {
+        width: auto;
+        height: auto;
+        display: inline-block;
+    }
+    
+    .horizontal-layout .drop-target.inline-target .drop-zone-inline {
+        width: 120px;
+        height: 80px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
     .drag-drop-container.vertical-layout {
         grid-template-columns: 1fr;
     }
@@ -2082,13 +2121,11 @@
 
     .landscape-layout .drop-targets-list {
         display: flex;
-        flex-direction: row;
+        flex-direction: column;
         gap: 8px;
         align-items: stretch;
         padding: 10px;
         justify-content: flex-start;
-        overflow-x: auto;
-        flex-wrap: nowrap;
     }
 
     .landscape-layout .drop-target {
@@ -2187,7 +2224,7 @@
         background: #92AB2F;
         border: 2px solid #5D8E2;
         border-radius: 8px;
-        padding: 15px 20px;
+        padding: 15px 14px; /* Reduced horizontal padding by 30% */
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         cursor: grab;
         font-weight: 500;
@@ -2233,10 +2270,58 @@
         gap: 10px;
         transition: all 0.2s;
     }
+
+    .drop-target.target-reordering {
+        opacity: 0.5;
+        border: 2px solid var(--accent-blue);
+    }
+
+    /* Inline style for code blocks with targets */
+    .drop-target.inline-target {
+        display: block;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        padding: 10px 15px;
+        min-height: auto;
+        margin-bottom: 5px;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        line-height: 1.6;
+        white-space: pre-wrap;
+    }
+
+    .drop-target.inline-target .drop-zone-inline {
+        display: inline-flex;
+        min-width: 120px;
+        min-height: 34px;
+        border: 2px dashed #94a3b8;
+        border-radius: 4px;
+        background: #f1f5f9;
+        vertical-align: middle;
+        margin: 0 5px;
+        padding: 2px;
+        transition: all 0.2s;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .drop-target.inline-target .drop-zone-inline.drag-over {
+        border-color: var(--accent-blue);
+        background: #eff6ff;
+    }
+
+    .drop-target.inline-target .dropped-item {
+        margin: 0;
+        padding: 4px 10px;
+        font-size: 13px;
+        border-radius: 4px;
+    }
     
     .drop-target.waiting {
         border: 2px dashed #92AB2F;
-        animation: blinkBorder 1.5s infinite;
+    }
+
+    .drop-target.inline-target.waiting .drop-zone-inline {
+        border-color: #92AB2F;
     }
     
     @keyframes blinkBorder {
@@ -2250,6 +2335,7 @@
         font-weight: 600;
         color: var(--dark-gray);
         margin-bottom: 5px;
+        white-space: pre-wrap;
     }
     
     .drop-target.drag-over {
@@ -2464,6 +2550,85 @@
         line-height: 1.5;
         outline: none;
     }
+.question-counter:hover {
+    background-color: rgba(146, 171, 47, 0.1);
+    border-radius: 4px;
+    padding: 2px 4px;
+}
+
+</style>
+
+<style>
+/* Question Navigation Modal Styles */
+.question-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.question-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 2px solid transparent;
+}
+
+.question-icon:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    border-color: #3b82f6;
+}
+
+.question-icon.answered {
+    background: #10b981;
+}
+
+.question-icon.unanswered {
+    background: #ef4444;
+}
+
+.question-icon.current {
+    border: 2px solid #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+.alert-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.close-modal-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.close-modal-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
 </style>
 
 <div class="exam-wrapper">
@@ -2508,13 +2673,19 @@
                             <i class="fas fa-sticky-note"></i>
                         </button>
                     </div>
-                    <div class="question-counter">Question <span id="currentQNum">1</span>/<%= totalQ %></div>
+                    <div class="question-counter" style="cursor: pointer;" onclick="showQuestionNavigationModal()" title="Click to navigate to any question">Question <span id="currentQNum">1</span>/<%= totalQ %></div>
                     <div class="nav-buttons">
+                        <button type="button" class="exam-nav-btn btn-first" onclick="goToFirstQuestion()" title="Go to first question">
+                            <i class="fas fa-step-backward"></i>
+                        </button>
                         <button type="button" class="exam-nav-btn btn-prev" id="prevBtn" onclick="prevQuestion()" disabled>
                             <i class="fas fa-arrow-left"></i> Prev
                         </button>
                         <button type="button" class="exam-nav-btn btn-next" id="nextBtn" onclick="nextQuestion()">
                             Next <i class="fas fa-arrow-right"></i>
+                        </button>
+                        <button type="button" class="exam-nav-btn btn-last" onclick="goToLastQuestion()" title="Go to last question">
+                            <i class="fas fa-step-forward"></i>
                         </button>
                     </div>
                 </div>
@@ -2797,6 +2968,38 @@
                     </div>
                 </div>
 
+                <!-- QUESTION NAVIGATION MODAL -->
+                <div id="questionNavModal" class="alert-modal" style="display: none;">
+                    <div class="alert-modal-content" style="max-width: 800px; width: 90%;">
+                        <div class="alert-modal-header" style="background: #09294d; color: white; padding: 20px; border-radius: 12px 12px 0 0;">
+                            <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                                <i class="fas fa-list-ol"></i>
+                                Question Navigation
+                            </h3>
+                            <button type="button" class="close-modal-btn" onclick="closeQuestionNavModal()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">&times;</button>
+                        </div>
+                        <div class="alert-modal-body" style="padding: 20px;">
+                            <p style="margin-bottom: 20px; color: #64748b;">Click on any question number to navigate directly to that question.</p>
+                            <div id="questionGrid" class="question-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 12px; max-height: 400px; overflow-y: auto; padding: 10px;">
+                                <!-- Question icons will be populated by JavaScript -->
+                            </div>
+                        </div>
+                        <div class="alert-modal-footer" style="padding: 15px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; gap: 15px; align-items: center;">
+                                <div style="display: flex; align-items: center; gap: 5px;">
+                                    <div style="width: 20px; height: 20px; background: #10b981; border-radius: 4px;"></div>
+                                    <span style="font-size: 14px; color: #64748b;">Answered</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 5px;">
+                                    <div style="width: 20px; height: 20px; background: #ef4444; border-radius: 4px;"></div>
+                                    <span style="font-size: 14px; color: #64748b;">Unanswered</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-secondary" onclick="closeQuestionNavModal()">Close</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- SUBMIT SECTION -->
                 <div class="submit-section">
                     <div class="submit-card">
@@ -2812,7 +3015,7 @@
                             <div class="submit-stats">
                                 <div class="stat-item"><span class="stat-number" id="submitAnswered">0</span><span class="stat-label">Answered</span></div>
                                 <div class="stat-divider"></div>
-                                <div class="stat-item"><span class="stat-number" id="submitUnanswered"><%= totalQ %></span><span class="stat-label">Unanswered</span></div>
+                                <div class="stat-item"><span class="stat-number" id="submitUnanswered" style="cursor: pointer; text-decoration: underline;" onclick="handleUnansweredClick()"><%= totalQ %></span><span class="stat-label">Unanswered</span></div>
                                 <div class="stat-divider"></div>
                                 <div class="stat-item"><span class="stat-number"><%= totalQ %></span><span class="stat-label">Total</span></div>
                             </div>
@@ -3077,6 +3280,15 @@
                     
                     currentQuestionIndex = index;
                     updateProgress();
+                    
+                    // Update current question highlight in navigation modal if it's open
+                    const modalIcons = document.querySelectorAll('#questionGrid .question-icon');
+                    modalIcons.forEach(icon => {
+                        icon.classList.remove('current');
+                        if (parseInt(icon.getAttribute('data-qindex')) === index) {
+                            icon.classList.add('current');
+                        }
+                    });
                 }
 
                 function nextQuestion() {
@@ -3610,8 +3822,12 @@ function initializeDragDropQuestions() {
                 if (extraData.orientation === 'vertical') {
                     var container = questionContainer.querySelector('.drag-drop-container');
                     if (container) container.classList.add('vertical-layout');
-                } else if (extraData.orientation === 'landscape' || extraData.orientation === 'horizontal') {
+                } else if (extraData.orientation === 'landscape') {
                     isLandscape = true;
+                } else if (extraData.orientation === 'horizontal') {
+                    // Apply horizontal layout class
+                    var container = questionContainer.querySelector('.drag-drop-container');
+                    if (container) container.classList.add('horizontal-layout');
                 }
             }
             
@@ -3669,7 +3885,7 @@ function renderDragDropInterface(qIdx, dragContainer, dropContainer, items, targ
     
     // RANDOMIZE: Shuffle only items (targets stay in original order)
     var shuffledItems = shuffleArray(normalizedItems.slice());
-    // Keep targets in original order - only shuffle draggable items
+    // Keep targets in original order - but we allow manual reordering now
     var orderedTargets = normalizedTargets.slice();
     
     // Render Items (randomized order)
@@ -3690,25 +3906,39 @@ function renderDragDropInterface(qIdx, dragContainer, dropContainer, items, targ
         dragContainer.appendChild(el);
     }
     
-    // Render Targets (original order - not shuffled, but reorderable via drag)
+    // Render Targets
     dropContainer.innerHTML = '';
     for (var i = 0; i < orderedTargets.length; i++) {
         var target = orderedTargets[i];
         var el = document.createElement('div');
-        el.className = 'drop-target';
         el.id = 'q' + qIdx + '_target_' + target.id;
         el.setAttribute('data-target-id', target.id);
+        el.draggable = true; // Targets are now draggable for reordering
         
-        // Targets are NOT draggable - only receive dropped items
+        // Handle [[target]] placeholder
+        var label = target.label || "";
+        var parts = label.split('[[target]]');
         
-        el.innerHTML = '<div class="drop-target-header">' + target.label + '</div>' +
-                       '<div class="placeholder">Drop here</div>';
+        if (parts.length > 1) {
+            el.className = 'drop-target inline-target';
+            el.innerHTML = '<span>' + parts[0] + '</span>' + 
+                           '<div class="drop-zone-inline"><div class="placeholder">Drop</div></div>' +
+                           '<span>' + (parts[1] || "") + '</span>';
+        } else {
+            el.className = 'drop-target';
+            el.innerHTML = '<div class="drop-target-header">' + label + '</div>' +
+                           '<div class="placeholder">Drop here</div>';
+        }
         
-        // Only add item drop listeners (not target reorder)
+        // Listeners for item drops
         el.addEventListener('dragover', handleDragOver);
         el.addEventListener('dragenter', handleDragEnter);
         el.addEventListener('dragleave', handleDragLeave);
         el.addEventListener('drop', handleDrop);
+        
+        // Listeners for target reordering
+        el.addEventListener('dragstart', handleTargetDragStart);
+        el.addEventListener('dragend', handleTargetDragEnd);
         
         dropContainer.appendChild(el);
     }
@@ -3769,9 +3999,27 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // DRAG HANDLERS
+let draggedTargetRow = null;
+
+function handleTargetDragStart(e) {
+    if (e.target.classList.contains('dropped-item') || e.target.closest('.dropped-item')) return;
+    draggedTargetRow = this;
+    this.classList.add('target-reordering');
+    e.dataTransfer.setData('text/target-id', this.id);
+    e.dataTransfer.effectAllowed = 'move';
+    
+    // Create a ghost image or just let it be
+}
+
+function handleTargetDragEnd(e) {
+    this.classList.remove('target-reordering');
+    draggedTargetRow = null;
+}
+
 function handleDragStart(e) {
     e.target.classList.add('dragging');
     e.dataTransfer.setData('text/plain', e.target.id);
+    e.dataTransfer.setData('text/type', 'item');
     e.dataTransfer.effectAllowed = 'move';
 }
 
@@ -3782,21 +4030,43 @@ function handleDragEnd(e) {
 function handleDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    
+    // Handle target reordering shifting
+    if (draggedTargetRow && this !== draggedTargetRow && this.classList.contains('drop-target')) {
+        if (this.parentNode === draggedTargetRow.parentNode) {
+            const container = this.parentNode;
+            const children = Array.from(container.children);
+            const draggedIndex = children.indexOf(draggedTargetRow);
+            const targetIndex = children.indexOf(this);
+            
+            if (draggedIndex < targetIndex) {
+                container.insertBefore(draggedTargetRow, this.nextSibling);
+            } else {
+                container.insertBefore(draggedTargetRow, this);
+            }
+        }
+    }
 }
 
 function handleDragEnter(e) {
     e.preventDefault();
+    if (draggedTargetRow) return; // Don't highlight for target reordering
+    
     var target = e.target.closest('.drop-target');
     if (target) {
-        target.classList.add('drag-over');
+        var zone = target.querySelector('.drop-zone-inline') || target;
+        zone.classList.add('drag-over');
         target.classList.remove('waiting');
     }
 }
 
 function handleDragLeave(e) {
+    if (draggedTargetRow) return;
+    
     var target = e.target.closest('.drop-target');
     if (target) {
-        target.classList.remove('drag-over');
+        var zone = target.querySelector('.drop-zone-inline') || target;
+        zone.classList.remove('drag-over');
         // Add waiting state back if target doesn't have items
         if (!target.querySelector('.dropped-item')) {
             target.classList.add('waiting');
@@ -3825,15 +4095,22 @@ function createDroppedItem(qIdx, targetId, itemId, text) {
 
 function handleDrop(e) {
     e.preventDefault();
+    
+    if (draggedTargetRow) {
+        // Target reordering drop - handled in dragover for shifting
+        return;
+    }
+    
     var target = e.target.closest('.drop-target');
     if (!target) return;
     
-    target.classList.remove('drag-over');
+    var zone = target.querySelector('.drop-zone-inline') || target;
+    zone.classList.remove('drag-over');
     target.classList.remove('waiting');
     
     var itemId = e.dataTransfer.getData('text/plain');
     var draggedEl = document.getElementById(itemId);
-    if (!draggedEl) return;
+    if (!draggedEl || !draggedEl.classList.contains('drag-item') && !draggedEl.classList.contains('dropped-item')) return;
     
     var qIdx = target.id.split('_')[0].substring(1);
     var targetId = target.getAttribute('data-target-id');
@@ -3872,12 +4149,13 @@ function handleDrop(e) {
             // Swap: move existing item to source target
             var sourceTarget = document.getElementById('q' + qIdx + '_target_' + sourceTargetId);
             if (sourceTarget) {
+                var sZone = sourceTarget.querySelector('.drop-zone-inline') || sourceTarget;
                 // Remove placeholder from source target if it was just added
-                var ph = sourceTarget.querySelector('.placeholder');
+                var ph = sZone.querySelector('.placeholder');
                 if (ph) ph.remove();
                 
                 var swappedEl = createDroppedItem(qIdx, sourceTargetId, existingId, existingText);
-                sourceTarget.appendChild(swappedEl);
+                sZone.appendChild(swappedEl);
                 userMappings[qIdx][sourceTargetId] = existingId;
             }
         } else {
@@ -3889,10 +4167,10 @@ function handleDrop(e) {
     
     // Add new item to target
     var droppedEl = createDroppedItem(qIdx, targetId, itemDataId, itemText);
-    target.appendChild(droppedEl);
+    zone.appendChild(droppedEl);
     
     // Remove placeholder
-    var placeholder = target.querySelector('.placeholder');
+    var placeholder = zone.querySelector('.placeholder');
     if (placeholder) placeholder.remove();
     
     // Update mappings
@@ -3911,10 +4189,19 @@ function handleDrop(e) {
 function updateWaitingStates() {
     var allTargets = document.querySelectorAll('.drop-target');
     allTargets.forEach(function(target) {
-        if (!target.querySelector('.dropped-item')) {
+        var zone = target.querySelector('.drop-zone-inline') || target;
+        if (!zone.querySelector('.dropped-item')) {
             target.classList.add('waiting');
+            if (!zone.querySelector('.placeholder')) {
+                 var ph = document.createElement('div');
+                 ph.className = 'placeholder';
+                 ph.textContent = target.classList.contains('inline-target') ? 'Drop' : 'Drop here';
+                 zone.appendChild(ph);
+            }
         } else {
             target.classList.remove('waiting');
+            var ph = zone.querySelector('.placeholder');
+            if (ph) ph.remove();
         }
     });
 }
@@ -3930,13 +4217,14 @@ function restoreItemToPool(qIdx, itemId, text) {
 function removeItemFromTarget(qIdx, targetId, itemId, text) {
     var target = document.getElementById('q' + qIdx + '_target_' + targetId);
     if (target) {
-        var droppedItem = target.querySelector('.dropped-item');
+        var zone = target.querySelector('.drop-zone-inline') || target;
+        var droppedItem = zone.querySelector('.dropped-item');
         if (droppedItem) droppedItem.remove();
-        if (!target.querySelector('.placeholder')) {
+        if (!zone.querySelector('.placeholder')) {
             var placeholder = document.createElement('div');
             placeholder.className = 'placeholder';
-            placeholder.textContent = 'Drop here';
-            target.appendChild(placeholder);
+            placeholder.textContent = target.classList.contains('inline-target') ? 'Drop' : 'Drop here';
+            zone.appendChild(placeholder);
         }
     }
     
@@ -4460,6 +4748,16 @@ if (document.readyState === 'loading') {
         const inactiveModal = document.getElementById('inactiveModal');
         const closeInactiveModal = document.getElementById('closeInactiveModal');
         const selectOtherCourse = document.getElementById('selectOtherCourse');
+        
+        // Initialize question navigation
+        const questionNavModal = document.getElementById('questionNavModal');
+        if (questionNavModal) {
+            // Close modal when clicking the close button
+            const closeBtn = questionNavModal.querySelector('.close-modal-btn');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closeQuestionNavModal);
+            }
+        }
 
         // Initialize modal display to none
         if (confirmationModal) confirmationModal.style.display = 'none';
@@ -4647,6 +4945,210 @@ if (document.readyState === 'loading') {
             if (inactiveModal && inactiveModal.style.display === 'flex') {
                 inactiveModal.style.display = 'none';
             }
+        }
+    });
+    
+    // Question Navigation Functions
+    function handleUnansweredClick() {
+        const unansweredCount = parseInt(document.getElementById('submitUnanswered').textContent);
+        
+        if (unansweredCount === 1) {
+            // If only one unanswered question, go directly to it
+            goToFirstUnansweredQuestion();
+        } else if (unansweredCount > 1) {
+            // If multiple unanswered questions, show navigation modal
+            showQuestionNavigationModal();
+        }
+    }
+    
+    function goToFirstUnansweredQuestion() {
+        const questionCards = document.querySelectorAll('.question-card');
+        
+        for (let i = 0; i < questionCards.length; i++) {
+            const card = questionCards[i];
+            const answersContainer = card.querySelector('.answers');
+            const qindex = card.getAttribute('data-qindex');
+            
+            if (answersContainer && !isQuestionAnswered(answersContainer)) {
+                scrollToQuestion(qindex);
+                return;
+            }
+        }
+    }
+    
+    function showQuestionNavigationModal() {
+        const modal = document.getElementById('questionNavModal');
+        const grid = document.getElementById('questionGrid');
+        
+        if (!modal || !grid) {
+            console.error('Question navigation modal or grid not found');
+            return;
+        }
+        
+        // Clear existing content
+        grid.innerHTML = '';
+        
+        // Get all question cards
+        const questionCards = document.querySelectorAll('.question-card');
+        
+        // Get current question index
+        const currentQNum = parseInt(document.getElementById('currentQNum')?.textContent || '1') - 1;
+        
+        // Create question icons
+        questionCards.forEach((card, index) => {
+            const qindex = card.getAttribute('data-qindex');
+            const answersContainer = card.querySelector('.answers');
+            const isAnswered = answersContainer && isQuestionAnswered(answersContainer);
+            
+            const icon = document.createElement('div');
+            icon.className = `question-icon ${isAnswered ? 'answered' : 'unanswered'}`;
+            if (parseInt(qindex) === currentQNum) {
+                icon.classList.add('current');
+            }
+            icon.textContent = parseInt(qindex) + 1;
+            icon.setAttribute('data-qindex', qindex);
+            icon.title = `Question ${parseInt(qindex) + 1} (${isAnswered ? 'Answered' : 'Unanswered'})`;
+            
+            // Use IIFE to capture the qindex value properly
+            icon.addEventListener('click', (function(questionIndex) {
+                return function() {
+                    closeQuestionNavModal();
+                    scrollToQuestion(questionIndex);
+                };
+            })(qindex));
+            
+            grid.appendChild(icon);
+        });
+        
+        // Show modal
+        modal.style.display = 'flex';
+    }
+    
+    function closeQuestionNavModal() {
+        const modal = document.getElementById('questionNavModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+    
+    function goToFirstQuestion() {
+        const firstQuestionIndex = 0;
+        scrollToQuestion(firstQuestionIndex.toString());
+    }
+    
+    function goToLastQuestion() {
+        const questionCards = document.querySelectorAll('.question-card');
+        const lastQuestionIndex = questionCards.length - 1;
+        scrollToQuestion(lastQuestionIndex.toString());
+    }
+    
+    function scrollToQuestion(qindex) {
+        // First, make sure the question is visible
+        if (typeof showQuestion === 'function') {
+            // Use the existing showQuestion function to display the selected question
+            showQuestion(parseInt(qindex));
+        } else {
+            // Fallback: manually show the question
+            const questionCards = document.querySelectorAll('.question-card');
+            questionCards.forEach((card, idx) => {
+                if (idx == qindex) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            
+            // Update the question counter
+            const currentQNumEl = document.getElementById('currentQNum');
+            if (currentQNumEl) currentQNumEl.textContent = parseInt(qindex) + 1;
+            
+            // Update navigation buttons
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            
+            if (prevBtn) prevBtn.disabled = (qindex === 0);
+            
+            const totalQuestions = document.querySelectorAll('.question-card').length;
+            if (qindex === totalQuestions - 1) {
+                if (nextBtn) {
+                    nextBtn.innerHTML = 'Finish <i class="fas fa-flag-checkered"></i>';
+                    nextBtn.style.background = '#059669';
+                }
+            } else {
+                if (nextBtn) {
+                    nextBtn.innerHTML = 'Next <i class="fas fa-arrow-right"></i>';
+                    nextBtn.style.background = '#92AB2F';
+                }
+            }
+        }
+        
+        // Small delay to ensure the question is visible before scrolling
+        setTimeout(() => {
+            const questionCard = document.querySelector(`.question-card[data-qindex="${qindex}"]`);
+            if (questionCard) {
+                questionCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // Add temporary highlight effect
+                questionCard.style.boxShadow = '0 0 0 3px #3b82f6';
+                questionCard.style.transition = 'box-shadow 0.3s';
+                
+                setTimeout(() => {
+                    questionCard.style.boxShadow = '';
+                }, 2000);
+            }
+        }, 100);
+    }
+    
+    function isQuestionAnswered(answersContainer) {
+        // Check for different question types
+        const singleSelect = answersContainer.querySelector('input.single:checked');
+        const multiSelect = answersContainer.querySelectorAll('input.multi:checked').length > 0;
+        const textAnswer = answersContainer.querySelector('textarea');
+        const hasText = textAnswer && textAnswer.value.trim() !== '';
+        
+        // For drag and drop questions
+        const droppedItems = answersContainer.querySelectorAll('.dropped-item').length > 0;
+        
+        return singleSelect || multiSelect || hasText || droppedItems;
+    }
+    
+    // Test function to verify horizontal orientation layout
+    function testHorizontalOrientation() {
+        console.log('Testing horizontal orientation layout:');
+        
+        // Find all drag-drop questions
+        const dragDropContainers = document.querySelectorAll('.drag-drop-container');
+        
+        dragDropContainers.forEach((container, index) => {
+            if (container.classList.contains('horizontal-layout')) {
+                console.log(`Question ${index + 1} has horizontal layout`);
+                
+                const dropTargetsList = container.querySelector('.drop-targets-list');
+                if (dropTargetsList) {
+                    const style = getComputedStyle(dropTargetsList);
+                    console.log(`  justify-content: ${style.justifyContent}`);
+                    console.log(`  flex-direction: ${style.flexDirection}`);
+                    
+                    // Check if drop targets are aligned to the right
+                    const isRightAligned = style.justifyContent === 'flex-end';
+                    console.log(`  Right aligned: ${isRightAligned}`);
+                    
+                    // Check drop target sizes
+                    const dropTargets = dropTargetsList.querySelectorAll('.drop-target');
+                    dropTargets.forEach((target, targetIndex) => {
+                        const targetStyle = getComputedStyle(target);
+                        console.log(`  Target ${targetIndex + 1}: width=${targetStyle.width}, height=${targetStyle.height}`);
+                    });
+                }
+            }
+        });
+    }
+    
+    // Close question navigation modal when clicking outside
+    window.addEventListener('click', function(event) {
+        const questionNavModal = document.getElementById('questionNavModal');
+        if (event.target === questionNavModal) {
+            closeQuestionNavModal();
         }
     });
 </script>

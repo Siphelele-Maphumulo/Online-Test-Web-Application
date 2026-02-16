@@ -1,6 +1,7 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@page import="myPackage.classes.User"%>
 <%@page import="myPackage.DatabaseClass"%>
+<%@ page isELIgnored="true" %>
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
  
 <% 

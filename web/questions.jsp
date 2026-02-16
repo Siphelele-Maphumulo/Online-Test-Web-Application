@@ -1077,8 +1077,20 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
     border-color: var(--accent-blue);
 }
 
-.drag-item-row input, .drop-target-row input {
+.drag-item-row textarea, .drop-target-row textarea {
     flex: 1;
+    resize: none;
+    overflow: hidden;
+    min-height: 38px;
+}
+
+.drag-handle {
+    cursor: move;
+}
+
+.drag-item-row.row-dragging, .drop-target-row.row-dragging {
+    opacity: 0.4;
+    border: 2px dashed var(--accent-blue);
 }
 
 .drag-item-row select {
@@ -1312,7 +1324,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                 <i class="fas fa-book" style="color: var(--accent-blue);"></i>
                                 Target Course
                             </label>
-                            <select name="coursename" class="form-select" id="courseSelectFile" required>
+                            <select name="coursename" class="form-select" id="courseSelectFile" required onchange="syncCourseDropdowns()">
                                 <% 
                                 if (courseNames.isEmpty()) {
                                 %>
@@ -1425,7 +1437,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                 <i class="fas fa-book" style="color: var(--accent-blue);"></i>
                                 Select Course
                             </label>
-                            <select name="coursename" class="form-select" id="courseSelectAddNew" required onchange="saveLastSelection()">
+                            <select name="coursename" class="form-select" id="courseSelectAddNew" required onchange="syncCourseDropdowns(); saveLastSelection()">
                                 <% 
                                 if (courseNames.isEmpty()) {
                                 %>
@@ -1543,9 +1555,10 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                     <i class="fas fa-columns" style="color: var(--info);"></i>
                                     Orientation
                                 </label>
-                                <select name="orientation" class="form-select">
-                                    <option value="horizontal">Horizontal (Current)</option>
-                                    <option value="vertical">Vertical</option>
+                                <select name="orientation" class="form-select" id="orientationSelect">
+                                    <option value="horizontal">Horizontal (Side by Side)</option>
+                                    <option value="vertical">Vertical (Stacked)</option>
+                                    <option value="landscape">Landscape (Code Style)</option>
                                 </select>
                                 <small class="form-hint">How items and targets are laid out</small>
                             </div>
@@ -1557,8 +1570,9 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                 Draggable Items
                             </label>
                             <div id="dragItemsContainer">
-                                <div class="drag-item-row" data-item-index="0">
-                                    <input type="text" name="dragItem_text_0" class="form-control" placeholder="Enter draggable item text">
+                                <div class="drag-item-row" data-item-index="0" draggable="true" ondragstart="handleQuestionRowDragStart(event)" ondragover="handleQuestionRowDragOver(event)" ondrop="handleQuestionRowDrop(event)" ondragend="handleQuestionRowDragEnd(event)">
+                                    <i class="fas fa-grip-vertical mr-2 text-muted drag-handle"></i>
+                                    <textarea name="dragItem_text_0" class="form-control" rows="1" placeholder="Enter draggable item text" oninput="autoResize(this)"></textarea>
                                     <select name="dragItem_target_0" class="form-select">
                                         <option value="">Select correct target</option>
                                     </select>
@@ -1576,8 +1590,9 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                 Drop Targets
                             </label>
                             <div id="dropTargetsContainer">
-                                <div class="drop-target-row" data-target-index="0">
-                                    <input type="text" name="dropTarget_0" class="form-control" placeholder="Enter drop target label">
+                                <div class="drop-target-row" data-target-index="0" draggable="true" ondragstart="handleQuestionRowDragStart(event)" ondragover="handleQuestionRowDragOver(event)" ondrop="handleQuestionRowDrop(event)" ondragend="handleQuestionRowDragEnd(event)">
+                                    <i class="fas fa-bullseye mr-2 text-muted drag-handle"></i>
+                                    <textarea name="dropTarget_0" class="form-control" rows="1" placeholder="Enter drop target label (use [[target]] for box position)" oninput="autoResize(this); updateDragDropTargetOptions()"></textarea>
                                     <button type="button" class="btn btn-outline btn-sm" onclick="removeDropTarget(this)">Remove</button>
                                 </div>
                             </div>
@@ -1659,7 +1674,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                 <i class="fas fa-filter" style="color: var(--warning);"></i>
                                 Filter by Course
                             </label>
-                            <select name="coursename" class="form-select" id="courseSelectView" onchange="updateShowAllButton()">
+                            <select name="coursename" class="form-select" id="courseSelectView" onchange="syncCourseDropdowns(); updateShowAllButton()">
                                 <option value="">All Courses</option>
                                 <% 
                                 if (courseNames != null) {
@@ -1742,7 +1757,7 @@ function saveLastSelection() {
 
 // Function to sync all course dropdowns
 function syncCourseDropdowns() {
-    const pdfCourseSelect = document.getElementById('courseSelectPdf');
+    const fileCourseSelect = document.getElementById('courseSelectFile');
     const addQuestionCourseSelect = document.getElementById('courseSelectAddNew');
     const viewCourseSelect = document.getElementById('courseSelectView');
     
@@ -1750,22 +1765,24 @@ function syncCourseDropdowns() {
     function syncAllDropdowns(changedSelect) {
         const value = changedSelect.value;
         
-        if (pdfCourseSelect && pdfCourseSelect !== changedSelect) {
-            pdfCourseSelect.value = value;
+        if (fileCourseSelect && fileCourseSelect !== changedSelect) {
+            fileCourseSelect.value = value;
         }
         if (addQuestionCourseSelect && addQuestionCourseSelect !== changedSelect) {
             addQuestionCourseSelect.value = value;
-            saveLastSelection(); // Save when course changes
         }
         if (viewCourseSelect && viewCourseSelect !== changedSelect) {
             viewCourseSelect.value = value;
-            updateShowAllButton();
         }
+        
+        // Save selection and update UI after syncing
+        saveLastSelection();
+        updateShowAllButton();
     }
     
     // Add event listeners to all dropdowns
-    if (pdfCourseSelect) {
-        pdfCourseSelect.addEventListener('change', function() {
+    if (fileCourseSelect) {
+        fileCourseSelect.addEventListener('change', function() {
             syncAllDropdowns(this);
         });
     }
@@ -3649,6 +3666,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize batch processing functionality
     initBatchSubmitHandling();
     
+    // Initialize orientation preview
+    initOrientationPreview();
+    
     // Initialize drop target input event listeners for immediate updates
     const existingDropTargetInputs = document.querySelectorAll('#dropTargetsContainer input[type="text"]');
     existingDropTargetInputs.forEach(input => {
@@ -3756,8 +3776,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 } else if (qType === "DRAG_AND_DROP") {
                     // For Drag and Drop questions, validate that drag items and drop targets are provided
-                    const dragItems = document.querySelectorAll('#dragItemsContainer input[type="text"]');
-                    const dropTargets = document.querySelectorAll('#dropTargetsContainer input[type="text"]');
+                    const dragItems = document.querySelectorAll('#dragItemsContainer textarea');
+                    const dropTargets = document.querySelectorAll('#dropTargetsContainer textarea');
                     
                     let hasValidDragItem = false;
                     let hasValidDropTarget = false;
@@ -3859,6 +3879,11 @@ document.addEventListener('DOMContentLoaded', function() {
 let dragItemIndex = 0;
 let dropTargetIndex = 0;
 
+function autoResize(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+}
+
 function addDragItem() {
     const container = document.getElementById('dragItemsContainer');
     const newIndex = ++dragItemIndex;
@@ -3866,9 +3891,16 @@ function addDragItem() {
     const itemRow = document.createElement('div');
     itemRow.className = 'drag-item-row';
     itemRow.setAttribute('data-item-index', newIndex);
+    itemRow.draggable = true;
+    
+    itemRow.addEventListener('dragstart', handleQuestionRowDragStart);
+    itemRow.addEventListener('dragover', handleQuestionRowDragOver);
+    itemRow.addEventListener('drop', handleQuestionRowDrop);
+    itemRow.addEventListener('dragend', handleQuestionRowDragEnd);
     
     itemRow.innerHTML = `
-        <input type="text" name="dragItem_text_${newIndex}" class="form-control" placeholder="Enter draggable item text">
+        <i class="fas fa-grip-vertical mr-2 text-muted drag-handle"></i>
+        <textarea name="dragItem_text_${newIndex}" class="form-control" rows="1" placeholder="Enter draggable item text" oninput="autoResize(this)"></textarea>
         <select name="dragItem_target_${newIndex}" class="form-select">
             <option value="">Select correct target</option>
         </select>
@@ -3892,23 +3924,69 @@ function addDropTarget() {
     const targetRow = document.createElement('div');
     targetRow.className = 'drop-target-row';
     targetRow.setAttribute('data-target-index', newIndex);
+    targetRow.draggable = true;
+    
+    targetRow.addEventListener('dragstart', handleQuestionRowDragStart);
+    targetRow.addEventListener('dragover', handleQuestionRowDragOver);
+    targetRow.addEventListener('drop', handleQuestionRowDrop);
+    targetRow.addEventListener('dragend', handleQuestionRowDragEnd);
     
     targetRow.innerHTML = `
-        <input type="text" name="dropTarget_${newIndex}" class="form-control" placeholder="Enter drop target label">
+        <i class="fas fa-bullseye mr-2 text-muted drag-handle"></i>
+        <textarea name="dropTarget_${newIndex}" class="form-control" rows="1" placeholder="Enter drop target label (use [[target]] for box position)" oninput="autoResize(this); updateDragDropTargetOptions()"></textarea>
         <button type="button" class="btn btn-outline btn-sm" onclick="removeDropTarget(this)">Remove</button>
     `;
     
     container.appendChild(targetRow);
     
-    // Add change event listener to the new input to update drag item options immediately
-    const newInput = targetRow.querySelector('input[type="text"]');
-    newInput.addEventListener('input', updateDragDropTargetOptions);
-    newInput.addEventListener('change', updateDragDropTargetOptions);
-    
     updateDragDropTargetOptions();
     
     // Auto-update marks (1 per target)
     updateDragDropMarks();
+}
+
+// Reordering logic for Add Question form
+let draggedQRow = null;
+
+function handleQuestionRowDragStart(e) {
+    draggedQRow = this;
+    this.style.opacity = '0.4';
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleQuestionRowDragOver(e) {
+    if (e.preventDefault) {
+        e.preventDefault();
+    }
+    e.dataTransfer.dropEffect = 'move';
+    
+    if (this !== draggedQRow && this.parentNode === draggedQRow.parentNode) {
+        const container = this.parentNode;
+        const children = Array.from(container.children);
+        const draggedIndex = children.indexOf(draggedQRow);
+        const targetIndex = children.indexOf(this);
+        
+        if (draggedIndex < targetIndex) {
+            container.insertBefore(draggedQRow, this.nextSibling);
+        } else {
+            container.insertBefore(draggedQRow, this);
+        }
+    }
+    
+    return false;
+}
+
+function handleQuestionRowDrop(e) {
+    if (e.stopPropagation) {
+        e.stopPropagation();
+    }
+    updateDragDropTargetOptions();
+    return false;
+}
+
+function handleQuestionRowDragEnd(e) {
+    this.style.opacity = '1';
+    draggedQRow = null;
 }
 
 function removeDropTarget(button) {
@@ -3929,7 +4007,7 @@ function updateDragDropMarks() {
 }
 
 function updateDragDropTargetOptions() {
-    const targetInputs = document.querySelectorAll('#dropTargetsContainer input[type="text"]');
+    const targetInputs = document.querySelectorAll('#dropTargetsContainer textarea');
     const targetOptions = [];
     
     targetInputs.forEach(input => {
@@ -3994,5 +4072,138 @@ function confirmBatchCancel() {
     resetForm();
 }
 
+// Test function to verify course dropdown synchronization
+function testCourseSync() {
+    console.log('Testing course dropdown synchronization:');
+    const fileSelect = document.getElementById('courseSelectFile');
+    const addSelect = document.getElementById('courseSelectAddNew');
+    const viewSelect = document.getElementById('courseSelectView');
+    
+    console.log('File course:', fileSelect ? fileSelect.value : 'Not found');
+    console.log('Add course:', addSelect ? addSelect.value : 'Not found');
+    console.log('View course:', viewSelect ? viewSelect.value : 'Not found');
+}
+
+// Test function to verify orientation functionality
+function testOrientation() {
+    console.log('Testing orientation functionality:');
+    const orientationSelect = document.getElementById('orientationSelect');
+    const dragDropEditor = document.getElementById('dragDropEditor');
+    
+    if (orientationSelect && dragDropEditor) {
+        console.log('Current orientation:', orientationSelect.value);
+        console.log('Editor classes:', dragDropEditor.className);
+        
+        // Test all orientations
+        ['horizontal', 'vertical', 'landscape'].forEach(orientation => {
+            orientationSelect.value = orientation;
+            orientationSelect.dispatchEvent(new Event('change'));
+            console.log(`${orientation} layout applied:`, dragDropEditor.classList.contains(`${orientation}-layout`));
+            
+            // Check if drop targets are laid out horizontally for horizontal orientation
+            if (orientation === 'horizontal') {
+                const dropTargetsList = dragDropEditor.querySelector('.drop-targets-list');
+                const isHorizontal = dropTargetsList && getComputedStyle(dropTargetsList).flexDirection === 'row';
+                console.log('Drop targets horizontal layout:', isHorizontal);
+            }
+        });
+        
+        // Reset to original value
+        orientationSelect.value = 'horizontal';
+        orientationSelect.dispatchEvent(new Event('change'));
+    } else {
+        console.log('Orientation elements not found');
+    }
+}
+
+// Initialize orientation preview for drag-drop questions
+function initOrientationPreview() {
+    const orientationSelect = document.getElementById('orientationSelect');
+    const dragDropEditor = document.getElementById('dragDropEditor');
+    
+    if (orientationSelect && dragDropEditor) {
+        // Function to update preview
+        function updateOrientationPreview() {
+            const selectedOrientation = orientationSelect.value;
+            
+            // Remove all orientation classes
+            dragDropEditor.classList.remove('horizontal-layout', 'vertical-layout', 'landscape-layout');
+            
+            // Add selected orientation class
+            if (selectedOrientation === 'vertical') {
+                dragDropEditor.classList.add('vertical-layout');
+            } else if (selectedOrientation === 'landscape') {
+                dragDropEditor.classList.add('landscape-layout');
+            } else {
+                // Default to horizontal
+                dragDropEditor.classList.add('horizontal-layout');
+            }
+            
+            console.log('Orientation changed to:', selectedOrientation);
+        }
+        
+        // Add event listener
+        orientationSelect.addEventListener('change', updateOrientationPreview);
+        
+        // Initialize with current selection
+        updateOrientationPreview();
+    }
+}
+
 // Initialize when DOM is loaded (this will be called after the above DOMContentLoaded event)
 </script>
+
+<style>
+/* Orientation preview styles for drag-drop editor */
+#dragDropEditor {
+    transition: all 0.3s ease;
+}
+
+#dragDropEditor.horizontal-layout {
+    /* Default horizontal layout - no special styling needed */
+}
+
+#dragDropEditor.horizontal-layout .drop-targets-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+}
+
+#dragDropEditor.horizontal-layout .drop-target {
+    min-width: 120px;
+    flex: 1 1 auto;
+}
+
+#dragDropEditor.vertical-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+#dragDropEditor.vertical-layout > div {
+    width: 100%;
+}
+
+#dragDropEditor.landscape-layout {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+#dragDropEditor.landscape-layout .draggable-items-panel {
+    padding: 15px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+}
+
+#dragDropEditor.landscape-layout .drop-targets-panel {
+    padding: 15px;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+}
+</style>
