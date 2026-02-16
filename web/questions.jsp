@@ -1417,8 +1417,8 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
     }
     
     .multi-select-toggle.checked::after {
-        content: '?';
-        border-color: red;
+        content: '\2713';
+        color: red;
         font-size: 12px;
         font-weight: bold;
     }
@@ -1964,10 +1964,6 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
     </div>
 </div>
 
-<!-- Scroll to Top Button -->
-<button class="scroll-to-top" id="scrollToTopBtn" title="Scroll to top">
-    <i class="fas fa-arrow-up"></i>
-</button>
 
 <script>
 // Function to update the Show All Questions button state
@@ -4144,27 +4140,6 @@ document.addEventListener('DOMContentLoaded', function() {
         resizeTimeout = setTimeout(updateScrollIndicator, 100);
     });
     
-    // Add scroll to top functionality
-    const scrollToTopBtn = document.getElementById('scrollToTopBtn');
-    
-    if (scrollToTopBtn) {
-        // Show/hide scroll to top button based on scroll position
-        window.addEventListener('scroll', function() {
-            if (window.pageYOffset > 300) {  // Show after scrolling down 300px
-                scrollToTopBtn.classList.add('show');
-            } else {
-                scrollToTopBtn.classList.remove('show');
-            }
-        });
-        
-        // Scroll to top when button is clicked
-        scrollToTopBtn.addEventListener('click', function() {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        });
-    }
 });
 
 // Drag and Drop Interface Functions

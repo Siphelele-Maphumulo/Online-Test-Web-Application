@@ -1492,8 +1492,8 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
     }
     
     .multi-select-toggle.checked::after {
-        content: '✓';
-        border-color: red;
+        content: '\2713';
+        color: red;
         font-size: 12px;
         font-weight: bold;
     }

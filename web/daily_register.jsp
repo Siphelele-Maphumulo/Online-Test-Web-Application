@@ -1235,6 +1235,98 @@
             .scroll-to-top:active {
                 transform: translateY(1px);
             }
+
+            /* Highlight selected rows for delete (admin view) */
+            .daily-row-selected {
+                background-color: rgba(250, 150, 150, 0.15);
+                position: relative;
+            }
+
+            .daily-row-selected::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                border: 2px solid rgba(220, 38, 38, 0.5);
+                border-radius: var(--radius-sm);
+                pointer-events: none;
+            }
+
+            /* Floating Scroll Buttons (same style as showall.jsp) */
+            .floating-scroll {
+                position: fixed;
+                bottom: 300px;
+                right: 5px;
+                z-index: 1000;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+            }
+
+            .floating-scroll.visible {
+                opacity: 1;
+                visibility: visible;
+            }
+
+            .scroll-btn {
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background-color: #476287;
+                color: var(--white);
+                border: none;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 8px;
+                box-shadow: var(--shadow-lg);
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .scroll-btn:hover {
+                transform: scale(1.1);
+                box-shadow: 0 8px 25px rgba(9, 41, 77, 0.3);
+            }
+
+            .scroll-btn:active {
+                transform: scale(0.95);
+            }
+
+            .scroll-btn::before {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 0;
+                height: 0;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.3);
+                transform: translate(-50%, -50%);
+                transition: width 0.4s ease, height 0.4s ease;
+            }
+
+            .scroll-btn:active::before {
+                width: 100%;
+                height: 100%;
+            }
+
+            @media (max-width: 768px) {
+                .floating-scroll {
+                    bottom: 20px;
+                    right: 20px;
+                }
+
+                .scroll-btn {
+                    width: 45px;
+                    height: 45px;
+                    font-size: 16px;
+                }
+            }
         </style>
 
         <%@ include file="header-messages.jsp" %>
@@ -1426,12 +1518,19 @@
                                 <i class="fas fa-clock"></i> Days Late
                             </div>
                         </div>
-                            </div>
+                        </div>
+
+            <!-- Floating Scroll Buttons (same as showall.jsp) -->
+            <div class="floating-scroll" id="floatingScroll">
+                <button class="scroll-btn" id="scrollUpBtn" title="Scroll to Top">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+                <button class="scroll-btn" id="scrollDownBtn" title="Scroll to Bottom">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
             
-            <!-- Scroll-to-top button -->
-            <button class="scroll-to-top" id="scrollToTopBtn" title="Go to top">
-                <i class="fas fa-arrow-up"></i>
-            </button>
+
             
         </div>
 <div id="deleteConfirmationModal" class="modal-overlay" style="display: none;">
@@ -1454,10 +1553,11 @@
     </body>
 
     <script>
-        // Scroll-to-top button functionality
+        // Scroll and selection enhancements
         document.addEventListener('DOMContentLoaded', function() {
             const scrollToTopBtn = document.getElementById('scrollToTopBtn');
-            
+
+            // Scroll-to-top button
             if (scrollToTopBtn) {
                 window.addEventListener('scroll', () => {
                     if (window.pageYOffset > 300) {
@@ -1474,7 +1574,92 @@
                     });
                 });
             }
+
+            // Initialize floating scroll buttons
+            initScrollButtons();
+
+            // Row selection highlighting (admin view)
+            const selectAll = document.getElementById('selectAll');
+            const rowCheckboxes = document.querySelectorAll('input[name="registerIds"]');
+
+            function updateRowSelection() {
+                rowCheckboxes.forEach(cb => {
+                    const row = cb.closest('tr');
+                    if (!row) return;
+                    if (cb.checked) {
+                        row.classList.add('daily-row-selected');
+                    } else {
+                        row.classList.remove('daily-row-selected');
+                    }
+                });
+            }
+
+            if (selectAll) {
+                selectAll.addEventListener('change', function () {
+                    rowCheckboxes.forEach(cb => {
+                        cb.checked = selectAll.checked;
+                    });
+                    updateRowSelection();
+                });
+            }
+
+            rowCheckboxes.forEach(cb => {
+                cb.addEventListener('change', updateRowSelection);
+            });
         });
+
+        // Floating scroll buttons functionality (same as showall.jsp)
+        function initScrollButtons() {
+            const floatingScroll = document.getElementById('floatingScroll');
+            const scrollUpBtn = document.getElementById('scrollUpBtn');
+            const scrollDownBtn = document.getElementById('scrollDownBtn');
+            
+            if (!floatingScroll || !scrollUpBtn || !scrollDownBtn) return;
+            
+            function toggleScrollButtons() {
+                const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+                const documentHeight = document.documentElement.scrollHeight;
+                const windowHeight = window.innerHeight;
+                
+                if (scrollPosition > 200) {
+                    floatingScroll.classList.add('visible');
+                } else {
+                    floatingScroll.classList.remove('visible');
+                }
+                
+                if (scrollPosition + windowHeight >= documentHeight - 100) {
+                    scrollDownBtn.style.display = 'none';
+                } else {
+                    scrollDownBtn.style.display = 'flex';
+                }
+                
+                if (scrollPosition < 100) {
+                    scrollUpBtn.style.display = 'none';
+                } else {
+                    scrollUpBtn.style.display = 'flex';
+                }
+            }
+            
+            function scrollToTop() {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            }
+            
+            function scrollToBottom() {
+                window.scrollTo({
+                    top: document.documentElement.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
+            
+            scrollUpBtn.addEventListener('click', scrollToTop);
+            scrollDownBtn.addEventListener('click', scrollToBottom);
+            window.addEventListener('scroll', toggleScrollButtons);
+            
+            toggleScrollButtons();
+        }
     </script>
     
     </body>

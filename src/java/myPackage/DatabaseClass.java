@@ -7570,147 +7570,75 @@ public String generateDeviceIdentifier() {
 
 
 
-
-
-
-
 // Method to get all exams with results
-
 public ArrayList<Exams> getAllExamsWithResults() {
 
     try {
-
         ensureConnection();
-
     } catch (SQLException e) {
-
         LOGGER.log(Level.SEVERE, "Connection error in getAllExamsWithResults", e);
-
         return new ArrayList<>();
-
     }
-
-    
 
     ArrayList<Exams> exams = new ArrayList<>();
 
-
-
     String query = "SELECT u.first_name, u.last_name, u.user_name, u.email, " +
-
                    "e.exam_id, e.std_id, e.course_name, e.total_marks, e.obt_marks, " +
-
-                   "e.date, e.start_time, e.end_time, e.exam_time, e.status, e.result_status " + // ADDED
-
+                   "e.date, e.start_time, e.end_time, e.exam_time, e.status, e.result_status " +
                    "FROM exams e " +
-
                    "INNER JOIN users u ON e.std_id = u.user_id";
 
-
-
     try (PreparedStatement ps = conn.prepareStatement(query);
-
          ResultSet rs = ps.executeQuery()) {
-
-
 
         while (rs.next()) {
 
-            String formattedDate = rs.getDate("date") != null 
-
-                                    ? new SimpleDateFormat("yyyy-MM-dd").format(rs.getDate("date")) 
-
-                                    : null;
-
-            
-
-            // Get result_status
+            String formattedDate = rs.getDate("date") != null
+                    ? new SimpleDateFormat("yyyy-MM-dd").format(rs.getDate("date"))
+                    : null;
 
             String resultStatus = rs.getString("result_status");
 
             if (resultStatus == null) {
-
-                // Calculate
-
                 int totalMarks = rs.getInt("total_marks");
-
                 int obtMarks = rs.getInt("obt_marks");
 
                 if (totalMarks > 0) {
-
                     double percentage = (obtMarks * 100.0) / totalMarks;
-
                     resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
-
                 } else {
-
                     resultStatus = rs.getString("status");
-
                 }
-
             }
 
-
-
             Exams exam = new Exams(
-
-                rs.getString("first_name"),
-
-                rs.getString("last_name"),
-
-                rs.getString("user_name"),
-
-                rs.getString("email"),
-
-                rs.getInt("exam_id"),
-
-                rs.getString("std_id"),
-
-                rs.getString("course_name"),
-
-                rs.getInt("total_marks"),
-
-                rs.getInt("obt_marks"),
-
-                formattedDate,
-
-                rs.getString("start_time"),
-
-                rs.getString("end_time"),
-
-                rs.getString("exam_time"),
-
-                resultStatus  // Use result_status
-
+                    rs.getString("first_name"),
+                    rs.getString("last_name"),
+                    rs.getString("user_name"),
+                    rs.getString("email"),
+                    rs.getInt("exam_id"),
+                    rs.getString("std_id"),
+                    rs.getString("course_name"),
+                    rs.getInt("total_marks"),
+                    rs.getInt("obt_marks"),
+                    formattedDate,
+                    rs.getString("start_time"),
+                    rs.getString("end_time"),
+                    rs.getString("exam_time"),
+                    resultStatus
             );
 
             exams.add(exam);
-
         }
 
     } catch (SQLException e) {
-
-        Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error fetching exams with results", e);
-
-    } finally {
-
-        try {
-
-            if (rs != null) rs.close();
-
-            if (ps != null) ps.close();
-
-        } catch (SQLException ex) {
-
-            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources", ex);
-
-        }
-
-        return exams;
-
+        Logger.getLogger(DatabaseClass.class.getName())
+              .log(Level.SEVERE, "Error fetching exams with results", e);
     }
 
+    return exams;
 }
+
 
 
 

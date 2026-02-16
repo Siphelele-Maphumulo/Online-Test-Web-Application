@@ -441,6 +441,169 @@ public String escapeHtml(String input) {
     }
 }
 
+    /* Floating Scroll Button */
+    .floating-scroll {
+        position: fixed;
+        bottom: 300px;
+        right: 5px;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .floating-scroll.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .scroll-btn {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #476287;
+        color: white;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .scroll-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 8px 25px rgba(9, 41, 77, 0.3);
+    }
+
+    .scroll-btn:active {
+        transform: scale(0.95);
+    }
+
+    .scroll-btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.4s ease, height 0.4s ease;
+    }
+
+    .scroll-btn:active::before {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Multi-select functionality */
+    .multi-select-checkbox {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 10;
+        opacity: 0;
+        pointer-events: none;
+    }
+    
+    .question-card.multi-selected, .result-row.multi-selected {
+        background-color: rgba(250, 150, 150, 0.479) !important;
+        outline-offset: -3px;
+        position: relative;
+    }
+    
+    .question-card.multi-selected::before, .result-row.multi-selected::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(226, 79, 74, 0.1);
+        z-index: 1;
+        pointer-events: none;
+    }
+    
+    .multi-select-toggle {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 20;
+        width: 20px;
+        height: 20px;
+        border: 2px solid #64748b;
+        border-radius: 4px;
+        background: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+    
+    .multi-select-toggle.checked {
+        background: white;
+        border-color: red;
+    }
+    
+    .multi-select-toggle.checked::after {
+        content: '\2713';
+        color: red;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    /* Floating delete button */
+    .floating-delete-selected {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 15px 30px;
+        font-size: 16px;
+        font-weight: 600;
+        box-shadow: 0 10px 25px rgba(220, 38, 38, 0.4);
+        cursor: pointer;
+        display: none;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+    
+    .floating-delete-selected:hover {
+        transform: translateX(-50%) scale(1.05);
+        box-shadow: 0 12px 30px rgba(220, 38, 38, 0.5);
+    }
+    
+    .floating-delete-selected.show {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .floating-delete-selected i {
+        font-size: 18px;
+    }
+    
+    /* Checkbox container to avoid interfering with row clicks */
+    .checkbox-container {
+        position: relative;
+        display: inline-block;
+    }
+
 </style>
 
 <%@ include file="modal_assets.jspf" %>
@@ -536,7 +699,7 @@ public String escapeHtml(String input) {
                 <table id="results-table">
                     <thead>
                         <tr>
-                            <th style="width: 20px;"><input type="checkbox" id="selectAll"></th>
+                            <th style="width: 20px;"><input type="checkbox" id="selectAll" class="multi-select-checkbox"></th>
                             <th onclick="sortTable(1)">Student Name</th>
                             <th onclick="sortTable(2)">Date</th>
                             <th onclick="sortTable(3)">Course</th>
@@ -573,7 +736,12 @@ public String escapeHtml(String input) {
                             data-course="<%= e.getcName() %>"
                             data-status="<%= statusText %>"
                             data-date="<%= e.getDate() %>">
-                            <td><input type="checkbox" name="eids" value="<%= e.getExamId() %>" class="record-checkbox" onchange="updateBulkDeleteButton()"></td>
+                            <td>
+                                <div class="checkbox-container">
+                                    <input type="checkbox" name="eids" value="<%= e.getExamId() %>" id="checkbox-<%= e.getExamId() %>" class="record-checkbox" onchange="toggleResultSelection(this)">
+                                    <label for="checkbox-<%= e.getExamId() %>" class="multi-select-toggle"></label>
+                                </div>
+                            </td>
                             <td><%= e.getFullName() %><br><small><%= e.getEmail() %></small></td>
                             <td><%= e.getDate() %></td>
                             <td><%= e.getcName() %></td>
@@ -599,6 +767,21 @@ public String escapeHtml(String input) {
                 </table>
             </form>
             
+            <!-- Floating Delete Selected Button -->
+            <button type="button" id="floatingDeleteBtn" class="floating-delete-selected" onclick="handleBulkDelete()">
+                <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
+            </button>
+
+            <!-- Floating Scroll Buttons -->
+            <div class="floating-scroll" id="floatingScroll">
+                <button type="button" class="scroll-btn" id="scrollUpBtn" title="Scroll to Top">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+                <button type="button" class="scroll-btn" id="scrollDownBtn" title="Scroll to Bottom">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+
             <!-- Delete Confirmation Modal -->
             <div id="deleteConfirmationModal" class="modal-overlay">
                 <div class="modal-content">
@@ -677,11 +860,107 @@ let currentSortColumn = -1;
 let sortDirection = 1; // 1 for ascending, -1 for descending
 const csrfToken = '<%= csrfToken %>';
 
+// Multi-select functionality
+function toggleResultSelection(checkbox) {
+    const row = checkbox.closest('.result-row');
+    const toggle = checkbox.nextElementSibling;
+    
+    if (checkbox.checked) {
+        row.classList.add('multi-selected');
+        if (toggle) toggle.classList.add('checked');
+    } else {
+        row.classList.remove('multi-selected');
+        if (toggle) toggle.classList.remove('checked');
+    }
+    updateBulkDeleteButton();
+}
+
 // Update bulk delete button state based on selected checkboxes
 function updateBulkDeleteButton() {
     const selectedCheckboxes = document.querySelectorAll('.record-checkbox:checked');
-    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
-    bulkDeleteBtn.disabled = selectedCheckboxes.length === 0;
+    const floatingBtn = document.getElementById('floatingDeleteBtn');
+    const countSpan = document.getElementById('selectedCount');
+    
+    const selectedCountNum = selectedCheckboxes.length;
+    
+    if (countSpan) {
+        countSpan.textContent = selectedCountNum;
+    }
+    
+    // Show/hide bulk delete button based on selection
+    if (floatingBtn) {
+        if (selectedCountNum > 0) {
+            floatingBtn.classList.add('show');
+        } else {
+            floatingBtn.classList.remove('show');
+        }
+    }
+}
+
+// Floating scroll buttons functionality
+function initScrollButtons() {
+    const floatingScroll = document.getElementById('floatingScroll');
+    const scrollUpBtn = document.getElementById('scrollUpBtn');
+    const scrollDownBtn = document.getElementById('scrollDownBtn');
+    
+    if (!floatingScroll || !scrollUpBtn || !scrollDownBtn) return;
+    
+    function toggleScrollButtons() {
+        const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+        const documentHeight = document.documentElement.scrollHeight;
+        const windowHeight = window.innerHeight;
+        
+        if (scrollPosition > 200) {
+            floatingScroll.classList.add('visible');
+        } else {
+            floatingScroll.classList.remove('visible');
+        }
+        
+        if (scrollPosition + windowHeight >= documentHeight - 100) {
+            scrollDownBtn.style.display = 'none';
+        } else {
+            scrollDownBtn.style.display = 'flex';
+        }
+        
+        if (scrollPosition < 100) {
+            scrollUpBtn.style.display = 'none';
+        } else {
+            scrollUpBtn.style.display = 'flex';
+        }
+    }
+    
+    function scrollToTop() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
+    
+    function scrollToBottom() {
+        window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: 'smooth'
+        });
+    }
+    
+    scrollUpBtn.addEventListener('click', scrollToTop);
+    scrollDownBtn.addEventListener('click', scrollToBottom);
+    window.addEventListener('scroll', toggleScrollButtons);
+    toggleScrollButtons();
+}
+
+// Bulk delete handler
+function handleBulkDelete() {
+    const selectedIds = getSelectedIds();
+    if (selectedIds.length === 0) {
+        alert('Please select at least one record to delete.');
+        return;
+    }
+    openDeleteModal(
+        `Are you sure you want to delete the <strong>${selectedIds.length}</strong> selected record(s)?<br><br>` +
+        `This action cannot be undone.`,
+        () => submitBulkDelete()
+    );
 }
 
 // Initialize when page loads
@@ -690,6 +969,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const rows = document.querySelectorAll('#resultsBody tr.result-row');
         originalResults = Array.from(rows).map(row => row.outerHTML);
         updateResultsCount();
+        initScrollButtons();
 
         // Attach event listeners
         document.getElementById('searchInput').addEventListener('input', applyFilters);
@@ -708,8 +988,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('selectAll').addEventListener('change', function(e) {
             document.querySelectorAll('.record-checkbox').forEach(checkbox => {
                 checkbox.checked = e.target.checked;
-                // Trigger onchange event to update bulk delete button
-                checkbox.dispatchEvent(new Event('change'));
+                toggleResultSelection(checkbox);
             });
         });
 
@@ -734,19 +1013,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // Bulk Delete Button
-        document.getElementById('bulkDeleteBtn').addEventListener('click', function() {
-            const selectedIds = getSelectedIds();
-            if (selectedIds.length === 0) {
-                alert('Please select at least one record to delete.');
-                return;
-            }
-            openDeleteModal(
-                `Are you sure you want to delete the <strong>${selectedIds.length}</strong> selected record(s)?<br><br>` +
-                `This action cannot be undone.`,
-                () => submitBulkDelete()
-            );
-        });
     }
 });
 
