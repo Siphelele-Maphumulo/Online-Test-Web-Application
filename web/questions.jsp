@@ -1262,6 +1262,208 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
         max-width: 1200px !important;
         width: 95% !important;
     }
+    
+   /* Floating Scroll Button */
+    .floating-scroll {
+        position: fixed;
+        bottom: 300px;
+        right: 5px;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .floating-scroll.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .scroll-btn {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #476287;
+        color: var(--white);
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8px;
+        box-shadow: var(--shadow-lg);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .scroll-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 8px 25px rgba(9, 41, 77, 0.3);
+    }
+
+    .scroll-btn:active {
+        transform: scale(0.95);
+    }
+
+    .scroll-btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.4s ease, height 0.4s ease;
+    }
+
+    .scroll-btn:active::before {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .floating-scroll {
+            bottom: 20px;
+            right: 20px;
+        }
+
+        .scroll-btn {
+            width: 45px;
+            height: 45px;
+            font-size: 16px;
+        }
+        
+        .search-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .search-box {
+            min-width: auto;
+            max-width: none;
+        }
+
+        .filter-controls {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .filter-select,
+        .btn-search {
+            width: 100%;
+        }
+
+        .active-filters {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+    
+    /* Multi-select functionality */
+    .multi-select-checkbox {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 10;
+        opacity: 0;
+        pointer-events: none;
+    }
+    
+    .question-card.multi-selected {
+        background-color: rgba(250, 150, 150, 0.479);
+        outline-offset: -3px;
+        position: relative;
+    }
+    
+    .question-card.multi-selected::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(226, 79, 74, 0.1);
+        z-index: 1;
+        pointer-events: none;
+    }
+    
+    .multi-select-toggle {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 20;
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--dark-gray);
+        border-radius: 4px;
+        background: var(--white);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+    
+    .multi-select-toggle.checked {
+        background: var(--white);
+        border-color: red;
+    }
+    
+    .multi-select-toggle.checked::after {
+        content: '?';
+        border-color: red;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    /* Floating delete button */
+    .floating-delete-selected {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 15px 30px;
+        font-size: 16px;
+        font-weight: 600;
+        box-shadow: 0 10px 25px rgba(220, 38, 38, 0.4);
+        cursor: pointer;
+        display: none;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+    
+    .floating-delete-selected:hover {
+        transform: translateX(-50%) scale(1.05);
+        box-shadow: 0 12px 30px rgba(220, 38, 38, 0.5);
+    }
+    
+    .floating-delete-selected.show {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .floating-delete-selected i {
+        font-size: 18px;
+    }
+    
+    /* Checkbox container to avoid interfering with card clicks */
+    .checkbox-container {
+        position: relative;
+        display: inline-block;
+    }
 </style>
 
 <!-- Dashboard Layout -->
@@ -4571,7 +4773,7 @@ initRearrangeInterface();
         // Scroll to bottom function
         function scrollToBottom() {
             window.scrollTo({
-                top: document.documentElement.scrollHeight,
+                top: document.documentElement.scrollHeight - window.innerHeight,
                 behavior: 'smooth'
             });
         }

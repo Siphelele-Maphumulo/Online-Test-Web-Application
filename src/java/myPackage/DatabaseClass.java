@@ -2815,9 +2815,9 @@ public ArrayList getAllQuestions(String courseName, String searchTerm, String qu
         ArrayList list=new ArrayList();
         try {
             
-            // Fixed: Use GROUP BY with proper aggregation to get the latest/most relevant status
-            // This ensures we get the correct status for each question
-            String sql = "SELECT question, answer, correct_answer, " +
+            // Fixed: Group by question_id ONLY to collapse duplicate rows.
+            // We use MAX() for other columns to ensure SQL compatibility while picking representative values.
+            String sql = "SELECT MAX(question) as question, MAX(answer) as answer, MAX(correct_answer) as correct_answer, " +
                         "CASE " +
                         "    WHEN SUM(CASE WHEN status = 'correct' THEN 1 ELSE 0 END) > 0 THEN 'correct' " +
                         "    WHEN SUM(CASE WHEN status LIKE 'partial:%' THEN 1 ELSE 0 END) > 0 THEN MAX(status) " +
@@ -2826,7 +2826,7 @@ public ArrayList getAllQuestions(String courseName, String searchTerm, String qu
                         "question_id " +
                         "FROM answers " +
                         "WHERE exam_id = ? " +
-                        "GROUP BY question_id, question, answer, correct_answer " +
+                        "GROUP BY question_id " +
                         "ORDER BY question_id";
             
             PreparedStatement pstm=conn.prepareStatement(sql);
@@ -2906,33 +2906,54 @@ public void insertAnswer(int eId, int qid, String question, String ans) {
         return;
     }
     
+    PreparedStatement pstmCheck = null;
     PreparedStatement pstm = null;
+    ResultSet rs = null;
     try {
         String correct = getCorrectAnswer(qid);
         String status = getAnswerStatus(ans, correct);
-        
         String userAnswerForDb = (ans != null && !ans.trim().isEmpty()) ? ans.trim() : "N/A";
 
-        pstm = conn.prepareStatement(
-            "INSERT INTO answers (exam_id, question_id, question, answer, correct_answer, status) VALUES (?, ?, ?, ?, ?, ?)"
-        );
-        pstm.setInt(1, eId);
-        pstm.setInt(2, qid); // Add the question_id
-        pstm.setString(3, question);
-        pstm.setString(4, userAnswerForDb);
-        pstm.setString(5, correct);
-        pstm.setString(6, status);
+        // First, check if an answer already exists for this exam and question
+        String checkSql = "SELECT answer_id FROM answers WHERE exam_id = ? AND question_id = ?";
+        pstmCheck = conn.prepareStatement(checkSql);
+        pstmCheck.setInt(1, eId);
+        pstmCheck.setInt(2, qid);
+        rs = pstmCheck.executeQuery();
+
+        if (rs.next()) {
+            // Update existing answer
+            int answerId = rs.getInt("answer_id");
+            String updateSql = "UPDATE answers SET question = ?, answer = ?, correct_answer = ?, status = ? WHERE answer_id = ?";
+            pstm = conn.prepareStatement(updateSql);
+            pstm.setString(1, question);
+            pstm.setString(2, userAnswerForDb);
+            pstm.setString(3, correct);
+            pstm.setString(4, status);
+            pstm.setInt(5, answerId);
+        } else {
+            // Insert new answer
+            String insertSql = "INSERT INTO answers (exam_id, question_id, question, answer, correct_answer, status) VALUES (?, ?, ?, ?, ?, ?)";
+            pstm = conn.prepareStatement(insertSql);
+            pstm.setInt(1, eId);
+            pstm.setInt(2, qid);
+            pstm.setString(3, question);
+            pstm.setString(4, userAnswerForDb);
+            pstm.setString(5, correct);
+            pstm.setString(6, status);
+        }
+        
         pstm.executeUpdate();
         
     } catch (SQLException ex) {
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
     } finally {
-        if (pstm != null) {
-            try {
-                pstm.close();
-            } catch (SQLException e) {
-                LOGGER.log(Level.SEVERE, "Failed to close PreparedStatement in insertAnswer", e);
-            }
+        try {
+            if (rs != null) rs.close();
+            if (pstmCheck != null) pstmCheck.close();
+            if (pstm != null) pstm.close();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Failed to close resources in insertAnswer", e);
         }
     }
 }
@@ -2952,16 +2973,41 @@ private String getCorrectAnswer(int qid) {
     
     try {
         // First, get the correct answer from the questions table
-        pstm = conn.prepareStatement("SELECT correct, question_type FROM questions WHERE question_id=?");
+        pstm = conn.prepareStatement("SELECT correct, question_type, drag_items FROM questions WHERE question_id=?");
         pstm.setInt(1, qid);
         rs = pstm.executeQuery();
         
         if (rs.next()) {
             String result = rs.getString("correct");
             String questionType = rs.getString("question_type");
+            String dragItemsJson = rs.getString("drag_items");
             
-            // For Drag and Drop, return the correct targets JSON in standard format
+            // For Drag and Drop or Rearrange, return the correct answer in JSON format
             if ("DRAG_AND_DROP".equalsIgnoreCase(questionType) || "REARRANGE".equalsIgnoreCase(questionType) || "RE_ARRANGE".equalsIgnoreCase(questionType)) {
+                // Special handling for REARRANGE (singular) - it uses a JSON array of IDs
+                if ("REARRANGE".equalsIgnoreCase(questionType)) {
+                    try {
+                        ArrayList<RearrangeItem> items = getRearrangeItems(qid);
+                        if (items != null && !items.isEmpty()) {
+                            org.json.JSONArray correctArr = new org.json.JSONArray();
+                            for (RearrangeItem item : items) {
+                                correctArr.put(item.getId());
+                            }
+                            return correctArr.toString();
+                        } else if (dragItemsJson != null && dragItemsJson.startsWith("[")) {
+                            // Fallback to JSON indices if relational table is empty
+                            org.json.JSONArray itemsArr = new org.json.JSONArray(dragItemsJson);
+                            org.json.JSONArray correctArr = new org.json.JSONArray();
+                            for (int i = 0; i < itemsArr.length(); i++) {
+                                correctArr.put(i);
+                            }
+                            return correctArr.toString();
+                        }
+                    } catch (Exception e) {
+                        LOGGER.log(Level.WARNING, "Error building rearrange correct answer for Q" + qid + ": " + e.getMessage());
+                    }
+                }
+
                 org.json.JSONObject correctJson = new org.json.JSONObject();
                 try {
                     ArrayList<DragItem> dragItems = getDragItemsByQuestionIdOld(qid);
@@ -3170,7 +3216,7 @@ private String getAnswerStatus(String ans, String correct) {
         return "incorrect";
     }
 
-    // 3. Compare based on question type (drag-drop, multi-select or single)
+    // 3. Compare based on question type (drag-drop, rearrange, multi-select or single)
     if (userAnswer.startsWith("{") && correctAnswer.startsWith("{")) {
         try {
             org.json.JSONObject userObj = new org.json.JSONObject(userAnswer);
@@ -3193,6 +3239,34 @@ private String getAnswerStatus(String ans, String correct) {
                 return "correct";
             } else if (correctMatches > 0) {
                 return "partial:" + (float)correctMatches;
+            } else {
+                return "incorrect";
+            }
+        } catch (Exception e) {
+            return "incorrect";
+        }
+    }
+    
+    // Handle REARRANGE JSON arrays
+    if (userAnswer.startsWith("[") && correctAnswer.startsWith("[")) {
+        try {
+            org.json.JSONArray userArr = new org.json.JSONArray(userAnswer);
+            org.json.JSONArray correctArr = new org.json.JSONArray(correctAnswer);
+            
+            int correctCount = 0;
+            int totalCount = correctArr.length();
+            
+            for (int i = 0; i < totalCount && i < userArr.length(); i++) {
+                if (userArr.get(i).equals(correctArr.get(i))) {
+                    correctCount++;
+                }
+            }
+            
+            if (correctCount == totalCount && totalCount > 0) {
+                return "correct";
+            } else if (correctCount > 0) {
+                // Calculate partial marks (assuming 1 mark per correct position by default)
+                return "partial:" + (float)correctCount;
             } else {
                 return "incorrect";
             }
@@ -3796,15 +3870,18 @@ public ArrayList<Exams> getAllExamsWithResults() {
     }
     
     ArrayList<Exams> exams = new ArrayList<>();
+    PreparedStatement ps = null;
+    ResultSet rs = null;
 
-    String query = "SELECT u.first_name, u.last_name, u.user_name, u.email, " +
-                   "e.exam_id, e.std_id, e.course_name, e.total_marks, e.obt_marks, " +
-                   "e.date, e.start_time, e.end_time, e.exam_time, e.status, e.result_status " + // ADDED
-                   "FROM exams e " +
-                   "INNER JOIN users u ON e.std_id = u.user_id";
-
-    try (PreparedStatement ps = conn.prepareStatement(query);
-         ResultSet rs = ps.executeQuery()) {
+    try {
+        String query = "SELECT u.first_name, u.last_name, u.user_name, u.email, " +
+                       "e.exam_id, e.std_id, e.course_name, e.total_marks, e.obt_marks, " +
+                       "e.date, e.start_time, e.end_time, e.exam_time, e.status, e.result_status " +
+                       "FROM exams e " +
+                       "INNER JOIN users u ON e.std_id = u.user_id";
+        
+        ps = conn.prepareStatement(query);
+        rs = ps.executeQuery();
 
         while (rs.next()) {
             String formattedDate = rs.getDate("date") != null 
@@ -3839,7 +3916,7 @@ public ArrayList<Exams> getAllExamsWithResults() {
                 rs.getString("start_time"),
                 rs.getString("end_time"),
                 rs.getString("exam_time"),
-                resultStatus  // Use result_status
+                resultStatus
             );
             exams.add(exam);
         }
@@ -3852,8 +3929,9 @@ public ArrayList<Exams> getAllExamsWithResults() {
         } catch (SQLException ex) {
             Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources", ex);
         }
-        return exams;
     }
+    
+    return exams;
 }
 
 public float[] getRawMarks(int examId) {
@@ -3868,18 +3946,19 @@ public float[] getRawMarks(int examId) {
     float totalObtainedMarks = 0;
 
     try {
-        // Get all answers for this exam - FIXED: Use GROUP BY to prevent double counting
+        // Get all answers for this exam - COLLAPSE DUPLICATES: Group ONLY by question_id
+        // This ensures each question is counted exactly once towards total possible marks.
         String sql = "SELECT " +
                     "CASE " +
                     "    WHEN SUM(CASE WHEN a.status = 'correct' THEN 1 ELSE 0 END) > 0 THEN 'correct' " +
                     "    WHEN SUM(CASE WHEN a.status LIKE 'partial:%' THEN 1 ELSE 0 END) > 0 THEN MAX(a.status) " +
                     "    ELSE 'incorrect' " +
                     "END as status, " +
-                    "a.answer, a.correct_answer, q.question_type, q.question_id, q.marks " +
+                    "q.question_type, q.question_id, q.marks " +
                     "FROM answers a " +
                     "JOIN questions q ON a.question_id = q.question_id " +
                     "WHERE a.exam_id = ? " +
-                    "GROUP BY a.question_id, a.answer, a.correct_answer, q.question_type, q.question_id, q.marks";
+                    "GROUP BY q.question_id, q.question_type, q.marks";
         PreparedStatement pstm = conn.prepareStatement(sql);
         pstm.setInt(1, examId);
         ResultSet rs = pstm.executeQuery();
@@ -3894,60 +3973,24 @@ public float[] getRawMarks(int examId) {
             float questionWeight = qMarks > 0 ? qMarks : 1.0f;
             totalPossibleMarks += questionWeight;
             
-            if ("DRAG_AND_DROP".equalsIgnoreCase(questionType) || "RE_ARRANGE".equalsIgnoreCase(questionType)) {
-                // For drag-drop questions, get marks from drag_drop_answers table
-                float obtainedForQ = 0;
-                String ddSql = "SELECT SUM(marks_obtained) as total_marks FROM drag_drop_answers WHERE exam_id = ? AND question_id = ?";
-                try (PreparedStatement ddPstm = conn.prepareStatement(ddSql)) {
-                    ddPstm.setInt(1, examId);
-                    ddPstm.setInt(2, qid);
-                    try (ResultSet ddRs = ddPstm.executeQuery()) {
-                        if (ddRs.next()) {
-                            obtainedForQ = ddRs.getFloat("total_marks");
-                        }
-                    }
-                } catch (SQLException e) {
-                    LOGGER.log(Level.WARNING, "Error fetching drag drop marks: " + e.getMessage());
-                }
-                
-                totalObtainedMarks += obtainedForQ;
-                LOGGER.log(Level.FINE, "Drag-drop Q{0}: obtained {1}/{2}", 
-                          new Object[]{qid, obtainedForQ, questionWeight});
-                
-            } else if ("REARRANGE".equalsIgnoreCase(questionType)) {
-                // For rearrange questions, get marks from rearrange_answers table
-                float obtainedForQ = 0;
-                String raSql = "SELECT SUM(marks_obtained) as total_marks FROM rearrange_answers WHERE exam_id = ? AND question_id = ?";
-                try (PreparedStatement raPstm = conn.prepareStatement(raSql)) {
-                    raPstm.setInt(1, examId);
-                    raPstm.setInt(2, qid);
-                    try (ResultSet raRs = raPstm.executeQuery()) {
-                        if (raRs.next()) {
-                            obtainedForQ = raRs.getFloat("total_marks");
-                        }
-                    }
-                } catch (SQLException e) {
-                    LOGGER.log(Level.WARNING, "Error fetching rearrange marks: " + e.getMessage());
-                }
-                
-                totalObtainedMarks += obtainedForQ;
-                LOGGER.log(Level.FINE, "Rearrange Q{0}: obtained {1}/{2}", 
-                          new Object[]{qid, obtainedForQ, questionWeight});
-                
-            } else {
-                // For regular questions, check status
-                if ("correct".equals(status)) {
-                    totalObtainedMarks += questionWeight;
-                } else if (status != null && status.startsWith("partial:")) {
-                    try {
-                        // Extract marks from status string (e.g. "partial:1.0")
-                        float partialObtained = Float.parseFloat(status.substring(8));
-                        totalObtainedMarks += partialObtained;
-                    } catch (NumberFormatException e) {
-                        LOGGER.log(Level.WARNING, "Error parsing partial marks from status: " + status, e);
-                    }
+            // Unified marking logic: use status from answers table for ALL question types.
+            // This ensures consistency between results summary and question details.
+            if ("correct".equals(status)) {
+                totalObtainedMarks += questionWeight;
+            } else if (status != null && status.startsWith("partial:")) {
+                try {
+                    // Extract marks from status string (e.g. "partial:1.5")
+                    float partialObtained = Float.parseFloat(status.substring(8));
+                    totalObtainedMarks += partialObtained;
+                } catch (NumberFormatException e) {
+                    LOGGER.log(Level.WARNING, "Error parsing partial marks from status: " + status, e);
                 }
             }
+            
+            LOGGER.log(Level.INFO, "Question Q{0} ({1}): obtained {2}/{3} (status: {4})", 
+                      new Object[]{qid, questionType, 
+                      ("correct".equals(status) ? questionWeight : (status != null && status.startsWith("partial:") ? status.substring(8) : "0")), 
+                      questionWeight, status});
         }
         rs.close();
         pstm.close();
@@ -5645,10 +5688,9 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
     }
 
     public void addRearrangeData(int questionId, java.util.List<String> items) {
-        Connection conn = null;
         PreparedStatement pstm = null;
         try {
-            conn = getConnection();
+            ensureConnection();
             String sql = "INSERT INTO rearrange_items (question_id, item_text, correct_position, item_order) VALUES (?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql);
             for (int i = 0; i < items.size(); i++) {
@@ -5664,15 +5706,13 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             LOGGER.log(Level.SEVERE, "Error adding rearrange data: " + e.getMessage(), e);
         } finally {
             try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
-            try { if (conn != null) conn.close(); } catch (SQLException e) {}
         }
     }
 
     public void clearRearrangeData(int questionId) {
-        Connection conn = null;
         PreparedStatement pstm = null;
         try {
-            conn = getConnection();
+            ensureConnection();
             String sql = "DELETE FROM rearrange_items WHERE question_id = ?";
             pstm = conn.prepareStatement(sql);
             pstm.setInt(1, questionId);
@@ -5682,15 +5722,13 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             LOGGER.log(Level.SEVERE, "Error clearing rearrange data for questionId=" + questionId + ": " + e.getMessage(), e);
         } finally {
             try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
-            try { if (conn != null) conn.close(); } catch (SQLException e) {}
         }
     }
 
     public void updateRearrangeQuestionJson(int questionId, String itemsJson, Integer totalMarks) {
-        Connection conn = null;
         PreparedStatement pstm = null;
         try {
-            conn = getConnection();
+            ensureConnection();
             // Store rearrange items in the drag_items column for consistency with other interactive types
             String sql = "UPDATE questions SET drag_items=?, marks=? WHERE question_id=?";
             pstm = conn.prepareStatement(sql);
@@ -5713,7 +5751,6 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             LOGGER.log(Level.SEVERE, "Error updating rearrange question JSON", e);
         } finally {
             try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
-            try { if (conn != null) conn.close(); } catch (SQLException e) {}
         }
     }
     
@@ -5974,6 +6011,22 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             }
             
             ArrayList<RearrangeItem> correctItems = getRearrangeItems(questionId);
+            if (correctItems == null || correctItems.isEmpty()) {
+                // Fallback to JSON
+                String itemsJson = question.getDragItemsJson();
+                if (itemsJson != null && itemsJson.startsWith("[")) {
+                    JSONArray arr = new JSONArray(itemsJson);
+                    correctItems = new ArrayList<>();
+                    for (int i = 0; i < arr.length(); i++) {
+                        RearrangeItem ri = new RearrangeItem();
+                        ri.setId(i); // Use index as virtual ID
+                        ri.setItemText(arr.getString(i));
+                        ri.setCorrectPosition(i + 1);
+                        correctItems.add(ri);
+                    }
+                }
+            }
+
             if (correctItems == null || correctItems.isEmpty()) {
                 throw new RuntimeException("No rearrange items found for question: " + questionId);
             }
