@@ -2973,13 +2973,14 @@ private String getCorrectAnswer(int qid) {
     
     try {
         // First, get the correct answer from the questions table
-        pstm = conn.prepareStatement("SELECT correct, question_type FROM questions WHERE question_id=?");
+        pstm = conn.prepareStatement("SELECT correct, question_type, drag_items FROM questions WHERE question_id=?");
         pstm.setInt(1, qid);
         rs = pstm.executeQuery();
         
         if (rs.next()) {
             String result = rs.getString("correct");
             String questionType = rs.getString("question_type");
+            String dragItemsJson = rs.getString("drag_items");
             
             // For Drag and Drop or Rearrange, return the correct answer in JSON format
             if ("DRAG_AND_DROP".equalsIgnoreCase(questionType) || "REARRANGE".equalsIgnoreCase(questionType) || "RE_ARRANGE".equalsIgnoreCase(questionType)) {
@@ -2991,6 +2992,14 @@ private String getCorrectAnswer(int qid) {
                             org.json.JSONArray correctArr = new org.json.JSONArray();
                             for (RearrangeItem item : items) {
                                 correctArr.put(item.getId());
+                            }
+                            return correctArr.toString();
+                        } else if (dragItemsJson != null && dragItemsJson.startsWith("[")) {
+                            // Fallback to JSON indices if relational table is empty
+                            org.json.JSONArray itemsArr = new org.json.JSONArray(dragItemsJson);
+                            org.json.JSONArray correctArr = new org.json.JSONArray();
+                            for (int i = 0; i < itemsArr.length(); i++) {
+                                correctArr.put(i);
                             }
                             return correctArr.toString();
                         }
@@ -5715,10 +5724,9 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
     }
 
     public void addRearrangeData(int questionId, java.util.List<String> items) {
-        Connection conn = null;
         PreparedStatement pstm = null;
         try {
-            conn = getConnection();
+            ensureConnection();
             String sql = "INSERT INTO rearrange_items (question_id, item_text, correct_position, item_order) VALUES (?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql);
             for (int i = 0; i < items.size(); i++) {
@@ -5734,15 +5742,13 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             LOGGER.log(Level.SEVERE, "Error adding rearrange data: " + e.getMessage(), e);
         } finally {
             try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
-            try { if (conn != null) conn.close(); } catch (SQLException e) {}
         }
     }
 
     public void clearRearrangeData(int questionId) {
-        Connection conn = null;
         PreparedStatement pstm = null;
         try {
-            conn = getConnection();
+            ensureConnection();
             String sql = "DELETE FROM rearrange_items WHERE question_id = ?";
             pstm = conn.prepareStatement(sql);
             pstm.setInt(1, questionId);
@@ -5752,15 +5758,13 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             LOGGER.log(Level.SEVERE, "Error clearing rearrange data for questionId=" + questionId + ": " + e.getMessage(), e);
         } finally {
             try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
-            try { if (conn != null) conn.close(); } catch (SQLException e) {}
         }
     }
 
     public void updateRearrangeQuestionJson(int questionId, String itemsJson, Integer totalMarks) {
-        Connection conn = null;
         PreparedStatement pstm = null;
         try {
-            conn = getConnection();
+            ensureConnection();
             // Store rearrange items in the drag_items column for consistency with other interactive types
             String sql = "UPDATE questions SET drag_items=?, marks=? WHERE question_id=?";
             pstm = conn.prepareStatement(sql);
@@ -5783,7 +5787,6 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             LOGGER.log(Level.SEVERE, "Error updating rearrange question JSON", e);
         } finally {
             try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
-            try { if (conn != null) conn.close(); } catch (SQLException e) {}
         }
     }
     
@@ -6044,6 +6047,22 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             }
             
             ArrayList<RearrangeItem> correctItems = getRearrangeItems(questionId);
+            if (correctItems == null || correctItems.isEmpty()) {
+                // Fallback to JSON
+                String itemsJson = question.getDragItemsJson();
+                if (itemsJson != null && itemsJson.startsWith("[")) {
+                    JSONArray arr = new JSONArray(itemsJson);
+                    correctItems = new ArrayList<>();
+                    for (int i = 0; i < arr.length(); i++) {
+                        RearrangeItem ri = new RearrangeItem();
+                        ri.setId(i); // Use index as virtual ID
+                        ri.setItemText(arr.getString(i));
+                        ri.setCorrectPosition(i + 1);
+                        correctItems.add(ri);
+                    }
+                }
+            }
+
             if (correctItems == null || correctItems.isEmpty()) {
                 throw new RuntimeException("No rearrange items found for question: " + questionId);
             }

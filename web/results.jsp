@@ -1787,13 +1787,21 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                                   for (int j = 0; j < userArr.length(); j++) {
                                       int itemId = userArr.getInt(j);
                                       String itemText = "Item " + itemId;
-                                      if (questionObj != null && questionObj.getRearrangeItems() != null) {
+                                      if (questionObj != null && questionObj.getRearrangeItems() != null && !questionObj.getRearrangeItems().isEmpty()) {
                                           for (myPackage.classes.RearrangeItem ri : questionObj.getRearrangeItems()) {
                                               if (ri.getId() == itemId) {
                                                   itemText = ri.getItemText();
                                                   break;
                                               }
                                           }
+                                      } else if (questionObj != null && questionObj.getDragItemsJson() != null) {
+                                          // Fallback to JSON indices if relational items are missing
+                                          try {
+                                              org.json.JSONArray fallbackArr = new org.json.JSONArray(questionObj.getDragItemsJson());
+                                              if (itemId >= 0 && itemId < fallbackArr.length()) {
+                                                  itemText = fallbackArr.getString(itemId);
+                                              }
+                                          } catch (Exception e) {}
                                       }
 
                                       // Check if this item is in the correct position
@@ -1835,13 +1843,21 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                                   for (int j = 0; j < correctArr.length(); j++) {
                                       int itemId = correctArr.getInt(j);
                                       String itemText = "Item " + itemId;
-                                      if (questionObj != null && questionObj.getRearrangeItems() != null) {
+                                      if (questionObj != null && questionObj.getRearrangeItems() != null && !questionObj.getRearrangeItems().isEmpty()) {
                                           for (myPackage.classes.RearrangeItem ri : questionObj.getRearrangeItems()) {
                                               if (ri.getId() == itemId) {
                                                   itemText = ri.getItemText();
                                                   break;
                                               }
                                           }
+                                      } else if (questionObj != null && questionObj.getDragItemsJson() != null) {
+                                          // Fallback to JSON indices
+                                          try {
+                                              org.json.JSONArray fallbackArr = new org.json.JSONArray(questionObj.getDragItemsJson());
+                                              if (itemId >= 0 && itemId < fallbackArr.length()) {
+                                                  itemText = fallbackArr.getString(itemId);
+                                              }
+                                          } catch (Exception e) {}
                                       }
                             %>
                                 <div style="margin-bottom: 8px; padding: 6px; background: rgba(5, 150, 105, 0.1); border-radius: 4px; font-size: 12px; display: flex; align-items: center; gap: 8px;">
