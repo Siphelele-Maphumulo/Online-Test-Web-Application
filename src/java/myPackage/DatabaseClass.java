@@ -3973,60 +3973,24 @@ public float[] getRawMarks(int examId) {
             float questionWeight = qMarks > 0 ? qMarks : 1.0f;
             totalPossibleMarks += questionWeight;
             
-            if ("DRAG_AND_DROP".equalsIgnoreCase(questionType) || "RE_ARRANGE".equalsIgnoreCase(questionType)) {
-                // For drag-drop questions, get marks from drag_drop_answers table
-                float obtainedForQ = 0;
-                String ddSql = "SELECT SUM(marks_obtained) as total_marks FROM drag_drop_answers WHERE exam_id = ? AND question_id = ?";
-                try (PreparedStatement ddPstm = conn.prepareStatement(ddSql)) {
-                    ddPstm.setInt(1, examId);
-                    ddPstm.setInt(2, qid);
-                    try (ResultSet ddRs = ddPstm.executeQuery()) {
-                        if (ddRs.next()) {
-                            obtainedForQ = ddRs.getFloat("total_marks");
-                        }
-                    }
-                } catch (SQLException e) {
-                    LOGGER.log(Level.WARNING, "Error fetching drag drop marks: " + e.getMessage());
-                }
-                
-                totalObtainedMarks += obtainedForQ;
-                LOGGER.log(Level.FINE, "Drag-drop Q{0}: obtained {1}/{2}", 
-                          new Object[]{qid, obtainedForQ, questionWeight});
-                
-            } else if ("REARRANGE".equalsIgnoreCase(questionType)) {
-                // For rearrange questions, get marks from rearrange_answers table
-                float obtainedForQ = 0;
-                String raSql = "SELECT SUM(marks_obtained) as total_marks FROM rearrange_answers WHERE exam_id = ? AND question_id = ?";
-                try (PreparedStatement raPstm = conn.prepareStatement(raSql)) {
-                    raPstm.setInt(1, examId);
-                    raPstm.setInt(2, qid);
-                    try (ResultSet raRs = raPstm.executeQuery()) {
-                        if (raRs.next()) {
-                            obtainedForQ = raRs.getFloat("total_marks");
-                        }
-                    }
-                } catch (SQLException e) {
-                    LOGGER.log(Level.WARNING, "Error fetching rearrange marks: " + e.getMessage());
-                }
-                
-                totalObtainedMarks += obtainedForQ;
-                LOGGER.log(Level.FINE, "Rearrange Q{0}: obtained {1}/{2}", 
-                          new Object[]{qid, obtainedForQ, questionWeight});
-                
-            } else {
-                // For regular questions, check status
-                if ("correct".equals(status)) {
-                    totalObtainedMarks += questionWeight;
-                } else if (status != null && status.startsWith("partial:")) {
-                    try {
-                        // Extract marks from status string (e.g. "partial:1.0")
-                        float partialObtained = Float.parseFloat(status.substring(8));
-                        totalObtainedMarks += partialObtained;
-                    } catch (NumberFormatException e) {
-                        LOGGER.log(Level.WARNING, "Error parsing partial marks from status: " + status, e);
-                    }
+            // Unified marking logic: use status from answers table for ALL question types.
+            // This ensures consistency between results summary and question details.
+            if ("correct".equals(status)) {
+                totalObtainedMarks += questionWeight;
+            } else if (status != null && status.startsWith("partial:")) {
+                try {
+                    // Extract marks from status string (e.g. "partial:1.5")
+                    float partialObtained = Float.parseFloat(status.substring(8));
+                    totalObtainedMarks += partialObtained;
+                } catch (NumberFormatException e) {
+                    LOGGER.log(Level.WARNING, "Error parsing partial marks from status: " + status, e);
                 }
             }
+
+            LOGGER.log(Level.INFO, "Question Q{0} ({1}): obtained {2}/{3} (status: {4})",
+                      new Object[]{qid, questionType,
+                      ("correct".equals(status) ? questionWeight : (status != null && status.startsWith("partial:") ? status.substring(8) : "0")),
+                      questionWeight, status});
         }
         rs.close();
         pstm.close();
