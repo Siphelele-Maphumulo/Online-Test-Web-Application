@@ -927,6 +927,16 @@
     border-color: var(--primary-blue);
 }
 
+.drag-item.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.row-draggable {
+    cursor: move;
+}
+
 .drag-item i, .drop-target i, .pairing-item i {
     color: var(--primary-blue);
     font-size: 1rem;
@@ -1047,6 +1057,76 @@
 
 .items-list::-webkit-scrollbar-thumb:hover {
     background: var(--dark-gray);
+}
+
+/* Rearrange Preview Styles */
+.rearrange-preview {
+    border: 2px dashed var(--medium-gray);
+    border-radius: var(--radius-md);
+    padding: 15px;
+    min-height: 80px;
+    background: var(--light-gray);
+    transition: all var(--transition-normal);
+}
+
+.rearrange-preview.vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.rearrange-preview.horizontal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.rearrange-preview.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px;
+}
+
+.rearrange-preview .preview-item {
+    background: var(--accent-blue);
+    color: var(--white);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    transition: all var(--transition-fast);
+}
+
+.rearrange-preview .preview-item:hover {
+    background: var(--primary-blue);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.rearrange-preview .item-number {
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+.rearrange-preview .item-text {
+    flex: 1;
+}
+
+.rearrange-preview .empty-preview-message {
+    color: var(--dark-gray);
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
 }
 
 /* Responsive Design */
@@ -1401,12 +1481,12 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label">
-                                    <i class="fas fa-star" style="color: var(--warning);"></i>
+                                    <i class="fas fa-sort-amount-up" style="color: var(--accent-blue);"></i>
                                     Total Marks
                                 </label>
                                 <input type="number" id="rearrangeTotalMarks" name="totalMarks" class="form-control" 
-                                       value="1" min="1" max="100">
-                                <small class="form-hint">Total marks for this rearrange question</small>
+                                       value="1" min="1" max="100" required>
+                                <small class="form-hint">Total marks for this question</small>
                             </div>
                             
                             <div class="form-group">
@@ -1428,17 +1508,27 @@
                                 <i class="fas fa-th" style="color: var(--info);"></i>
                                 Items to Rearrange
                             </label>
-                            <div class="alert alert-info" style="margin-bottom: 15px; font-size: 13px; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 10px;">
+                            <div class="quick-add-indicator" style="background: #e9ecef; margin-bottom: 15px;">
                                 <i class="fas fa-info-circle"></i>
-                                <span>Add items in their <strong>correct order</strong>. Students will need to rearrange them.</span>
+                                <span>Add items in their <strong>correct order</strong>. Students will need to rearrange them to match this sequence.</span>
                             </div>
                             <div id="rearrangeItemsContainer" class="items-list">
                                 <!-- Items will be added here -->
                             </div>
-                            <button type="button" class="btn btn-outline add-item-btn" onclick="addRearrangeItem()">
-                                <i class="fas fa-plus-circle"></i>
-                                Add Rearrange Item
+                            <button type="button" class="btn btn-outline btn-sm" onclick="addRearrangeItem()">
+                                <i class="fas fa-plus"></i> Add Item
                             </button>
+                        </div>
+                        
+                        <!-- Preview Section -->
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-eye" style="color: var(--success);"></i>
+                                Preview (How students will see it)
+                            </label>
+                            <div id="rearrangePreview" class="rearrange-preview">
+                                Add items to see preview
+                            </div>
                         </div>
                         
                         <input type="hidden" id="rearrangeItemsHidden" name="rearrangeItemsHidden" value="">
@@ -1499,13 +1589,22 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <script src="drag_drop_edit.js"></script>
 
+<%
+    // Prepare extra data string for JavaScript to avoid complex JSP expressions in JS
+    String extraDataForJS = "{}";
+    if (questionToEdit != null && questionToEdit.getExtraData() != null) {
+        extraDataForJS = questionToEdit.getExtraData().replace("'", "\\'");
+    }
+%>
+
 <script>
     // 🔹 STEP 3 — Pass JSON Data to JavaScript
     const dragItemsFromDB = <%= dragItemsJson %>;
     const dropTargetsFromDB = <%= dropTargetsJson %>;
     const correctTargetsFromDB = <%= dragCorrectTargetsJson %>;
     const rearrangeItemsFromDB = <%= rearrangeItemsJson_db %>;
-    const totalMarksFromDB = <%= totalMarks %>;
+    const totalMarksFromDB = parseInt("<%= totalMarks %>" || "1");
+    const extraDataForJS = "<%= extraDataForJS %>";
     
     console.log('=== JSON Data from DB ===');
     console.log('Drag Items:', dragItemsFromDB);
@@ -2251,8 +2350,9 @@
             // Show rearrange section
             rearrange.style.display = "block";
             
-            // Hide MCQ options
+            // Hide MCQ options and correct answer
             mcq.style.display = "none";
+            single.style.display = "none";
             
             // Initialize rearrange data
             setTimeout(() => {
@@ -2778,20 +2878,20 @@ window.addEventListener('DOMContentLoaded', function() {
         }
         
         // Initialize drag-drop if current question type is DRAG_AND_DROP
-        if ('<%= questionType %>' === 'DRAG_AND_DROP') {
-            if (typeof initializeDragDrop === 'function') {
+        if ("<%= questionType %>" === "DRAG_AND_DROP") {
+            if (typeof initializeDragDrop === "function") {
                 initializeDragDrop();
             }
             
             // Set orientation from extra_data
             try {
-                const extraDataStr = '<%= questionToEdit.getExtraData() != null ? questionToEdit.getExtraData().replace("'", "\'") : "{}" %>';
-                const extraData = JSON.parse(extraDataStr);
+                const extraData = JSON.parse(extraDataForJS);
                 if (extraData && extraData.orientation) {
-                    document.getElementById('editOrientationSelect').value = extraData.orientation;
+                    document.getElementById("editOrientationSelect").value = extraData.orientation;
+                    updateOrientationPreview();
                 }
             } catch (e) {
-                console.error('Error parsing extra_data for orientation:', e);
+                console.error("Error parsing extra_data for orientation:", e);
             }
                         
             // Initialize orientation preview
@@ -2857,24 +2957,33 @@ window.addEventListener('DOMContentLoaded', function() {
         
         // Load style from extra_data
         try {
-            const extraDataStr = '<%= questionToEdit != null && questionToEdit.getExtraData() != null ? questionToEdit.getExtraData().replace("'", "\\'") : "{}" %>';
-            const extraData = JSON.parse(extraDataStr);
+            const extraData = JSON.parse(extraDataForJS);
             if (extraData && extraData.style) {
-                document.getElementById('editRearrangeStyleSelect').value = extraData.style;
+                document.getElementById("editRearrangeStyleSelect").value = extraData.style;
             }
         } catch (e) {
-            console.error('Error parsing extra_data for rearrange style:', e);
+            console.error("Error parsing extra_data for rearrange style:", e);
         }
         
         // Load marks
         const marksInput = document.getElementById("rearrangeTotalMarks");
         if (marksInput) {
-            marksInput.value = totalMarksFromDB || rearrangeItemsFromDB.length || 1;
+            marksInput.value = parseInt("<%= totalMarks %>" || "1") || rearrangeItemsFromDB.length || 1;
         }
+        
+        // Add style change listener
+        const styleSelect = document.getElementById('editRearrangeStyleSelect');
+        if (styleSelect) {
+            styleSelect.addEventListener('change', updateRearrangePreviewEdit);
+        }
+        
+        // Initialize preview
+        updateRearrangePreviewEdit();
     }
 
     function addRearrangeItem() {
         addRearrangeItemToUI("");
+        updateRearrangePreviewEdit();
     }
 
     function addRearrangeItemToUI(text) {
@@ -2883,11 +2992,19 @@ window.addEventListener('DOMContentLoaded', function() {
         const div = document.createElement("div");
         div.className = "drag-item row-draggable";
         div.draggable = true;
-        div.innerHTML = `
-            <i class="fas fa-grip-vertical drag-handle"></i>
-            <textarea name="rearrangeItem_${index}" class="form-control" rows="1" placeholder="Item text..." oninput="autoResize(this)">${escapeHtml(text)}</textarea>
-            <button type="button" class="remove-btn" onclick="this.parentElement.remove()">×</button>
-        `;
+        
+        // Escape HTML manually to avoid EL function issues
+        const escapedText = text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+        
+        div.innerHTML = 
+            '<i class="fas fa-grip-vertical drag-handle"></i>' +
+            '<textarea name="rearrangeItem_' + index + '" class="form-control" rows="1" placeholder="Item text..." oninput="autoResize(this); updateRearrangePreviewEdit();">' + escapedText + '</textarea>' +
+            '<button type="button" class="remove-btn" onclick="this.parentElement.remove(); updateRearrangePreviewEdit();">×</button>';
         
         div.addEventListener('dragstart', handleRowDragStart);
         div.addEventListener('dragover', handleRowDragOver);
@@ -2896,6 +3013,9 @@ window.addEventListener('DOMContentLoaded', function() {
         
         container.appendChild(div);
         autoResize(div.querySelector('textarea'));
+        
+        // Update preview
+        updateRearrangePreviewEdit();
     }
 
     function collectRearrangeItemsFromUI() {
@@ -2908,14 +3028,96 @@ window.addEventListener('DOMContentLoaded', function() {
         document.getElementById("rearrangeItemsHidden").value = JSON.stringify(items);
     }
 
-    function escapeHtml(text) {
-        if (!text) return "";
-        return text
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
+    // Drag and drop functions for rearrange items
+    let draggedRow = null;
+
+    function handleRowDragStart(e) {
+        draggedRow = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', this.innerHTML);
+    }
+
+    function handleRowDragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault();
+        }
+        e.dataTransfer.dropEffect = 'move';
+        
+        const afterElement = getDragAfterElement(document.getElementById("rearrangeItemsContainer"), e.clientY);
+        if (afterElement == null) {
+            document.getElementById("rearrangeItemsContainer").appendChild(draggedRow);
+        } else {
+            document.getElementById("rearrangeItemsContainer").insertBefore(draggedRow, afterElement);
+        }
+        
+        return false;
+    }
+
+    function handleRowDrop(e) {
+        if (e.stopPropagation) {
+            e.stopPropagation();
+        }
+        return false;
+    }
+
+    function handleRowDragEnd(e) {
+        this.classList.remove('dragging');
+        draggedRow = null;
+    }
+
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.drag-item:not(.dragging)')];
+        
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    function autoResize(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    }
+
+    function updateRearrangePreviewEdit() {
+        const container = document.getElementById('rearrangePreview');
+        const items = document.querySelectorAll('#rearrangeItemsContainer textarea');
+        const styleSelect = document.getElementById('editRearrangeStyleSelect');
+        
+        const style = styleSelect ? styleSelect.value : 'vertical';
+        
+        // Clear current preview
+        container.innerHTML = '';
+        container.className = `rearrange-preview ${style}`;
+        
+        if (items.length === 0) {
+            container.innerHTML = '<div class="empty-preview-message" style="text-align: center; color: #6c757d; padding: 20px;">Add items to see preview</div>';
+            return;
+        }
+        
+        // Create preview items
+        items.forEach((item, index) => {
+            if (item.value.trim() !== '') {
+                const previewItem = document.createElement('div');
+                previewItem.className = 'preview-item';
+                previewItem.innerHTML = `
+                    <span class="item-number">${index + 1}.</span>
+                    <span class="item-text">${item.value.trim()}</span>
+                `;
+                container.appendChild(previewItem);
+            }
+        });
+        
+        if (container.children.length === 0) {
+            container.innerHTML = '<div class="empty-preview-message" style="text-align: center; color: #6c757d; padding: 20px;">Add items to see preview</div>';
+        }
     }
 
     // Test function to verify orientation functionality in edit mode
