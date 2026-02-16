@@ -2815,7 +2815,20 @@ public ArrayList getAllQuestions(String courseName, String searchTerm, String qu
         ArrayList list=new ArrayList();
         try {
             
-            String sql="Select * from answers where exam_id=?";
+            // Fixed: Use GROUP BY with proper aggregation to get the latest/most relevant status
+            // This ensures we get the correct status for each question
+            String sql = "SELECT question, answer, correct_answer, " +
+                        "CASE " +
+                        "    WHEN SUM(CASE WHEN status = 'correct' THEN 1 ELSE 0 END) > 0 THEN 'correct' " +
+                        "    WHEN SUM(CASE WHEN status LIKE 'partial:%' THEN 1 ELSE 0 END) > 0 THEN MAX(status) " +
+                        "    ELSE 'incorrect' " +
+                        "END as status, " +
+                        "question_id " +
+                        "FROM answers " +
+                        "WHERE exam_id = ? " +
+                        "GROUP BY question_id, question, answer, correct_answer " +
+                        "ORDER BY question_id";
+            
             PreparedStatement pstm=conn.prepareStatement(sql);
             pstm.setInt(1,examId);
             ResultSet rs=pstm.executeQuery();
@@ -3832,16 +3845,17 @@ public ArrayList<Exams> getAllExamsWithResults() {
         }
     } catch (SQLException e) {
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Error fetching exams with results", e);
+    } finally {
+        try {
+            if (rs != null) rs.close();
+            if (ps != null) ps.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, "Failed to close resources", ex);
+        }
+        return exams;
     }
-
-    return exams;
 }
 
-
-/**
- * Calculates raw marks for an exam.
- * Returns an array where [0] is obtained marks and [1] is total possible marks.
- */
 public float[] getRawMarks(int examId) {
     try {
         ensureConnection();
@@ -3854,11 +3868,18 @@ public float[] getRawMarks(int examId) {
     float totalObtainedMarks = 0;
 
     try {
-        // Get all answers for this exam
-        String sql = "SELECT a.status, a.answer, a.correct_answer, q.question_type, q.question_id, q.marks " +
-                     "FROM answers a " +
-                     "JOIN questions q ON a.question_id = q.question_id " +
-                     "WHERE a.exam_id = ?";
+        // Get all answers for this exam - FIXED: Use GROUP BY to prevent double counting
+        String sql = "SELECT " +
+                    "CASE " +
+                    "    WHEN SUM(CASE WHEN a.status = 'correct' THEN 1 ELSE 0 END) > 0 THEN 'correct' " +
+                    "    WHEN SUM(CASE WHEN a.status LIKE 'partial:%' THEN 1 ELSE 0 END) > 0 THEN MAX(a.status) " +
+                    "    ELSE 'incorrect' " +
+                    "END as status, " +
+                    "a.answer, a.correct_answer, q.question_type, q.question_id, q.marks " +
+                    "FROM answers a " +
+                    "JOIN questions q ON a.question_id = q.question_id " +
+                    "WHERE a.exam_id = ? " +
+                    "GROUP BY a.question_id, a.answer, a.correct_answer, q.question_type, q.question_id, q.marks";
         PreparedStatement pstm = conn.prepareStatement(sql);
         pstm.setInt(1, examId);
         ResultSet rs = pstm.executeQuery();

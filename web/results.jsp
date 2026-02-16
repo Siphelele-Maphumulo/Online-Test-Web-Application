@@ -1437,7 +1437,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
               } else {
                 int correctAnswers = 0;
                 for (Answers a : answersList) {
-                  if (a.getStatus().equals("correct")) {
+                  if (a.getStatus().equals("correct") || a.getStatus().startsWith("partial:")) {
                     correctAnswers++;
                   }
                 }

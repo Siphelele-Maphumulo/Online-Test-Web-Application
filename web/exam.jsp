@@ -2942,7 +2942,7 @@
                                         <div class="draggable-items-panel">
                                             <div class="panel-header">
                                                 <i class="fas fa-grip-vertical"></i> Draggable Items
-                                                <button type="button" class="shuffle-btn" onclick="shuffleDraggableItems(<%= i %>)" title="Shuffle Items">
+                                                <button type="button" class="shuffle-btn" onclick="shuffleDraggableItems('<%= i %>')" title="Shuffle Items">
                                                     <i class="fas fa-random"></i>
                                                 </button>
                                             </div>
@@ -3185,8 +3185,8 @@
                 var warningGiven = false;
                 var dirty = false;
                 var timerInterval = null;
-                var examDuration = <%= pDAO.getExamDuration(courseName) %>;
-                var totalQuestions = <%= totalQ %>;
+                var examDuration = parseInt('<%= pDAO.getExamDuration(courseName) %>');
+                var totalQuestions = parseInt('<%= totalQ %>');
                 var currentCourseName = '<%= courseName %>';
                 var currentQuestionIndex = 0;
 
@@ -4141,6 +4141,8 @@ function randomizeImages() {
 // Call this after DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     randomizeImages();
+    initializeDragDropQuestions();
+    initializeRearrangeQuestions();
 });
 
 // DRAG HANDLERS
@@ -4404,12 +4406,7 @@ function getDragDropAnswers() {
     return userMappings;
 }
 
-// Initialize drag-drop questions when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeDragDropQuestions);
-} else {
-    initializeDragDropQuestions();
-}
+// Initialize drag-drop questions when DOM is ready - already handled in main DOMContentLoaded listener
 
 /* --- REARRANGE QUESTION FUNCTIONALITY --- */
 function initializeRearrangeQuestions() {
@@ -4678,13 +4675,7 @@ function getRearrangeAnswers() {
 }
 
 // Modify the submitExam function to handle rearrange answers
-const originalSubmitExam = typeof submitExam === 'function' ? submitExam : function() {};
 function submitExam() {
-    // Handle original functionality
-    if (typeof originalSubmitExam === 'function') {
-        originalSubmitExam();
-        return;
-    }
     
     // Save all multi-select answers
     document.querySelectorAll('.answers[data-max-select="2"]').forEach(function(box){
@@ -4771,9 +4762,7 @@ function submitExam() {
 }
 
 // Modify the updateProgress function to handle rearrange questions
-const originalUpdateProgress = typeof updateProgress === 'function' ? updateProgress : function() {};
 function updateProgress() {
-    originalUpdateProgress();
     
     var cards = document.querySelectorAll('.question-card');
     var answered = 0;
@@ -4849,12 +4838,7 @@ function updateProgress() {
     if(progressRing) progressRing.style.strokeDashoffset = offset;
 }
 
-// Initialize rearrange questions when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeRearrangeQuestions);
-} else {
-    initializeRearrangeQuestions();
-}
+// Initialize rearrange questions when DOM is ready - already handled in main DOMContentLoaded listener
             </script>
 
             <% } else if ("1".equals(request.getParameter("showresult"))) {

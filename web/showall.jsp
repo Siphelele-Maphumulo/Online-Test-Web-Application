@@ -452,7 +452,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     /* Floating Scroll Button */
     .floating-scroll {
         position: fixed;
-        bottom: 30px;
+        bottom: 300px;
         right: 5px;
         z-index: 1000;
         display: flex;

@@ -6,6 +6,10 @@
 <%
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
+// Generate new CSRF token for each page load
+String csrfToken = java.util.UUID.randomUUID().toString();
+session.setAttribute("csrf_token", csrfToken);
+
 // Get course names for dropdown
 ArrayList<String> courseNames = pDAO.getAllCourseNames();
 if (courseNames == null) {
@@ -4341,6 +4345,7 @@ initRearrangeInterface();
 
 #dragDropEditor.horizontal-layout {
     /* Default horizontal layout - no special styling needed */
+    display: block;
 }
 
 #dragDropEditor.horizontal-layout .drop-targets-list {
@@ -4386,4 +4391,384 @@ initRearrangeInterface();
     border: 2px solid #e2e8f0;
     border-radius: 8px;
 }
+
+/* Multi-select functionality */
+.question-card.multi-selected {
+    background-color: rgba(250, 150, 150, 0.479);
+    outline-offset: -3px;
+    position: relative;
+}
+
+.question-card.multi-selected::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(220, 38, 38, 0.1);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Floating delete button */
+.floating-delete-selected {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 25px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 8px 25px rgba(220, 38, 38, 0.3);
+    display: none;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.floating-delete-selected:hover {
+    transform: translateX(-50%) scale(1.05);
+    box-shadow: 0 12px 30px rgba(220, 38, 38, 0.5);
+}
+
+.floating-delete-selected.show {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.floating-delete-selected i {
+    font-size: 18px;
+}
 </style>
+
+<!-- Floating Delete Selected Button -->
+<button id="floatingDeleteBtn" class="floating-delete-selected" onclick="deleteSelectedQuestions()">
+    <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
+</button>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-box">
+        <div class="modal-header">Confirm Deletion</div>
+        <div class="modal-body">
+            Are you sure you want to delete this question? This action cannot be undone.
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="hideDeleteModal()">Cancel</button>
+            <button class="btn-confirm-del" id="confirmDelBtn">Delete Question</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Selected Confirmation Modal -->
+<div id="deleteSelectedModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-box">
+        <div class="modal-header">Confirm Bulk Deletion</div>
+        <div class="modal-body">
+            Are you sure you want to delete <span id="deleteCount" style="font-weight: bold;">0</span> selected question(s)?
+            <div style="color: #dc3545; font-weight: 500; margin-top: 10px;">This action cannot be undone.</div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="hideDeleteSelectedModal()">Cancel</button>
+            <button class="btn-confirm-del" onclick="confirmDeleteSelected()">Delete Selected</button>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Scroll Buttons -->
+<div class="floating-scroll" id="floatingScroll">
+    <button class="scroll-btn" id="scrollUpBtn" title="Scroll to Top">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+    <button class="scroll-btn" id="scrollDownBtn" title="Scroll to Bottom">
+        <i class="fas fa-chevron-down"></i>
+    </button>
+</div>
+
+<script>
+    let questionToDelete = null;
+    let courseToDeleteFrom = null;
+    let csrfToken = '<%= csrfToken %>';
+
+    function showDeleteModal(qid, cname) {
+        questionToDelete = qid;
+        courseToDeleteFrom = cname;
+        document.getElementById('deleteModal').style.display = 'flex';
+    }
+    
+    function showDeleteModalFromData(button) {
+        const qid = button.getAttribute('data-qid');
+        const cname = button.getAttribute('data-course');
+        showDeleteModal(qid, cname);
+    }
+
+    function hideDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+        questionToDelete = null;
+        courseToDeleteFrom = null;
+    }
+
+    function clearSearch() {
+        const searchInput = document.querySelector('.search-input');
+        if (searchInput) {
+            searchInput.value = '';
+            // Submit form to clear search results
+            searchInput.form.submit();
+        }
+    }
+
+    // Floating scroll buttons functionality
+    function initScrollButtons() {
+        const floatingScroll = document.getElementById('floatingScroll');
+        const scrollUpBtn = document.getElementById('scrollUpBtn');
+        const scrollDownBtn = document.getElementById('scrollDownBtn');
+        
+        if (!floatingScroll || !scrollUpBtn || !scrollDownBtn) return;
+        
+        // Show/hide floating buttons based on scroll position
+        function toggleScrollButtons() {
+            const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+            const documentHeight = document.documentElement.scrollHeight;
+            const windowHeight = window.innerHeight;
+            
+            // Show buttons when user scrolls down at least 200px
+            if (scrollPosition > 200) {
+                floatingScroll.classList.add('visible');
+            } else {
+                floatingScroll.classList.remove('visible');
+            }
+            
+            // Hide scroll down button when at bottom
+            if (scrollPosition + windowHeight >= documentHeight - 100) {
+                scrollDownBtn.style.display = 'none';
+            } else {
+                scrollDownBtn.style.display = 'flex';
+            }
+            
+            // Hide scroll up button when at top
+            if (scrollPosition < 100) {
+                scrollUpBtn.style.display = 'none';
+            } else {
+                scrollUpBtn.style.display = 'flex';
+            }
+        }
+        
+        // Scroll to top function
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+        
+        // Scroll to bottom function
+        function scrollToBottom() {
+            window.scrollTo({
+                top: document.documentElement.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+        
+        // Event listeners
+        scrollUpBtn.addEventListener('click', scrollToTop);
+        scrollDownBtn.addEventListener('click', scrollToBottom);
+        window.addEventListener('scroll', toggleScrollButtons);
+        
+        // Initial check
+        toggleScrollButtons();
+    }
+
+    document.getElementById('confirmDelBtn').onclick = function() {
+        if (questionToDelete && courseToDeleteFrom) {
+            // METHOD 1: Redirect with URL parameters (simplest)
+            const url = 'controller.jsp?page=questions&operation=del&qid=' + 
+                        encodeURIComponent(questionToDelete) + 
+                        '&coursename=' + encodeURIComponent(courseToDeleteFrom) + 
+                        '&csrf_token=' + encodeURIComponent(csrfToken);
+            
+            window.location.href = url;
+            
+            // Hide modal after click
+            hideDeleteModal();
+        } else {
+            alert('Missing question information');
+        }
+    };
+
+    // Close modal on outside click
+    window.onclick = function(event) {
+        const modal = document.getElementById('deleteModal');
+        if (event.target == modal) {
+            hideDeleteModal();
+        }
+        
+        // Also close delete selected modal if clicked outside
+        const deleteSelectedModal = document.getElementById('deleteSelectedModal');
+        if (event.target == deleteSelectedModal) {
+            hideDeleteSelectedModal();
+        }
+    }
+    
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            hideDeleteModal();
+            hideDeleteSelectedModal();
+        }
+    });
+
+    // Add search on Enter key functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.querySelector('.search-input');
+        if (searchInput) {
+            searchInput.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    this.form.submit();
+                }
+            });
+        }
+        
+        // Initialize scroll buttons
+        initScrollButtons();
+    });
+    
+    // Multi-select functionality
+    function toggleQuestionSelection(element) {
+        const checkbox = element.previousElementSibling;
+        const questionCard = checkbox.closest('.question-card');
+        
+        checkbox.checked = !checkbox.checked;
+        
+        if (checkbox.checked) {
+            questionCard.classList.add('multi-selected');
+            element.classList.add('checked');
+        } else {
+            questionCard.classList.remove('multi-selected');
+            element.classList.remove('checked');
+        }
+        
+        updateFloatingDeleteButton();
+    }
+    
+    function updateFloatingDeleteButton() {
+        const selectedCheckboxes = document.querySelectorAll('.multi-select-checkbox:checked');
+        const floatingBtn = document.getElementById('floatingDeleteBtn');
+        const countSpan = document.getElementById('selectedCount');
+        
+        countSpan.textContent = selectedCheckboxes.length;
+        
+        if (selectedCheckboxes.length > 0) {
+            floatingBtn.classList.add('show');
+        } else {
+            floatingBtn.classList.remove('show');
+        }
+    }
+    
+    function deleteSelectedQuestions() {
+        const selectedCheckboxes = document.querySelectorAll('.multi-select-checkbox:checked');
+        
+        if (selectedCheckboxes.length === 0) {
+            alert('Please select at least one question to delete.');
+            return;
+        }
+        
+        // Show confirmation modal instead of confirm dialog
+        document.getElementById('deleteCount').textContent = selectedCheckboxes.length;
+        document.getElementById('deleteSelectedModal').style.display = 'flex';
+    }
+    
+    function hideDeleteSelectedModal() {
+        document.getElementById('deleteSelectedModal').style.display = 'none';
+    }
+    
+    function confirmDeleteSelected() {
+        hideDeleteSelectedModal();
+        
+        const selectedCheckboxes = document.querySelectorAll('.multi-select-checkbox:checked');
+        
+        // Collect all selected question IDs
+        const questionIds = [];
+        selectedCheckboxes.forEach(checkbox => {
+            questionIds.push(checkbox.dataset.qid);
+        });
+        
+        // Perform the deletion
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'controller.jsp';
+        
+        const pageInput = document.createElement('input');
+        pageInput.type = 'hidden';
+        pageInput.name = 'page';
+        pageInput.value = 'questions';
+        form.appendChild(pageInput);
+        
+        const operationInput = document.createElement('input');
+        operationInput.type = 'hidden';
+        operationInput.name = 'operation';
+        operationInput.value = 'bulk_delete';
+        form.appendChild(operationInput);
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        const courseInput = document.createElement('input');
+        courseInput.type = 'hidden';
+        courseInput.name = 'coursename';
+        const courseSelect = document.getElementById('courseSelectView') || document.getElementById('courseSelectAddNew');
+        courseInput.value = courseSelect && courseSelect.value ? courseSelect.value : '';
+        form.appendChild(courseInput);
+        
+        // Add each question ID as a separate input
+        questionIds.forEach(id => {
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = 'questionIds';
+            idInput.value = id;
+            form.appendChild(idInput);
+        });
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+    
+    // Add event listener to handle clicks on question cards to prevent interference with checkboxes
+    document.addEventListener('click', function(e) {
+        // If clicked on a question card but not on an action button or checkbox, toggle selection
+        if (e.target.closest('.question-card') && 
+            !e.target.closest('.actions') && 
+            !e.target.closest('.multi-select-toggle') &&
+            !e.target.closest('.btn-edit') &&
+            !e.target.closest('.btn-delete')) {
+            
+            const card = e.target.closest('.question-card');
+            const checkbox = card.querySelector('.multi-select-checkbox');
+            const toggle = card.querySelector('.multi-select-toggle');
+            
+            if (checkbox && toggle) {
+                checkbox.checked = !checkbox.checked;
+                
+                if (checkbox.checked) {
+                    card.classList.add('multi-selected');
+                    toggle.classList.add('checked');
+                } else {
+                    card.classList.remove('multi-selected');
+                    toggle.classList.remove('checked');
+                }
+                
+                updateFloatingDeleteButton();
+            }
+        }
+    });
+</script>
