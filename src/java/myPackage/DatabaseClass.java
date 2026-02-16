@@ -1353,16 +1353,16 @@ public int addNewQuestionReturnId(String questionText, String opt1, String opt2,
         }
 
         // Handle different question types
-        if (("DRAG_AND_DROP".equalsIgnoreCase(questionType) || "RE_ARRANGE".equalsIgnoreCase(questionType))) {
-            // For drag-and-drop questions, insert empty strings for opt fields since they're required
+        if ("DRAG_AND_DROP".equalsIgnoreCase(questionType) || "REARRANGE".equalsIgnoreCase(questionType) || "RE_ARRANGE".equalsIgnoreCase(questionType)) {
+            // For drag-and-drop or rearrange questions, insert empty strings for opt fields since they're required
             sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path, marks, extra_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             pstm = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             pstm.setString(1, questionText);
-            pstm.setString(2, ""); // opt1 - empty for drag-drop
-            pstm.setString(3, ""); // opt2 - empty for drag-drop
-            pstm.setString(4, ""); // opt3 - empty for drag-drop
-            pstm.setString(5, ""); // opt4 - empty for drag-drop
-            pstm.setString(6, ""); // correct - empty for drag-drop
+            pstm.setString(2, ""); // opt1 - empty
+            pstm.setString(3, ""); // opt2 - empty
+            pstm.setString(4, ""); // opt3 - empty
+            pstm.setString(5, ""); // opt4 - empty
+            pstm.setString(6, ""); // correct - empty
             pstm.setString(7, courseName);
             pstm.setString(8, questionType);
             pstm.setString(9, imagePath);
@@ -2442,7 +2442,7 @@ public ArrayList getQuestions(String courseName, int questions) {
     // Now populate nested relational data AFTER closing the main ResultSet
     for (Object obj : list) {
         Questions q = (Questions) obj;
-        if (("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType()) || "RE_ARRANGE".equalsIgnoreCase(q.getQuestionType()))) {
+            if ("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType()) || "RE_ARRANGE".equalsIgnoreCase(q.getQuestionType())) {
             q.setDragItems(getDragItemsByQuestionIdOld(q.getQuestionId()));
             q.setDropTargets(getDropTargetsByQuestionIdOld(q.getQuestionId()));
         } else if ("REARRANGE".equalsIgnoreCase(q.getQuestionType())) {
@@ -2683,11 +2683,13 @@ public ArrayList getAllQuestions(String courseName) {
     // Now populate nested relational data AFTER closing the main ResultSet
     for (Object obj : list) {
         Questions q = (Questions) obj;
-        if (("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType()) || "RE_ARRANGE".equalsIgnoreCase(q.getQuestionType()))) {
+        if ("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType()) || "RE_ARRANGE".equalsIgnoreCase(q.getQuestionType())) {
             q.setDragItems(getDragItemsByQuestionIdOld(q.getQuestionId()));
             q.setDropTargets(getDropTargetsByQuestionIdOld(q.getQuestionId()));
         } else if ("REARRANGE".equalsIgnoreCase(q.getQuestionType())) {
             q.setRearrangeItems(getRearrangeItems(q.getQuestionId()));
+            // Also populate rearrangeItemsJson for fallback in UI
+            q.setRearrangeItemsJson(q.getDragItemsJson());
         }
     }
     return list;
@@ -2790,9 +2792,13 @@ public ArrayList getAllQuestions(String courseName, String searchTerm, String qu
     // Now populate nested relational data AFTER closing the main ResultSet
     for (Object obj : list) {
         Questions q = (Questions) obj;
-        if (("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType()) || "RE_ARRANGE".equalsIgnoreCase(q.getQuestionType()))) {
+        if ("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType()) || "RE_ARRANGE".equalsIgnoreCase(q.getQuestionType())) {
             q.setDragItems(getDragItemsByQuestionIdOld(q.getQuestionId()));
             q.setDropTargets(getDropTargetsByQuestionIdOld(q.getQuestionId()));
+        } else if ("REARRANGE".equalsIgnoreCase(q.getQuestionType())) {
+            q.setRearrangeItems(getRearrangeItems(q.getQuestionId()));
+            // Also populate rearrangeItemsJson for fallback in UI
+            q.setRearrangeItemsJson(q.getDragItemsJson());
         }
     }
     return list;
@@ -2942,7 +2948,7 @@ private String getCorrectAnswer(int qid) {
             String questionType = rs.getString("question_type");
             
             // For Drag and Drop, return the correct targets JSON in standard format
-            if (("DRAG_AND_DROP".equalsIgnoreCase(questionType) || "RE_ARRANGE".equalsIgnoreCase(questionType))) {
+            if ("DRAG_AND_DROP".equalsIgnoreCase(questionType) || "REARRANGE".equalsIgnoreCase(questionType) || "RE_ARRANGE".equalsIgnoreCase(questionType)) {
                 org.json.JSONObject correctJson = new org.json.JSONObject();
                 try {
                     ArrayList<DragItem> dragItems = getDragItemsByQuestionIdOld(qid);
@@ -3867,7 +3873,7 @@ public float[] getRawMarks(int examId) {
             float questionWeight = qMarks > 0 ? qMarks : 1.0f;
             totalPossibleMarks += questionWeight;
             
-            if (("DRAG_AND_DROP".equalsIgnoreCase(questionType) || "RE_ARRANGE".equalsIgnoreCase(questionType))) {
+            if ("DRAG_AND_DROP".equalsIgnoreCase(questionType) || "RE_ARRANGE".equalsIgnoreCase(questionType)) {
                 // For drag-drop questions, get marks from drag_drop_answers table
                 float obtainedForQ = 0;
                 String ddSql = "SELECT SUM(marks_obtained) as total_marks FROM drag_drop_answers WHERE exam_id = ? AND question_id = ?";
@@ -3885,6 +3891,26 @@ public float[] getRawMarks(int examId) {
                 
                 totalObtainedMarks += obtainedForQ;
                 LOGGER.log(Level.FINE, "Drag-drop Q{0}: obtained {1}/{2}", 
+                          new Object[]{qid, obtainedForQ, questionWeight});
+                
+            } else if ("REARRANGE".equalsIgnoreCase(questionType)) {
+                // For rearrange questions, get marks from rearrange_answers table
+                float obtainedForQ = 0;
+                String raSql = "SELECT SUM(marks_obtained) as total_marks FROM rearrange_answers WHERE exam_id = ? AND question_id = ?";
+                try (PreparedStatement raPstm = conn.prepareStatement(raSql)) {
+                    raPstm.setInt(1, examId);
+                    raPstm.setInt(2, qid);
+                    try (ResultSet raRs = raPstm.executeQuery()) {
+                        if (raRs.next()) {
+                            obtainedForQ = raRs.getFloat("total_marks");
+                        }
+                    }
+                } catch (SQLException e) {
+                    LOGGER.log(Level.WARNING, "Error fetching rearrange marks: " + e.getMessage());
+                }
+                
+                totalObtainedMarks += obtainedForQ;
+                LOGGER.log(Level.FINE, "Rearrange Q{0}: obtained {1}/{2}", 
                           new Object[]{qid, obtainedForQ, questionWeight});
                 
             } else {

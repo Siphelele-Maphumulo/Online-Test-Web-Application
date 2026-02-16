@@ -2982,6 +2982,36 @@
                                         })();
                                     </script>
                                 </div>
+                            <% } else if(isRearrange) { 
+                                org.json.JSONArray itemsArray = new org.json.JSONArray();
+                                if (q.getRearrangeItems() != null && !q.getRearrangeItems().isEmpty()) {
+                                    for (myPackage.classes.RearrangeItem ri : q.getRearrangeItems()) {
+                                        org.json.JSONObject jo = new org.json.JSONObject();
+                                        jo.put("id", ri.getId());
+                                        jo.put("text", ri.getItemText());
+                                        itemsArray.put(jo);
+                                    }
+                                } else if (q.getRearrangeItemsJson() != null && !q.getRearrangeItemsJson().isEmpty()) {
+                                    try {
+                                        itemsArray = new org.json.JSONArray(q.getRearrangeItemsJson());
+                                    } catch (Exception e) {}
+                                }
+                            %>
+                                <div class="rearrange-question" 
+                                     data-items-json="<%= escapeHtmlAttr(itemsArray.toString()) %>"
+                                     data-extra-data="<%= escapeHtmlAttr(nz(q.getExtraData(), "{}")) %>">
+                                    <div class="rearrange-instructions">
+                                        <i class="fas fa-sort-amount-down"></i>
+                                        <div>
+                                            <strong>Rearrange the Items</strong>
+                                            <p>Drag and drop the items below into the correct sequence order.</p>
+                                        </div>
+                                    </div>
+                                    <div class="rearrange-interface" id="rearrange_<%= i %>">
+                                        <!-- Rearrange items will be loaded dynamically -->
+                                    </div>
+                                    <input type="hidden" name="rearrangeQuestion_<%= i %>" value="true">
+                                </div>
                             <% } else { %>
                                 <% if(isMultiTwo){ %>
                                     <div class="multi-select-note"><i class="fas fa-check-double"></i><strong>Choose up to 2 answers</strong></div>
@@ -3007,7 +3037,7 @@
                         </div>
                         <input type="hidden" name="question<%= i %>" value="<%= q.getQuestion() %>">
                         <input type="hidden" name="qid<%= i %>" value="<%= q.getQuestionId() %>">
-                        <input type="hidden" name="qtype<%= i %>" value="<%= isDragDrop?"dragdrop":(isMultiTwo?"multi2":"single") %>">
+                        <input type="hidden" name="qtype<%= i %>" value="<%= isDragDrop?"dragdrop":(isRearrange?"rearrange":(isMultiTwo?"multi2":"single")) %>">
                     </div>
                 <% } %>
                 </div>
