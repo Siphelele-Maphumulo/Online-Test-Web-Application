@@ -2018,10 +2018,123 @@
     .drag-drop-instructions i {
         font-size: 20px;
         color: var(--accent-blue);
+    }
+    
+    /* Rearrange Question Styles */
+    .rearrange-question {
         background: white;
-        padding: 10px;
-        border-radius: 8px;
-        box-shadow: var(--shadow-sm);
+        border-radius: 12px;
+        padding: 0;
+        margin: var(--spacing-md) 0;
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+    }
+    
+    .rearrange-instructions {
+        text-align: left;
+        padding: var(--spacing-md) var(--spacing-lg);
+        background: #f8fafc;
+        border-bottom: 1px solid var(--medium-gray);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+    }
+    
+    .rearrange-instructions i {
+        font-size: 20px;
+        color: var(--success);
+    }
+    
+    .rearrange-instructions strong {
+        display: block;
+        font-size: 15px;
+        color: var(--text-dark);
+        margin-bottom: 2px;
+    }
+    
+    .rearrange-instructions p {
+        margin: 0;
+        color: var(--dark-gray);
+        font-size: 13px;
+    }
+    
+    .rearrange-interface {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 20px;
+        background: white;
+    }
+    
+    .rearrange-items-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .rearrange-items-list.horizontal {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .rearrange-items-list.grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+    }
+    
+    .rearrange-item {
+        background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+        color: white;
+        padding: 15px 20px;
+        border-radius: var(--radius-md);
+        font-size: 15px;
+        font-weight: 500;
+        box-shadow: var(--shadow-md);
+        border: 2px solid transparent;
+        transition: all 0.2s ease;
+        cursor: grab;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .rearrange-item:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--accent-blue-light);
+    }
+    
+    .rearrange-item.dragging {
+        opacity: 0.5;
+        cursor: grabbing;
+        transform: scale(1.05);
+    }
+    
+    .rearrange-item.drag-over {
+        border-color: var(--success);
+        transform: scale(1.02);
+    }
+    
+    .rearrange-item .item-position {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    
+    .rearrange-item .drag-handle {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 18px;
+        margin-right: 5px;
+        cursor: grab;
     }
     
     .drag-drop-instructions strong {
@@ -2222,7 +2335,7 @@
     
     .drag-item {
         background: #92AB2F;
-        border: 2px solid #5D8E2;
+        border: 2px solid #5D8E2F;
         border-radius: 8px;
         padding: 15px 14px; /* Reduced horizontal padding by 30% */
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
@@ -2248,7 +2361,7 @@
         background: #7FB069;
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        border-color: #5D8E2;
+        border-color: #5D8E2F;
     }
     
     .drag-item.dragging {
@@ -2326,7 +2439,7 @@
     
     @keyframes blinkBorder {
         0%, 50% { border-color: #92AB2F; border-style: dashed; }
-        25%, 75% { border-color: #5D8E2; border-style: solid; }
+        25%, 75% { border-color: #5D8E2F; border-style: solid; }
         100% { border-color: #92AB2F; border-style: dashed; }
     }
     
@@ -2703,6 +2816,7 @@
                     Questions q = questionsList.get(i);
                     boolean isMultiTwo = false;
                     boolean isDragDrop = false;
+                    boolean isRearrange = false;
                     try{
                         String qt = q.getQuestion().toLowerCase();
                         String questionType = q.getQuestionType();
@@ -2712,6 +2826,7 @@
                                     qt.contains("two options") || qt.contains("multiple select") ||
                                     qt.contains("select multiple") || qt.contains("choose multiple");
                         isDragDrop = "DRAG_AND_DROP".equalsIgnoreCase(questionType);
+                        isRearrange = "REARRANGE".equalsIgnoreCase(questionType);
                     } catch(Exception e) { 
                         isMultiTwo = false; 
                         isDragDrop = false;
@@ -4265,6 +4380,451 @@ if (document.readyState === 'loading') {
 } else {
     initializeDragDropQuestions();
 }
+
+/* --- REARRANGE QUESTION FUNCTIONALITY --- */
+function initializeRearrangeQuestions() {
+    const rearrangeQuestions = document.querySelectorAll('.rearrange-question');
+    
+    rearrangeQuestions.forEach(function(questionContainer, idx) {
+        const card = questionContainer.closest('.question-card');
+        if (!card) return;
+        
+        const questionIndex = card.getAttribute('data-qindex');
+        
+        const itemsJson = questionContainer.getAttribute('data-items-json');
+        let itemsData = [];
+        
+        try {
+            if (itemsJson && itemsJson !== 'null' && itemsJson !== 'undefined') {
+                itemsData = JSON.parse(itemsJson);
+            }
+        } catch (e) {
+            console.log('Error parsing rearrange JSON for question ' + (parseInt(questionIndex) + 1));
+            itemsData = [];
+        }
+        
+        // Render the rearrange interface
+        renderRearrangeInterface(questionIndex, questionContainer, itemsData);
+    });
+}
+
+function renderRearrangeInterface(qIdx, container, items) {
+    // Normalize items
+    const normalizedItems = [];
+    for (let i = 0; i < items.length; i++) {
+        if (typeof items[i] === 'string') {
+            normalizedItems.push({ id: 'item_' + i, text: items[i], correctPosition: i + 1 });
+        } else {
+            normalizedItems.push(items[i]);
+        }
+    }
+    
+    // Create the rearrange container
+    const rearrangeContainer = document.createElement('div');
+    rearrangeContainer.className = 'rearrange-container';
+    
+    // Create the items list that can be reordered
+    const itemsList = document.createElement('div');
+    itemsList.className = 'rearrange-items-list';
+    itemsList.id = 'rearrangeItemsList_' + qIdx;
+    
+    // Shuffle items for student to rearrange
+    const shuffledItems = [...normalizedItems];
+    
+    // Fisher-Yates shuffle algorithm
+    for (let i = shuffledItems.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledItems[i], shuffledItems[j]] = [shuffledItems[j], shuffledItems[i]];
+    }
+    
+    // Add shuffled items to the list
+    shuffledItems.forEach((item, index) => {
+        const itemElement = createRearrangeItemElement(qIdx, item.id, item.text, index);
+        itemsList.appendChild(itemElement);
+    });
+    
+    rearrangeContainer.appendChild(itemsList);
+    container.appendChild(rearrangeContainer);
+    
+    // Make the list sortable
+    makeSortable(itemsList, qIdx);
+}
+
+function createRearrangeItemElement(qIdx, itemId, text, position) {
+    const element = document.createElement('div');
+    element.className = 'rearrange-item';
+    element.draggable = true;
+    element.id = 'q' + qIdx + '_rearrange_' + itemId;
+    element.setAttribute('data-item-id', itemId);
+    element.setAttribute('data-text', text);
+    
+    element.innerHTML = `
+        <i class="fas fa-grip-vertical drag-handle"></i>
+        <span class="item-position">${position + 1}</span>
+        <span class="item-text">${text}</span>
+    `;
+    
+    // Add drag events
+    element.addEventListener('dragstart', handleRearrangeDragStart);
+    element.addEventListener('dragend', handleRearrangeDragEnd);
+    element.addEventListener('dragover', handleRearrangeDragOver);
+    element.addEventListener('dragenter', handleRearrangeDragEnter);
+    element.addEventListener('dragleave', handleRearrangeDragLeave);
+    element.addEventListener('drop', handleRearrangeDrop);
+    
+    return element;
+}
+
+// Rearrange drag handlers
+function handleRearrangeDragStart(e) {
+    e.target.classList.add('dragging');
+    e.dataTransfer.setData('text/plain', e.target.id);
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleRearrangeDragEnd(e) {
+    e.target.classList.remove('dragging');
+    
+    // Update positions after drag ends
+    const list = e.target.parentElement;
+    const qIdx = list.id.replace('rearrangeItemsList_', '');
+    updateRearrangePositions(list, qIdx);
+    saveRearrangeAnswer(qIdx);
+}
+
+function handleRearrangeDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+}
+
+function handleRearrangeDragEnter(e) {
+    e.preventDefault();
+    e.target.classList.add('drag-over');
+}
+
+function handleRearrangeDragLeave(e) {
+    e.target.classList.remove('drag-over');
+}
+
+function handleRearrangeDrop(e) {
+    e.preventDefault();
+    e.target.classList.remove('drag-over');
+    
+    const draggedId = e.dataTransfer.getData('text/plain');
+    const draggedElement = document.getElementById(draggedId);
+    const targetElement = e.target.closest('.rearrange-item');
+    
+    if (draggedElement && targetElement && draggedElement !== targetElement) {
+        // Determine drop position
+        const rect = targetElement.getBoundingClientRect();
+        const next = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5 ? targetElement.nextSibling : targetElement;
+        
+        const list = targetElement.parentElement;
+        list.insertBefore(draggedElement, next);
+        
+        // Update positions
+        updateRearrangePositions(list, list.id.replace('rearrangeItemsList_', ''));
+        
+        // Save answer
+        saveRearrangeAnswer(list.id.replace('rearrangeItemsList_', ''));
+    }
+}
+
+function makeSortable(list, qIdx) {
+    let draggedItem = null;
+    
+    list.addEventListener('dragstart', function(e) {
+        draggedItem = e.target;
+        if (draggedItem.classList.contains('rearrange-item')) {
+            draggedItem.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', draggedItem.id);
+            e.dataTransfer.effectAllowed = 'move';
+        }
+    });
+    
+    list.addEventListener('dragend', function() {
+        if (draggedItem) {
+            draggedItem.classList.remove('dragging');
+            draggedItem = null;
+            
+            // Update positions after drag completes
+            updateRearrangePositions(list, qIdx);
+            saveRearrangeAnswer(qIdx);
+        }
+    });
+    
+    list.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        
+        if (draggedItem && draggedItem.classList.contains('rearrange-item')) {
+            const afterElement = getDragAfterElement(list, e.clientY);
+            const currentSibling = draggedItem.nextSibling;
+            
+            if (currentSibling !== afterElement) {
+                list.insertBefore(draggedItem, afterElement);
+            }
+        }
+    });
+}
+
+function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.rearrange-item:not(.dragging)')];
+    
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+function updateRearrangePositions(list, qIdx) {
+    const items = list.querySelectorAll('.rearrange-item');
+    items.forEach((item, index) => {
+        const positionSpan = item.querySelector('.item-position');
+        if (positionSpan) {
+            positionSpan.textContent = index + 1;
+        }
+    });
+}
+
+function saveRearrangeAnswer(qIdx) {
+    const list = document.getElementById('rearrangeItemsList_' + qIdx);
+    if (!list) return;
+    
+    const items = list.querySelectorAll('.rearrange-item');
+    const orderedItemIds = [];
+    
+    items.forEach(item => {
+        const itemId = item.getAttribute('data-item-id');
+        if (itemId) {
+            orderedItemIds.push(itemId.replace('item_', '')); // Extract numeric ID
+        }
+    });
+    
+    // Convert to integer IDs
+    const orderedIds = orderedItemIds.map(id => parseInt(id));
+    
+    const answer = JSON.stringify(orderedIds);
+    
+    // Save using existing saveAnswer function
+    if (typeof saveAnswer === 'function') {
+        saveAnswer(qIdx, answer);
+    }
+}
+
+function getRearrangeAnswers() {
+    const rearrangeQuestions = document.querySelectorAll('.rearrange-question');
+    const answers = {};
+    
+    rearrangeQuestions.forEach(function(questionContainer) {
+        const card = questionContainer.closest('.question-card');
+        if (!card) return;
+        
+        const qIdx = card.getAttribute('data-qindex');
+        const list = document.getElementById('rearrangeItemsList_' + qIdx);
+        
+        if (list) {
+            const items = list.querySelectorAll('.rearrange-item');
+            const orderedItemIds = [];
+            
+            items.forEach(item => {
+                const itemId = item.getAttribute('data-item-id');
+                if (itemId) {
+                    orderedItemIds.push(parseInt(itemId.replace('item_', '')));
+                }
+            });
+            
+            answers[qIdx] = orderedItemIds;
+        }
+    });
+    
+    return answers;
+}
+
+// Modify the submitExam function to handle rearrange answers
+const originalSubmitExam = typeof submitExam === 'function' ? submitExam : function() {};
+function submitExam() {
+    // Handle original functionality
+    if (typeof originalSubmitExam === 'function') {
+        originalSubmitExam();
+        return;
+    }
+    
+    // Save all multi-select answers
+    document.querySelectorAll('.answers[data-max-select="2"]').forEach(function(box){
+        var card = box.closest('.question-card');
+        if (!card) return;
+        var qindex = card.getAttribute('data-qindex');
+        if (qindex) updateHiddenForMulti(qindex);
+    });
+    
+    // Handle Drag and Drop answers
+    const dragDropAnswers = getDragDropAnswers();
+    Object.keys(dragDropAnswers).forEach(qindex => {
+        const mappings = dragDropAnswers[qindex];
+        const formattedMappings = {};
+        for (let tId in mappings) {
+            formattedMappings['target_' + tId] = 'item_' + mappings[tId];
+        }
+        const ansValue = JSON.stringify(formattedMappings);
+        
+        let hiddenAns = document.querySelector('input[name="ans' + qindex + '"]');
+        if (!hiddenAns) {
+            hiddenAns = document.createElement('input');
+            hiddenAns.type = 'hidden';
+            hiddenAns.name = 'ans' + qindex;
+            document.getElementById('myform').appendChild(hiddenAns);
+        }
+        hiddenAns.value = ansValue;
+    });
+    
+    // Handle Rearrange answers
+    const rearrangeAnswers = getRearrangeAnswers();
+    Object.keys(rearrangeAnswers).forEach(qindex => {
+        const orderedIds = rearrangeAnswers[qindex];
+        const ansValue = JSON.stringify(orderedIds);
+        
+        let hiddenAns = document.querySelector('input[name="ans' + qindex + '"]');
+        if (!hiddenAns) {
+            hiddenAns = document.createElement('input');
+            hiddenAns.type = 'hidden';
+            hiddenAns.name = 'ans' + qindex;
+            document.getElementById('myform').appendChild(hiddenAns);
+        }
+        hiddenAns.value = ansValue;
+    });
+    
+    var answeredQuestions = 0;
+    document.querySelectorAll('.question-card').forEach(function(card){
+        const isDragDrop = card.querySelector('.drag-drop-question') !== null;
+        const isRearrange = card.querySelector('.rearrange-question') !== null;
+        
+        if (isDragDrop) {
+            if (card.querySelectorAll('.dropped-item').length > 0) {
+                answeredQuestions++;
+            }
+        } else if (isRearrange) {
+            // For rearrange, consider answered if there are items in the list
+            const list = card.querySelector('.rearrange-items-list');
+            if (list && list.querySelectorAll('.rearrange-item').length > 0) {
+                answeredQuestions++;
+            }
+        } else {
+            var box = card.querySelector('.answers');
+            if(!box) return;
+            var maxSel = parseInt(box.getAttribute('data-max-select') || '1', 10);
+            if(maxSel === 1) {
+                if(box.querySelector('input.single:checked')) answeredQuestions++;
+            } else {
+                if(box.querySelectorAll('input.multi:checked').length >= 1) answeredQuestions++;
+            }
+        }
+    });
+    
+    // Check for unanswered questions
+    if(answeredQuestions < totalQuestions) {
+        var unanswered = totalQuestions - answeredQuestions;
+        if(!confirm("You have " + unanswered + " unanswered question" + 
+                (unanswered > 1 ? "s" : "") + ". Submit anyway?")) {
+            return;
+        }
+    }
+    
+    // Final confirmation - show modal
+    showConfirmSubmitModal();
+}
+
+// Modify the updateProgress function to handle rearrange questions
+const originalUpdateProgress = typeof updateProgress === 'function' ? updateProgress : function() {};
+function updateProgress() {
+    originalUpdateProgress();
+    
+    var cards = document.querySelectorAll('.question-card');
+    var answered = 0;
+    
+    cards.forEach(function(card){
+        var box = card.querySelector('.answers');
+        if(!box) return;
+        
+        const qindex = card.getAttribute('data-qindex');
+        const isDragDrop = card.querySelector('.drag-drop-question') !== null;
+        const isRearrange = card.querySelector('.rearrange-question') !== null;
+        
+        if (isDragDrop) {
+            // Question is answered if at least one target has an item
+            if (card.querySelectorAll('.dropped-item').length > 0) {
+                answered++;
+            }
+        } else if (isRearrange) {
+            // For rearrange questions, check if items exist in the list
+            const list = card.querySelector('.rearrange-items-list');
+            if (list && list.querySelectorAll('.rearrange-item').length > 0) {
+                answered++;
+            }
+        } else {
+            var maxSel = parseInt(box.getAttribute('data-max-select') || '1', 10);
+            if(maxSel === 1){
+                if(box.querySelector('input.single:checked')) answered++;
+            } else {
+                if(box.querySelectorAll('input.multi:checked').length >= 1) answered++;
+            }
+        }
+    });
+    
+    // Update progress bars and labels with the correct count
+    var total = cards.length;
+    var pct = total ? Math.round((answered / total) * 100) : 0;
+    
+    // Update progress bars
+    var progressBar = document.getElementById('progressBar');
+    var progressBarHeader = document.getElementById('progressBarHeader');
+    var modalProgressBar = document.getElementById('modalProgressBar');
+    if(progressBar) progressBar.style.width = pct + '%';
+    if(progressBarHeader) progressBarHeader.style.width = pct + '%';
+    if(modalProgressBar) modalProgressBar.style.width = pct + '%';
+    
+    // Update labels
+    var progressLabel = document.getElementById('progressLabel');
+    var examProgressPctHeader = document.getElementById('examProgressPctHeader');
+    var progressPercent = document.querySelector('.progress-percent');
+    if(progressLabel) progressLabel.textContent = pct + '%';
+    if(examProgressPctHeader) examProgressPctHeader.textContent = pct + '%';
+    if(progressPercent) progressPercent.textContent = pct + '%';
+    
+    // Update counters
+    var submitAnswered = document.getElementById('submitAnswered');
+    var submitUnanswered = document.getElementById('submitUnanswered');
+    var floatCounter = document.getElementById('floatCounter');
+    var modalAnswered = document.getElementById('modalAnswered');
+    var modalUnanswered = document.getElementById('modalUnanswered');
+    var modalProgressText = document.getElementById('modalProgressText');
+    
+    if(submitAnswered) submitAnswered.textContent = answered;
+    if(submitUnanswered) submitUnanswered.textContent = total - answered;
+    if(floatCounter) floatCounter.textContent = answered + '/' + total;
+    if(modalAnswered) modalAnswered.textContent = answered;
+    if(modalUnanswered) modalUnanswered.textContent = total - answered;
+    if(modalProgressText) modalProgressText.textContent = answered + ' / ' + total;
+    
+    // Update circular progress
+    var circumference = 2 * Math.PI * 34;
+    var offset = circumference - (pct / 100) * circumference;
+    var progressRing = document.querySelector('.progress-ring-progress');
+    if(progressRing) progressRing.style.strokeDashoffset = offset;
+}
+
+// Initialize rearrange questions when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeRearrangeQuestions);
+} else {
+    initializeRearrangeQuestions();
+}
             </script>
 
             <% } else if ("1".equals(request.getParameter("showresult"))) {
@@ -4368,7 +4928,7 @@ if (document.readyState === 'loading') {
                     <a href="std-page.jsp?pgprt=1"
                        class="btn-primary"
                        style="padding: 12px 30px; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">
-                        <h3 style="margin-bottom: 0; color: #fffff;">
+                        <h3 style="margin-bottom: 0; color: #ffffff;">
                             <i class="fas fa-redo"></i> Take Another Exam
                         </h3>
                     </a>

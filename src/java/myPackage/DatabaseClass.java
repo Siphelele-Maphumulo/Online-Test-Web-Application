@@ -16,6 +16,7 @@ import myPackage.classes.User;
 import myPackage.classes.DragItem;
 import myPackage.classes.DropTarget;
 import myPackage.classes.DragDropAnswer;
+import myPackage.classes.RearrangeItem;
 import org.mindrot.jbcrypt.BCrypt;
 import java.sql.Connection;
 import java.sql.Date;
@@ -31,9 +32,12 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
-// Add these imports at the top of your DatabaseClass.java
+import java.util.HashMap;
+import java.util.HashSet;
 import myPackage.classes.Result;
-
+import org.json.JSONObject;
+import org.json.JSONArray;
+import org.json.JSONException;
 
 public class DatabaseClass {
     private static DatabaseClass instance; // Singleton instance
@@ -2667,6 +2671,8 @@ public ArrayList getAllQuestions(String courseName) {
         if (("DRAG_AND_DROP".equalsIgnoreCase(q.getQuestionType()) || "RE_ARRANGE".equalsIgnoreCase(q.getQuestionType()))) {
             q.setDragItems(getDragItemsByQuestionIdOld(q.getQuestionId()));
             q.setDropTargets(getDropTargetsByQuestionIdOld(q.getQuestionId()));
+        } else if ("REARRANGE".equalsIgnoreCase(q.getQuestionType())) {
+            q.setRearrangeItems(getRearrangeItems(q.getQuestionId()));
         }
     }
     return list;
@@ -5502,6 +5508,86 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
     }
     
     /**
+     * Adds a rearrange question to the database
+     */
+    public int addRearrangeQuestion(String courseName, String question, String imagePath, 
+                                ArrayList<String> items, ArrayList<Integer> correctOrder, int marks) {
+        int questionId = -1;
+        try {
+            // Insert into questions table
+            String sql = "INSERT INTO questions (question, opt1, opt2, opt3, opt4, correct, course_name, question_type, image_path, marks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            pstmt.setString(1, question);
+            pstmt.setString(2, ""); // opt1 - empty for rearrange
+            pstmt.setString(3, ""); // opt2 - empty for rearrange
+            pstmt.setString(4, ""); // opt3 - empty for rearrange
+            pstmt.setString(5, ""); // opt4 - empty for rearrange
+            pstmt.setString(6, ""); // correct - empty for rearrange
+            pstmt.setString(7, courseName);
+            pstmt.setString(8, "REARRANGE");
+            pstmt.setString(9, imagePath);
+            pstmt.setInt(10, marks);
+            pstmt.executeUpdate();
+            
+            ResultSet rs = pstmt.getGeneratedKeys();
+            if (rs.next()) {
+                questionId = rs.getInt(1);
+            }
+            
+            // Insert rearrange items
+            String itemSql = "INSERT INTO rearrange_items (question_id, item_text, correct_position) VALUES (?, ?, ?)";
+            PreparedStatement itemStmt = conn.prepareStatement(itemSql);
+            
+            for (int i = 0; i < items.size(); i++) {
+                itemStmt.setInt(1, questionId);
+                itemStmt.setString(2, items.get(i));
+                itemStmt.setInt(3, correctOrder.get(i));
+                itemStmt.addBatch();
+            }
+            itemStmt.executeBatch();
+            
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return questionId;
+    }
+    
+    /**
+     * Gets rearrange items for a question
+     */
+    public ArrayList<RearrangeItem> getRearrangeItems(int questionId) {
+        ArrayList<RearrangeItem> items = new ArrayList<>();
+        try {
+            String sql = "SELECT * FROM rearrange_items WHERE question_id = ? ORDER BY id";
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, questionId);
+            ResultSet rs = pstmt.executeQuery();
+            
+            while (rs.next()) {
+                RearrangeItem item = new RearrangeItem();
+                item.setId(rs.getInt("id"));
+                item.setItemText(rs.getString("item_text"));
+                item.setCorrectPosition(rs.getInt("correct_position"));
+                items.add(item);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return items;
+    }
+    
+    /**
+     * Gets a complete rearrange question with all items
+     */
+    public Questions getRearrangeQuestionById(int questionId) {
+        Questions question = getQuestionById(questionId);
+        if (question != null && "REARRANGE".equals(question.getQuestionType())) {
+            question.setRearrangeItems(getRearrangeItems(questionId));
+        }
+        return question;
+    }
+    
+    /**
      * Submits drag-drop answers and calculates marks
      * 1 mark per correct match, divided proportionally from total marks
      */
@@ -5722,6 +5808,123 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
         }
         
         return answers;
+    }
+    
+    /**
+     * Submit rearrange answers and calculate marks
+     * 1 mark per correctly positioned item, divided proportionally from total marks
+     */
+    public float submitRearrangeAnswer(int examId, int questionId, String studentId, ArrayList<Integer> studentOrder) {
+        Connection conn = null;
+        PreparedStatement pstmDelete = null;
+        PreparedStatement pstmInsert = null;
+        PreparedStatement pstmSelect = null;
+        ResultSet rs = null;
+        float totalMarks = 0;
+        
+        try {
+            conn = getConnection();
+            conn.setAutoCommit(false);
+            
+            // Get the question's total marks and correct rearrange items
+            Questions question = getQuestionById(questionId);
+            if (question == null) {
+                throw new RuntimeException("Question not found: " + questionId);
+            }
+            
+            ArrayList<RearrangeItem> correctItems = getRearrangeItems(questionId);
+            if (correctItems == null || correctItems.isEmpty()) {
+                throw new RuntimeException("No rearrange items found for question: " + questionId);
+            }
+            
+            // Calculate marks per correct position (equal distribution)
+            float marksPerCorrectPosition = 0;
+            if (correctItems.size() > 0) {
+                marksPerCorrectPosition = (float) question.getTotalMarks() / correctItems.size();
+            }
+            
+            // Delete any existing answers for this question
+            String deleteSql = "DELETE FROM rearrange_answers WHERE exam_id = ? AND question_id = ? AND student_id = ?";
+            pstmDelete = conn.prepareStatement(deleteSql);
+            pstmDelete.setInt(1, examId);
+            pstmDelete.setInt(2, questionId);
+            pstmDelete.setString(3, studentId);
+            pstmDelete.executeUpdate();
+            pstmDelete.close();
+            
+            // Insert new answers
+            String insertSql = "INSERT INTO rearrange_answers (exam_id, question_id, student_id, item_id, student_position, is_correct, marks_obtained) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            pstmInsert = conn.prepareStatement(insertSql);
+            
+            int correctCount = 0;
+            
+            // Compare student's order with correct order
+            for (int i = 0; i < correctItems.size() && i < studentOrder.size(); i++) {
+                RearrangeItem correctItem = correctItems.get(i);
+                int studentSelectedItemId = studentOrder.get(i);
+                
+                // Check if the student placed the correct item in this position
+                boolean isCorrect = (correctItem.getId() == studentSelectedItemId);
+                float marksObtained = isCorrect ? marksPerCorrectPosition : 0;
+                
+                pstmInsert.setInt(1, examId);
+                pstmInsert.setInt(2, questionId);
+                pstmInsert.setString(3, studentId);
+                pstmInsert.setInt(4, correctItem.getId());
+                pstmInsert.setInt(5, i + 1); // Position in student's arrangement
+                pstmInsert.setInt(6, isCorrect ? 1 : 0);
+                pstmInsert.setFloat(7, marksObtained);
+                pstmInsert.addBatch();
+                
+                totalMarks += marksObtained;
+                if (isCorrect) correctCount++;
+            }
+            
+            // Handle case where student provided fewer items than expected
+            for (int i = studentOrder.size(); i < correctItems.size(); i++) {
+                RearrangeItem correctItem = correctItems.get(i);
+                
+                pstmInsert.setInt(1, examId);
+                pstmInsert.setInt(2, questionId);
+                pstmInsert.setString(3, studentId);
+                pstmInsert.setInt(4, correctItem.getId());
+                pstmInsert.setNull(5, java.sql.Types.INTEGER); // No position given by student
+                pstmInsert.setInt(6, 0); // Incorrect
+                pstmInsert.setFloat(7, 0); // No marks
+                pstmInsert.addBatch();
+            }
+            
+            pstmInsert.executeBatch();
+            conn.commit();
+            
+            LOGGER.info("Rearrange answers submitted for exam: " + examId + 
+                        ", question: " + questionId + 
+                        ", student: " + studentId + 
+                        ", correct: " + correctCount + "/" + correctItems.size() +
+                        ", marks: " + totalMarks + "/" + question.getTotalMarks());
+            
+        } catch (SQLException e) {
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException rollbackEx) {
+                LOGGER.log(Level.SEVERE, "Rollback failed", rollbackEx);
+            }
+            LOGGER.log(Level.SEVERE, "Error submitting rearrange answers", e);
+            throw new RuntimeException("Failed to submit rearrange answers: " + e.getMessage(), e);
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstmDelete != null) pstmDelete.close();
+                if (pstmInsert != null) pstmInsert.close();
+                if (conn != null) {
+                    conn.setAutoCommit(true);
+                }
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources", e);
+            }
+        }
+        
+        return totalMarks;
     }
 }
     

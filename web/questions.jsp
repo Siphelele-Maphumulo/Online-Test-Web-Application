@@ -1469,6 +1469,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                                 <option value="MultipleSelect" <%="MultipleSelect".equals(lastQuestionType) ? "selected" : ""%>>Multiple Select (2 correct)</option>
                                 <option value="Code" <%="Code".equals(lastQuestionType) ? "selected" : ""%>>Code Snippet</option>
                                 <option value="DRAG_AND_DROP" <%="DRAG_AND_DROP".equals(lastQuestionType) ? "selected" : ""%>>Drag and Drop</option>
+                                <option value="REARRANGE" <%="REARRANGE".equals(lastQuestionType) ? "selected" : ""%>>Rearrange (Order Items)</option>
                             </select>
                             <input type="hidden" id="questionTypeHidden" name="questionType" value="<%=lastQuestionType%>">
                         </div>
@@ -1599,6 +1600,61 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                             <button type="button" class="btn btn-outline btn-sm" onclick="addDropTarget()">
                                 <i class="fas fa-plus"></i> Add Target
                             </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Rearrange Options -->
+                    <div id="rearrangeOptions" style="display:none;">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="fas fa-sort-amount-up" style="color: var(--accent-blue);"></i>
+                                    Total Marks
+                                </label>
+                                <input type="number" name="totalMarks" class="form-control" value="1" min="1" max="100" required>
+                                <small class="form-hint">Total marks for this question</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="fas fa-paint-brush" style="color: var(--info);"></i>
+                                    Display Style
+                                </label>
+                                <select name="rearrangeStyle" class="form-select" id="rearrangeStyleSelect">
+                                    <option value="vertical">Vertical (Stacked)</option>
+                                    <option value="horizontal">Horizontal (Side by Side)</option>
+                                    <option value="grid">Grid Layout</option>
+                                </select>
+                                <small class="form-hint">How items are displayed</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-th" style="color: var(--info);"></i>
+                                Items to Rearrange
+                            </label>
+                            <div class="quick-add-indicator" style="background: #e9ecef; margin-bottom: 15px;">
+                                <i class="fas fa-info-circle"></i>
+                                <span>Add items in their <strong>correct order</strong>. Students will need to rearrange them to match this sequence.</span>
+                            </div>
+                            <div id="rearrangeItemsContainer">
+                                <!-- Items will be added here -->
+                            </div>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="addRearrangeItem()">
+                                <i class="fas fa-plus"></i> Add Item
+                            </button>
+                        </div>
+                        
+                        <!-- Preview Section -->
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-eye" style="color: var(--success);"></i>
+                                Preview (How students will see it)
+                            </label>
+                            <div id="rearrangePreview" class="rearrange-preview">
+                                <!-- Preview will be shown here -->
+                            </div>
                         </div>
                     </div>
                     
@@ -2332,6 +2388,7 @@ function toggleOptions() {
     const trueFalse = document.getElementById("trueFalseContainer");
     const multiple = document.getElementById("multipleCorrectContainer");
     const dragDrop = document.getElementById("dragDropOptions");
+    const rearrange = document.getElementById("rearrangeOptions");
     const correct = document.getElementById("correctAnswer");
     const trueFalseSelect = document.getElementById("trueFalseSelect");
     
@@ -2349,6 +2406,7 @@ function toggleOptions() {
     trueFalse.style.display = "none";
     multiple.style.display = "none";
     dragDrop.style.display = "none";
+    rearrange.style.display = "none";
     
     // Remove required attributes from all elements
     correct.required = false;
@@ -2420,6 +2478,34 @@ function toggleOptions() {
         
         // Initialize drag-drop interface
         updateDragDropTargetOptions();
+    } else if (qType === "REARRANGE") {
+        rearrange.style.display = "block";
+        // Don't require options for rearrange questions
+        if (opt1) opt1.required = false;
+        if (opt2) opt2.required = false;
+        if (opt3) opt3.required = false;
+        if (opt4) opt4.required = false;
+        
+        // Store current option values before disabling
+        if (opt1) {
+            sessionStorage.setItem('stored_opt1', opt1.value);
+            opt1.disabled = true;
+        }
+        if (opt2) {
+            sessionStorage.setItem('stored_opt2', opt2.value);
+            opt2.disabled = true;
+        }
+        if (opt3) {
+            sessionStorage.setItem('stored_opt3', opt3.value);
+            opt3.disabled = true;
+        }
+        if (opt4) {
+            sessionStorage.setItem('stored_opt4', opt4.value);
+            opt4.disabled = true;
+        }
+        
+        // Initialize rearrange interface
+        updateRearrangePreview();
     } else {
         mcq.style.display = "block";
         if (opt1) opt1.required = true;
@@ -4150,7 +4236,101 @@ function initOrientationPreview() {
     }
 }
 
+// Rearrange Question Functions
+let rearrangeItemIndex = 0;
+
+function addRearrangeItem() {
+    const container = document.getElementById('rearrangeItemsContainer');
+    const newIndex = ++rearrangeItemIndex;
+    
+    const itemRow = document.createElement('div');
+    itemRow.className = 'rearrange-item-editor';
+    itemRow.setAttribute('data-item-index', newIndex);
+    
+    itemRow.innerHTML = `
+        <span class="item-index">${newIndex}.</span>
+        <textarea name="rearrangeItem_${newIndex}" class="form-control" rows="1" placeholder="Enter item text" oninput="autoResize(this); updateRearrangePreview();"></textarea>
+        <button type="button" class="rearrange-remove-btn" onclick="removeRearrangeItem(this)" title="Remove item">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    container.appendChild(itemRow);
+    
+    // Auto-resize the textarea
+    const textarea = itemRow.querySelector('textarea');
+    autoResize(textarea);
+    
+    // Update preview
+    updateRearrangePreview();
+}
+
+function removeRearrangeItem(button) {
+    const itemRow = button.closest('.rearrange-item-editor');
+    itemRow.remove();
+    
+    // Update preview
+    updateRearrangePreview();
+}
+
+function updateRearrangePreview() {
+    const container = document.getElementById('rearrangePreview');
+    const items = document.querySelectorAll('#rearrangeItemsContainer textarea');
+    const styleSelect = document.getElementById('rearrangeStyleSelect');
+    
+    const style = styleSelect ? styleSelect.value : 'vertical';
+    
+    // Clear current preview
+    container.innerHTML = '';
+    container.className = `rearrange-preview ${style}`;
+    
+    if (items.length === 0) {
+        container.innerHTML = '<div class="empty-preview-message" style="text-align: center; color: #6c757d; padding: 20px;">Add items to see preview</div>';
+        return;
+    }
+    
+    // Create preview items
+    items.forEach((item, index) => {
+        if (item.value.trim() !== '') {
+            const previewItem = document.createElement('div');
+            previewItem.className = 'rearrange-item-preview';
+            previewItem.draggable = true;
+            previewItem.innerHTML = `
+                <i class="fas fa-grip-vertical drag-handle"></i>
+                <span class="item-number">${index + 1}</span>
+                <span class="item-text">${item.value.trim()}</span>
+            `;
+            
+            // Add drag events
+            previewItem.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', index);
+                previewItem.classList.add('dragging');
+            });
+            
+            previewItem.addEventListener('dragend', () => {
+                previewItem.classList.remove('dragging');
+            });
+            
+            container.appendChild(previewItem);
+        }
+    });
+    
+    if (container.children.length === 0) {
+        container.innerHTML = '<div class="empty-preview-message" style="text-align: center; color: #6c757d; padding: 20px;">Add items to see preview</div>';
+    }
+}
+
+// Initialize rearrange interface when DOM is loaded
+function initRearrangeInterface() {
+    // Add event listener to the style selector to update preview when style changes
+    const styleSelect = document.getElementById('rearrangeStyleSelect');
+    if (styleSelect) {
+        styleSelect.addEventListener('change', updateRearrangePreview);
+    }
+}
+
 // Initialize when DOM is loaded (this will be called after the above DOMContentLoaded event)
+initRearrangeInterface();
 </script>
 
 <style>

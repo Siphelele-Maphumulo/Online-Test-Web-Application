@@ -9,6 +9,8 @@ public class Questions {
     private int totalMarks;
     private List<DragItem> dragItems;
     private List<DropTarget> dropTargets;
+    private List<RearrangeItem> rearrangeItems;
+    private String rearrangeItemsJson;
 
     public Questions() {
     }
@@ -188,5 +190,14 @@ public class Questions {
         this.dropTargets = dropTargets;
     }
     
+    public List<RearrangeItem> getRearrangeItems() { return rearrangeItems; }
+    public void setRearrangeItems(List<RearrangeItem> rearrangeItems) { 
+        this.rearrangeItems = rearrangeItems; 
+    }
+    
+    public String getRearrangeItemsJson() { return rearrangeItemsJson; }
+    public void setRearrangeItemsJson(String rearrangeItemsJson) { 
+        this.rearrangeItemsJson = rearrangeItemsJson; 
+    }
     
 }

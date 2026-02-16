@@ -1,7 +1,10 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@page import="myPackage.classes.Questions"%>
+<%@page import="myPackage.classes.RearrangeItem"%>
 <%@page import="java.util.ArrayList"%>
 <%@page import="java.util.Map"%>
+<%@page import="org.json.JSONArray"%>
+<%@page import="org.json.JSONObject"%>
 
 <!-- Font Awesome Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -203,6 +206,24 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
         padding: 4px 12px; border-radius: 16px; font-size: 12px; margin-right: 8px;
         color: #475569;
     }
+    
+    /* Rearrange Question Preview Styles */
+    .rearrange-preview {
+        background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px;
+    }
+    .rearrange-items-container {
+        display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;
+    }
+    .rearrange-item {
+        display: flex; align-items: center; justify-content: space-between;
+        background: white; padding: 10px 16px; border-radius: 6px; border: 1px solid #e2e8f0;
+        font-size: 14px;
+    }
+    .rearrange-item-number {
+        display: inline-block; background: #e0f2fe; color: #0369a1; padding: 2px 8px;
+        border-radius: 12px; font-size: 11px; font-weight: 600; margin-right: 10px;
+    }
+    .rearrange-item-text { color: var(--primary-blue); font-weight: 600; }
 
     .question-footer {
         padding: 12px 24px; background: #f8fafc; border-top: 1px solid #eee;
@@ -723,6 +744,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
                                     <option value="TrueFalse" <%= "TrueFalse".equalsIgnoreCase(questionTypeFilter) ? "selected" : "" %>>True/False</option>
                                     <option value="Code" <%= "Code".equalsIgnoreCase(questionTypeFilter) ? "selected" : "" %>>Code Snippet</option>
                                     <option value="DRAG_AND_DROP" <%= "DRAG_AND_DROP".equalsIgnoreCase(questionTypeFilter) ? "selected" : "" %>>Drag & Drop</option>
+                                    <option value="REARRANGE" <%= "REARRANGE".equalsIgnoreCase(questionTypeFilter) ? "selected" : "" %>>Rearrange</option>
                                 </select>
                                 
                                 <select name="sort" class="filter-select" onchange="this.form.submit()">
@@ -783,6 +805,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
                         Questions q = (Questions) list.get(i);
                         String qType = q.getQuestionType() != null ? q.getQuestionType() : "MCQ";
                         boolean isDD = "DRAG_AND_DROP".equals(qType);
+                        boolean isRearrange = "REARRANGE".equals(qType);
                         boolean isFIB = "FillInTheBlank".equalsIgnoreCase(qType);
                         boolean isMS = "MultipleSelect".equals(qType);
                         String[] correctAns = isMS ? q.getCorrect().split("\\|") : new String[]{q.getCorrect()};
@@ -850,7 +873,48 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
                                         <div class="option-content"><%= q.getCorrect() %></div>
                                         <span class="correct-tag"><i class="fas fa-check"></i></span>
                                     </div>
+                                <% } else if (isRearrange) { 
+                                    // Handle rearrange questions
+                                    org.json.JSONArray itemsArray = new org.json.JSONArray();
+                                    if (q.getRearrangeItems() != null && !q.getRearrangeItems().isEmpty()) {
+                                        for (myPackage.classes.RearrangeItem ri : q.getRearrangeItems()) {
+                                            org.json.JSONObject jo = new org.json.JSONObject();
+                                            jo.put("id", ri.getId());
+                                            jo.put("text", ri.getItemText());
+                                            jo.put("correctPosition", ri.getCorrectPosition());
+                                            itemsArray.put(jo);
+                                        }
+                                    } else if (q.getRearrangeItemsJson() != null && !q.getRearrangeItemsJson().isEmpty()) {
+                                        // Fallback to JSON column if relational list is empty
+                                        try {
+                                            itemsArray = new org.json.JSONArray(q.getRearrangeItemsJson());
+                                        } catch (Exception e) {
+                                            // Silently handle JSON parsing errors
+                                        }
+                                    }
+                                    String[] items = parseSimpleJsonArray(itemsArray.toString());
+                                %>
+                                    <div class="rearrange-preview">
+                                        <h4><i class="fas fa-sort-amount-down"></i> Correct Sequence Order</h4>
+                                        <div class="rearrange-items-container">
+                                            <% for (int j = 0; j < items.length; j++) { 
+                                                int position = j + 1; // Positions start from 1
+                                            %>
+                                                <div class="rearrange-item">
+                                                    <span class="rearrange-item-number">#<%= position %></span>
+                                                    <span class="rearrange-item-text"><%= items[j] %></span>
+                                                </div>
+                                            <% } %>
+                                        </div>
+                                        <div class="dd-targets-pool">
+                                            <span style="font-size: 12px; color: #94a3b8; display: block; margin-bottom: 8px;">Students must arrange these items in the correct order:</span>
+                                            <% for (int j = 0; j < items.length; j++) { %>
+                                                <span class="target-badge">#<%= j + 1 %> <%= items[j] %></span>
+                                            <% } %>
+                                        </div>
+                                    </div>
                                 <% } else { %>
+
                                     <div class="options-grid">
                                         <% 
                                         String[] opts = {q.getOpt1(), q.getOpt2(), q.getOpt3(), q.getOpt4()};

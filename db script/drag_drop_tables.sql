@@ -45,3 +45,30 @@ CREATE TABLE IF NOT EXISTS drag_drop_answers (
 
 -- Update existing questions to have question_type if null
 UPDATE questions SET question_type = 'MCQ' WHERE question_type IS NULL;
+
+-- Create rearrange_items table for rearrange question type
+CREATE TABLE IF NOT EXISTS rearrange_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    question_id INT NOT NULL,
+    item_text TEXT NOT NULL,
+    correct_position INT NOT NULL,
+    item_order INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (question_id) REFERENCES questions(question_id) ON DELETE CASCADE
+);
+
+-- Create rearrange_answers table for student submissions
+CREATE TABLE IF NOT EXISTS rearrange_answers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    exam_id INT NOT NULL,
+    question_id INT NOT NULL,
+    student_id VARCHAR(45) NOT NULL,
+    item_id INT NOT NULL,
+    student_position INT,
+    is_correct BOOLEAN DEFAULT FALSE,
+    marks_obtained FLOAT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (question_id) REFERENCES questions(question_id) ON DELETE CASCADE,
+    FOREIGN KEY (item_id) REFERENCES rearrange_items(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_rearrange_answer (exam_id, question_id, student_id, item_id)
+);
