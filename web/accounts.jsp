@@ -1033,11 +1033,13 @@ for (User user : studentList) {
                                         <i class="fas fa-edit"></i>
                                         Edit
                                     </a>
+                                   <% if (currentUser.getType().equalsIgnoreCase("admin")) { %>
                                    <button class="btn btn-error" style="font-size: 13px; padding: 8px 16px;"
                                             onclick="openDeleteStudentModal('<%= user.getUserId() %>', '<%= user.getFirstName() + " " + user.getLastName() %>', '<%= user.getUserName() %>')">
                                         <i class="fas fa-trash"></i>
                                         Delete
                                     </button>
+                                   <% } %>
                                 </div>
                             </td>
                         </tr>

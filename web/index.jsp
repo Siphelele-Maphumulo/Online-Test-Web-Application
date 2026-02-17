@@ -1,3 +1,4 @@
+<% request.setAttribute("disableLoader", "true"); %>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -127,13 +128,13 @@
         // Ensure loader is visible immediately
         loader.style.display = 'flex';
         
-        // Hide loader after 2 seconds
+        // Hide loader after 0.5 seconds
         setTimeout(function() {
           loader.classList.add('hidden');
           setTimeout(function() {
             loader.style.display = 'none';
           }, 300); // Wait for fade-out transition
-        }, 2000); // 2 seconds
+        }, 500); // 0.5 seconds
       }
     })();
   </script>

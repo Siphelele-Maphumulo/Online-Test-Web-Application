@@ -6,6 +6,16 @@
 <%
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
+myPackage.classes.User currentUser = null;
+if (session.getAttribute("userId") != null) {
+    currentUser = pDAO.getUserDetails(session.getAttribute("userId").toString());
+}
+
+if (currentUser == null) {
+    response.sendRedirect("login.jsp");
+    return;
+}
+
 // Generate new CSRF token for each page load
 String csrfToken = java.util.UUID.randomUUID().toString();
 session.setAttribute("csrf_token", csrfToken);
@@ -4656,9 +4666,11 @@ initRearrangeInterface();
 </style>
 
 <!-- Floating Delete Selected Button -->
+<% if (currentUser.getType().equalsIgnoreCase("admin")) { %>
 <button id="floatingDeleteBtn" class="floating-delete-selected" onclick="deleteSelectedQuestions()">
     <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
 </button>
+<% } %>
 
 <!-- Delete Confirmation Modal -->
 <div id="deleteModal" class="modal-backdrop" style="display: none;">

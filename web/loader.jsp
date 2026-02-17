@@ -34,19 +34,6 @@
         border-radius: 50%;
         animation: spin 1s linear infinite;
         margin-bottom: 20px;
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .loader-img {
-        width: 32px;
-        height: 32px;
-        position: absolute;
-        filter: brightness(0) invert(1); /* Makes image white */
-        animation: spin 1s linear infinite;
-        object-fit: contain;
     }
     
     @keyframes spin {
@@ -121,9 +108,7 @@
 </style>
 
 <div id="pageLoader" class="page-loader">
-    <div class="loader-spinner">
-        <img src="./IMG/Design.png" class="loader-img" alt="Loading results animation" aria-hidden="true">
-    </div>
+    <div class="loader-spinner"></div>
     <div class="loader-text">Loading...</div>
     <div class="loader-progress">
         <div class="loader-progress-bar"></div>
@@ -138,7 +123,7 @@
             loader.classList.add('hidden');
             setTimeout(function() {
                 loader.style.display = 'none';
-            }, 300);
+            }, 100);
         }
     });
     
@@ -171,7 +156,7 @@
             loader.classList.add('hidden');
             setTimeout(function() {
                 loader.style.display = 'none';
-            }, 300);
+            }, 100);
         }
     }
 </script>

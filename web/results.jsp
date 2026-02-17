@@ -20,6 +20,16 @@ public String escapeHtml(String input) {
 <%
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
+myPackage.classes.User currentUser = null;
+if (session.getAttribute("userId") != null) {
+    currentUser = pDAO.getUserDetails(session.getAttribute("userId").toString());
+}
+
+if (currentUser == null) {
+    response.sendRedirect("login.jsp");
+    return;
+}
+
 // Get user ID from session
 Integer userId = null;
 if (session.getAttribute("userId") != null) {
@@ -184,16 +194,17 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
     .content-area,
     .main-content {
         flex: 1;
-        padding: var(--spacing-xl);
-        padding-top: 100px;
+        padding: var(--spacing-md);
+        padding-top: 20px;
         overflow-y: auto;
         background: transparent;
         margin-left: 0px;
         min-height: 100vh;
-        min-width: 100vh;
+        min-width: 0;
     }
     .results-panel {
-        margin-left: -30px;
+        margin-left: 0;
+        width: 100%;
     }
 
     /* Responsive Design - Adjust for mobile */
@@ -1092,18 +1103,21 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
     .question-image-container {
         margin: var(--spacing-md) 0;
         text-align: center;
+        width: 100%;
+        clear: both;
     }
     
     .question-image {
         max-width: 100%;
-        max-height: 400px;
+        max-height: 500px;
         height: auto;
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-md);
         border: 1px solid var(--medium-gray);
         background: var(--white);
-        padding: var(--spacing-md);
+        padding: var(--spacing-sm);
         object-fit: contain;
+        display: inline-block;
     }
     
     /* Responsive adjustments for images */
@@ -1862,6 +1876,12 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                         Questions questionDetailsObj = pDAO.getQuestionById(questionId);
                         if (questionDetailsObj != null && questionDetailsObj.getImagePath() != null && !questionDetailsObj.getImagePath().isEmpty()) {
                             imagePath = questionDetailsObj.getImagePath();
+                            // Add context path if image path doesn't start with http
+                            if (!imagePath.startsWith("http") && !imagePath.startsWith("/")) {
+                                imagePath = request.getContextPath() + "/" + imagePath;
+                            } else if (!imagePath.startsWith("http") && imagePath.startsWith("/")) {
+                                imagePath = request.getContextPath() + imagePath;
+                            }
                         }
                     }
                     if (!imagePath.isEmpty()) { 
@@ -2919,9 +2939,11 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
 </script>
 
 <!-- Floating Delete Selected Button -->
+<% if (currentUser.getType().equalsIgnoreCase("admin")) { %>
 <button id="floatingDeleteBtn" class="floating-delete-selected" onclick="deleteSelectedQuestions()">
     <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
 </button>
+<% } %>
 
 <!-- Delete Confirmation Modal -->
 <div id="deleteModal" class="modal-backdrop" style="display: none;">

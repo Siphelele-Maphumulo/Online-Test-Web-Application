@@ -11,6 +11,12 @@
 <% 
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 //pDAO.autoActivateExams();
+
+// Disable loader for fast-loading pages
+String pgprtParam = request.getParameter("pgprt");
+if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("4")) {
+    request.setAttribute("disableLoader", "true");
+}
 %>
 
 <!-- Font Awesome for Icons -->
@@ -239,13 +245,14 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         }
         
         .dashboard-content {
-            margin-left: 200px;
+            margin-left: 0;
             min-height: calc(100vh - 52px); /* Match new height */
-            padding: 16px;
+            padding: 0;
+            width: 100%;
         }
         
         .content-wrapper {
-            padding: 16px;
+            padding: 0;
         }
     }
 
@@ -680,7 +687,8 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     }
 %>
 
-  <!-- Page Loader - Shows for 2 seconds -->
+  <!-- Page Loader - Shows for 0.5 seconds -->
+  <% if (request.getAttribute("disableLoader") == null && session.getAttribute("disableLoader") == null) { %>
   <div id="pageLoader" class="page-loader-overlay">
     <div class="page-loader-content">
       <div class="page-loader-spinner">
@@ -689,6 +697,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
       <div class="page-loader-text">Loading...</div>
     </div>
   </div>
+  <% } %>
 
 <!-- Professional Dashboard Header - 3 Column Layout -->
 <header class="dashboard-header">
@@ -731,10 +740,11 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 <div class="student-panel-container">
 
   <!-- MAIN CONTENT -->
-  <main class="main-content" style="margin-left: 13%; margin-top: -5%;">
+   <main class="main-content" style="margin-left: 13%; margin-top: -5%;">
     <%
         if(session.getAttribute("userStatus") != null && session.getAttribute("userStatus").equals("1")) {
             String pgprt = request.getParameter("pgprt");
+            
             
             // Page title and badge
             String pageTitle = "Student Profile";
@@ -885,7 +895,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             // Ensure loader is visible immediately
             loader.style.display = 'flex';
             
-            // Hide loader after 2 seconds OR when page is fully loaded
+            // Hide loader after 0.5 seconds OR when page is fully loaded
             var hideLoader = function() {
                 if (loader && loader.classList) {
                     loader.classList.add('hidden');
@@ -897,8 +907,8 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
                 }
             };
             
-            // Set timeout to hide loader after 2 seconds
-            setTimeout(hideLoader, 2000);
+            // Set timeout to hide loader after 0.5 seconds
+            setTimeout(hideLoader, 500);
             
             // Also hide loader when page is fully loaded
             window.addEventListener('load', hideLoader);
