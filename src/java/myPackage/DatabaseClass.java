@@ -5817,6 +5817,13 @@ public void insertAnswer(int eId, int qid, String question, String ans) {
     PreparedStatement pstm = null;
 
     try {
+        // Delete any existing answer for this question in this exam to prevent duplicates
+        String deleteSql = "DELETE FROM answers WHERE exam_id = ? AND question_id = ?";
+        try (PreparedStatement dpstm = conn.prepareStatement(deleteSql)) {
+            dpstm.setInt(1, eId);
+            dpstm.setInt(2, qid);
+            dpstm.executeUpdate();
+        }
 
         String correct = getCorrectAnswer(qid);
 
@@ -5922,9 +5929,22 @@ private String getCorrectAnswer(int qid) {
 
             
 
-            // For Drag and Drop, return the correct targets JSON in standard format
+                        // For Rearrange, return JSON array of correct item IDs in order
+            if ("REARRANGE".equalsIgnoreCase(questionType)) {
+                org.json.JSONArray correctArr = new org.json.JSONArray();
+                try {
+                    ArrayList<myPackage.classes.RearrangeItem> items = getRearrangeItems(qid);
+                    for (myPackage.classes.RearrangeItem ri : items) {
+                        correctArr.put(ri.getId());
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Error building correct rearrange order", e);
+                }
+                return correctArr.toString();
+            }
 
-            if ("DRAG_AND_DROP".equalsIgnoreCase(questionType) || "REARRANGE".equalsIgnoreCase(questionType) || "RE_ARRANGE".equalsIgnoreCase(questionType)) {
+            // For Drag and Drop, return the correct targets JSON in standard format
+            if ("DRAG_AND_DROP".equalsIgnoreCase(questionType) || "RE_ARRANGE".equalsIgnoreCase(questionType)) {
 
                 org.json.JSONObject correctJson = new org.json.JSONObject();
 
@@ -6343,6 +6363,32 @@ private String getAnswerStatus(String ans, String correct) {
 
 
     // 3. Compare based on question type (drag-drop, multi-select or single)
+
+    if (userAnswer.startsWith("[") && correctAnswer.startsWith("[")) {
+        try {
+            org.json.JSONArray userArr = new org.json.JSONArray(userAnswer);
+            org.json.JSONArray correctArr = new org.json.JSONArray(correctAnswer);
+
+            int correctMatches = 0;
+            int totalMatches = correctArr.length();
+
+            for (int i = 0; i < Math.min(userArr.length(), correctArr.length()); i++) {
+                if (userArr.get(i).toString().equals(correctArr.get(i).toString())) {
+                    correctMatches++;
+                }
+            }
+
+            if (correctMatches == totalMatches && totalMatches > 0) {
+                return "correct";
+            } else if (correctMatches > 0) {
+                return "partial:" + (float)correctMatches;
+            } else {
+                return "incorrect";
+            }
+        } catch (Exception e) {
+            return "incorrect";
+        }
+    }
 
     if (userAnswer.startsWith("{") && correctAnswer.startsWith("{")) {
 
@@ -7715,212 +7761,92 @@ public ArrayList<Exams> getAllExamsWithResults() {
 
 
 public float[] getRawMarks(int examId) {
-
     try {
-
         ensureConnection();
-
     } catch (SQLException e) {
-
         LOGGER.log(Level.SEVERE, "Connection error in getRawMarks", e);
-
         return new float[]{0, 0};
-
     }
-
-
 
     float totalPossibleMarks = 0;
-
     float totalObtainedMarks = 0;
 
-
-
     try {
-
-        // Get all answers for this exam - FIXED: Use GROUP BY to prevent double counting
-
-        String sql = "SELECT " +
-
-                    "CASE " +
-
-                    "    WHEN SUM(CASE WHEN a.status = 'correct' THEN 1 ELSE 0 END) > 0 THEN 'correct' " +
-
-                    "    WHEN SUM(CASE WHEN a.status LIKE 'partial:%' THEN 1 ELSE 0 END) > 0 THEN MAX(a.status) " +
-
-                    "    ELSE 'incorrect' " +
-
-                    "END as status, " +
-
-                    "a.answer, a.correct_answer, q.question_type, q.question_id, q.marks " +
-
-                    "FROM answers a " +
-
-                    "JOIN questions q ON a.question_id = q.question_id " +
-
-                    "WHERE a.exam_id = ? " +
-
-                    "GROUP BY a.question_id, a.answer, a.correct_answer, q.question_type, q.question_id, q.marks";
-
-        PreparedStatement pstm = conn.prepareStatement(sql);
-
-        pstm.setInt(1, examId);
-
-        ResultSet rs = pstm.executeQuery();
-
-
-
-        while (rs.next()) {
-
-            String status = rs.getString("status");
-
-            String questionType = rs.getString("question_type");
-
-            int qid = rs.getInt("question_id");
-
-            int qMarks = rs.getInt("marks");
-
-            
-
-            // Default weight if marks not set
-
-            float questionWeight = qMarks > 0 ? qMarks : 1.0f;
-
-            totalPossibleMarks += questionWeight;
-
-            
-
-            if ("DRAG_AND_DROP".equalsIgnoreCase(questionType) || "RE_ARRANGE".equalsIgnoreCase(questionType)) {
-
-                // For drag-drop questions, get marks from drag_drop_answers table
-
-                float obtainedForQ = 0;
-
-                String ddSql = "SELECT SUM(marks_obtained) as total_marks FROM drag_drop_answers WHERE exam_id = ? AND question_id = ?";
-
-                try (PreparedStatement ddPstm = conn.prepareStatement(ddSql)) {
-
-                    ddPstm.setInt(1, examId);
-
-                    ddPstm.setInt(2, qid);
-
-                    try (ResultSet ddRs = ddPstm.executeQuery()) {
-
-                        if (ddRs.next()) {
-
-                            obtainedForQ = ddRs.getFloat("total_marks");
-
-                        }
-
-                    }
-
-                } catch (SQLException e) {
-
-                    LOGGER.log(Level.WARNING, "Error fetching drag drop marks: " + e.getMessage());
-
+        // 1. Get total possible marks from ALL questions assigned to this exam"s course
+        String courseSql = "SELECT course_name FROM exams WHERE exam_id = ?";
+        String courseName = "";
+        try (PreparedStatement cpstm = conn.prepareStatement(courseSql)) {
+            cpstm.setInt(1, examId);
+            try (ResultSet crs = cpstm.executeQuery()) {
+                if (crs.next()) {
+                    courseName = crs.getString("course_name");
                 }
-
-                
-
-                totalObtainedMarks += obtainedForQ;
-
-                LOGGER.log(Level.FINE, "Drag-drop Q{0}: obtained {1}/{2}", 
-
-                          new Object[]{qid, obtainedForQ, questionWeight});
-
-                
-
-            } else if ("REARRANGE".equalsIgnoreCase(questionType)) {
-
-                // For rearrange questions, get marks from rearrange_answers table
-
-                float obtainedForQ = 0;
-
-                String raSql = "SELECT SUM(marks_obtained) as total_marks FROM rearrange_answers WHERE exam_id = ? AND question_id = ?";
-
-                try (PreparedStatement raPstm = conn.prepareStatement(raSql)) {
-
-                    raPstm.setInt(1, examId);
-
-                    raPstm.setInt(2, qid);
-
-                    try (ResultSet raRs = raPstm.executeQuery()) {
-
-                        if (raRs.next()) {
-
-                            obtainedForQ = raRs.getFloat("total_marks");
-
-                        }
-
-                    }
-
-                } catch (SQLException e) {
-
-                    LOGGER.log(Level.WARNING, "Error fetching rearrange marks: " + e.getMessage());
-
-                }
-
-                
-
-                totalObtainedMarks += obtainedForQ;
-
-                LOGGER.log(Level.FINE, "Rearrange Q{0}: obtained {1}/{2}", 
-
-                          new Object[]{qid, obtainedForQ, questionWeight});
-
-                
-
-            } else {
-
-                // For regular questions, check status
-
-                if ("correct".equals(status)) {
-
-                    totalObtainedMarks += questionWeight;
-
-                } else if (status != null && status.startsWith("partial:")) {
-
-                    try {
-
-                        // Extract marks from status string (e.g. "partial:1.0")
-
-                        float partialObtained = Float.parseFloat(status.substring(8));
-
-                        totalObtainedMarks += partialObtained;
-
-                    } catch (NumberFormatException e) {
-
-                        LOGGER.log(Level.WARNING, "Error parsing partial marks from status: " + status, e);
-
-                    }
-
-                }
-
             }
-
         }
 
-        rs.close();
+        if (courseName != null && !courseName.isEmpty()) {
+            String totalSql = "SELECT SUM(CASE WHEN marks > 0 THEN marks ELSE 1 END) as total FROM questions WHERE course_name = ?";
+            try (PreparedStatement tpstm = conn.prepareStatement(totalSql)) {
+                tpstm.setString(1, courseName);
+                try (ResultSet trs = tpstm.executeQuery()) {
+                    if (trs.next()) {
+                        totalPossibleMarks = trs.getFloat("total");
+                    }
+                }
+            }
+        }
 
-        pstm.close();
+        // 2. Get obtained marks from the answers table - Single source of truth
+        String sql = "SELECT a.status, q.marks, q.question_type " +
+                    "FROM answers a " +
+                    "JOIN questions q ON a.question_id = q.question_id " +
+                    "WHERE a.exam_id = ? " +
+                    "GROUP BY q.question_id, a.status, q.marks, q.question_type";
 
+        try (PreparedStatement pstm = conn.prepareStatement(sql)) {
+            pstm.setInt(1, examId);
+            try (ResultSet rs = pstm.executeQuery()) {
+                while (rs.next()) {
+                    String status = rs.getString("status");
+                    int qMarks = rs.getInt("marks");
+                    float questionWeight = qMarks > 0 ? (float)qMarks : 1.0f;
+
+                    if ("correct".equalsIgnoreCase(status)) {
+                        totalObtainedMarks += questionWeight;
+                    } else if (status != null && status.startsWith("partial:")) {
+                        try {
+                            float partialMarks = Float.parseFloat(status.split(":")[1]);
+                            totalObtainedMarks += partialMarks;
+                        } catch (Exception e) {
+                            LOGGER.log(Level.WARNING, "Error parsing partial marks: " + status);
+                        }
+                    }
+                }
+            }
+        }
+
+        // If for some reason totalPossibleMarks is still 0, fallback to the sum of answered questions
+        if (totalPossibleMarks == 0) {
+            String fallbackSql = "SELECT SUM(CASE WHEN q.marks > 0 THEN q.marks ELSE 1 END) as total " +
+                                "FROM answers a JOIN questions q ON a.question_id = q.question_id " +
+                                "WHERE a.exam_id = ?";
+            try (PreparedStatement fpstm = conn.prepareStatement(fallbackSql)) {
+                fpstm.setInt(1, examId);
+                try (ResultSet frs = fpstm.executeQuery()) {
+                    if (frs.next()) {
+                        totalPossibleMarks = frs.getFloat("total");
+                    }
+                }
+            }
+        }
         
-
         return new float[]{totalObtainedMarks, totalPossibleMarks};
-
         
-
     } catch (SQLException ex) {
-
         Logger.getLogger(DatabaseClass.class.getName()).log(Level.SEVERE, null, ex);
-
         return new float[]{0, 0};
-
     }
-
 }
-
-
 
 public void calculateResult(int eid, int tMarks, String endTime, int size) {
 

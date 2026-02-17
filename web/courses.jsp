@@ -750,9 +750,11 @@
                                             data-exam-date="<%= dataDate %>">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
+                                    <% if (currentUser.getType().equalsIgnoreCase("admin")) { %>
                                     <button onclick="confirmDelete('<%= courseName %>');" class="btn btn-danger">
                                         <i class="fas fa-trash"></i> Delete
                                     </button>
+                                    <% } %>
                                 </div>
                             </td>
                         </tr>

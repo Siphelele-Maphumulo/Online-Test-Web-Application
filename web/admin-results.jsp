@@ -22,6 +22,16 @@ public String escapeHtml(String input) {
     session.setAttribute("csrf_token", csrf_token);
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
+    myPackage.classes.User currentUser = null;
+    if (session.getAttribute("userId") != null) {
+        currentUser = pDAO.getUserDetails(session.getAttribute("userId").toString());
+    }
+
+    if (currentUser == null) {
+        response.sendRedirect("login.jsp");
+        return;
+    }
+
     // Get ALL exam results (for admin view)
     ArrayList<Exams> allExamResults = pDAO.getAllExamResults();
 %>
@@ -1103,6 +1113,7 @@ public String escapeHtml(String input) {
                                         <i class="fas fa-eye"></i><span>Details</span>
                                     </a>
 
+                                     <% if (currentUser.getType().equalsIgnoreCase("admin")) { %>
                                      <button class="btn btn-danger action-btn delete-btn single-delete-btn"
                                             type="button"
                                             data-exam-id="<%= examId %>"
@@ -1116,6 +1127,7 @@ public String escapeHtml(String input) {
                                             data-date="<%= examDate %>">
                                         <i class="fas fa-trash"></i>
                                     </button>
+                                     <% } %>
                                 </div>
 
                                 </td>
@@ -1191,9 +1203,11 @@ public String escapeHtml(String input) {
 </div>
 
 <!-- Floating Delete Selected Button -->
+<% if (currentUser.getType().equalsIgnoreCase("admin")) { %>
 <button id="floatingDeleteBtn" class="floating-delete-selected" onclick="handleBulkDelete()">
     <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
 </button>
+<% } %>
 
 <!-- Floating Scroll Buttons -->
 <div class="floating-scroll" id="floatingScroll">

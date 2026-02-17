@@ -605,18 +605,21 @@
     .question-image-container {
         margin: var(--spacing-md) 0;
         text-align: center;
+        width: 100%;
+        clear: both;
     }
     
     .question-image {
         max-width: 100%;
-        max-height: 400px;
+        max-height: 500px;
         height: auto;
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-md);
         border: 1px solid var(--medium-gray);
         background: var(--white);
-        padding: var(--spacing-md);
+        padding: var(--spacing-sm);
         object-fit: contain;
+        display: inline-block;
     }
     
     /* Responsive adjustments for images */
@@ -4458,10 +4461,23 @@ function renderRearrangeInterface(qIdx, container, items) {
     // Shuffle items for student to rearrange
     const shuffledItems = [...normalizedItems];
     
-    // Fisher-Yates shuffle algorithm
-    for (let i = shuffledItems.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffledItems[i], shuffledItems[j]] = [shuffledItems[j], shuffledItems[i]];
+    // Fisher-Yates shuffle algorithm with a check to ensure it's not in the correct order
+    let isCorrectOrder = true;
+    let attempts = 0;
+
+    while (isCorrectOrder && attempts < 10) {
+        for (let i = shuffledItems.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledItems[i], shuffledItems[j]] = [shuffledItems[j], shuffledItems[i]];
+        }
+
+        // Check if current order matches the original normalized order
+        if (shuffledItems.length <= 1) {
+            isCorrectOrder = false;
+        } else {
+            isCorrectOrder = shuffledItems.every((item, index) => item.id === normalizedItems[index].id);
+        }
+        attempts++;
     }
     
     // Add shuffled items to the list

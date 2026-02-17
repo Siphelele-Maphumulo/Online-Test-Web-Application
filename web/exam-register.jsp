@@ -1064,7 +1064,9 @@
                 <table class="results-table">
                     <thead>
                         <tr>
+                            <% if ("admin".equals(userType)) { %>
                             <th><input type="checkbox" id="selectAll"></th>
+                            <% } %>
                             <th>#</th>
                             <th>Student</th>
                             <th>Student ID</th>
@@ -1086,7 +1088,9 @@
                         boolean completed = rs.getTime("end_time") != null;
             %>
                         <tr>
+                            <% if ("admin".equals(userType)) { %>
                             <td><input type="checkbox" name="registerIds" value="<%= rs.getInt("register_id") %>"></td>
+                            <% } %>
                             <td><%= i %></td>
                             <td>
                                 <strong><%= rs.getString("first_name") %> <%= rs.getString("last_name") %></strong><br>
@@ -1188,11 +1192,13 @@
   </div>
  
             <!-- Floating Delete Button -->
+            <% if ("admin".equals(userType)) { %>
             <div id="floatingDeleteBtn" class="floating-delete-btn">
                 <button type="button" id="deleteSelectedBtn" class="btn btn-danger" style="padding: 15px 30px; font-size: 16px;">
                     <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCountBadge">0</span>)
                 </button>
             </div>
+            <% } %>
 
 <!-- Floating Scroll Buttons -->
 <div class="floating-scroll" id="floatingScroll">
