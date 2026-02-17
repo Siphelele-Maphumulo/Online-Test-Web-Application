@@ -1659,12 +1659,14 @@
                     <table class="results-table">
                         <thead>
                             <tr>
+                                <% if ("admin".equals(userType)) { %>
                                 <th style="width: 50px;">
                                     <label class="checkbox-container">
                                         <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
                                         <span class="checkbox-custom"></span>
                                     </label>
                                 </th>
+                                <% } %>
                                 <th onclick="sortTable('index')"># <i class="fas fa-sort sort-indicator"></i></th>
                                 <th onclick="sortTable('register_id')">Register ID <i class="fas fa-sort sort-indicator"></i></th>
                                 <th onclick="sortTable('student_id')">Student ID <i class="fas fa-sort sort-indicator"></i></th>
@@ -1686,12 +1688,14 @@
                                     String regTime = record.get("registration_time");
                             %>
                             <tr>
+                                <% if ("admin".equals(userType)) { %>
                                 <td>
                                     <label class="checkbox-container">
                                         <input type="checkbox" name="registerIds" value="<%= registerId %>" class="record-checkbox" onchange="updateSelection()">
                                         <span class="checkbox-custom"></span>
                                     </label>
                                 </td>
+                                <% } %>
                                 <td><span class="badge badge-info"><%= i %></span></td>
                                 <td><code><%= registerId %></code></td>
                                 <td><strong><%= studentId %></strong></td>
@@ -1814,11 +1818,13 @@
 
             
             <!-- Floating Delete Button -->
+            <% if ("admin".equals(userType)) { %>
             <div id="floatingDeleteBtn" class="floating-delete-btn">
                 <button type="button" id="deleteSelectedBtn" class="btn btn-danger" style="padding: 15px 30px; font-size: 16px;">
                     <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCountBadge">0</span>)
                 </button>
             </div>
+            <% } %>
 
 <script>
     // Global variables

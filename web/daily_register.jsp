@@ -1445,7 +1445,7 @@
                             <input type="hidden" name="page" value="daily-register">
                             <input type="hidden" name="operation" value="bulk_delete">
                             <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") %>">
-                             <% if (!"student".equals(userType)) { %>
+                             <% if ("admin".equals(userType)) { %>
                             <button type="submit" class="btn btn-error" style="margin-bottom: 20px;">
                                 <i class="fas fa-trash"></i> Delete Selected
                             </button>
@@ -1454,7 +1454,7 @@
                                 <table class="results-table">
                                     <thead>
                                         <tr>
-                                            <% if (!"student".equals(userType)) { %>
+                                            <% if ("admin".equals(userType)) { %>
                                             <th><input type="checkbox" id="selectAll"></th>
                                             <% } %>
                                             <th>#</th>
@@ -1469,7 +1469,7 @@
                                                 i++;
                                         %>
                                         <tr>
-                                            <% if (!"student".equals(userType)) { %>
+                                            <% if ("admin".equals(userType)) { %>
                                             <td><input type="checkbox" name="registerIds" value="<%= record.get("register_id") %>"></td>
                                             <% } %>
                                             <td><%= i %></td>

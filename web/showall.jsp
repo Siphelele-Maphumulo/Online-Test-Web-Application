@@ -59,6 +59,16 @@
 <%
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
+myPackage.classes.User currentUser = null;
+if (session.getAttribute("userId") != null) {
+    currentUser = pDAO.getUserDetails(session.getAttribute("userId").toString());
+}
+
+if (currentUser == null) {
+    response.sendRedirect("login.jsp");
+    return;
+}
+
 // Generate new CSRF token for each page load
 String csrfToken = java.util.UUID.randomUUID().toString();
 session.setAttribute("csrf_token", csrfToken);
@@ -457,16 +467,13 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
 
     /* Responsive adjustments */
     @media (max-width: 992px) {
-        .sidebar {
-            display: none;
-        }
-        
-        .main-content {
-            margin-left: 0;
-            padding: 15px;
-            width: 100%;
-            box-sizing: border-box;
-        }
+        .dashboard-container { flex-direction: column; }
+        .sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-nav { display: flex; overflow-x: auto; padding: 10px; gap: 5px; }
+        .nav-item { padding: 10px; min-width: 100px; text-align: center; border-left: none; border-bottom: 3px solid transparent; }
+        .nav-item.active { border-left: none; border-bottom: 3px solid var(--accent-blue); }
+        .main-content { margin-left: 0; padding: 15px; width: 100%; box-sizing: border-box; }
+        .page-header { flex-direction: column; gap: 10px; text-align: center; }
     }
 
     @media (max-width: 768px) {
@@ -850,9 +857,11 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
                                     <a href="edit_question.jsp?qid=<%= q.getQuestionId() %>&coursename=<%= courseName %>" class="btn-icon btn-edit" title="Edit Question">
                                         <i class="fas fa-pen"></i>
                                     </a>
+                                    <% if (currentUser.getType().equalsIgnoreCase("admin")) { %>
                                     <button class="btn-icon btn-delete" data-qid="<%= q.getQuestionId() %>" data-course="<%= courseName %>" onclick="showDeleteModalFromData(this)" title="Delete Question">
                                         <i class="fas fa-trash"></i>
                                     </button>
+                                    <% } %>
                                 </div>
                             </div>
                             
@@ -991,9 +1000,11 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
 </a>
 
 <!-- Floating Delete Selected Button -->
+<% if (currentUser.getType().equalsIgnoreCase("admin")) { %>
 <button id="floatingDeleteBtn" class="floating-delete-selected" onclick="deleteSelectedQuestions()">
     <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
 </button>
+<% } %>
 
 <!-- Delete Confirmation Modal -->
 <div id="deleteModal" class="modal-backdrop" style="display: none;">

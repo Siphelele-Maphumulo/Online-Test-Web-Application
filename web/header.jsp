@@ -8,7 +8,7 @@
     boolean isSignupPage = currentPage.contains("signup.jsp") || 
                           currentPage.contains("lecture_signup.jsp") ||
                           currentPage.contains("register.html");
-    boolean showPageLoader = !isLoginPage && !isSignupPage;
+    boolean showPageLoader = !isLoginPage && !isSignupPage && request.getAttribute("disableLoader") == null && session.getAttribute("disableLoader") == null;
 %>
 
 <% if (showPageLoader) { %>
@@ -105,13 +105,13 @@
         // Ensure loader is visible immediately
         loader.style.display = 'flex';
         
-        // Hide loader after 2 seconds
+        // Hide loader after 0.5 seconds
         setTimeout(function() {
             loader.classList.add('hidden');
             setTimeout(function() {
                 loader.style.display = 'none';
             }, 300); // Wait for fade-out transition
-        }, 2000); // 2 seconds
+        }, 500); // 0.5 seconds
     }
 })();
 </script>
@@ -390,28 +390,31 @@ button.nav-link:hover { background: rgba(255,255,255,0.18); transform: translate
 }
 
 @media (max-width: 767.98px) {
-    .header-content-wrapper { padding: 5px 0; }
+    .header-content-wrapper { padding: 5px 10px; }
     .header-title-section { display: none; }
-    .header-logo { max-height: 32px; }
+    .header-logo { max-height: 28px; }
     .mobile-nav-toggle { display: block; }
     
     .nav-links {
         display: none;
-        position: absolute;
-        top: 100%;
+        position: fixed;
+        top: 60px;
+        left: 0;
         right: 0;
-        background: var(--secondary-blue);
+        background: var(--primary-blue);
         flex-direction: column;
-        width: 200px;
-        padding: 10px;
-        border-radius: 4px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        border: 1px solid rgba(255,255,255,0.1);
-        margin-top: 10px;
+        width: 100%;
+        padding: 20px;
+        border-radius: 0;
+        box-shadow: 0 10px 15px rgba(0,0,0,0.3);
+        border: none;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        margin-top: 0;
+        z-index: 1001;
     }
     
     .nav-links.active { display: flex; }
-    .nav-link { width: 100%; justify-content: flex-start; }
+    .nav-link { width: 100%; justify-content: center; padding: 15px; font-size: 1rem; }
 }
 
 .login-link:hover { background: rgba(74,144,226,0.2);  }
