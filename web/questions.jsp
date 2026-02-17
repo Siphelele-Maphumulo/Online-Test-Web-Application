@@ -1758,32 +1758,27 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                         <small class="form-hint">Type or paste your question. Auto-parsing triggers after 1 second of inactivity.</small>
                     </div>
                     
-                    <!-- Image Upload Section -->
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-image" style="color: var(--info);"></i> Upload Question Image (Optional)</label>
-                        <div class="drop-zone" id="imageDropZone">
-                            <div class="drop-zone-content">
-                                <i class="fas fa-cloud-upload-alt drop-icon"></i>
-                                <p class="drop-text">Drag & drop your image here or click to browse</p>
-                                <p class="drop-hint">Supports JPG, PNG, GIF, WebP (Max 3MB)</p>
-                                <input type="file" name="imageFile" class="form-control" id="imageFile" accept=".jpg,.jpeg,.png,.gif,.webp" style="display: none;">
-                            </div>
+                    <!-- Compact Image Upload -->
+                    <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+                        <label class="form-label" style="margin: 0; font-size: 14px;">
+                            <i class="fas fa-image" style="color: var(--info); margin-right: 5px;"></i>
+                            Question Image (Optional)
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="file" name="imageFile" id="imageFile" accept=".jpg,.jpeg,.png,.gif,.webp" style="display: none;">
+                            <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('imageFile').click()" style="padding: 6px 12px; font-size: 13px;">
+                                <i class="fas fa-upload"></i>
+                            </button>
+                            <span id="imageFileName" style="font-size: 12px; color: var(--dark-gray);"></span>
+                            <button type="button" class="btn btn-sm btn-outline" onclick="removeImageFile()" id="removeImageBtn" style="display: none; padding: 4px 8px; font-size: 12px;">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
-                        <div id="imageFileNameDisplay" class="file-name-display" style="display: none; margin-top: 10px;">
-                            <i class="fas fa-image"></i>
-                            <span id="imageFileName"></span>
-                            <button type="button" class="remove-file-btn" onclick="removeImageFile()">?</button>
-                        </div>
-                        <small class="form-hint">Upload an image to accompany your question (optional)</small>
                     </div>
                     
-                    <!-- Image Preview Section -->
-                    <div id="imagePreviewSection" class="form-group" style="display: none;">
-                        <label class="form-label"><i class="fas fa-eye" style="color: var(--success);"></i> Image Preview</label>
-                        <div style="text-align: center; padding: 10px; border: 1px solid var(--medium-gray); border-radius: var(--radius-sm);">
-                            <img id="imagePreview" src="#" alt="Image Preview" style="max-width: 100%; max-height: 200px; display: none; border-radius: var(--radius-sm);">
-                            <p id="previewPlaceholder" style="color: var(--dark-gray); margin: 0;">Uploaded image will appear here</p>
-                        </div>
+                    <!-- Hidden Image Preview (for functionality) -->
+                    <div id="imagePreviewSection" style="display: none;">
+                        <img id="imagePreview" src="#" alt="Image Preview" style="max-width: 100%; max-height: 200px; display: none;">
                     </div>
                     
                     <div id="mcqOptions">
@@ -2535,111 +2530,76 @@ function removeUploadFile() {
 
 function removeImageFile() {
     const imageFileInput = document.getElementById('imageFile');
-    const imageFileNameDisplay = document.getElementById('imageFileNameDisplay');
-    const imageDropZone = document.getElementById('imageDropZone');
+    const imageFileName = document.getElementById('imageFileName');
     const imagePreviewSection = document.getElementById('imagePreviewSection');
     const imagePreview = document.getElementById('imagePreview');
-    const previewPlaceholder = document.getElementById('previewPlaceholder');
+    const removeImageBtn = document.getElementById('removeImageBtn');
     
     // Reset file input
     imageFileInput.value = '';
     
-    // Hide file name display and show drop zone
-    imageFileNameDisplay.style.display = 'none';
-    imageDropZone.style.display = 'block';
+    // Hide file name and remove button
+    if (imageFileName) imageFileName.textContent = '';
+    if (removeImageBtn) removeImageBtn.style.display = 'none';
     
     // Hide preview section
-    imagePreviewSection.style.display = 'none';
-    imagePreview.style.display = 'none';
-    previewPlaceholder.style.display = 'block';
+    if (imagePreviewSection) imagePreviewSection.style.display = 'none';
+    if (imagePreview) {
+        imagePreview.style.display = 'none';
+        imagePreview.src = '#';
+    }
 }
 
-// Drag and drop functionality for image upload
+// Drag and drop functionality for image upload (simplified for compact layout)
 const imageFileInput = document.getElementById('imageFile');
-const imageDropZone = document.getElementById('imageDropZone');
+const imageFileName = document.getElementById('imageFileName');
 const imagePreview = document.getElementById('imagePreview');
 const imagePreviewSection = document.getElementById('imagePreviewSection');
-const previewPlaceholder = document.getElementById('previewPlaceholder');
+const removeImageBtn = document.getElementById('removeImageBtn');
 
-if (imageFileInput && imageDropZone) {
-    // Click to browse
-    imageDropZone.addEventListener('click', () => {
-        imageFileInput.click();
-    });
-    
+if (imageFileInput) {
     // File input change
     imageFileInput.addEventListener('change', function() {
         if (this.files && this.files[0]) {
-            displayImageFileName(this.files[0]);
-            previewImage(this.files[0]);
-        }
-    });
-    
-    // Drag and drop events
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        imageDropZone.addEventListener(eventName, preventDefaults, false);
-    });
-    
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-    
-    ['dragenter', 'dragover'].forEach(eventName => {
-        imageDropZone.addEventListener(eventName, highlight, false);
-    });
-    
-    ['dragleave', 'drop'].forEach(eventName => {
-        imageDropZone.addEventListener(eventName, unhighlight, false);
-    });
-    
-    function highlight() {
-        imageDropZone.classList.add('drag-over');
-    }
-    
-    function unhighlight() {
-        imageDropZone.classList.remove('drag-over');
-    }
-    
-    imageDropZone.addEventListener('drop', handleImageDrop, false);
-    
-    function handleImageDrop(e) {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        
-        if (files.length > 0) {
-            const file = files[0];
-            // Check if it's an image file
-            if (file.type.startsWith('image/') || ['.jpg', '.jpeg', '.png', '.gif', '.webp'].some(ext => file.name.toLowerCase().endsWith(ext))) {
-                // Set the file to the hidden input
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(file);
-                imageFileInput.files = dataTransfer.files;
-                displayImageFileName(file);
-                previewImage(file);
-            } else {
-                showToast('error', 'Invalid File Type', 'Only image files (JPG, PNG, GIF, WebP) are allowed.');
+            const file = this.files[0];
+            
+            // Validate file size (3MB limit)
+            const maxSize = 3 * 1024 * 1024; // 3MB in bytes
+            if (file.size > maxSize) {
+                showToast('error', 'File Too Large', 'Image must be smaller than 3MB. Please choose a smaller image.');
+                this.value = ''; // Clear the file input
+                return;
             }
+            
+            // Validate file type
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                showToast('error', 'Invalid File Type', 'Only JPG, PNG, GIF, and WebP images are allowed.');
+                this.value = ''; // Clear the file input
+                return;
+            }
+            
+            displayImageFileName(file);
+            previewImage(file);
         }
-    }
+    });
     
     function displayImageFileName(file) {
-        const imageFileNameDisplay = document.getElementById('imageFileNameDisplay');
-        const imageFileNameSpan = document.getElementById('imageFileName');
-        
-        imageFileNameSpan.textContent = file.name;
-        imageFileNameDisplay.style.display = 'flex';
-        imageDropZone.style.display = 'none';
+        if (imageFileName) imageFileName.textContent = file.name;
+        if (removeImageBtn) removeImageBtn.style.display = 'inline-flex';
     }
     
     function previewImage(file) {
         const reader = new FileReader();
         
         reader.onload = function(e) {
-            imagePreview.src = e.target.result;
-            imagePreview.style.display = 'block';
-            previewPlaceholder.style.display = 'none';
-            imagePreviewSection.style.display = 'block';
+            if (imagePreview) {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+            }
+            if (imagePreviewSection) {
+                imagePreviewSection.style.display = 'block';
+            }
         };
         
         reader.readAsDataURL(file);

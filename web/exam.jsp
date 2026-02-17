@@ -207,22 +207,6 @@
         .main-content {
             margin-left: 0;
             padding: var(--spacing-lg);
-            padding-top: 150px;
-        }
-
-        .exam-header-container {
-            padding-left: 0;
-        }
-
-        .top-progress-bar-row {
-            flex-direction: column;
-            gap: 10px;
-            text-align: center;
-        }
-
-        .nav-header-row {
-            flex-direction: column;
-            gap: 10px;
         }
     }
     
@@ -398,13 +382,12 @@
     .exam-header-container {
         position: fixed;
         top: 0;
-        left: 0;
+        left: 15%;
         right: 0;
-        width: 100%;
+        width: 85%;
         z-index: 1000;
         background: var(--white);
         box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-        padding-left: 200px;
     }
 
     .top-progress-bar-row {
@@ -2692,22 +2675,22 @@
 /* Question Navigation Modal Styles */
 .question-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 12px;
     max-height: 400px;
     overflow-y: auto;
     padding: 10px;
 }
 
 .question-icon {
-    width: 45px;
-    height: 45px;
+    width: 60px;
+    height: 60px;
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    font-size: 14px;
+    font-size: 18px;
     color: white;
     cursor: pointer;
     transition: all 0.2s ease;

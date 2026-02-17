@@ -1492,8 +1492,8 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
     }
     
     .multi-select-toggle.checked::after {
-        content: '\2713';
-        color: red;
+        content: '✓';
+        border-color: red;
         font-size: 12px;
         font-weight: bold;
     }
@@ -1894,7 +1894,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                     </div>
                     
                     <div style="background: var(--light-gray); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--medium-gray);">
-                      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                         <!-- Student's Answers -->
                         <div>
                           <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 8px; font-size: 12px;">
@@ -2009,7 +2009,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                     </div>
                     
                     <div style="background: var(--light-gray); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--medium-gray);">
-                      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                         <!-- Student's Answer -->
                         <div>
                           <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 8px; font-size: 12px;">
@@ -2230,7 +2230,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
             </div>
           </div>
           
-          <div class="results-table-container table-responsive">
+          <div class="results-table-container">
             <table class="results-table">
               <thead>
                 <tr>

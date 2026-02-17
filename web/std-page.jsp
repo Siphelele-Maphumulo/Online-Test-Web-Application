@@ -731,7 +731,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 <div class="student-panel-container">
 
   <!-- MAIN CONTENT -->
-  <main class="main-content">
+  <main class="main-content" style="margin-left: 13%; margin-top: -5%;">
     <%
         if(session.getAttribute("userStatus") != null && session.getAttribute("userStatus").equals("1")) {
             String pgprt = request.getParameter("pgprt");
