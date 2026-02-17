@@ -1254,8 +1254,8 @@
             /* Floating Scroll Buttons (same style as showall.jsp) */
             .floating-scroll {
                 position: fixed;
-                bottom: 300px;
-                right: 5px;
+                bottom: 100px;
+                right: 20px;
                 z-index: 1000;
                 display: flex;
                 flex-direction: column;
@@ -1271,17 +1271,17 @@
             }
 
             .scroll-btn {
-                width: 20px;
-                height: 20px;
+                width: 40px;
+                height: 40px;
                 border-radius: 50%;
-                background-color: #476287;
+                background-color: var(--primary-blue);
                 color: var(--white);
                 border: none;
                 cursor: pointer;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 8px;
+                font-size: 16px;
                 box-shadow: var(--shadow-lg);
                 transition: all 0.3s ease;
                 position: relative;
@@ -1607,60 +1607,79 @@
                 cb.addEventListener('change', updateRowSelection);
             });
         });
-
-        // Floating scroll buttons functionality (same as showall.jsp)
-        function initScrollButtons() {
-            const floatingScroll = document.getElementById('floatingScroll');
-            const scrollUpBtn = document.getElementById('scrollUpBtn');
-            const scrollDownBtn = document.getElementById('scrollDownBtn');
-            
-            if (!floatingScroll || !scrollUpBtn || !scrollDownBtn) return;
-            
-            function toggleScrollButtons() {
-                const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
-                const documentHeight = document.documentElement.scrollHeight;
-                const windowHeight = window.innerHeight;
-                
-                if (scrollPosition > 200) {
-                    floatingScroll.classList.add('visible');
-                } else {
-                    floatingScroll.classList.remove('visible');
-                }
-                
-                if (scrollPosition + windowHeight >= documentHeight - 100) {
-                    scrollDownBtn.style.display = 'none';
-                } else {
-                    scrollDownBtn.style.display = 'flex';
-                }
-                
-                if (scrollPosition < 100) {
-                    scrollUpBtn.style.display = 'none';
-                } else {
-                    scrollUpBtn.style.display = 'flex';
-                }
-            }
-            
-            function scrollToTop() {
-                window.scrollTo({
-                    top: 0,
-                    behavior: 'smooth'
-                });
-            }
-            
-            function scrollToBottom() {
-                window.scrollTo({
-                    top: document.documentElement.scrollHeight,
-                    behavior: 'smooth'
-                });
-            }
-            
-            scrollUpBtn.addEventListener('click', scrollToTop);
-            scrollDownBtn.addEventListener('click', scrollToBottom);
-            window.addEventListener('scroll', toggleScrollButtons);
-            
-            toggleScrollButtons();
-        }
-    </script>
     
+    // Single, consolidated scroll button functionality
+    function initScrollButtons() {
+        const floatingScroll = document.getElementById('floatingScroll');
+        const scrollUpBtn = document.getElementById('scrollUpBtn');
+        const scrollDownBtn = document.getElementById('scrollDownBtn');
+        
+        if (!floatingScroll || !scrollUpBtn || !scrollDownBtn) return;
+        
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+        
+        function scrollToBottom() {
+            window.scrollTo({
+                top: document.documentElement.scrollHeight - window.innerHeight,
+                behavior: 'smooth'
+            });
+        }
+        
+        function toggleScrollButtons() {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const documentHeight = document.documentElement.scrollHeight;
+            const windowHeight = window.innerHeight;
+            
+            // Show/hide floating container based on scroll position
+            if (scrollTop > 200) {
+                floatingScroll.classList.add('visible');
+            } else {
+                floatingScroll.classList.remove('visible');
+            }
+            
+            // Hide down button when at bottom
+            if (scrollTop + windowHeight >= documentHeight - 100) {
+                scrollDownBtn.style.display = 'none';
+            } else {
+                scrollDownBtn.style.display = 'flex';
+            }
+            
+            // Hide up button when at top
+            if (scrollTop < 100) {
+                scrollUpBtn.style.display = 'none';
+            } else {
+                scrollUpBtn.style.display = 'flex';
+            }
+        }
+        
+        // Remove any existing event listeners by cloning and replacing buttons
+        const newScrollUpBtn = scrollUpBtn.cloneNode(true);
+        const newScrollDownBtn = scrollDownBtn.cloneNode(true);
+        scrollUpBtn.parentNode.replaceChild(newScrollUpBtn, scrollUpBtn);
+        scrollDownBtn.parentNode.replaceChild(newScrollDownBtn, scrollDownBtn);
+        
+        // Attach fresh event listeners
+        document.getElementById('scrollUpBtn').addEventListener('click', scrollToTop);
+        document.getElementById('scrollDownBtn').addEventListener('click', scrollToBottom);
+        window.addEventListener('scroll', toggleScrollButtons);
+        window.addEventListener('resize', toggleScrollButtons);
+        
+        // Initial check
+        toggleScrollButtons();
+    }
+    
+    // Initialize when DOM is loaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initScrollButtons);
+    } else {
+        initScrollButtons();
+    }
+    </script>
+
     </body>
 </html>

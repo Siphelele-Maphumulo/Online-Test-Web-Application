@@ -1,4 +1,8 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <%@page import="myPackage.classes.Questions"%>
 <%@page import="myPackage.classes.RearrangeItem"%>
 <%@page import="java.util.ArrayList"%>
@@ -186,7 +190,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     .dd-preview {
         background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px;
     }
-    .dd-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 20px; align-items: center; }
+    .dd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; align-items: center; }
     .dd-column h4 { font-size: 13px; color: #64748b; margin-top: 0; margin-bottom: 12px; text-align: center; }
     .dd-item-list { display: flex; flex-direction: column; gap: 8px; }
     .dd-pair {
@@ -312,7 +316,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     }
 
     .search-input {
-        width: 100%;
+        width: 80%;
         padding: 12px 16px 12px 45px;
         border: 2px solid var(--medium-gray);
         border-radius: var(--radius-md);
@@ -449,72 +453,30 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
         text-decoration: underline;
     }
 
-    /* Floating Scroll Button */
-    .floating-scroll {
-        position: fixed;
-        bottom: 300px;
-        right: 5px;
-        z-index: 1000;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.3s ease;
-    }
 
-    .floating-scroll.visible {
-        opacity: 1;
-        visibility: visible;
-    }
-
-    .scroll-btn {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background-color: #476287;
-        color: var(--white);
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 8px;
-        box-shadow: var(--shadow-lg);
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .scroll-btn:hover {
-        transform: scale(1.1);
-        box-shadow: 0 8px 25px rgba(9, 41, 77, 0.3);
-    }
-
-    .scroll-btn:active {
-        transform: scale(0.95);
-    }
-
-    .scroll-btn::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 0;
-        height: 0;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.3);
-        transform: translate(-50%, -50%);
-        transition: width 0.4s ease, height 0.4s ease;
-    }
-
-    .scroll-btn:active::before {
-        width: 100%;
-        height: 100%;
-    }
 
     /* Responsive adjustments */
+    @media (max-width: 992px) {
+        .sidebar {
+            display: none;
+        }
+        
+        .main-content {
+            margin-left: 0;
+            padding: 15px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+    }
+
     @media (max-width: 768px) {
+        .dashboard-container { flex-direction: column; }
+        .sidebar { width: 100%; height: auto; position: static; }
+        .sidebar-nav { display: flex; overflow-x: auto; padding: 10px; }
+        .nav-item { padding: 10px; min-width: 80px; text-align: center; }
+        .main-content { padding: 15px; }
+        .page-header { flex-direction: column; gap: 10px; text-align: center; }
+
         .floating-scroll {
             bottom: 20px;
             right: 20px;
@@ -551,7 +513,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
             align-items: flex-start;
         }
     }
-    
+
     /* Multi-select functionality */
     .multi-select-checkbox {
         position: absolute;
@@ -649,6 +611,70 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     .checkbox-container {
         position: relative;
         display: inline-block;
+    }
+
+    /* Floating Scroll Button */
+    .floating-scroll {
+        position: fixed;
+        bottom: 300px;
+        right: 5px;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .floating-scroll.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .scroll-btn {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #476287;
+        color: var(--white);
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8px;
+        box-shadow: var(--shadow-lg);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .scroll-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 8px 25px rgba(9, 41, 77, 0.3);
+    }
+
+    .scroll-btn:active {
+        transform: scale(0.95);
+    }
+
+    .scroll-btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.4s ease, height 0.4s ease;
+    }
+
+    .scroll-btn:active::before {
+        width: 100%;
+        height: 100%;
     }
 </style>
 

@@ -14,3 +14,34 @@ temp/
 *.tmp
 .DS_Store
 Thumbs.db
+
+# Environment variables and secrets
+.env
+.env.local
+.env.production
+*.env
+
+# API Keys and sensitive configuration
+**/API_KEYS.txt
+**/SECRETS.txt
+**/config/secrets.properties
+**/config/api-keys.properties
+
+# Database files with credentials
+**/database.properties
+**/db.properties
+**/application.properties
+
+# IDE files that might store API keys
+.vscode/settings.json
+.idea/workspace.xml
+*.iml
+
+# Build outputs that might contain secrets
+/target/
+
+# Logs that might contain sensitive data
+
+# Temporary files
+
+# OS generated files

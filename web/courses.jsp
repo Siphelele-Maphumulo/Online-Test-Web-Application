@@ -497,6 +497,114 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
+    
+    
+               /* Scroll-to-top button */
+    .scroll-to-top {
+        position: fixed;
+        bottom: 30px;
+        right: 20px;
+        z-index: 999;
+        display: none;
+        background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+        color: white;
+        border: none;
+        border-radius: 40%;
+        width: 40px;
+        height: 40px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+            
+    .scroll-to-top:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        background: linear-gradient(135deg, var(--secondary-blue), var(--primary-blue));
+    }
+
+    .scroll-to-top:active {
+        transform: translateY(1px);
+    }
+
+    /* Highlight selected rows for delete (admin view) */
+    .daily-row-selected {
+        background-color: rgba(250, 150, 150, 0.15);
+        position: relative;
+    }
+
+    .daily-row-selected::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border: 2px solid rgba(220, 38, 38, 0.5);
+        border-radius: var(--radius-sm);
+        pointer-events: none;
+    }
+
+    /* Floating Scroll Buttons (same style as showall.jsp) */
+    .floating-scroll {
+        position: fixed;
+        bottom: 300px;
+        right: 5px;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .floating-scroll.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .scroll-btn {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #476287;
+        color: var(--white);
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8px;
+        box-shadow: var(--shadow-lg);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .scroll-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 8px 25px rgba(9, 41, 77, 0.3);
+    }
+
+    .scroll-btn:active {
+        transform: scale(0.95);
+    }
+
+    .scroll-btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.4s ease, height 0.4s ease;
+    }
+
+    .scroll-btn:active::before {
+        width: 100%;
+        height: 100%;
+    }
 </style>
 
 <%@ include file="modal_assets.jspf" %>
@@ -766,6 +874,16 @@
             </button>
         </div>
     </div>
+</div>
+
+<!-- Floating Scroll Buttons -->
+<div class="floating-scroll" id="floatingScroll">
+    <button class="scroll-btn" id="scrollUpBtn" title="Scroll to Top">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+    <button class="scroll-btn" id="scrollDownBtn" title="Scroll to Bottom">
+        <i class="fas fa-chevron-down"></i>
+    </button>
 </div>
 
 <!-- Font Awesome for Icons -->
@@ -1303,6 +1421,68 @@
             hideCourseNameWarning();
         }
     });
+    
+      // Floating scroll buttons functionality
+    function initScrollButtons() {
+        const floatingScroll = document.getElementById('floatingScroll');
+        const scrollUpBtn = document.getElementById('scrollUpBtn');
+        const scrollDownBtn = document.getElementById('scrollDownBtn');
+        
+        if (!floatingScroll || !scrollUpBtn || !scrollDownBtn) return;
+        
+        // Show/hide floating buttons based on scroll position
+        function toggleScrollButtons() {
+            const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+            const documentHeight = document.documentElement.scrollHeight;
+            const windowHeight = window.innerHeight;
+            
+            // Show buttons when user scrolls down at least 200px
+            if (scrollPosition > 200) {
+                floatingScroll.classList.add('visible');
+            } else {
+                floatingScroll.classList.remove('visible');
+            }
+            
+            // Hide scroll down button when at bottom
+            if (scrollPosition + windowHeight >= documentHeight - 100) {
+                scrollDownBtn.style.display = 'none';
+            } else {
+                scrollDownBtn.style.display = 'flex';
+            }
+            
+            // Hide scroll up button when at top
+            if (scrollPosition < 100) {
+                scrollUpBtn.style.display = 'none';
+            } else {
+                scrollUpBtn.style.display = 'flex';
+            }
+        }
+        
+        // Scroll to top function
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+        
+        // Scroll to bottom function
+        function scrollToBottom() {
+            window.scrollTo({
+                top: document.documentElement.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+        
+        // Event listeners
+        scrollUpBtn.addEventListener('click', scrollToTop);
+        scrollDownBtn.addEventListener('click', scrollToBottom);
+        window.addEventListener('scroll', toggleScrollButtons);
+        
+        // Initial check
+        toggleScrollButtons();
+    } 
+    
 </script>
 
 <style>

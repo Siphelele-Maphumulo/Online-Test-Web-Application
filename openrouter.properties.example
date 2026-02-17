@@ -1,0 +1,15 @@
+# OpenRouter API Configuration
+# Copy this file to openrouter.properties and fill in your actual API key
+# NEVER commit the actual openrouter.properties file to version control!
+
+# OpenRouter API Key
+openrouter.api.key=your_openrouter_api_key_here
+
+# Default AI Model
+openrouter.model=openai/gpt-4o-mini
+
+# API Base URL (usually don't need to change)
+openrouter.api.url=https://openrouter.ai/api/v1
+
+# Request timeout in milliseconds
+openrouter.timeout=30000

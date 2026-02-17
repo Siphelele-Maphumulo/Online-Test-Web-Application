@@ -737,26 +737,20 @@ public String escapeHtml(String input) {
     
     .question-card.multi-selected, .result-row.multi-selected {
         background-color: rgba(250, 150, 150, 0.479) !important;
-        outline-offset: -3px;
+        outline: 2px solid rgba(220, 38, 38, 0.3);
+        outline-offset: -2px;
         position: relative;
     }
     
     .question-card.multi-selected::before, .result-row.multi-selected::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(226, 79, 74, 0.1);
-        z-index: 1;
-        pointer-events: none;
+
     }
     
     .multi-select-toggle {
         position: absolute;
-        top: 10px;
+        top: 50%;
         left: 10px;
+        transform: translateY(-50%);
         z-index: 20;
         width: 20px;
         height: 20px;
@@ -822,6 +816,10 @@ public String escapeHtml(String input) {
     .checkbox-container {
         position: relative;
         display: inline-block;
+        width: 40px;
+        height: 100%;
+        min-height: 40px;
+        flex-shrink: 0;
     }
 
 </style>
@@ -974,12 +972,12 @@ public String escapeHtml(String input) {
                 </div>
             </div>
          
-<!--             Hidden Form for Bulk Delete 
+            <!-- Hidden Form for Bulk Delete -->
         <form id="bulkDeleteForm" action="controller.jsp" method="post" style="display: none;">
             <input type="hidden" name="page" value="admin-results">
             <input type="hidden" name="operation" value="bulk_delete">
             <input type="hidden" name="csrf_token" value="<%= csrf_token %>">
-        </form>-->
+        </form>
 
                         
             <% if (request.getParameter("eid") == null) { %>
@@ -1039,7 +1037,7 @@ public String escapeHtml(String input) {
                                 <td>
                                     <div class="checkbox-container">
                                         <input type="checkbox" name="examIds" value="<%= examId %>" id="checkbox-<%= examId %>"
-                                               class="record-checkbox" onchange="toggleResultSelection(this)">
+                                               class="multi-select-checkbox" onchange="toggleResultSelection(this)">
                                         <label for="checkbox-<%= examId %>" class="multi-select-toggle"></label>
                                     </div>
                                 </td>
@@ -1260,7 +1258,7 @@ public String escapeHtml(String input) {
         const selectAll = document.getElementById('selectAll');
         if (selectAll) {
             selectAll.addEventListener('change', function() {
-                const checkboxes = document.querySelectorAll('.record-checkbox');
+                const checkboxes = document.querySelectorAll('.multi-select-checkbox');
                 const isChecked = this.checked;
                 checkboxes.forEach(function(checkbox) {
                     checkbox.checked = isChecked;
@@ -1271,14 +1269,14 @@ public String escapeHtml(String input) {
         
         // Individual checkbox handling
         document.addEventListener('change', function(e) {
-            if (e.target.classList.contains('record-checkbox')) {
+            if (e.target.classList.contains('multi-select-checkbox')) {
                 updateBulkDeleteButton();
                 
                 // Update select all state
                 const selectAll = document.getElementById('selectAll');
                 if (selectAll) {
-                    const totalCheckboxes = document.querySelectorAll('.record-checkbox').length;
-                    const checkedCheckboxes = document.querySelectorAll('.record-checkbox:checked').length;
+                    const totalCheckboxes = document.querySelectorAll('.multi-select-checkbox').length;
+                    const checkedCheckboxes = document.querySelectorAll('.multi-select-checkbox:checked').length;
                     
                     selectAll.checked = checkedCheckboxes === totalCheckboxes;
                     selectAll.indeterminate = checkedCheckboxes > 0 && checkedCheckboxes < totalCheckboxes;
@@ -1379,7 +1377,7 @@ public String escapeHtml(String input) {
 
     // Bulk delete handling
     function handleBulkDelete() {
-        const selectedCheckboxes = document.querySelectorAll('.record-checkbox:checked');
+        const selectedCheckboxes = document.querySelectorAll('.multi-select-checkbox:checked');
         const selectedCount = selectedCheckboxes.length;
         
         if (selectedCount === 0) {
@@ -1474,7 +1472,7 @@ public String escapeHtml(String input) {
 
     // Bulk delete function
     function performBulkDelete() {
-        const selectedCheckboxes = document.querySelectorAll('.record-checkbox:checked');
+        const selectedCheckboxes = document.querySelectorAll('.multi-select-checkbox:checked');
         
         if (selectedCheckboxes.length === 0) {
             showAlert('No records selected for deletion.', 'warning');
@@ -1582,7 +1580,7 @@ public String escapeHtml(String input) {
     }
 
     function updateBulkDeleteButton() {
-        const selectedCheckboxes = document.querySelectorAll('.record-checkbox:checked');
+        const selectedCheckboxes = document.querySelectorAll('.multi-select-checkbox:checked');
         const floatingBtn = document.getElementById('floatingDeleteBtn');
         const countSpan = document.getElementById('selectedCount');
         
@@ -1592,7 +1590,6 @@ public String escapeHtml(String input) {
             countSpan.textContent = selectedCountNum;
         }
         
-        // Show/hide bulk delete button based on selection
         if (floatingBtn) {
             if (selectedCountNum > 0) {
                 floatingBtn.classList.add('show');
@@ -1604,7 +1601,7 @@ public String escapeHtml(String input) {
         // Update select all checkbox state
         const selectAll = document.getElementById('selectAll');
         if (selectAll) {
-            const totalCheckboxes = document.querySelectorAll('.record-checkbox').length;
+            const totalCheckboxes = document.querySelectorAll('.multi-select-checkbox').length;
             selectAll.checked = selectedCountNum === totalCheckboxes && totalCheckboxes > 0;
             selectAll.indeterminate = selectedCountNum > 0 && selectedCountNum < totalCheckboxes;
         }

@@ -2,6 +2,10 @@
 <%@page import="myPackage.classes.User"%>
 <%@page import="myPackage.DatabaseClass"%>
 <%@ page isELIgnored="true" %>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <%--<jsp:useBean id="pDAO" class="myPackage.DatabaseClass" scope="page"/>--%>
  
 <% 
@@ -67,32 +71,26 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     /* Header row - 3 column flex layout */
     .header-row {
         display: flex;
-        flex-wrap: wrap;
         align-items: center;
+        justify-content: space-between;
         width: 100%;
-        margin: 0 -10px; /* Reduced gap */
+        gap: 10px;
     }
 
     /* Logo Column - Compact size */
     .logo-col {
-        flex: 0 0 15%;
-        max-width: 15%;
-        padding: 0 10px;
+        flex: 0 0 auto;
     }
 
     /* Title Column - More space */
     .title-col {
-        flex: 0 0 70%;
-        max-width: 70%;
-        padding: 0 10px;
+        flex: 1;
         text-align: center;
     }
 
     /* User Column - Compact size */
     .user-col {
-        flex: 0 0 15%;
-        max-width: 15%;
-        padding: 0 10px;
+        flex: 0 0 auto;
     }
 
     /* Logo Styles - Smaller */
@@ -253,26 +251,25 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
     @media (max-width: 767.98px) {
         .dashboard-header {
-            padding: 4px 0; /* Very compact */
-            height: 48px;
+            padding: 4px 0;
+            height: 50px;
         }
         
         .header-container {
-            padding: 0 8px;
+            padding: 0 10px;
         }
         
         .header-logo {
-            max-height: 28px; /* Much smaller */
+            max-height: 30px;
         }
         
         .header-title {
-            font-size: 0.8125rem; /* Smaller */
+            font-size: 0.85rem;
             line-height: 1.2;
         }
         
         .header-subtitle {
-            font-size: 0.5625rem; /* Smaller */
-            margin-top: 0;
+            display: none;
         }
         
         .user-name {
@@ -284,8 +281,8 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         }
         
         .logout-btn {
-            padding: 3px 6px; /* Very compact */
-            font-size: 0.6875rem;
+            padding: 4px 8px;
+            font-size: 0.75rem;
         }
         
         .logout-btn span {
@@ -294,22 +291,6 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         
         .logout-btn i {
             margin-right: 0;
-            font-size: 0.6875rem;
-        }
-        
-        .logo-col {
-            flex: 0 0 20%;
-            max-width: 20%;
-        }
-        
-        .title-col {
-            flex: 0 0 60%;
-            max-width: 60%;
-        }
-        
-        .user-col {
-            flex: 0 0 20%;
-            max-width: 20%;
         }
         
         .dashboard-container {
@@ -600,6 +581,83 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         cursor: pointer;
         font-size: 16px;
     }
+    
+    /* Floating Scroll Buttons */
+    .floating-scroll {
+        position: fixed;
+        bottom: 100px;
+        right: 20px;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .floating-scroll.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .scroll-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: var(--primary-blue);
+        color: var(--text-white);
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        box-shadow: var(--shadow-lg);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .scroll-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 8px 25px rgba(9, 41, 77, 0.3);
+    }
+
+    .scroll-btn:active {
+        transform: scale(0.95);
+    }
+
+    .scroll-btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.4s ease, height 0.4s ease;
+    }
+
+    .scroll-btn:active::before {
+        width: 100%;
+        height: 100%;
+    }
+
+    @media (max-width: 768px) {
+        .floating-scroll {
+            bottom: 20px;
+            right: 20px;
+        }
+
+        .scroll-btn {
+            width: 45px;
+            height: 45px;
+            font-size: 16px;
+        }
+    }
 </style>
 
 <%
@@ -673,7 +731,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 <div class="student-panel-container">
 
   <!-- MAIN CONTENT -->
-  <main class="main-content" style="margin-left: 13%; margin-top: -5%;">
+  <main class="main-content">
     <%
         if(session.getAttribute("userStatus") != null && session.getAttribute("userStatus").equals("1")) {
             String pgprt = request.getParameter("pgprt");
@@ -853,3 +911,109 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         }
     })();
 </script>
+
+<!-- Floating Scroll Buttons -->
+<div class="floating-scroll" id="floatingScroll">
+    <button class="scroll-btn" id="scrollUpBtn" title="Scroll to Top">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+    <button class="scroll-btn" id="scrollDownBtn" title="Scroll to Bottom">
+        <i class="fas fa-chevron-down"></i>
+    </button>
+</div>
+
+<script>
+// Initialize floating scroll buttons
+document.addEventListener('DOMContentLoaded', function() {
+    initScrollButtons();
+});
+
+// Single, consolidated scroll button functionality
+function initScrollButtons() {
+    const floatingScroll = document.getElementById('floatingScroll');
+    const scrollUpBtn = document.getElementById('scrollUpBtn');
+    const scrollDownBtn = document.getElementById('scrollDownBtn');
+    
+    if (!floatingScroll || !scrollUpBtn || !scrollDownBtn) {
+        console.log('Scroll buttons not found');
+        return;
+    }
+    
+    console.log('Scroll buttons initialized');
+    
+    function scrollToTop() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
+    
+    function scrollToBottom() {
+        window.scrollTo({
+            top: document.documentElement.scrollHeight - window.innerHeight,
+            behavior: 'smooth'
+        });
+    }
+    
+    function toggleScrollButtons() {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const documentHeight = document.documentElement.scrollHeight;
+        const windowHeight = window.innerHeight;
+        
+        // Always show floating container when page is scrollable
+        if (documentHeight > windowHeight) {
+            floatingScroll.classList.add('visible');
+        } else {
+            floatingScroll.classList.remove('visible');
+        }
+        
+        // Hide down button when at bottom
+        if (scrollTop + windowHeight >= documentHeight - 100) {
+            scrollDownBtn.style.display = 'none';
+        } else {
+            scrollDownBtn.style.display = 'flex';
+        }
+        
+        // Hide up button when at top
+        if (scrollTop < 100) {
+            scrollUpBtn.style.display = 'none';
+        } else {
+            scrollUpBtn.style.display = 'flex';
+        }
+    }
+    
+    // Remove any existing event listeners to prevent duplicates
+    window.removeEventListener('scroll', toggleScrollButtons);
+    window.removeEventListener('resize', toggleScrollButtons);
+    
+    // Attach fresh event listeners
+    document.getElementById('scrollUpBtn').addEventListener('click', scrollToTop);
+    document.getElementById('scrollDownBtn').addEventListener('click', scrollToBottom);
+    window.addEventListener('scroll', toggleScrollButtons);
+    window.addEventListener('resize', toggleScrollButtons);
+    
+    // Initial check
+    toggleScrollButtons();
+    
+    // Force visible after a short delay to ensure DOM is ready
+    setTimeout(() => {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const documentHeight = document.documentElement.scrollHeight;
+        const windowHeight = window.innerHeight;
+        
+        if (documentHeight > windowHeight && scrollTop > 200) {
+            floatingScroll.classList.add('visible');
+        }
+    }, 500);
+}
+
+// Initialize when DOM is loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initScrollButtons);
+} else {
+    initScrollButtons();
+}
+</script>
+
+</body>
+</html>

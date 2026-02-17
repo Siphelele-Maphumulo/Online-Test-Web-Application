@@ -1,5 +1,6 @@
 <%@ page import="javax.servlet.http.HttpSession" %>
 
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <%
     // Check if current page should show loader (exclude login and signup pages)
     String currentPage = request.getRequestURI().toLowerCase();
@@ -119,10 +120,9 @@
 <!-- Professional Header -->
 <header class="header">
     <div class="container-fluid">
-        <div class="row align-items-center">
-
-            <!-- Logo Column -->
-            <div class="col-3 col-md-2">
+        <div class="header-content-wrapper">
+            <!-- Logo Section -->
+            <div class="header-logo-section">
                 <a href="index.jsp" class="logo-link">
                     <img src="IMG/mut-45yearslogo-whitetrans1024x362-1-12@2x.png" 
                          alt="MUT Logo" 
@@ -130,20 +130,22 @@
                 </a>
             </div>
 
-            <!-- Title Column -->
-            <div class="col-6 col-md-8 text-center">
-                <h1 class="header-title">Web-Based Online Assessment System</h1>
+            <!-- Title Section -->
+            <div class="header-title-section">
+                <h1 class="header-title">Online Assessment System</h1>
                 <p class="header-subtitle">CodeSA Institute | Professional Testing Platform</p>
             </div>
 
-            <!-- Navigation Column -->
-            <div class="col-3 col-md-2">
+            <!-- Navigation Section -->
+            <div class="header-nav-section">
                 <nav class="header-nav">
-                    <div class="nav-links">
+                    <button class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Toggle navigation">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="nav-links" id="navLinks">
                         <% 
                             boolean isLoggedIn = session.getAttribute("userStatus") != null 
                                                 && session.getAttribute("userStatus").equals("1");
-                            // currentPage, isLoginPage, and isSignupPage are already declared at the top
                         %>
 
                         <% if (!isLoggedIn && !isSignupPage) { %>
@@ -168,7 +170,6 @@
                         <% } %>
 
                         <% if (isLoggedIn) { %>
-                        <!-- Logout Button -->
                         <button type="button" class="nav-link logout-link" id="logoutBtn">
                             <i class="fas fa-sign-out-alt"></i>
                             <span class="link-text">Logout</span>
@@ -177,7 +178,6 @@
                     </div>
                 </nav>
             </div>
-
         </div>
     </div>
 </header>
@@ -340,7 +340,7 @@
 
 .header {
     background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
-    padding: 12px 0;
+    padding: 8px 0;
     border-bottom: 2px solid var(--text-white);
     position: sticky;
     top: 0;
@@ -350,17 +350,69 @@
     color: var(--text-white);
 }
 
-.header-logo { max-height: 42px; width: auto; transition: transform 0.3s ease; }
-.logo-link:hover .header-logo { transform: translateY(-1px); opacity: 0.95; }
-.header-title { color: var(--text-white); font-size: 1.125rem; font-weight: 600; margin: 0; text-shadow: 0 1px 3px rgba(0,0,0,0.25); }
-.header-subtitle { color: var(--text-light); font-size: 0.75rem; margin: 2px 0 0; opacity: 0.9; }
+.header-content-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+}
 
-.header-nav { display: flex; justify-content: flex-end; }
+.header-logo-section { flex: 0 0 auto; }
+.header-title-section { flex: 1; text-align: center; }
+.header-nav-section { flex: 0 0 auto; }
+
+.header-logo { max-height: 40px; width: auto; transition: transform 0.3s ease; }
+.logo-link:hover .header-logo { transform: translateY(-1px); opacity: 0.95; }
+.header-title { color: var(--text-white); font-size: 1.1rem; font-weight: 600; margin: 0; text-shadow: 0 1px 3px rgba(0,0,0,0.25); }
+.header-subtitle { color: var(--text-light); font-size: 0.7rem; margin: 2px 0 0; opacity: 0.9; }
+
+.header-nav { position: relative; }
+.mobile-nav-toggle {
+    display: none;
+    background: none;
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white;
+    font-size: 1.2rem;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
 .nav-links { display: flex; gap: 8px; align-items: center; }
-.nav-link { color: var(--text-white); text-decoration: none; font-weight: 500; font-size: 0.8125rem; padding: 6px 12px; border-radius: 4px; transition: all var(--transition-speed) ease; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.nav-link { color: var(--text-white); text-decoration: none; font-weight: 500; font-size: 0.8125rem; padding: 8px 12px; border-radius: 4px; transition: all var(--transition-speed) ease; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; }
 button.nav-link { border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.08); }
 button.nav-link:hover { background: rgba(255,255,255,0.18); transform: translateY(-2px); border-color: rgba(255,255,255,0.3); }
-.nav-link i { font-size: 0.6875rem; }
+.nav-link i { font-size: 0.75rem; }
+
+@media (max-width: 991px) {
+    .header-title { font-size: 0.95rem; }
+    .header-subtitle { font-size: 0.65rem; }
+}
+
+@media (max-width: 767.98px) {
+    .header-content-wrapper { padding: 5px 0; }
+    .header-title-section { display: none; }
+    .header-logo { max-height: 32px; }
+    .mobile-nav-toggle { display: block; }
+    
+    .nav-links {
+        display: none;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: var(--secondary-blue);
+        flex-direction: column;
+        width: 200px;
+        padding: 10px;
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        border: 1px solid rgba(255,255,255,0.1);
+        margin-top: 10px;
+    }
+    
+    .nav-links.active { display: flex; }
+    .nav-link { width: 100%; justify-content: flex-start; }
+}
 
 .login-link:hover { background: rgba(74,144,226,0.2);  }
 .signup-link:hover { background: rgba(46,204,113,0.2);  }
@@ -436,7 +488,6 @@ button.nav-link:hover { background: rgba(255,255,255,0.18); transform: translate
     padding: 10px 8px 6px;
 }
 
-@media (max-width: 767.98px) { .header-logo { max-height: 36px; } .header-title { font-size: 0.875rem; } .header-subtitle { font-size: 0.625rem; } .nav-link { padding: 5px 8px; font-size: 0.75rem; } }
 
 /* Loading state for submit/logout buttons */
 button.nav-link.loading,
@@ -559,6 +610,21 @@ document.addEventListener('DOMContentLoaded', function () {
     if (lrModal) {
         lrModal.addEventListener('click', function (e) {
             if (e.target === lrModal) closeLrModal();
+        });
+    }
+
+    // Mobile Nav Toggle
+    const mobileNavToggle = document.getElementById('mobileNavToggle');
+    const navLinks = document.getElementById('navLinks');
+    if (mobileNavToggle && navLinks) {
+        mobileNavToggle.addEventListener('click', function() {
+            navLinks.classList.toggle('active');
+        });
+        // Close when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!mobileNavToggle.contains(e.target) && !navLinks.contains(e.target)) {
+                navLinks.classList.remove('active');
+            }
         });
     }
 

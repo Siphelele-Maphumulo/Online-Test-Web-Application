@@ -90,6 +90,15 @@
         from { opacity: 1; transform: translateY(0); }
         to { opacity: 0; transform: translateY(-10px); }
     }
+
+    @media (max-width: 576px) {
+        .alert-message-container {
+            top: 10px;
+            right: 10px;
+            left: 10px;
+            max-width: none;
+        }
+    }
 </style>
 
 <div class="alert-message-container" id="alertContainer">

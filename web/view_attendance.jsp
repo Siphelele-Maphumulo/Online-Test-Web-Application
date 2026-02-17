@@ -165,7 +165,7 @@
                 padding: var(--spacing-xl);
                 overflow-y: auto;
                 background: transparent;
-                margin-left: 180px;
+                margin-left: 200px;
                 min-height: 100vh;
             }
 
@@ -930,6 +930,11 @@
                     margin-left: 0;
                 }
                 
+                .results-table-container {
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                }
+                
                 .page-header {
                     flex-direction: column;
                     gap: var(--spacing-lg);
@@ -1014,6 +1019,83 @@
             
             .scroll-to-top i {
                 font-size: 16px;
+            }
+            
+            /* Floating Scroll Buttons */
+            .floating-scroll {
+                position: fixed;
+                bottom: 100px;
+                right: 20px;
+                z-index: 10000; /* Increased z-index to ensure visibility */
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                opacity: 1 !important; /* Always visible when page loads */
+                visibility: visible !important; /* Always visible when page loads */
+                transition: opacity 0.3s ease, visibility 0.3s ease;
+            }
+
+            .floating-scroll.visible {
+                opacity: 1;
+                visibility: visible;
+            }
+
+            .scroll-btn {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background-color: var(--primary-blue);
+                color: var(--white);
+                border: none;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 16px;
+                box-shadow: var(--shadow-lg);
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .scroll-btn:hover {
+                transform: scale(1.1);
+                box-shadow: 0 8px 25px rgba(9, 41, 77, 0.3);
+            }
+
+            .scroll-btn:active {
+                transform: scale(0.95);
+            }
+
+            .scroll-btn::before {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 0;
+                height: 0;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.3);
+                transform: translate(-50%, -50%);
+                transition: width 0.4s ease, height 0.4s ease;
+            }
+
+            .scroll-btn:active::before {
+                width: 100%;
+                height: 100%;
+            }
+
+            @media (max-width: 768px) {
+                .floating-scroll {
+                    bottom: 20px;
+                    right: 20px;
+                }
+
+                .scroll-btn {
+                    width: 45px;
+                    height: 45px;
+                    font-size: 16px;
+                }
             }
         </style>
     <body>
@@ -1343,53 +1425,113 @@
             </div>
         </div>
 
-
-
-<div id="deleteConfirmationModal" class="modal-overlay" style="display: none;">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h2>
-      <button class="close-button" onclick="closeModal()">&times;</button>
-    </div>
-    <div class="modal-body">
-      <p id="deleteModalMessage">Are you sure you want to delete the selected records?</p>
-    </div>
-    <div class="modal-footer">
-      <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
-      <button id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
-    </div>
-  </div>
-</div>
-
-<!-- Scroll to Top Button -->
-<button class="scroll-to-top" id="scrollToTopBtn" title="Scroll to top">
-    <i class="fas fa-arrow-up"></i>
-</button>
+        <div id="deleteConfirmationModal" class="modal-overlay" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h2>
+                    <button class="close-button" onclick="closeModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p id="deleteModalMessage">Are you sure you want to delete the selected records?</p>
+                </div>
+                <div class="modal-footer">
+                    <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+                    <button id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+                </div>
+            </div>
+        </div>
 
 <script>
-// Scroll to top functionality
+// Initialize floating scroll buttons
 document.addEventListener('DOMContentLoaded', function() {
-    const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+    initScrollButtons();
+});
+
+// Single, consolidated scroll button functionality
+function initScrollButtons() {
+    const floatingScroll = document.getElementById('floatingScroll');
+    const scrollUpBtn = document.getElementById('scrollUpBtn');
+    const scrollDownBtn = document.getElementById('scrollDownBtn');
     
-    if (scrollToTopBtn) {
-        // Show/hide scroll to top button based on scroll position
-        window.addEventListener('scroll', function() {
-            if (window.pageYOffset > 300) {  // Show after scrolling down 300px
-                scrollToTopBtn.classList.add('show');
-            } else {
-                scrollToTopBtn.classList.remove('show');
-            }
-        });
-        
-        // Scroll to top when button is clicked
-        scrollToTopBtn.addEventListener('click', function() {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
+    if (!floatingScroll || !scrollUpBtn || !scrollDownBtn) {
+        console.log('Scroll buttons not found');
+        return;
+    }
+    
+    console.log('Scroll buttons initialized');
+    
+    function scrollToTop() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
         });
     }
-});
+    
+    function scrollToBottom() {
+        window.scrollTo({
+            top: document.documentElement.scrollHeight - window.innerHeight,
+            behavior: 'smooth'
+        });
+    }
+    
+    function toggleScrollButtons() {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const documentHeight = document.documentElement.scrollHeight;
+        const windowHeight = window.innerHeight;
+        
+        // Always show floating container when page is scrollable
+        if (documentHeight > windowHeight) {
+            floatingScroll.classList.add('visible');
+        } else {
+            floatingScroll.classList.remove('visible');
+        }
+        
+        // Hide down button when at bottom
+        if (scrollTop + windowHeight >= documentHeight - 100) {
+            scrollDownBtn.style.display = 'none';
+        } else {
+            scrollDownBtn.style.display = 'flex';
+        }
+        
+        // Hide up button when at top
+        if (scrollTop < 100) {
+            scrollUpBtn.style.display = 'none';
+        } else {
+            scrollUpBtn.style.display = 'flex';
+        }
+    }
+    
+    // Remove any existing event listeners to prevent duplicates
+    window.removeEventListener('scroll', toggleScrollButtons);
+    window.removeEventListener('resize', toggleScrollButtons);
+    
+    // Attach fresh event listeners
+    document.getElementById('scrollUpBtn').addEventListener('click', scrollToTop);
+    document.getElementById('scrollDownBtn').addEventListener('click', scrollToBottom);
+    window.addEventListener('scroll', toggleScrollButtons);
+    window.addEventListener('resize', toggleScrollButtons);
+    
+    // Initial check
+    toggleScrollButtons();
+    
+    // Force visible after a short delay to ensure DOM is ready
+    setTimeout(() => {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const documentHeight = document.documentElement.scrollHeight;
+        const windowHeight = window.innerHeight;
+        
+        if (documentHeight > windowHeight && scrollTop > 200) {
+            floatingScroll.classList.add('visible');
+        }
+    }, 500);
+}
+
+// Initialize when DOM is loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initScrollButtons);
+} else {
+    initScrollButtons();
+}
 </script>
 
     </body>

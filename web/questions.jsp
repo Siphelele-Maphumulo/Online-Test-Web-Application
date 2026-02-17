@@ -246,6 +246,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
         position: sticky;
         top: 0;
         height: 100vh;
+        transition: width var(--transition-normal);
     }
     
     .sidebar-header {
@@ -385,6 +386,12 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
         margin-bottom: var(--spacing-lg);
     }
     
+    @media (max-width: 576px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
     .form-group {
         display: flex;
         flex-direction: column;
@@ -459,7 +466,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
     /* Options Grid */
     .options-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: var(--spacing-sm);
         margin: var(--spacing-md) 0;
     }
@@ -1263,69 +1270,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
         width: 95% !important;
     }
     
-   /* Floating Scroll Button */
-    .floating-scroll {
-        position: fixed;
-        bottom: 300px;
-        right: 5px;
-        z-index: 1000;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.3s ease;
-    }
 
-    .floating-scroll.visible {
-        opacity: 1;
-        visibility: visible;
-    }
-
-    .scroll-btn {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background-color: #476287;
-        color: var(--white);
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 8px;
-        box-shadow: var(--shadow-lg);
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .scroll-btn:hover {
-        transform: scale(1.1);
-        box-shadow: 0 8px 25px rgba(9, 41, 77, 0.3);
-    }
-
-    .scroll-btn:active {
-        transform: scale(0.95);
-    }
-
-    .scroll-btn::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 0;
-        height: 0;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.3);
-        transform: translate(-50%, -50%);
-        transition: width 0.4s ease, height 0.4s ease;
-    }
-
-    .scroll-btn:active::before {
-        width: 100%;
-        height: 100%;
-    }
 
     /* Responsive adjustments */
     @media (max-width: 768px) {
@@ -1463,6 +1408,129 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
     .checkbox-container {
         position: relative;
         display: inline-block;
+    }
+
+   /* Floating Scroll Button */
+
+    .floating-scroll {
+        position: fixed;
+        bottom: 300px;
+        right: 5px;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .floating-scroll.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
+
+    .scroll-btn {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #476287;
+        color: var(--white);
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8px;
+        box-shadow: var(--shadow-lg);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .scroll-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 8px 25px rgba(9, 41, 77, 0.3);
+    }
+
+    .scroll-btn:active {
+        transform: scale(0.95);
+    }
+
+    .scroll-btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.4s ease, height 0.4s ease;
+    }
+
+    .scroll-btn:active::before {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Floating Show Questions Button */
+    .floating-show-questions {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1001;
+        background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 15px 25px;
+        font-size: 14px;
+        font-weight: 600;
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+    }
+
+    .floating-show-questions:hover {
+        transform: translateY(-3px) scale(1.05);
+        box-shadow: 0 12px 30px rgba(16, 185, 129, 0.5);
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    }
+
+    .floating-show-questions:active {
+        transform: translateY(-1px) scale(0.98);
+    }
+
+    .floating-show-questions:disabled {
+        background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: 0 4px 15px rgba(107, 114, 128, 0.3);
+    }
+
+    .floating-show-questions i {
+        font-size: 16px;
+    }
+
+    @media (max-width: 768px) {
+        .floating-show-questions {
+            bottom: 15px;
+            right: 15px;
+            padding: 12px 20px;
+            font-size: 13px;
+        }
+
+        .floating-show-questions i {
+            font-size: 14px;
+        }
     }
 </style>
 
@@ -1953,10 +2021,7 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                     </div>
                     
                     <div class="form-actions">
-                        <button type="button" class="btn btn-success" id="showAllQuestionsBtn" onclick="showAllQuestions()" <%=courseNames.isEmpty() ? "disabled" : ""%>>
-                            <i class="fas fa-eye"></i>
-                            Show All Questions
-                        </button>
+                        <!-- Original Show All Questions button removed - now using floating button -->
                     </div>
                 </form>
             </div>
@@ -1969,14 +2034,19 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
 // Function to update the Show All Questions button state
 function updateShowAllButton() {
     const courseSelect = document.getElementById('courseSelectView');
-    const showAllBtn = document.getElementById('showAllQuestionsBtn');
+    const floatingShowBtn = document.getElementById('floatingShowQuestionsBtn');
+    const floatingShowText = document.getElementById('floatingShowQuestionsText');
     
     if (courseSelect.value) {
-        showAllBtn.disabled = false;
-        showAllBtn.innerHTML = '<i class="fas fa-eye"></i> Show Questions in ' + courseSelect.value;
+        if (floatingShowBtn) {
+            floatingShowBtn.disabled = false;
+            floatingShowText.textContent = 'Show Questions in ' + courseSelect.value;
+        }
     } else {
-        showAllBtn.disabled = true;
-        showAllBtn.innerHTML = '<i class="fas fa-eye"></i> Select a Course First';
+        if (floatingShowBtn) {
+            floatingShowBtn.disabled = true;
+            floatingShowText.textContent = 'Select a Course First';
+        }
     }
 }
 
@@ -4947,5 +5017,125 @@ initRearrangeInterface();
                 updateFloatingDeleteButton();
             }
         }
+        
+        // Initialize floating scroll buttons
+        initScrollButtons();
+    });
+    
+    // Single, consolidated scroll button functionality
+    function initScrollButtons() {
+        const floatingScroll = document.getElementById('floatingScroll');
+        const scrollUpBtn = document.getElementById('scrollUpBtn');
+        const scrollDownBtn = document.getElementById('scrollDownBtn');
+        
+        if (!floatingScroll || !scrollUpBtn || !scrollDownBtn) return;
+        
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+        
+        function scrollToBottom() {
+            window.scrollTo({
+                top: document.documentElement.scrollHeight - window.innerHeight,
+                behavior: 'smooth'
+            });
+        }
+        
+        function toggleScrollButtons() {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const documentHeight = document.documentElement.scrollHeight;
+            const windowHeight = window.innerHeight;
+            
+            console.log('Scroll position:', scrollTop, 'Document height:', documentHeight, 'Window height:', windowHeight);
+            
+            // Show/hide floating container based on scroll position (lowered threshold for testing)
+            if (scrollTop > 50) { // Changed from 200 to 50 for easier testing
+                floatingScroll.classList.add('visible');
+                console.log('Adding visible class');
+            } else {
+                floatingScroll.classList.remove('visible');
+                console.log('Removing visible class');
+            }
+            
+            // Hide down button when at bottom
+            if (scrollTop + windowHeight >= documentHeight - 100) {
+                scrollDownBtn.style.display = 'none';
+            } else {
+                scrollDownBtn.style.display = 'flex';
+            }
+            
+            // Hide up button when at top
+            if (scrollTop < 100) {
+                scrollUpBtn.style.display = 'none';
+            } else {
+                scrollUpBtn.style.display = 'flex';
+            }
+        }
+        
+        // Remove any existing event listeners by cloning and replacing buttons
+        const newScrollUpBtn = scrollUpBtn.cloneNode(true);
+        const newScrollDownBtn = scrollDownBtn.cloneNode(true);
+        scrollUpBtn.parentNode.replaceChild(newScrollUpBtn, scrollUpBtn);
+        scrollDownBtn.parentNode.replaceChild(newScrollDownBtn, scrollDownBtn);
+        
+        // Attach fresh event listeners
+        document.getElementById('scrollUpBtn').addEventListener('click', scrollToTop);
+        document.getElementById('scrollDownBtn').addEventListener('click', scrollToBottom);
+        window.addEventListener('scroll', toggleScrollButtons);
+        window.addEventListener('resize', toggleScrollButtons);
+        
+        // Initial check
+        toggleScrollButtons();
+        
+        // Force visible after a short delay to ensure DOM is ready
+        setTimeout(() => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const documentHeight = document.documentElement.scrollHeight;
+            const windowHeight = window.innerHeight;
+            
+            console.log('Force check - Scroll:', scrollTop, 'Doc height:', documentHeight, 'Window height:', windowHeight);
+            
+            if (documentHeight > windowHeight && scrollTop > 50) {
+                floatingScroll.classList.add('visible');
+                console.log('Force adding visible class');
+            }
+            
+            // For testing - always show after 2 seconds
+            setTimeout(() => {
+                floatingScroll.classList.add('visible');
+                console.log('TEST: Force showing scroll buttons');
+            }, 2000);
+        }, 500);
+    }
+    
+    // Initialize when DOM is loaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initScrollButtons);
+    } else {
+        initScrollButtons();
+    }
+    
+    // Also initialize after window load (for any delayed content)
+    window.addEventListener('load', function() {
+        setTimeout(initScrollButtons, 100);
     });
 </script>
+
+<!-- Floating Scroll Buttons -->
+<div class="floating-scroll" id="floatingScroll">
+    <button class="scroll-btn" id="scrollUpBtn" title="Scroll to Top">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+    <button class="scroll-btn" id="scrollDownBtn" title="Scroll to Bottom">
+        <i class="fas fa-chevron-down"></i>
+    </button>
+</div>
+
+<!-- Floating Show Questions Button -->
+<button type="button" class="floating-show-questions" id="floatingShowQuestionsBtn" onclick="showAllQuestions()" <%=courseNames.isEmpty() ? "disabled" : ""%>>
+    <i class="fas fa-eye"></i>
+    <span id="floatingShowQuestionsText">Show All Questions</span>
+</button>

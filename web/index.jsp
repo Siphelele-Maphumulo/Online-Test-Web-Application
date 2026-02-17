@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=0.8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Online Exam</title>
 
   <!-- Bootstrap CSS -->
@@ -11,27 +11,30 @@
 
   <style>
     body {
-      transform-origin: top left;
       width: 100%;
       background: linear-gradient(135deg, #e0f7fa, #ffffff);
-      overflow: hidden;
+      min-height: 100vh;
       font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
     }
 
-    .container {
+    .landing-container {
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       text-align: center;
+      padding: 20px;
     }
 
-    img {
+    .landing-img {
       max-width: 100%;
       height: auto;
       border-radius: 20px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      margin-bottom: 20px;
     }
 
     .callout_row_text {
@@ -93,8 +96,8 @@
 
 <body>
 
-  <div class="container">
-    <img src="IMG/main_large.gif" alt="Assessment System">
+  <div class="landing-container">
+    <img src="IMG/main_large.gif" alt="Assessment System" class="landing-img">
 
     <div class="callout_row callout_row_text">
       Welcome to our automatic grading and test submissions.<br>
@@ -102,7 +105,7 @@
     </div>
 
     <div class="app_buttons mt-4">
-      <a href="login.jsp" class="btn btn-primary shadow-lg">START</a>
+      <a href="login.jsp" class="btn btn-primary shadow-lg px-5 py-3">START</a>
     </div>
   </div>
 
@@ -133,26 +136,6 @@
         }, 2000); // 2 seconds
       }
     })();
-
-    document.addEventListener("DOMContentLoaded", function () {
-      function updateScale() {
-        const body = document.body;
-        const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight;
-        const bodyWidth = body.scrollWidth;
-        const bodyHeight = body.scrollHeight;
-
-        const scaleX = windowWidth / bodyWidth;
-        const scaleY = windowHeight / bodyHeight;
-        const scale = Math.min(scaleX, scaleY, 1);
-
-        body.style.transform = `scale(${scale})`;
-        body.style.transformOrigin = "top left";
-      }
-
-      updateScale();
-      window.addEventListener("resize", updateScale);
-    });
   </script>
 
 </body>
