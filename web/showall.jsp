@@ -868,9 +868,16 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
                             <div class="question-body">
                                 <div class="question-text"><%= q.getQuestion() %></div>
 
-                                <% if (q.getImagePath() != null && !q.getImagePath().isEmpty()) { %>
+                                <% if (q.getImagePath() != null && !q.getImagePath().isEmpty()) {
+                                    String imagePath = q.getImagePath();
+                                    if (!imagePath.startsWith("http") && !imagePath.startsWith("/")) {
+                                        imagePath = request.getContextPath() + "/" + imagePath;
+                                    } else if (!imagePath.startsWith("http") && imagePath.startsWith("/")) {
+                                        imagePath = request.getContextPath() + imagePath;
+                                    }
+                                %>
                                     <div style="margin-bottom: 20px; border: 1px solid #eee; padding: 10px; border-radius: 8px; display: inline-block;">
-                                        <img src="<%= q.getImagePath() %>" style="max-width: 100%; max-height: 250px; border-radius: 4px;">
+                                        <img src="<%= imagePath %>" style="max-width: 100%; max-height: 250px; border-radius: 4px;">
                                     </div>
                                 <% } %>
 
