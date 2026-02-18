@@ -72,7 +72,7 @@
             
             try {
                 // Check if models directory exists and is accessible
-                const response = await fetch('/models/tiny_face_detector_model-shard1');
+                const response = await fetch('models/tiny_face_detector_model-shard1');
                 if (response.ok) {
                     statusDiv.className = 'status success';
                     statusDiv.innerHTML = '✅ Local face-api models found and accessible';
@@ -150,9 +150,9 @@
                     script.onload = async () => {
                         try {
                             // Try local models first
-                            await faceapi.nets.tinyFaceDetector.load('/models');
-                            await faceapi.nets.faceLandmark68Net.load('/models');
-                            await faceapi.nets.faceExpressionNet.load('/models');
+                            await faceapi.nets.tinyFaceDetector.load('models');
+                            await faceapi.nets.faceLandmark68Net.load('models');
+                            await faceapi.nets.faceExpressionNet.load('models');
                             this.faceapi = faceapi;
                             addResult('✅ Face detection models loaded from local files', 'success');
                             resolve();
