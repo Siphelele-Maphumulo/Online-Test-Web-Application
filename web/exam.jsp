@@ -2745,6 +2745,69 @@
 .close-modal-btn:hover {
     background: rgba(255, 255, 255, 0.1);
 }
+    /* Floating Scroll Button */
+    .floating-scroll {
+        position: fixed;
+        bottom: 300px;
+        right: 5px;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .floating-scroll.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .scroll-btn {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #476287;
+        color: var(--white);
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8px;
+        box-shadow: var(--shadow-lg);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .scroll-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 8px 25px rgba(9, 41, 77, 0.3);
+    }
+
+    .scroll-btn:active {
+        transform: scale(0.95);
+    }
+
+    .scroll-btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.4s ease, height 0.4s ease;
+    }
+
+    .scroll-btn:active::before {
+        width: 100%;
+        height: 100%;
+    }
 </style>
 
 <div class="exam-wrapper">

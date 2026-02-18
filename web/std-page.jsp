@@ -200,6 +200,71 @@ if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("4")) {
     .logout-btn i {
         font-size: 0.625rem; /* Reduced from 0.6875rem */
     }
+
+        /* Floating Scroll Button */
+    .floating-scroll {
+        position: fixed;
+        bottom: 300px;
+        right: 5px;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .floating-scroll.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .scroll-btn {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #476287;
+        color: var(--white);
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8px;
+        box-shadow: var(--shadow-lg);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .scroll-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 8px 25px rgba(9, 41, 77, 0.3);
+    }
+
+    .scroll-btn:active {
+        transform: scale(0.95);
+    }
+
+    .scroll-btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.4s ease, height 0.4s ease;
+    }
+
+    .scroll-btn:active::before {
+        width: 100%;
+        height: 100%;
+    }
+
     /* Responsive Design */
     @media (max-width: 991.98px) {
         .dashboard-header {
@@ -664,6 +729,52 @@ if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("4")) {
             height: 45px;
             font-size: 16px;
         }
+        
+        /* Exam Loader Styles */
+        .exam-loader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+        
+        .exam-loader-spinner {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            min-width: 200px;
+        }
+        
+        .exam-loader-spinner .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        
+        .exam-loader-spinner p {
+            margin: 0;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     }
 </style>
 
@@ -777,6 +888,26 @@ if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("4")) {
         // Include appropriate page based on parameter
         if ("1".equals(pgprt)) {
     %>
+        <div id="examLoader" class="exam-loader-overlay">
+            <div class="exam-loader-spinner">
+                <div class="spinner"></div>
+                <p>Loading Exam...</p>
+            </div>
+        </div>
+        <script>
+            // Hide loader when exam is fully loaded
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    const loader = document.getElementById('examLoader');
+                    if (loader) {
+                        loader.style.opacity = '0';
+                        setTimeout(() => {
+                            loader.style.display = 'none';
+                        }, 300);
+                    }
+                }, 500);
+            });
+        </script>
         <jsp:include page="exam.jsp"/>
     <%
         } else if ("2".equals(pgprt)) {
