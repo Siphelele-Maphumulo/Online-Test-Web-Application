@@ -2503,55 +2503,43 @@ try {
         int examId = Integer.parseInt(nz(request.getParameter("examId"), "0"));
         int studentId = Integer.parseInt(nz(request.getParameter("studentId"), "0"));
 
-        if ("log_incident".equalsIgnoreCase(operation) || "log_violation".equalsIgnoreCase(operation)) {
-            String type = "";
-            String desc = "";
-            String screenshotData = "";
-            int vExamId = examId;
-            int vStudentId = studentId;
-
-            if ("log_violation".equalsIgnoreCase(operation)) {
-                try {
-                    String violationData = request.getParameter("violation_data");
-                    if (violationData != null) {
-                        JSONObject violation = new JSONObject(violationData);
-                        type = violation.optString("type", "Unknown");
-                        desc = violation.optString("description", "");
-                        vExamId = violation.optInt("examId", examId);
-                        vStudentId = violation.optInt("studentId", studentId);
-                        screenshotData = violation.optString("screenshot", "");
-                    }
-                } catch (Exception e) {
-                    LOGGER.log(Level.SEVERE, "Error parsing violation JSON", e);
-                }
-            } else {
-                type = nz(request.getParameter("type"), "");
-                desc = nz(request.getParameter("description"), "");
-                screenshotData = nz(request.getParameter("screenshot"), "");
-            }
-
+        if ("log_violation".equalsIgnoreCase(operation) || "log_incident".equalsIgnoreCase(operation)) {
+            String violationData = request.getParameter("violation_data");
+            String type = nz(request.getParameter("type"), "Unknown");
+            String desc = nz(request.getParameter("description"), "");
             String screenshotPath = "";
-            if (screenshotData != null && !screenshotData.isEmpty()) {
-                try {
-                    String uploadPath = getServletContext().getRealPath("/uploads/proctoring");
-                    File uploadDir = new File(uploadPath);
-                    if (!uploadDir.exists()) uploadDir.mkdirs();
 
-                    String fileName = "incident_" + vExamId + "_" + Calendar.getInstance().getTimeInMillis() + ".jpg";
-                    File file = new File(uploadDir, fileName);
-                    
-                    String base64Image = screenshotData.contains(",") ? screenshotData.split(",")[1] : screenshotData;
-                    byte[] imageBytes = Base64.getDecoder().decode(base64Image);
-                    try (FileOutputStream fos = new FileOutputStream(file)) {
-                        fos.write(imageBytes);
+            try {
+                if (violationData != null && !violationData.isEmpty()) {
+                    JSONObject violation = new JSONObject(violationData);
+                    type = violation.optString("type", type);
+                    desc = violation.optString("description", desc);
+                    examId = violation.optInt("examId", examId);
+                    studentId = violation.optInt("studentId", studentId);
+
+                    // Save screenshot if present in JSON
+                    String screenshot = violation.optString("screenshot", "");
+                    if (!screenshot.isEmpty()) {
+                        String uploadPath = getServletContext().getRealPath("/uploads/proctoring");
+                        File uploadDir = new File(uploadPath);
+                        if (!uploadDir.exists()) uploadDir.mkdirs();
+
+                        String fileName = "incident_" + examId + "_" + Calendar.getInstance().getTimeInMillis() + ".jpg";
+                        File file = new File(uploadDir, fileName);
+
+                        String base64Image = screenshot.contains(",") ? screenshot.split(",")[1] : screenshot;
+                        byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+                        try (FileOutputStream fos = new FileOutputStream(file)) {
+                            fos.write(imageBytes);
+                        }
+                        screenshotPath = "uploads/proctoring/" + fileName;
                     }
-                    screenshotPath = "uploads/proctoring/" + fileName;
-                } catch (Exception e) {
-                    LOGGER.log(Level.SEVERE, "Error saving proctoring screenshot", e);
                 }
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error parsing violation data", e);
             }
 
-            boolean success = pDAO.logProctoringIncident(vExamId, vStudentId, type, desc, screenshotPath);
+            boolean success = pDAO.logProctoringIncident(examId, studentId, type, desc, screenshotPath);
             response.setContentType("application/json");
             response.getWriter().write("{\"success\": " + success + "}");
             return;
