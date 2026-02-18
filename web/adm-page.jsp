@@ -814,6 +814,10 @@
             %>
                             <jsp:include page="Lecturers_accounts.jsp" />
             <%
+                        } else if ("9".equals(pgprt)) {
+            %>
+                            <jsp:include page="proctor-dashboard.jsp" />
+            <%
                         } else {
                             // Default page: Profile
                             if (currentUser.getType().equalsIgnoreCase("admin")

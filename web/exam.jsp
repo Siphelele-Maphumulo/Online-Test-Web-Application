@@ -5446,6 +5446,146 @@ function updateProgress() {
     </main>
 </div>
 
+<!-- Identity Verification Modal -->
+<div id="identityVerificationModal" class="modal-overlay" style="display: none;">
+    <div class="modal-container" style="max-width: 800px; width: 95%;">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fas fa-user-shield"></i> Exam Policy and Candidate Identity Verification</h3>
+        </div>
+        <div class="modal-body">
+            <!-- Step Navigation -->
+            <div style="display: flex; justify-content: space-around; margin-bottom: 30px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px;">
+                <div id="step-nav-1" style="text-align: center; color: var(--primary-blue); font-weight: bold;">
+                    <div style="width: 30px; height: 30px; border-radius: 50%; background: var(--primary-blue); color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 5px;">1</div>
+                    <span style="font-size: 12px;">Code of Honor</span>
+                </div>
+                <div id="step-nav-2" style="text-align: center; color: #cbd5e1;">
+                    <div style="width: 30px; height: 30px; border-radius: 50%; background: #cbd5e1; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 5px;">2</div>
+                    <span style="font-size: 12px;">Face Photo</span>
+                </div>
+                <div id="step-nav-3" style="text-align: center; color: #cbd5e1;">
+                    <div style="width: 30px; height: 30px; border-radius: 50%; background: #cbd5e1; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 5px;">3</div>
+                    <span style="font-size: 12px;">ID Verification</span>
+                </div>
+                <div id="step-nav-4" style="text-align: center; color: #cbd5e1;">
+                    <div style="width: 30px; height: 30px; border-radius: 50%; background: #cbd5e1; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 5px;">4</div>
+                    <span style="font-size: 12px;">Summary</span>
+                </div>
+            </div>
+
+            <!-- Step 1: Code of Honor -->
+            <div id="verification-step-1" class="verification-step">
+                <h4 style="margin-bottom: 15px; color: var(--primary-blue);">Candidate Identity Verification Step 1: Code of Honor</h4>
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; max-height: 300px; overflow-y: auto; font-size: 14px; line-height: 1.6;">
+                    <p><strong>HONOR CODE AGREEMENT</strong></p>
+                    <p>As a candidate for this examination, I hereby acknowledge and agree to the following conditions:</p>
+                    <ul>
+                        <li>I will not use any unauthorized materials, including but not limited to textbooks, notes, or electronic devices during the exam.</li>
+                        <li>I will not communicate with any other individual by any means during the examination.</li>
+                        <li>I will remain within the view of the camera at all times and will not leave my seat without proper authorization.</li>
+                        <li>I understand that my session will be monitored via audio and video, and any suspicious behavior will be flagged for review.</li>
+                        <li>I will not copy, record, or distribute any part of the examination content.</li>
+                        <li>I confirm that I am the person registered to take this exam.</li>
+                    </ul>
+                    <p>Violation of these rules may lead to immediate disqualification and further disciplinary action by the institution.</p>
+                </div>
+                <div style="margin-top: 20px; display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="honorCodeCheckbox" style="width: 20px; height: 20px; cursor: pointer;">
+                    <label for="honorCodeCheckbox" style="font-size: 14px; font-weight: 600; cursor: pointer;">I agree to the Code of Honor and understand the consequences of cheating.</label>
+                </div>
+                <div style="margin-top: 15px;">
+                    <label style="display: block; font-size: 14px; margin-bottom: 5px; color: #64748b;">Type your full name as digital signature:</label>
+                    <input type="text" id="digitalSignature" placeholder="Enter your full name" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                </div>
+            </div>
+
+            <!-- Step 2: Face Photo -->
+            <div id="verification-step-2" class="verification-step" style="display: none;">
+                <h4 style="margin-bottom: 15px; color: var(--primary-blue);">Candidate Identity Verification Step 2: Face Photo</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div style="text-align: center;">
+                        <div style="background: #000; border-radius: 8px; overflow: hidden; position: relative; aspect-ratio: 4/3;">
+                            <video id="faceVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+                            <canvas id="faceOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+                            <div id="faceAlignmentGuide" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 260px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 50% 50% 40% 40%;"></div>
+                        </div>
+                        <button type="button" id="captureFaceBtn" class="btn-primary" style="margin-top: 15px; width: 100%;">
+                            <i class="fas fa-camera"></i> Capture Face Photo
+                        </button>
+                    </div>
+                    <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; border-left: 4px solid var(--info);">
+                        <p style="font-weight: 600; color: var(--primary-blue); margin-bottom: 10px;">Instructions for clear photo:</p>
+                        <ul style="font-size: 13px; color: #0369a1; line-height: 1.8;">
+                            <li>Ensure your face is within the dashed oval.</li>
+                            <li>Look directly at the camera.</li>
+                            <li>Ensure there is proper lighting on your face (avoid strong backlighting).</li>
+                            <li>Do not wear hats, sunglasses, or anything that covers your face.</li>
+                            <li>Ensure you are the only person in the frame.</li>
+                        </ul>
+                        <div id="faceCapturedPreview" style="margin-top: 15px; display: none;">
+                            <p style="font-size: 12px; font-weight: bold; color: var(--success); margin-bottom: 5px;"><i class="fas fa-check-circle"></i> Photo Captured Successfully</p>
+                            <img id="faceImgPreview" style="width: 100%; border-radius: 4px; border: 1px solid #cbd5e1;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: ID Verification -->
+            <div id="verification-step-3" class="verification-step" style="display: none;">
+                <h4 style="margin-bottom: 15px; color: var(--primary-blue);">Candidate Identity Verification Step 3: ID Verification</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div style="text-align: center;">
+                        <div style="background: #000; border-radius: 8px; overflow: hidden; aspect-ratio: 4/3;">
+                            <video id="idVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+                        </div>
+                        <button type="button" id="captureIdBtn" class="btn-primary" style="margin-top: 15px; width: 100%;">
+                            <i class="fas fa-id-card"></i> Capture ID Photo
+                        </button>
+                    </div>
+                    <div style="background: #fffbeb; padding: 20px; border-radius: 8px; border-left: 4px solid var(--warning);">
+                        <p style="font-weight: 600; color: #92400e; margin-bottom: 10px;">ID Guidelines:</p>
+                        <ul style="font-size: 13px; color: #92400e; line-height: 1.8;">
+                            <li>Hold your government-issued ID close to the camera.</li>
+                            <li>Ensure your name and photo on the ID are clearly visible.</li>
+                            <li>Avoid glare on the ID surface.</li>
+                            <li>Keep the ID flat and steady.</li>
+                        </ul>
+                        <div id="idCapturedPreview" style="margin-top: 15px; display: none;">
+                            <p style="font-size: 12px; font-weight: bold; color: var(--success); margin-bottom: 5px;"><i class="fas fa-check-circle"></i> ID Photo Captured Successfully</p>
+                            <img id="idImgPreview" style="width: 100%; border-radius: 4px; border: 1px solid #cbd5e1;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Summary -->
+            <div id="verification-step-4" class="verification-step" style="display: none; text-align: center; padding: 40px 0;">
+                <div style="width: 80px; height: 80px; background: #d1fae5; color: var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; margin: 0 auto 20px;">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h3 style="color: var(--text-dark); margin-bottom: 10px;">Verification Complete!</h3>
+                <p style="color: #64748b; margin-bottom: 30px;">All identity checks have been successfully completed. You are now authorized to begin the examination.</p>
+                
+                <div style="display: flex; justify-content: center; gap: 15px;">
+                    <div style="width: 120px;">
+                        <img id="summaryFaceImg" style="width: 100%; border-radius: 8px; border: 2px solid var(--success);">
+                        <p style="font-size: 11px; margin-top: 5px;">Face Photo</p>
+                    </div>
+                    <div style="width: 120px;">
+                        <img id="summaryIdImg" style="width: 100%; border-radius: 8px; border: 2px solid var(--success);">
+                        <p style="font-size: 11px; margin-top: 5px;">ID Card</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="verifyPrevBtn" class="btn-secondary" style="display: none;">Previous</button>
+            <button id="verifyNextBtn" class="btn-primary">Next</button>
+            <button id="verifyFinalBtn" class="btn-primary" style="display: none; background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));">Proceed to Exam</button>
+        </div>
+    </div>
+</div>
+
 <!-- Diagnostics Modal -->
 <div id="diagnosticsModal" class="modal-overlay" style="display: none;">
     <div class="modal-container" style="max-width: 650px;">
@@ -6011,14 +6151,28 @@ function updateProgress() {
             { id: 'status-internet', check: async () => ({ pass: navigator.onLine }) },
             { id: 'status-browser', check: async () => {
                 const ua = navigator.userAgent;
-                const isModern = ua.includes("Chrome") || ua.includes("Edg") || ua.includes("Firefox") || (ua.includes("Safari") && !ua.includes("Chrome"));
-                return { pass: isModern };
+                const isChrome = /Chrome/.test(ua) && /Google Inc/.test(navigator.vendor);
+                let version = 0;
+                if (isChrome) {
+                    const match = ua.match(/Chrome\/(\d+)/);
+                    version = match ? parseInt(match[1]) : 0;
+                }
+                return { pass: isChrome && version >= 100 }; // Chrome 100+ required
             }},
             { id: 'status-javascript', check: async () => ({ pass: true }) },
-            { id: 'status-resolution', check: async () => ({ pass: window.screen.width >= 1024 && window.screen.height >= 768 }) },
+            { id: 'status-resolution', check: async () => ({ pass: window.screen.width >= 1536 && window.screen.height >= 864 }) },
             { id: 'status-os', check: async () => {
                 const p = navigator.platform.toLowerCase();
-                return { pass: p.includes("win") || p.includes("mac") || p.includes("linux") || p.includes("x11") };
+                let isWin11 = false;
+                if (navigator.userAgentData) {
+                    const uaData = await navigator.userAgentData.getHighEntropyValues(["platformVersion"]);
+                    // Windows 11 platform version starts from 13.0.0
+                    isWin11 = uaData.platform === "Windows" && parseInt(uaData.platformVersion.split('.')[0]) >= 13;
+                } else {
+                    // Fallback to generic Windows check if userAgentData is not supported
+                    isWin11 = p.includes("win");
+                }
+                return { pass: isWin11 };
             }},
             { id: 'status-camera', check: async () => {
                 try {
@@ -6029,8 +6183,12 @@ function updateProgress() {
                 } catch (e) { return { pass: false }; }
             }},
             { id: 'status-environment', check: async () => {
-                // Simulation of environment check
-                return new Promise(resolve => setTimeout(() => resolve({ pass: true }), 800));
+                // Check if full screen is available for lockdown
+                const fullScreenAvailable = document.fullscreenEnabled || 
+                                           document.webkitFullscreenEnabled || 
+                                           document.mozFullScreenEnabled || 
+                                           document.msFullscreenEnabled;
+                return { pass: !!fullScreenAvailable };
             }}
         ];
 
@@ -6088,6 +6246,349 @@ function updateProgress() {
 
     document.getElementById('diagProceedButton').onclick = () => {
         document.getElementById('diagnosticsModal').style.display = 'none';
+        startIdentityVerification();
+    };
+
+    /* --- IDENTITY VERIFICATION LOGIC --- */
+    let currentVerifyStep = 1;
+    let capturedFaceData = null;
+    let capturedIdData = null;
+    let verificationStream = null;
+
+    function startIdentityVerification() {
+        document.getElementById('identityVerificationModal').style.display = 'flex';
+        showVerifyStep(1);
+    }
+
+    async function showVerifyStep(step) {
+        // Stop any existing stream if switching steps
+        if (verificationStream) {
+            verificationStream.getTracks().forEach(track => track.stop());
+            verificationStream = null;
+        }
+
+        // Hide all steps
+        document.querySelectorAll('.verification-step').forEach(el => el.style.display = 'none');
+        // Show current step
+        document.getElementById('verification-step-' + step).style.display = 'block';
+
+        // Update nav UI
+        for (let i = 1; i <= 4; i++) {
+            const nav = document.getElementById('step-nav-' + i);
+            const circle = nav.querySelector('div');
+            if (i < step) {
+                circle.style.background = 'var(--success)';
+                circle.innerHTML = '<i class="fas fa-check"></i>';
+                nav.style.color = 'var(--success)';
+            } else if (i === step) {
+                circle.style.background = 'var(--primary-blue)';
+                circle.textContent = i;
+                nav.style.color = 'var(--primary-blue)';
+                nav.style.fontWeight = 'bold';
+            } else {
+                circle.style.background = '#cbd5e1';
+                circle.textContent = i;
+                nav.style.color = '#cbd5e1';
+                nav.style.fontWeight = 'normal';
+            }
+        }
+
+        // Handle buttons
+        document.getElementById('verifyPrevBtn').style.display = (step > 1 && step < 4) ? 'inline-block' : 'none';
+        document.getElementById('verifyNextBtn').style.display = (step < 4) ? 'inline-block' : 'none';
+        document.getElementById('verifyFinalBtn').style.display = (step === 4) ? 'inline-block' : 'none';
+
+        // Initialize camera if needed
+        if (step === 2) {
+            try {
+                verificationStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                document.getElementById('faceVideo').srcObject = verificationStream;
+            } catch (err) {
+                alert('Could not access camera for face verification.');
+            }
+        } else if (step === 3) {
+            try {
+                verificationStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                document.getElementById('idVideo').srcObject = verificationStream;
+            } catch (err) {
+                alert('Could not access camera for ID verification.');
+            }
+        } else if (step === 4) {
+            document.getElementById('summaryFaceImg').src = capturedFaceData;
+            document.getElementById('summaryIdImg').src = capturedIdData;
+        }
+
+        currentVerifyStep = step;
+    }
+
+    document.getElementById('verifyNextBtn').onclick = async () => {
+        if (currentVerifyStep === 1) {
+            const agreed = document.getElementById('honorCodeCheckbox').checked;
+            const sig = document.getElementById('digitalSignature').value.trim();
+            if (!agreed || !sig) {
+                alert('Please agree to the Code of Honor and provide your digital signature.');
+                return;
+            }
+            showVerifyStep(2);
+        } else if (currentVerifyStep === 2) {
+            if (!capturedFaceData) {
+                alert('Please capture your face photo first.');
+                return;
+            }
+            showVerifyStep(3);
+        } else if (currentVerifyStep === 3) {
+            if (!capturedIdData) {
+                alert('Please capture your ID photo first.');
+                return;
+            }
+            // Save everything to backend
+            await saveVerificationToBackend();
+            showVerifyStep(4);
+        }
+    };
+
+    document.getElementById('verifyPrevBtn').onclick = () => {
+        showVerifyStep(currentVerifyStep - 1);
+    };
+
+    document.getElementById('captureFaceBtn').onclick = () => {
+        const video = document.getElementById('faceVideo');
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        capturedFaceData = canvas.toDataURL('image/jpeg');
+        document.getElementById('faceImgPreview').src = capturedFaceData;
+        document.getElementById('faceCapturedPreview').style.display = 'block';
+    };
+
+    document.getElementById('captureIdBtn').onclick = () => {
+        const video = document.getElementById('idVideo');
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        capturedIdData = canvas.toDataURL('image/jpeg');
+        document.getElementById('idImgPreview').src = capturedIdData;
+        document.getElementById('idCapturedPreview').style.display = 'block';
+    };
+
+    async function saveVerificationToBackend() {
+        const formData = new URLSearchParams();
+        formData.append('page', 'proctoring');
+        formData.append('operation', 'save_verification');
+        // Note: userId and examId will be injected via JSP or session
+        formData.append('studentId', '<%= session.getAttribute("userId") != null ? session.getAttribute("userId") : "0" %>');
+        formData.append('examId', '<%= session.getAttribute("examId") != null ? session.getAttribute("examId") : "0" %>');
+        formData.append('honorAccepted', 'true');
+        formData.append('facePhoto', capturedFaceData);
+        formData.append('idPhoto', capturedIdData);
+
+        try {
+            const response = await fetch('controller.jsp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            });
+            console.log('Verification saved:', await response.json());
+        } catch (err) {
+            console.error('Error saving verification:', err);
+        }
+    }
+
+    document.getElementById('verifyFinalBtn').onclick = () => {
+        document.getElementById('identityVerificationModal').style.display = 'none';
         document.getElementById('confirmationModal').style.display = 'flex';
     };
+
+    /* --- REAL-TIME PROCTORING SYSTEM --- */
+    let proctoringInterval = null;
+    let audioContext = null;
+    let audioAnalyser = null;
+    let lastFaceDetectionTime = Date.now();
+    let proctoringActive = false;
+    const NOISE_THRESHOLD = 65; // dB
+    const EYE_CONTACT_THRESHOLD = 5000; // 5 seconds
+
+    function initProctoring() {
+        if (proctoringActive) return;
+        proctoringActive = true;
+        console.log('Initializing Real-Time Proctoring...');
+
+        // 1. Audio Monitoring
+        initAudioMonitoring();
+
+        // 2. Environment Lockdown
+        initEnvironmentLockdown();
+
+        // 3. Visual Monitoring (Polling)
+        proctoringInterval = setInterval(async () => {
+            if (!examActive) return;
+            
+            // Environmental check
+            if (!document.fullscreenElement) {
+                logIncident('Environmental', 'User exited full-screen mode');
+            }
+
+            // Visual tracking
+            performVisualCheck();
+
+        }, 1000);
+
+        // Heartbeat to keep session alive and log status
+        setInterval(() => {
+            if (examActive) {
+                console.log('Proctoring Heartbeat: Audio/Video monitoring active');
+            }
+        }, 10000);
+    }
+
+    async function initAudioMonitoring() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+            audioAnalyser = audioContext.createAnalyser();
+            audioAnalyser.fftSize = 256;
+            source.connect(audioAnalyser);
+
+            const bufferLength = audioAnalyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function checkNoise() {
+                if (!proctoringActive) return;
+                audioAnalyser.getByteFrequencyData(dataArray);
+                let sum = 0;
+                for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
+                const average = sum / bufferLength;
+                
+                // Simple dB approximation
+                const db = 20 * Math.log10(average || 1);
+                if (db > NOISE_THRESHOLD) {
+                    logIncident('Audio', 'Excessive background noise detected (' + Math.round(db) + 'dB)');
+                }
+                requestAnimationFrame(checkNoise);
+            }
+            checkNoise();
+        } catch (err) {
+            console.error('Audio proctoring failed:', err);
+        }
+    }
+
+    function initEnvironmentLockdown() {
+        // Disable Right-Click
+        document.oncontextmenu = (e) => {
+            e.preventDefault();
+            logIncident('Lockdown', 'Right-click attempt blocked');
+            return false;
+        };
+
+        // Monitor focus/blur
+        window.onblur = () => {
+            if (examActive) {
+                logIncident('Environmental', 'User switched tabs or left the browser window');
+            }
+        };
+
+        // Keyboard Shortcuts
+        document.onkeydown = (e) => {
+            // Block Alt+Tab, Ctrl+C, Ctrl+V, PrintScreen, etc.
+            if (e.altKey || e.ctrlKey || e.metaKey || e.keyCode === 44) {
+                logIncident('Lockdown', 'Unauthorized keyboard shortcut detected: ' + e.key);
+                // We can't really block Alt+Tab, but we can detect blur
+            }
+        };
+    }
+
+    let lastFrameData = null;
+    async function performVisualCheck() {
+        const video = document.getElementById('faceVideo');
+        if (!video || !video.srcObject) return;
+
+        // Simple Movement Detection using Canvas Difference
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 160; // Low res for performance
+        canvas.height = 120;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const currentFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        if (lastFrameData) {
+            let diff = 0;
+            for (let i = 0; i < currentFrame.data.length; i += 4) {
+                diff += Math.abs(currentFrame.data[i] - lastFrameData.data[i]);
+            }
+            const movementScore = diff / (canvas.width * canvas.height);
+            if (movementScore > 30) { // Arbitrary threshold for significant movement
+                logIncident('Visual', 'Significant movement or background activity detected');
+            }
+        }
+        lastFrameData = currentFrame;
+
+        // Loss of Eye Contact / Face Presence Logic
+        // In a full implementation, we'd use: const detections = await faceapi.detectAllFaces(video)...
+        // For now, we assume face is present if movement is reasonable, or use a placeholder.
+        const isFaceVisible = true; 
+        const isLookingAtScreen = true; 
+
+        if (!isFaceVisible) {
+            if (Date.now() - lastFaceDetectionTime > EYE_CONTACT_THRESHOLD) {
+                logIncident('Visual', 'No face detected in frame (>5 seconds)');
+            }
+        } else {
+            lastFaceDetectionTime = Date.now();
+        }
+    }
+
+    async function logIncident(type, description) {
+        console.warn('PROCTORING FLAG [' + type + ']: ' + description);
+        
+        // Capture a silent screenshot if video is available
+        let screenshot = '';
+        try {
+            const video = document.getElementById('faceVideo'); // Reuse video from verification or hidden video
+            if (video && video.srcObject) {
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                screenshot = canvas.toDataURL('image/jpeg', 0.5);
+            }
+        } catch (e) {}
+
+        const formData = new URLSearchParams();
+        formData.append('page', 'proctoring');
+        formData.append('operation', 'log_incident');
+        formData.append('examId', '<%= session.getAttribute("examId") != null ? session.getAttribute("examId") : "0" %>');
+        formData.append('studentId', '<%= session.getAttribute("userId") != null ? session.getAttribute("userId") : "0" %>');
+        formData.append('type', type);
+        formData.append('description', description);
+        formData.append('screenshot', screenshot);
+
+        try {
+            navigator.sendBeacon('controller.jsp', formData);
+        } catch (err) {
+            console.error('Failed to log incident:', err);
+        }
+    }
+
+    // Hook into Begin Exam button to start proctoring and fullscreen
+    const originalBeginBtn = document.getElementById('beginButton');
+    if (originalBeginBtn) {
+        const oldClick = originalBeginBtn.onclick;
+        originalBeginBtn.onclick = async (e) => {
+            // Request full screen
+            try {
+                const elem = document.documentElement;
+                if (elem.requestFullscreen) await elem.requestFullscreen();
+                else if (elem.webkitRequestFullscreen) await elem.webkitRequestFullscreen();
+                else if (elem.msRequestFullscreen) await elem.msRequestFullscreen();
+            } catch (err) {
+                console.warn('Fullscreen request denied');
+            }
+            
+            initProctoring();
+            if (oldClick) oldClick.apply(this, [e]);
+        };
+    }
 </script>

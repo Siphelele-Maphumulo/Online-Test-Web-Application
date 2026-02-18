@@ -1577,6 +1577,10 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                <i class="fas fa-users"></i>
                <h2>Registers</h2>
            </a>
+            <a href="adm-page.jsp?pgprt=9" class="nav-item">
+                <i class="fas fa-user-shield"></i>
+                <h2>Proctoring</h2>
+            </a>
         </nav>
     </aside>
     

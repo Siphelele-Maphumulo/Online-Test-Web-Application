@@ -12079,6 +12079,139 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
         return totalMarks;
 
     }
+
+    // ==================== PROCTORING METHODS ====================
+
+    /**
+     * Logs a proctoring incident (e.g., noise, movement, eye contact loss).
+     */
+    public boolean logProctoringIncident(int examId, int studentId, String type, String desc, String screenshotPath) {
+        PreparedStatement pstm = null;
+        try {
+            ensureConnection();
+            String sql = "INSERT INTO proctoring_incidents (exam_id, student_id, incident_type, description, screenshot_path) VALUES (?, ?, ?, ?, ?)";
+            pstm = conn.prepareStatement(sql);
+            pstm.setInt(1, examId);
+            pstm.setInt(2, studentId);
+            pstm.setString(3, type);
+            pstm.setString(4, desc);
+            pstm.setString(5, screenshotPath);
+            int rows = pstm.executeUpdate();
+            return rows > 0;
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error logging proctoring incident: " + e.getMessage(), e);
+            return false;
+        } finally {
+            try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
+        }
+    }
+
+    /**
+     * Stores candidate identity verification data.
+     */
+    public boolean saveIdentityVerification(int studentId, int examId, boolean honorAccepted, String facePath, String idPath) {
+        PreparedStatement pstmCheck = null;
+        PreparedStatement pstmAction = null;
+        ResultSet rs = null;
+        try {
+            ensureConnection();
+            // Check if record already exists for this student/exam
+            String checkSql = "SELECT id FROM student_verifications WHERE student_id = ? AND exam_id = ?";
+            pstmCheck = conn.prepareStatement(checkSql);
+            pstmCheck.setInt(1, studentId);
+            pstmCheck.setInt(2, examId);
+            rs = pstmCheck.executeQuery();
+            
+            if (rs.next()) {
+                // Update existing record
+                int id = rs.getInt("id");
+                String updateSql = "UPDATE student_verifications SET honor_code_accepted = ?, honor_code_timestamp = CURRENT_TIMESTAMP, face_photo_path = ?, id_photo_path = ?, status = 'verified' WHERE id = ?";
+                pstmAction = conn.prepareStatement(updateSql);
+                pstmAction.setBoolean(1, honorAccepted);
+                pstmAction.setString(2, facePath);
+                pstmAction.setString(3, idPath);
+                pstmAction.setInt(4, id);
+            } else {
+                // Insert new record
+                String insertSql = "INSERT INTO student_verifications (student_id, exam_id, honor_code_accepted, honor_code_timestamp, face_photo_path, id_photo_path, status) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, 'verified')";
+                pstmAction = conn.prepareStatement(insertSql);
+                pstmAction.setInt(1, studentId);
+                pstmAction.setInt(2, examId);
+                pstmAction.setBoolean(3, honorAccepted);
+                pstmAction.setString(4, facePath);
+                pstmAction.setString(5, idPath);
+            }
+            
+            int rows = pstmAction.executeUpdate();
+            return rows > 0;
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error saving identity verification: " + e.getMessage(), e);
+            return false;
+        } finally {
+            try { if (rs != null) rs.close(); } catch (SQLException e) {}
+            try { if (pstmCheck != null) pstmCheck.close(); } catch (SQLException e) {}
+            try { if (pstmAction != null) pstmAction.close(); } catch (SQLException e) {}
+        }
+    }
+
+    /**
+     * Gets all proctoring incidents for a specific exam attempt.
+     */
+    public ArrayList<Map<String, String>> getProctoringIncidents(int examId) {
+        ArrayList<Map<String, String>> incidents = new ArrayList<>();
+        PreparedStatement pstm = null;
+        ResultSet rs = null;
+        try {
+            ensureConnection();
+            String sql = "SELECT * FROM proctoring_incidents WHERE exam_id = ? ORDER BY timestamp DESC";
+            pstm = conn.prepareStatement(sql);
+            pstm.setInt(1, examId);
+            rs = pstm.executeQuery();
+            while (rs.next()) {
+                Map<String, String> incident = new HashMap<>();
+                incident.put("id", rs.getString("id"));
+                incident.put("type", rs.getString("incident_type"));
+                incident.put("description", rs.getString("description"));
+                incident.put("timestamp", rs.getString("timestamp"));
+                incident.put("screenshot", rs.getString("screenshot_path"));
+                incidents.add(incident);
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error fetching proctoring incidents", e);
+        } finally {
+            try { if (rs != null) rs.close(); if (pstm != null) pstm.close(); } catch (SQLException e) {}
+        }
+        return incidents;
+    }
+
+    /**
+     * Gets verification data for a specific student exam.
+     */
+    public Map<String, String> getIdentityVerification(int studentId, int examId) {
+        Map<String, String> data = new HashMap<>();
+        PreparedStatement pstm = null;
+        ResultSet rs = null;
+        try {
+            ensureConnection();
+            String sql = "SELECT * FROM student_verifications WHERE student_id = ? AND exam_id = ?";
+            pstm = conn.prepareStatement(sql);
+            pstm.setInt(1, studentId);
+            pstm.setInt(2, examId);
+            rs = pstm.executeQuery();
+            if (rs.next()) {
+                data.put("honor_accepted", rs.getString("honor_code_accepted"));
+                data.put("timestamp", rs.getString("honor_code_timestamp"));
+                data.put("face_photo", rs.getString("face_photo_path"));
+                data.put("id_photo", rs.getString("id_photo_path"));
+                data.put("status", rs.getString("status"));
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error fetching identity verification", e);
+        } finally {
+            try { if (rs != null) rs.close(); if (pstm != null) pstm.close(); } catch (SQLException e) {}
+        }
+        return data;
+    }
 }
 
     

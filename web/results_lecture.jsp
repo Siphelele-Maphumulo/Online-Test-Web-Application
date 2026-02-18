@@ -626,6 +626,7 @@ public String escapeHtml(String input) {
             <a href="adm-page.jsp?pgprt=3"><h2 style="color:black">Questions</h2></a>
             <a href="adm-page.jsp?pgprt=1"><h2 style="color:black">Accounts</h2></a>
             <a class="active" href="adm-page.jsp?pgprt=5"><h2 style="color:black">Students Results</h2></a>
+            <a href="adm-page.jsp?pgprt=9"><h2 style="color:black">Proctoring</h2></a>
         </div>
     </div>
 </div>

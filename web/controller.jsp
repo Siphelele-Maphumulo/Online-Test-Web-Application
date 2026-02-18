@@ -2495,6 +2495,82 @@ try {
         request.getRequestDispatcher("transition.jsp").forward(request, response);
         return;
         
+    } else if ("proctoring".equalsIgnoreCase(pageParam)) {
+        String operation = nz(request.getParameter("operation"), "");
+        int examId = Integer.parseInt(nz(request.getParameter("examId"), "0"));
+        int studentId = Integer.parseInt(nz(request.getParameter("studentId"), "0"));
+
+        if ("log_incident".equalsIgnoreCase(operation)) {
+            String type = nz(request.getParameter("type"), "");
+            String desc = nz(request.getParameter("description"), "");
+            String screenshotData = nz(request.getParameter("screenshot"), ""); // Base64
+            String screenshotPath = "";
+
+            if (!screenshotData.isEmpty()) {
+                try {
+                    String uploadPath = getServletContext().getRealPath("/uploads/proctoring");
+                    File uploadDir = new File(uploadPath);
+                    if (!uploadDir.exists()) uploadDir.mkdirs();
+
+                    String fileName = "incident_" + examId + "_" + Calendar.getInstance().getTimeInMillis() + ".jpg";
+                    File file = new File(uploadDir, fileName);
+                    
+                    // Decode Base64 and save
+                    String base64Image = screenshotData.split(",")[1];
+                    byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+                    try (FileOutputStream fos = new FileOutputStream(file)) {
+                        fos.write(imageBytes);
+                    }
+                    screenshotPath = "uploads/proctoring/" + fileName;
+                } catch (Exception e) {
+                    LOGGER.log(Level.SEVERE, "Error saving proctoring screenshot", e);
+                }
+            }
+
+            boolean success = pDAO.logProctoringIncident(examId, studentId, type, desc, screenshotPath);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\": " + success + "}");
+            return;
+
+        } else if ("save_verification".equalsIgnoreCase(operation)) {
+            boolean honorAccepted = "true".equalsIgnoreCase(request.getParameter("honorAccepted"));
+            String faceData = nz(request.getParameter("facePhoto"), "");
+            String idData = nz(request.getParameter("idPhoto"), "");
+            String facePath = "";
+            String idPath = "";
+
+            String uploadPath = getServletContext().getRealPath("/uploads/verifications");
+            File uploadDir = new File(uploadPath);
+            if (!uploadDir.exists()) uploadDir.mkdirs();
+
+            if (!faceData.isEmpty()) {
+                String fileName = "face_" + studentId + "_" + examId + ".jpg";
+                File file = new File(uploadDir, fileName);
+                String base64Image = faceData.split(",")[1];
+                byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+                try (FileOutputStream fos = new FileOutputStream(file)) {
+                    fos.write(imageBytes);
+                }
+                facePath = "uploads/verifications/" + fileName;
+            }
+
+            if (!idData.isEmpty()) {
+                String fileName = "id_" + studentId + "_" + examId + ".jpg";
+                File file = new File(uploadDir, fileName);
+                String base64Image = idData.split(",")[1];
+                byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+                try (FileOutputStream fos = new FileOutputStream(file)) {
+                    fos.write(imageBytes);
+                }
+                idPath = "uploads/verifications/" + fileName;
+            }
+
+            boolean success = pDAO.saveIdentityVerification(studentId, examId, honorAccepted, facePath, idPath);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\": " + success + "}");
+            return;
+        }
+
     } else {
         // Handle case when page parameter is not recognized
         session.setAttribute("error", "Invalid page parameter: " + pageParam);
