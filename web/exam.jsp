@@ -2877,9 +2877,16 @@
                                 <% } %>
                                 
                                 <!-- Question Image -->
-                                <% if(q.getImagePath() != null && !q.getImagePath().isEmpty()){ %>
+                                <% if(q.getImagePath() != null && !q.getImagePath().isEmpty()){
+                                    String imagePath = q.getImagePath();
+                                    if (!imagePath.startsWith("http") && !imagePath.startsWith("/")) {
+                                        imagePath = request.getContextPath() + "/" + imagePath;
+                                    } else if (!imagePath.startsWith("http") && imagePath.startsWith("/")) {
+                                        imagePath = request.getContextPath() + imagePath;
+                                    }
+                                %>
                                     <div class="question-image-container">
-                                        <img src="<%= q.getImagePath() %>" alt="Question Image" class="question-image" onerror="this.style.display='none';">
+                                        <img src="<%= imagePath %>" alt="Question Image" class="question-image" onerror="this.style.display='none';">
                                     </div>
                                 <% } %>
                                 
