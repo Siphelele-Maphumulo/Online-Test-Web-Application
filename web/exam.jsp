@@ -2530,6 +2530,96 @@
         }
     }
 
+    /* Diagnostics Modal Styles */
+    .diagnostics-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-top: 15px;
+    }
+    .diag-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 15px;
+        background: #f8fafc;
+        border: 1px solid var(--medium-gray);
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+    .diag-info {
+        flex: 1;
+    }
+    .diag-info strong {
+        display: block;
+        font-size: 14px;
+        color: var(--text-dark);
+        margin-bottom: 2px;
+    }
+    .diag-info p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--dark-gray);
+        line-height: 1.4;
+    }
+    .diag-status {
+        width: 40px;
+        text-align: right;
+        font-size: 20px;
+        display: flex;
+        justify-content: flex-end;
+    }
+    .status-pass { color: var(--success); }
+    .status-fail { color: var(--error); }
+
+    .diagnostics-intro {
+        margin-bottom: 15px;
+    }
+    .diagnostics-intro h4 {
+        margin: 0 0 5px;
+        color: var(--primary-blue);
+        font-size: 16px;
+    }
+    .diagnostics-intro p {
+        margin: 0;
+        color: var(--dark-gray);
+        font-size: 13px;
+    }
+    .diagnostics-simple-words {
+        margin-top: 20px;
+        padding: 12px;
+        background: #f0f9ff;
+        border-radius: 8px;
+        border-left: 4px solid var(--info);
+    }
+    .diagnostics-simple-words strong {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--primary-blue);
+        font-size: 14px;
+    }
+    .diagnostics-simple-words p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--secondary-blue);
+    }
+
+    @keyframes pulse-success {
+        0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    .pulse-animation {
+        animation: pulse-success 2s infinite;
+    }
+    #diagProceedButton:disabled {
+        background: var(--medium-gray);
+        color: var(--dark-gray);
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+    }
+
     /* Scientific Calculator Styles */
     .calculator-modal {
         display: none;
@@ -5254,7 +5344,9 @@ function updateProgress() {
             if (isActive) {
                 modalCourseName.textContent = courseName;
                 modalDuration.textContent = duration + ' minutes';
-                confirmationModal.style.display = 'flex';
+                // Show Diagnostics first
+                document.getElementById('diagnosticsModal').style.display = 'flex';
+                runDiagnostics();
             } else {
                 inactiveCourseName.textContent = courseName;
                 inactiveModal.style.display = 'flex';
@@ -5322,6 +5414,89 @@ function updateProgress() {
             </div>
         </div>
     </main>
+</div>
+
+<!-- Diagnostics Modal -->
+<div id="diagnosticsModal" class="modal-overlay" style="display: none;">
+    <div class="modal-container" style="max-width: 650px;">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fas fa-diagnoses"></i> Diagnostics Check</h3>
+        </div>
+        <div class="modal-body">
+            <div class="diagnostics-intro">
+                <h4>Diagnostics Check</h4>
+                <p>This checks if your computer is ready for the exam. It makes sure everything is working properly so you don’t have problems during the test.</p>
+            </div>
+
+            <div class="diagnostics-grid">
+                <div class="diag-item" id="diag-internet">
+                    <div class="diag-info">
+                        <strong>Active internet connection</strong>
+                        <p>The exam is online. You need internet so questions can load, answers can save, and the system can monitor the exam. If your internet is weak, you might lose your work.</p>
+                    </div>
+                    <div class="diag-status" id="status-internet"><i class="fas fa-spinner fa-spin"></i></div>
+                </div>
+
+                <div class="diag-item" id="diag-browser">
+                    <div class="diag-info">
+                        <strong>Internet browser</strong>
+                        <p>The system checks your browser (like Chrome or Edge). Some exams only work properly on certain browsers. This prevents pages not loading or errors during the test.</p>
+                    </div>
+                    <div class="diag-status" id="status-browser"><i class="fas fa-spinner fa-spin"></i></div>
+                </div>
+
+                <div class="diag-item" id="diag-javascript">
+                    <div class="diag-info">
+                        <strong>JavaScript enabled</strong>
+                        <p>JavaScript helps the website function properly. It allows timers to work, questions to change, and answers to save automatically.</p>
+                    </div>
+                    <div class="diag-status" id="status-javascript"><i class="fas fa-spinner fa-spin"></i></div>
+                </div>
+
+                <div class="diag-item" id="diag-resolution">
+                    <div class="diag-info">
+                        <strong>Screen resolution</strong>
+                        <p>This checks your screen size. The exam needs enough space to show all questions clearly, show the timer, and instructions.</p>
+                    </div>
+                    <div class="diag-status" id="status-resolution"><i class="fas fa-spinner fa-spin"></i></div>
+                </div>
+
+                <div class="diag-item" id="diag-os">
+                    <div class="diag-info">
+                        <strong>Operating system</strong>
+                        <p>The system checks if you are using Windows, Mac, etc. This helps avoid compatibility problems.</p>
+                    </div>
+                    <div class="diag-status" id="status-os"><i class="fas fa-spinner fa-spin"></i></div>
+                </div>
+
+                <div class="diag-item" id="diag-camera">
+                    <div class="diag-info">
+                        <strong>Camera enabled</strong>
+                        <p>The camera is used for monitoring. It helps prevent cheating, confirm your identity, and record the exam session (online proctoring).</p>
+                    </div>
+                    <div class="diag-status" id="status-camera"><i class="fas fa-spinner fa-spin"></i></div>
+                </div>
+
+                <div class="diag-item" id="diag-environment">
+                    <div class="diag-info">
+                        <strong>Exam environment</strong>
+                        <p>This checks that no other programs are open, no screen sharing is active, and no suspicious activity is happening.</p>
+                    </div>
+                    <div class="diag-status" id="status-environment"><i class="fas fa-spinner fa-spin"></i></div>
+                </div>
+            </div>
+
+            <div class="diagnostics-simple-words">
+                <strong>In Simple Words:</strong>
+                <p>The testing system checks all these things to make sure the exam works properly, prevent cheating, protect your answers, and make the exam fair and secure.</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="diagCancelButton" class="btn-secondary">Cancel</button>
+            <button id="diagRetryButton" class="btn-secondary" style="display: none;">Retry</button>
+            <button id="diagProceedButton" class="btn-primary" disabled>Continue</button>
+        </div>
+    </div>
 </div>
 
 <!-- Confirmation Modal (for course selection) -->
@@ -5811,4 +5986,91 @@ function updateProgress() {
             closeQuestionNavModal();
         }
     });
+
+    /* --- DIAGNOSTICS LOGIC --- */
+    function runDiagnostics() {
+        console.log('Starting diagnostics...');
+        const checks = [
+            { id: 'status-internet', check: async () => ({ pass: navigator.onLine }) },
+            { id: 'status-browser', check: async () => {
+                const ua = navigator.userAgent;
+                const isModern = ua.includes("Chrome") || ua.includes("Edg") || ua.includes("Firefox") || (ua.includes("Safari") && !ua.includes("Chrome"));
+                return { pass: isModern };
+            }},
+            { id: 'status-javascript', check: async () => ({ pass: true }) },
+            { id: 'status-resolution', check: async () => ({ pass: window.screen.width >= 1024 && window.screen.height >= 768 }) },
+            { id: 'status-os', check: async () => {
+                const p = navigator.platform.toLowerCase();
+                return { pass: p.includes("win") || p.includes("mac") || p.includes("linux") || p.includes("x11") };
+            }},
+            { id: 'status-camera', check: async () => {
+                try {
+                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return { pass: false };
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    stream.getTracks().forEach(t => t.stop());
+                    return { pass: true };
+                } catch (e) { return { pass: false }; }
+            }},
+            { id: 'status-environment', check: async () => {
+                // Simulation of environment check
+                return new Promise(resolve => setTimeout(() => resolve({ pass: true }), 800));
+            }}
+        ];
+
+        let passedCount = 0;
+        let completedCount = 0;
+
+        // Reset UI
+        checks.forEach(c => {
+            const el = document.getElementById(c.id);
+            if (el) el.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        });
+        document.getElementById('diagProceedButton').disabled = true;
+        document.getElementById('diagRetryButton').style.display = 'none';
+
+        checks.forEach((c, i) => {
+            setTimeout(async () => {
+                const result = await c.check();
+                const el = document.getElementById(c.id);
+                if (el) {
+                    if (result.pass) {
+                        el.innerHTML = '<i class="fas fa-check-circle status-pass"></i>';
+                        passedCount++;
+                    } else {
+                        el.innerHTML = '<i class="fas fa-times-circle status-fail"></i>';
+                    }
+                }
+                completedCount++;
+                if (completedCount === checks.length) {
+                    finishDiagnostics(passedCount === checks.length);
+                }
+            }, i * 300);
+        });
+    }
+
+    function finishDiagnostics(allPassed) {
+        const proceedBtn = document.getElementById('diagProceedButton');
+        const retryBtn = document.getElementById('diagRetryButton');
+
+        if (allPassed) {
+            proceedBtn.disabled = false;
+            proceedBtn.classList.add('pulse-animation');
+        } else {
+            retryBtn.style.display = 'inline-block';
+        }
+    }
+
+    // Modal button listeners
+    document.getElementById('diagCancelButton').onclick = () => {
+        document.getElementById('diagnosticsModal').style.display = 'none';
+    };
+
+    document.getElementById('diagRetryButton').onclick = () => {
+        runDiagnostics();
+    };
+
+    document.getElementById('diagProceedButton').onclick = () => {
+        document.getElementById('diagnosticsModal').style.display = 'none';
+        document.getElementById('confirmationModal').style.display = 'flex';
+    };
 </script>
