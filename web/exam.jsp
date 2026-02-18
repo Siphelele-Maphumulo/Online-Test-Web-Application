@@ -831,19 +831,6 @@ function finishDiagnostics(allPassed) {
     // This function is kept for compatibility
 }
 
-// Modal button listeners
-document.getElementById('diagCancelButton').onclick = function() {
-    document.getElementById('diagnosticsModal').style.display = 'none';
-};
-
-document.getElementById('diagRetryButton').onclick = function() {
-    runDiagnostics();
-};
-
-document.getElementById('diagProceedButton').onclick = function() {
-    document.getElementById('diagnosticsModal').style.display = 'none';
-    startIdentityVerification();
-};
 
 /* --- SIMPLIFIED PROCTORING SYSTEM --- */
 var currentVerifyStep = 1;
@@ -921,6 +908,29 @@ async function showVerifyStep(step) {
 
 // Initialize button listeners after DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+    // Modal button listeners
+    const diagCancelBtn = document.getElementById('diagCancelButton');
+    if (diagCancelBtn) {
+        diagCancelBtn.onclick = function() {
+            document.getElementById('diagnosticsModal').style.display = 'none';
+        };
+    }
+
+    const diagRetryBtn = document.getElementById('diagRetryButton');
+    if (diagRetryBtn) {
+        diagRetryBtn.onclick = function() {
+            runDiagnostics();
+        };
+    }
+
+    const diagProceedBtn = document.getElementById('diagProceedButton');
+    if (diagProceedBtn) {
+        diagProceedBtn.onclick = function() {
+            document.getElementById('diagnosticsModal').style.display = 'none';
+            startIdentityVerification();
+        };
+    }
+
     // Capture face
     const captureFaceBtn = document.getElementById('captureFaceBtn');
     if (captureFaceBtn) {
