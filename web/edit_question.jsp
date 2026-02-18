@@ -1599,7 +1599,15 @@
                                     <button type="button" class="remove-file-btn" onclick="removeCurrentImage()">×</button>
                                 </div>
                                 <div style="margin-top: 10px; text-align: center;">
-                                    <img src="<%= questionToEdit.getImagePath() %>" alt="Current Question Image" style="max-width: 200px; max-height: 200px; border-radius: var(--radius-sm); border: 1px solid var(--medium-gray);">
+                                    <% 
+                                        String imagePath = questionToEdit.getImagePath();
+                                        if (imagePath != null && !imagePath.startsWith("http") && !imagePath.startsWith("/")) {
+                                            imagePath = request.getContextPath() + "/" + imagePath;
+                                        } else if (imagePath != null && !imagePath.startsWith("http") && imagePath.startsWith("/")) {
+                                            imagePath = request.getContextPath() + imagePath;
+                                        }
+                                    %>
+                                    <img src="<%= imagePath %>" alt="Current Question Image" style="max-width: 200px; max-height: 200px; border-radius: var(--radius-sm); border: 1px solid var(--medium-gray);">
                                 </div>
                             <% } else { %>
                                 <div class="form-hint">No image currently uploaded</div>

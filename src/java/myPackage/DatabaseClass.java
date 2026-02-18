@@ -5913,7 +5913,7 @@ private String getCorrectAnswer(int qid) {
 
         // First, get the correct answer from the questions table
 
-        pstm = conn.prepareStatement("SELECT correct, question_type FROM questions WHERE question_id=?");
+        pstm = conn.prepareStatement("SELECT correct, question_type, drag_items FROM questions WHERE question_id=?");
 
         pstm.setInt(1, qid);
 
@@ -5927,6 +5927,8 @@ private String getCorrectAnswer(int qid) {
 
             String questionType = rs.getString("question_type");
 
+            String dragItemsJson = rs.getString("drag_items");
+
             
 
                         // For Rearrange, return JSON array of correct item IDs in order
@@ -5935,8 +5937,16 @@ private String getCorrectAnswer(int qid) {
                 try {
                     ArrayList<myPackage.classes.RearrangeItem> items = getRearrangeItems(qid);
                     // Items are already ordered by correct_position ASC from getRearrangeItems
-                    for (myPackage.classes.RearrangeItem ri : items) {
-                        correctArr.put(ri.getId());
+                    if (items != null && !items.isEmpty()) {
+                        for (myPackage.classes.RearrangeItem ri : items) {
+                            correctArr.put(ri.getId());
+                        }
+                    } else if (dragItemsJson != null && !dragItemsJson.trim().isEmpty()) {
+                        // FALLBACK: Use indices as virtual IDs if relational data is missing
+                        org.json.JSONArray arr = new org.json.JSONArray(dragItemsJson);
+                        for (int i = 0; i < arr.length(); i++) {
+                            correctArr.put(i);
+                        }
                     }
                 } catch (Exception e) {
                     LOGGER.log(Level.WARNING, "Error building correct rearrange order", e);
@@ -11257,8 +11267,6 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
 
             try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
 
-            try { if (conn != null) conn.close(); } catch (SQLException e) {}
-
         }
 
     }
@@ -11292,8 +11300,6 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
         } finally {
 
             try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
-
-            try { if (conn != null) conn.close(); } catch (SQLException e) {}
 
         }
 
@@ -11354,8 +11360,6 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
         } finally {
 
             try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
-
-            try { if (conn != null) conn.close(); } catch (SQLException e) {}
 
         }
 
@@ -11878,9 +11882,27 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             ArrayList<RearrangeItem> correctItems = getRearrangeItems(questionId);
 
             if (correctItems == null || correctItems.isEmpty()) {
+                // FALLBACK: If relational data is missing, try to use drag_items JSON fallback
+                try {
+                    String dragItemsJson = question.getDragItemsJson();
+                    if (dragItemsJson != null && !dragItemsJson.trim().isEmpty()) {
+                        org.json.JSONArray arr = new org.json.JSONArray(dragItemsJson);
+                        correctItems = new ArrayList<>();
+                        for (int i = 0; i < arr.length(); i++) {
+                            RearrangeItem ri = new RearrangeItem();
+                            ri.setId(i); // Virtual ID 0, 1, 2...
+                            ri.setItemText(arr.getString(i));
+                            ri.setCorrectPosition(i + 1);
+                            correctItems.add(ri);
+                        }
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Error creating virtual rearrange items fallback: " + e.getMessage());
+                }
+            }
 
+            if (correctItems == null || correctItems.isEmpty()) {
                 throw new RuntimeException("No rearrange items found for question: " + questionId);
-
             }
 
             
@@ -12052,17 +12074,11 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             } catch (SQLException e) {
 
                 LOGGER.log(Level.SEVERE, "Error closing resources", e);
-
             }
-
         }
-
-        
-
         return totalMarks;
 
     }
-
 }
 
     
