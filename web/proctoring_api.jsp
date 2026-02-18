@@ -1,6 +1,8 @@
 <%@ page contentType="text/html" pageEncoding="UTF-8"%>
 <%@ page import="java.util.*" %>
 <%@ page import="myPackage.DatabaseClass" %>
+<%@ page import="org.json.JSONObject" %>
+<%@ page import="org.json.JSONArray" %>
 
 <%
     // Role check
@@ -19,7 +21,22 @@
     String action = request.getParameter("action");
     DatabaseClass pDAO = DatabaseClass.getInstance();
 
-    if ("get_incidents".equalsIgnoreCase(action)) {
+    if ("live-sessions".equalsIgnoreCase(action)) {
+        ArrayList<Map<String, Object>> activeExams = pDAO.getActiveProctoredExams();
+        JSONArray jsonArray = new JSONArray();
+        for (Map<String, Object> exam : activeExams) {
+            JSONObject obj = new JSONObject(exam);
+            // Ensure streamUrl is full path
+            String streamUrl = exam.get("streamUrl").toString();
+            if (!streamUrl.isEmpty()) {
+                obj.put("streamUrl", request.getContextPath() + "/" + streamUrl);
+            }
+            jsonArray.put(obj);
+        }
+        response.setContentType("application/json");
+        response.getWriter().write(jsonArray.toString());
+        return;
+    } else if ("get_incidents".equalsIgnoreCase(action)) {
         int examId = Integer.parseInt(request.getParameter("examId"));
         ArrayList<Map<String, String>> incidents = pDAO.getProctoringIncidents(examId);
 
