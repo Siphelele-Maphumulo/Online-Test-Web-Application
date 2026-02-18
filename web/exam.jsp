@@ -2562,6 +2562,21 @@
         color: var(--dark-gray);
         line-height: 1.4;
     }
+    .diag-info ul {
+        margin: 5px 0 5px 20px;
+        padding: 0;
+    }
+    .diag-info ul li {
+        display: list-item !important;
+        padding: 2px 0 !important;
+        font-size: 12px !important;
+        list-style-type: disc !important;
+        color: var(--dark-gray) !important;
+        background: none !important;
+        border: none !important;
+        margin: 0 !important;
+        gap: 0 !important;
+    }
     .diag-status {
         width: 40px;
         text-align: right;
@@ -2602,6 +2617,21 @@
         margin: 0;
         font-size: 12px;
         color: var(--secondary-blue);
+    }
+    .diagnostics-simple-words ul {
+        margin: 5px 0 0 20px;
+        padding: 0;
+    }
+    .diagnostics-simple-words li {
+        font-size: 12px !important;
+        color: var(--secondary-blue) !important;
+        margin-bottom: 2px !important;
+        display: list-item !important;
+        list-style-type: disc !important;
+        background: none !important;
+        border: none !important;
+        padding: 0 !important;
+        gap: 0 !important;
     }
     
     @keyframes pulse-success {
@@ -5425,70 +5455,57 @@ function updateProgress() {
         <div class="modal-body">
             <div class="diagnostics-intro">
                 <h4>Diagnostics Check</h4>
-                <p>This checks if your computer is ready for the exam. It makes sure everything is working properly so you don?t have problems during the test.</p>
             </div>
             
             <div class="diagnostics-grid">
                 <div class="diag-item" id="diag-internet">
                     <div class="diag-info">
-                        <strong>Active internet connection</strong>
-                        <p>The exam is online. You need internet so questions can load, answers can save, and the system can monitor the exam. If your internet is weak, you might lose your work.</p>
+                        <strong>Active Internet Connection</strong>
                     </div>
                     <div class="diag-status" id="status-internet"><i class="fas fa-spinner fa-spin"></i></div>
                 </div>
                 
                 <div class="diag-item" id="diag-browser">
                     <div class="diag-info">
-                        <strong>Internet browser</strong>
-                        <p>The system checks your browser (like Chrome or Edge). Some exams only work properly on certain browsers. This prevents pages not loading or errors during the test.</p>
+                        <strong>Internet Browser</strong>
                     </div>
                     <div class="diag-status" id="status-browser"><i class="fas fa-spinner fa-spin"></i></div>
                 </div>
                 
                 <div class="diag-item" id="diag-javascript">
                     <div class="diag-info">
-                        <strong>JavaScript enabled</strong>
-                        <p>JavaScript helps the website function properly. It allows timers to work, questions to change, and answers to save automatically.</p>
+                        <strong>JavaScript Enabled</strong>
                     </div>
                     <div class="diag-status" id="status-javascript"><i class="fas fa-spinner fa-spin"></i></div>
                 </div>
                 
                 <div class="diag-item" id="diag-resolution">
                     <div class="diag-info">
-                        <strong>Screen resolution</strong>
-                        <p>This checks your screen size. The exam needs enough space to show all questions clearly, show the timer, and instructions.</p>
+                        <strong>Screen Resolution</strong>
                     </div>
                     <div class="diag-status" id="status-resolution"><i class="fas fa-spinner fa-spin"></i></div>
                 </div>
                 
                 <div class="diag-item" id="diag-os">
                     <div class="diag-info">
-                        <strong>Operating system</strong>
-                        <p>The system checks if you are using Windows, Mac, etc. This helps avoid compatibility problems.</p>
+                        <strong>Operating System</strong>
                     </div>
                     <div class="diag-status" id="status-os"><i class="fas fa-spinner fa-spin"></i></div>
                 </div>
                 
                 <div class="diag-item" id="diag-camera">
                     <div class="diag-info">
-                        <strong>Camera enabled</strong>
-                        <p>The camera is used for monitoring. It helps prevent cheating, confirm your identity, and record the exam session (online proctoring).</p>
+                        <strong>Camera Enabled</strong>
                     </div>
                     <div class="diag-status" id="status-camera"><i class="fas fa-spinner fa-spin"></i></div>
                 </div>
                 
                 <div class="diag-item" id="diag-environment">
                     <div class="diag-info">
-                        <strong>Exam environment</strong>
-                        <p>This checks that no other programs are open, no screen sharing is active, and no suspicious activity is happening.</p>
+                        <strong>Exam Environment</strong>
                     </div>
                     <div class="diag-status" id="status-environment"><i class="fas fa-spinner fa-spin"></i></div>
                 </div>
-            </div>
-
-            <div class="diagnostics-simple-words">
-                <strong>In Simple Words:</strong>
-                <p>The testing system checks all these things to make sure the exam works properly, prevent cheating, protect your answers, and make the exam fair and secure.</p>
             </div>
         </div>
         <div class="modal-footer">
