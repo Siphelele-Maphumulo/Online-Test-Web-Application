@@ -851,7 +851,7 @@ if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("4")) {
 <div class="student-panel-container">
 
   <!-- MAIN CONTENT -->
-   <main class="main-content" style="margin-left: 13%; margin-top: -5%;">
+   <main class="main-content" style="margin-left: 13%; margin-top: 0%;">
     <%
         if(session.getAttribute("userStatus") != null && session.getAttribute("userStatus").equals("1")) {
             String pgprt = request.getParameter("pgprt");

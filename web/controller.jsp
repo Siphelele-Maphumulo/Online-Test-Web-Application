@@ -12,6 +12,8 @@
 <%@ page import="java.sql.PreparedStatement" %>
 <%@ page import="java.sql.SQLException" %>
 <%@ page import="java.sql.ResultSet" %>
+<%@ page import="java.util.Calendar" %>
+<%@ page import="java.util.Base64" %>
 <%@ page import="myPackage.*" %>
 <%@ page import="myPackage.classes.User" %>
 <%@ page import="myPackage.classes.Questions" %>
@@ -1995,8 +1997,17 @@ try {
                            .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
             
             int size = Integer.parseInt(nz(request.getParameter("size"), "0"));
-            if (session.getAttribute("examId") != null) {
-                int eId    = Integer.parseInt(session.getAttribute("examId").toString());
+            int eId = 0;
+            Object sessionExamIdObj = session.getAttribute("examId");
+            if (sessionExamIdObj != null) {
+                eId = Integer.parseInt(sessionExamIdObj.toString());
+            } else {
+                // Fallback: allow forced/terminated submissions to still finalize results
+                // even if the session examId was lost.
+                eId = Integer.parseInt(nz(request.getParameter("examId"), "0"));
+            }
+
+            if (eId > 0) {
                 int tMarks = Integer.parseInt(nz(request.getParameter("totalmarks"), "0"));
                 
                 // Get student ID
@@ -2095,7 +2106,9 @@ try {
                     pDAO.insertAnswer(eId, qid, question, ans);
                 }
 
-                pDAO.calculateResult(eId, tMarks, endTime, size);
+                boolean cheatingTerminated = "true".equalsIgnoreCase(request.getParameter("cheating_terminated"));
+                String resultStatus = cheatingTerminated ? "Cheating Detected" : null;
+                pDAO.calculateResult(eId, tMarks, endTime, size, resultStatus);
                 
                 // REGISTER EXAM COMPLETION
                 if (userId > 0) {
@@ -2495,6 +2508,91 @@ try {
         request.getRequestDispatcher("transition.jsp").forward(request, response);
         return;
         
+    } else if ("proctoring".equalsIgnoreCase(pageParam)) {
+        String operation = nz(request.getParameter("operation"), "");
+        int examId = Integer.parseInt(nz(request.getParameter("examId"), "0"));
+        int studentId = Integer.parseInt(nz(request.getParameter("studentId"), "0"));
+
+        if ("log_violation".equalsIgnoreCase(operation) || "log_incident".equalsIgnoreCase(operation)) {
+            String violationData = request.getParameter("violation_data");
+            String type = nz(request.getParameter("type"), "Unknown");
+            String desc = nz(request.getParameter("description"), "");
+            String screenshotPath = "";
+
+            try {
+                if (violationData != null && !violationData.isEmpty()) {
+                    JSONObject violation = new JSONObject(violationData);
+                    type = violation.optString("type", type);
+                    desc = violation.optString("description", desc);
+                    examId = violation.optInt("examId", examId);
+                    studentId = violation.optInt("studentId", studentId);
+
+                    // Save screenshot if present in JSON
+                    String screenshot = violation.optString("screenshot", "");
+                    if (!screenshot.isEmpty()) {
+                        String uploadPath = getServletContext().getRealPath("/uploads/proctoring");
+                        File uploadDir = new File(uploadPath);
+                        if (!uploadDir.exists()) uploadDir.mkdirs();
+
+                        String fileName = "incident_" + examId + "_" + new java.util.Date().getTime() + ".jpg";
+                        File file = new File(uploadDir, fileName);
+
+                        String base64Image = screenshot.contains(",") ? screenshot.split(",")[1] : screenshot;
+                        byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+                        try (FileOutputStream fos = new FileOutputStream(file)) {
+                            fos.write(imageBytes);
+                        }
+                        screenshotPath = "uploads/proctoring/" + fileName;
+                    }
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error parsing violation data", e);
+            }
+
+            boolean success = pDAO.logProctoringIncident(examId, studentId, type, desc, screenshotPath);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\": " + success + "}");
+            return;
+
+        } else if ("save_verification".equalsIgnoreCase(operation)) {
+            boolean honorAccepted = "true".equalsIgnoreCase(request.getParameter("honorAccepted"));
+            String faceData = nz(request.getParameter("facePhoto"), "");
+            String idData = nz(request.getParameter("idPhoto"), "");
+            String facePath = "";
+            String idPath = "";
+
+            String uploadPath = getServletContext().getRealPath("/uploads/verifications");
+            File uploadDir = new File(uploadPath);
+            if (!uploadDir.exists()) uploadDir.mkdirs();
+
+            if (!faceData.isEmpty()) {
+                String fileName = "face_" + studentId + "_" + examId + ".jpg";
+                File file = new File(uploadDir, fileName);
+                String base64Image = faceData.split(",")[1];
+                byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+                try (FileOutputStream fos = new FileOutputStream(file)) {
+                    fos.write(imageBytes);
+                }
+                facePath = "uploads/verifications/" + fileName;
+            }
+
+            if (!idData.isEmpty()) {
+                String fileName = "id_" + studentId + "_" + examId + ".jpg";
+                File file = new File(uploadDir, fileName);
+                String base64Image = idData.split(",")[1];
+                byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+                try (FileOutputStream fos = new FileOutputStream(file)) {
+                    fos.write(imageBytes);
+                }
+                idPath = "uploads/verifications/" + fileName;
+            }
+
+            boolean success = pDAO.saveIdentityVerification(studentId, examId, honorAccepted, facePath, idPath);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\": " + success + "}");
+            return;
+        }
+
     } else {
         // Handle case when page parameter is not recognized
         session.setAttribute("error", "Invalid page parameter: " + pageParam);

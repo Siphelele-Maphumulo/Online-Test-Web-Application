@@ -4,6 +4,7 @@
 <%@page import="java.util.ArrayList"%>
 <%@page import="myPackage.classes.Questions"%>
 <%@page import="myPackage.classes.Exams"%>
+<%@page import="myPackage.classes.Answers"%>
 <%@ page isELIgnored="true" %>
 <%
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
@@ -92,13 +93,13 @@
         --info: #0ea5e9;
         --info-light: #e0f2fe;
         
-        /* Spacing - 8px grid */
-        --spacing-xs: 4px;
-        --spacing-sm: 8px;
-        --spacing-md: 16px;
-        --spacing-lg: 24px;
-        --spacing-xl: 32px;
-        --spacing-2xl: 48px;
+        /* Spacing - 8px grid - High Density */
+        --spacing-xs: 2px;
+        --spacing-sm: 4px;
+        --spacing-md: 8px;
+        --spacing-lg: 12px;
+        --spacing-xl: 16px;
+        --spacing-2xl: 20px;
         
         /* Border Radius - Modern */
         --radius-sm: 6px;
@@ -135,8 +136,14 @@
     
     body {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-        line-height: 1.5;
+        line-height: 1.3;
+        font-size: 13px;
         color: var(--text-dark);
+    }
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.3rem; }
+    h3 { font-size: 1.1rem; }
+    h4 { font-size: 1rem; }
         background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
         min-height: 100vh;
         font-weight: 400;
@@ -187,7 +194,7 @@
     .main-content {
         flex: 1;
         padding: var(--spacing-xl);
-        padding-top: 100px;
+        padding-top: 60px;
         overflow-y: auto;
         background: transparent;
         margin-left: 0px;
@@ -504,7 +511,7 @@
         flex-direction: column;
         gap: 15px;
         margin-bottom: 20px;
-        margin-top: -90px;
+        margin-top: calc(-90px + 5vh);
     }
     
     /* Question Card */
@@ -1135,7 +1142,7 @@
         width: 100%;
         height: 100%;
         background: rgba(0, 0, 0, 0.6);
-        z-index: 400;
+        z-index: 2000;
         backdrop-filter: blur(4px);
         align-items: center;
         justify-content: center;
@@ -1640,6 +1647,26 @@
         overflow: hidden;
         animation: modalSlideIn 0.3s ease-out;
     }
+
+    /* Keep the identity verification modal fully visible on smaller displays */
+    #identityVerificationModal .modal-container {
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    #identityVerificationModal .modal-body {
+        overflow-y: auto;
+        flex: 1 1 auto;
+        padding: var(--spacing-lg);
+    }
+
+    #identityVerificationModal .modal-footer {
+        flex: 0 0 auto;
+        position: sticky;
+        bottom: 0;
+        z-index: 1;
+    }
     
     .modal-container .modal-header {
         background: linear-gradient(135deg, var(--warning), #f59e0b);
@@ -2099,9 +2126,17 @@
         transition: all 0.2s ease;
         cursor: grab;
         user-select: none;
+        -webkit-user-select: none;
+        touch-action: none;
         display: flex;
         align-items: center;
         gap: 15px;
+    }
+
+    .rearrange-item * {
+        user-select: none;
+        -webkit-user-select: none;
+        pointer-events: none;
     }
     
     .rearrange-item:hover {
@@ -2351,6 +2386,14 @@
         font-size: 14px;
         color: white;
         user-select: none;
+        -webkit-user-select: none;
+        touch-action: none;
+    }
+
+    .drag-item * {
+        user-select: none;
+        -webkit-user-select: none;
+        pointer-events: none;
     }
     
     .drag-item::before {
@@ -2988,11 +3031,65 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- SYSTEM ALERT MODAL (replaces alert() to keep fullscreen) -->
+                <div id="systemAlertModal" class="alert-modal">
+                    <div class="alert-modal-content" style="max-width: 520px; width: 92%;">
+                        <div class="alert-modal-header" style="background: #09294d; color: white; padding: 18px 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; font-size: 18px;">
+                                <i class="fas fa-info-circle"></i>
+                                Notice
+                            </h3>
+                            <button type="button" class="close-modal-btn" onclick="closeSystemAlertModal()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">&times;</button>
+                        </div>
+                        <div class="alert-modal-body" style="padding: 18px 20px;">
+                            <p id="systemAlertMessage" style="margin: 0; color: #334155; font-size: 15px; line-height: 1.5;"></p>
+                        </div>
+                        <div class="alert-modal-footer" style="padding: 14px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end;">
+                            <button type="button" class="btn-secondary" onclick="closeSystemAlertModal()">OK</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LEAVE WINDOW MODAL -->
+                <div id="leaveWindowModal" class="alert-modal">
+                    <div class="alert-modal-content alert-modal-warning" style="max-width: 560px; width: 92%;">
+                        <div class="alert-modal-icon">
+                            <i class="fas fa-window-restore"></i>
+                        </div>
+                        <div class="alert-modal-body">
+                            <h3>Return to the exam</h3>
+                            <p>You left the exam window. Please return within <strong><span id="leaveWindowCountdown">5</span></strong> seconds.</p>
+                            <p style="margin: 0; font-size: 13px; color: #64748b;">If you do not return in time, your exam will be submitted automatically.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONFIRM ACTION MODAL (replaces confirm() to keep fullscreen) -->
+                <div id="systemConfirmModal" class="alert-modal">
+                    <div class="alert-modal-content" style="max-width: 560px; width: 92%;">
+                        <div class="alert-modal-header" style="background: #09294d; color: white; padding: 18px 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; font-size: 18px;">
+                                <i class="fas fa-question-circle"></i>
+                                Confirm
+                            </h3>
+                            <button type="button" class="close-modal-btn" onclick="closeSystemConfirmModal(false)" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">&times;</button>
+                        </div>
+                        <div class="alert-modal-body" style="padding: 18px 20px;">
+                            <p id="systemConfirmMessage" style="margin: 0; color: #334155; font-size: 15px; line-height: 1.5;"></p>
+                        </div>
+                        <div class="alert-modal-footer" style="padding: 14px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+                            <button type="button" class="btn-secondary" onclick="closeSystemConfirmModal(false)">Cancel</button>
+                            <button type="button" class="btn-primary" id="systemConfirmOkBtn" onclick="closeSystemConfirmModal(true)">Proceed</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <form id="myform" action="controller.jsp" method="post">
                 <input type="hidden" name="page" value="exams">
                 <input type="hidden" name="operation" value="submitted">
+                <input type="hidden" name="examId" value="<%= session.getAttribute("examId") != null ? session.getAttribute("examId") : "0" %>">
                 <input type="hidden" name="size" value="<%= totalQ %>">
                 <input type="hidden" name="totalmarks" value="<%= pDAO.getTotalMarksByName(courseName) %>">
                 <input type="hidden" name="coursename" value="<%= courseName %>">
@@ -3062,14 +3159,23 @@
                                 <!-- Question Image -->
                                 <% if(q.getImagePath() != null && !q.getImagePath().isEmpty()){ 
                                     String imagePath = q.getImagePath();
-                                    if (!imagePath.startsWith("http") && !imagePath.startsWith("/")) {
-                                        imagePath = request.getContextPath() + "/" + imagePath;
-                                    } else if (!imagePath.startsWith("http") && imagePath.startsWith("/")) {
-                                        imagePath = request.getContextPath() + imagePath;
+                                    imagePath = imagePath.trim();
+                                    imagePath = imagePath.replace('\\', '/');
+
+                                    if (!imagePath.startsWith("http")) {
+                                        String ctx = request.getContextPath();
+                                        if (imagePath.startsWith(ctx + "/")) {
+                                            // already context-relative
+                                        } else if (imagePath.startsWith("/")) {
+                                            imagePath = ctx + imagePath;
+                                        } else {
+                                            imagePath = ctx + "/" + imagePath;
+                                        }
                                     }
                                 %>
                                     <div class="question-image-container">
-                                        <img src="<%= imagePath %>" alt="Question Image" class="question-image" onerror="this.style.display='none';">
+                                        <img src="<%= imagePath %>" alt="Question Image" class="question-image" loading="lazy" onerror="this.onerror=null; this.style.display='none'; var msg=this.parentNode.querySelector('.question-image-error'); if(msg) msg.style.display='block';">
+                                        <div class="question-image-error" style="display:none; font-size: 12px; color: #ef4444; margin-top: 8px;">Image could not be loaded.</div>
                                     </div>
                                 <% } %>
                                 
@@ -3373,380 +3479,342 @@
 
             <!-- SCRIPT BLOCK -->
             <script>
-                /* --- GLOBAL VARIABLES --- */
-                var examActive = true;
-                var warningGiven = false;
-                var dirty = false;
-                var timerInterval = null;
-                var examDuration = parseInt('<%= pDAO.getExamDuration(courseName) %>');
-                var totalQuestions = parseInt('<%= totalQ %>');
-                var currentCourseName = '<%= courseName %>';
-                var currentQuestionIndex = 0;
+/* --- GLOBAL VARIABLES - SAFE FOR JSP --- */
+var examActive = true;
+var warningGiven = false;
+var dirty = false;
+var timerInterval = null;
 
-                /* --- CALCULATOR LOGIC --- */
-                var calcInputStr = "";
-                
-                function toggleCalculator() {
-                    var modal = document.getElementById('calculatorModal');
-                    if (modal.style.display === 'block') {
-                        modal.style.display = 'none';
-                    } else {
-                        modal.style.display = 'block';
-                    }
-                }
+// Read values from server-side (JSP) to avoid relying on dataset/body attributes.
+var examDuration = parseInt('<%= pDAO.getExamDuration(courseName) %>' || '60', 10);
+var totalQuestions = parseInt('<%= totalQ %>' || '10', 10);
+var currentCourseName = '<%= courseName %>' || '';
+var currentQuestionIndex = 0;
 
-                function calcInput(val) {
-                    calcInputStr += val;
-                    document.getElementById('calcDisplay').textContent = calcInputStr.replace(/Math\.PI/g, '?').replace(/Math\.E/g, 'e');
-                }
+// Proctoring variables - get from JSP safely
+var examId = '<%= session.getAttribute("examId") != null ? session.getAttribute("examId") : "0" %>';
+var studentId = '<%= session.getAttribute("userId") != null ? session.getAttribute("userId") : "0" %>';
 
-                function calcAction(action) {
-                    var display = document.getElementById('calcDisplay');
-                    var history = document.getElementById('calcHistory');
+// Global stream for camera
+var globalVideoStream = null;
 
-                    if (action === 'clear') {
-                        calcInputStr = "";
-                        display.textContent = "0";
-                        history.textContent = "";
-                    } else if (action === 'backspace') {
-                        calcInputStr = calcInputStr.slice(0, -1);
-                        display.textContent = calcInputStr || "0";
-                    } else if (action === 'equal') {
-                        try {
-                            var result = eval(calcInputStr);
-                            history.textContent = calcInputStr.replace(/Math\.PI/g, '?').replace(/Math\.E/g, 'e') + " =";
-                            calcInputStr = result.toString();
-                            display.textContent = calcInputStr;
-                        } catch (e) {
-                            display.textContent = "Error";
-                            calcInputStr = "";
-                        }
-                    } else if (['sin', 'cos', 'tan', 'log', 'ln', 'sqrt'].includes(action)) {
-                        try {
-                            var val = eval(calcInputStr || "0");
-                            var res = 0;
-                            // Convert degrees to radians for trigonometric functions
-                            var rad = val * (Math.PI / 180);
-                            switch(action) {
-                                case 'sin': res = Math.sin(rad); break;
-                                case 'cos': res = Math.cos(rad); break;
-                                case 'tan': res = Math.tan(rad); break;
-                                case 'log': res = Math.log10(val); break;
-                                case 'ln': res = Math.log(val); break;
-                                case 'sqrt': res = Math.sqrt(val); break;
-                            }
-                            history.textContent = action + "(" + val + (['sin','cos','tan'].includes(action) ? "?" : "") + ") =";
-                            // Round to 8 decimal places to avoid floating point issues
-                            res = Math.round(res * 100000000) / 100000000;
-                            calcInputStr = res.toString();
-                            display.textContent = calcInputStr;
-                        } catch (e) {
-                            display.textContent = "Error";
-                        }
-                    } else if (action === 'pow') {
-                        calcInputStr += "**";
-                        display.textContent = calcInputStr;
-                    }
-                }
+/* --- CALCULATOR LOGIC --- */
+var calcInputStr = "";
 
-                // Drag functionality for calculator
-                function initCalcDraggable() {
-                    dragElement(document.getElementById("calculatorModal"));
-                }
+function toggleCalculator() {
+    var modal = document.getElementById('calculatorModal');
+    if (!modal) return;
+    if (modal.style.display === 'block') {
+        modal.style.display = 'none';
+    } else {
+        modal.style.display = 'block';
+    }
+}
 
-                function dragElement(elmnt) {
-                    var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-                    var header = document.getElementById("calcHeader");
-                    if (header) {
-                        header.onmousedown = dragMouseDown;
-                    } else {
-                        elmnt.onmousedown = dragMouseDown;
-                    }
+function calcInput(val) {
+    calcInputStr += val;
+    var display = document.getElementById('calcDisplay');
+    if (!display) return;
+    display.textContent = calcInputStr.replace(/Math\.PI/g, '?').replace(/Math\.E/g, 'e');
+}
 
-                    function dragMouseDown(e) {
-                        e = e || window.event;
-                        e.preventDefault();
-                        pos3 = e.clientX;
-                        pos4 = e.clientY;
-                        document.onmouseup = closeDragElement;
-                        document.onmousemove = elementDrag;
-                    }
+function calcAction(action) {
+    var display = document.getElementById('calcDisplay');
+    var history = document.getElementById('calcHistory');
+    if (!display || !history) return;
 
-                    function elementDrag(e) {
-                        e = e || window.event;
-                        e.preventDefault();
-                        pos1 = pos3 - e.clientX;
-                        pos2 = pos4 - e.clientY;
-                        pos3 = e.clientX;
-                        pos4 = e.clientY;
-                        elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
-                        elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
-                    }
+    if (action === 'clear') {
+        calcInputStr = "";
+        display.textContent = "0";
+        history.textContent = "";
+    } else if (action === 'backspace') {
+        calcInputStr = calcInputStr.slice(0, -1);
+        display.textContent = calcInputStr || "0";
+    } else if (action === 'equal') {
+        try {
+            var result = eval(calcInputStr);
+            history.textContent = calcInputStr.replace(/Math\.PI/g, '?').replace(/Math\.E/g, 'e') + " =";
+            calcInputStr = result.toString();
+            display.textContent = calcInputStr;
+        } catch (e) {
+            display.textContent = "Error";
+            calcInputStr = "";
+        }
+    } else if (['sin', 'cos', 'tan', 'log', 'ln', 'sqrt'].indexOf(action) !== -1) {
+        try {
+            var val = eval(calcInputStr || "0");
+            var res = 0;
+            var rad = val * (Math.PI / 180);
+            switch(action) {
+                case 'sin': res = Math.sin(rad); break;
+                case 'cos': res = Math.cos(rad); break;
+                case 'tan': res = Math.tan(rad); break;
+                case 'log': res = Math.log10(val); break;
+                case 'ln': res = Math.log(val); break;
+                case 'sqrt': res = Math.sqrt(val); break;
+            }
+            history.textContent = action + "(" + val + (['sin','cos','tan'].indexOf(action) !== -1 ? "deg" : "") + ") =";
+            res = Math.round(res * 100000000) / 100000000;
+            calcInputStr = res.toString();
+            display.textContent = calcInputStr;
+        } catch (e) {
+            display.textContent = "Error";
+        }
+    } else if (action === 'pow') {
+        calcInputStr += "**";
+        display.textContent = calcInputStr;
+    }
+}
 
-                    function closeDragElement() {
-                        document.onmouseup = null;
-                        document.onmousemove = null;
-                    }
-                }
+// Drag functionality for calculator
+function initCalcDraggable() {
+    var modal = document.getElementById("calculatorModal");
+    if (!modal) return;
+    dragElement(modal);
+}
 
-                /* --- ROUGH PAPER LOGIC --- */
-                function toggleRoughPaper() {
-                    var modal = document.getElementById('roughPaperModal');
-                    if (modal.style.display === 'block') {
-                        modal.style.display = 'none';
-                    } else {
-                        modal.style.display = 'block';
-                    }
-                }
+function dragElement(elmnt) {
+    var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    var header = document.getElementById("calcHeader");
+    if (header) {
+        header.onmousedown = dragMouseDown;
+    } else {
+        elmnt.onmousedown = dragMouseDown;
+    }
 
-                function initRoughPaper() {
-                    var textarea = document.getElementById('roughTextarea');
-                    if (!textarea) return;
-                    
-                    var saved = sessionStorage.getItem('exam_rough_notes');
-                    if (saved) textarea.value = saved;
+    function dragMouseDown(e) {
+        e = e || window.event;
+        e.preventDefault();
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        document.onmouseup = closeDragElement;
+        document.onmousemove = elementDrag;
+    }
 
-                    textarea.addEventListener('input', function() {
-                        sessionStorage.setItem('exam_rough_notes', this.value);
-                    });
-                    
-                    var roughModal = document.getElementById("roughPaperModal");
-                    var roughHeader = document.getElementById("roughHeader");
-                    
-                    // Simple drag implementation for rough paper
-                    if (roughHeader) {
-                        roughHeader.onmousedown = function(e) {
-                            var pos1 = 0, pos2 = 0, pos3 = e.clientX, pos4 = e.clientY;
-                            document.onmouseup = function() {
-                                document.onmouseup = null;
-                                document.onmousemove = null;
-                            };
-                            document.onmousemove = function(e) {
-                                pos1 = pos3 - e.clientX;
-                                pos2 = pos4 - e.clientY;
-                                pos3 = e.clientX;
-                                pos4 = e.clientY;
-                                roughModal.style.top = (roughModal.offsetTop - pos2) + "px";
-                                roughModal.style.left = (roughModal.offsetLeft - pos1) + "px";
-                            };
-                        };
-                    }
-                }
+    function elementDrag(e) {
+        e = e || window.event;
+        e.preventDefault();
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+        elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+    }
 
-                /* --- MULTI-SELECT HIDDEN FIELD --- */
-                function updateHiddenForMulti(qindex){
-                    var box = document.querySelector('.question-card[data-qindex="'+qindex+'"] .answers');
-                    if(!box) return;
-                    var selectedValues = [];
-                    box.querySelectorAll('input.multi:checked').forEach(function(ch){
-                        selectedValues.push(ch.value);
-                    });
-                    var hidden = document.getElementById('ans'+qindex+'-hidden');
-                    if(hidden){
-                        hidden.value = selectedValues.join('|');
-                    }
-                }
+    function closeDragElement() {
+        document.onmouseup = null;
+        document.onmousemove = null;
+    }
+}
 
-                /* --- ANSWER SELECTION & PROGRESS --- */
-                document.addEventListener('change', function(e){
-                    if(!e.target.classList || !e.target.classList.contains('answer-input')) return;
-                    
-                    var wrapper = e.target.closest('.answers');
-                    if(!wrapper) return;
-                    
-                    var maxSel = parseInt(wrapper.getAttribute('data-max-select') || '1', 10);
-                    
-                    if(e.target.classList.contains('multi')){
-                        var checkedBoxes = wrapper.querySelectorAll('input.multi:checked');
-                        if(checkedBoxes.length > maxSel){
-                            e.target.checked = false;
-                            alert('You can only select up to ' + maxSel + ' options for this question.');
-                            return;
-                        }
-                        var qindex = e.target.getAttribute('data-qindex');
-                        updateHiddenForMulti(qindex);
-                    }
-                    
-                    document.querySelectorAll('.form-check').forEach(function(c){
-                        if (c && c.classList) {
-                            c.classList.remove('selected');
-                        }
-                    });
-                    document.querySelectorAll('.answer-input:checked').forEach(function(inp){
-                        var fc = inp.closest('.form-check');
-                        if(fc && fc.classList) fc.classList.add('selected');
-                    });
-                    
-                    updateProgress();
-                    dirty = true;
-                });
+/* --- ROUGH PAPER LOGIC --- */
+function toggleRoughPaper() {
+    var modal = document.getElementById('roughPaperModal');
+    if (!modal) return;
+    if (modal.style.display === 'block') {
+        modal.style.display = 'none';
+    } else {
+        modal.style.display = 'block';
+    }
+}
 
-                function showQuestion(index) {
-                    var cards = document.querySelectorAll('.question-card');
-                    cards.forEach(function(card, idx) {
-                        if (idx === index) {
-                            card.style.display = 'block';
-                        } else {
-                            card.style.display = 'none';
-                        }
-                    });
+function initRoughPaper() {
+    var textarea = document.getElementById('roughTextarea');
+    if (!textarea) return;
+    
+    var saved = sessionStorage.getItem('exam_rough_notes');
+    if (saved) textarea.value = saved;
 
-                    // Update counter
-                    var currentQNumEl = document.getElementById('currentQNum');
-                    if (currentQNumEl) currentQNumEl.textContent = index + 1;
+    textarea.addEventListener('input', function() {
+        sessionStorage.setItem('exam_rough_notes', this.value);
+    });
+    
+    var roughModal = document.getElementById("roughPaperModal");
+    var roughHeader = document.getElementById("roughHeader");
+    
+    if (roughHeader) {
+        roughHeader.onmousedown = function(e) {
+            var pos1 = 0, pos2 = 0, pos3 = e.clientX, pos4 = e.clientY;
+            document.onmouseup = function() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            };
+            document.onmousemove = function(e) {
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                roughModal.style.top = (roughModal.offsetTop - pos2) + "px";
+                roughModal.style.left = (roughModal.offsetLeft - pos1) + "px";
+            };
+        };
+    }
+}
 
-                    // Update buttons
-                    var prevBtn = document.getElementById('prevBtn');
-                    var nextBtn = document.getElementById('nextBtn');
-                    var submitSection = document.querySelector('.submit-section');
+/* --- MULTI-SELECT HIDDEN FIELD --- */
+function updateHiddenForMulti(qindex) {
+    var box = document.querySelector('.question-card[data-qindex="' + qindex + '"] .answers');
+    if (!box) return;
+    var selectedValues = [];
+    var checkboxes = box.querySelectorAll('input.multi:checked');
+    for (var i = 0; i < checkboxes.length; i++) {
+        selectedValues.push(checkboxes[i].value);
+    }
+    var hidden = document.getElementById('ans' + qindex + '-hidden');
+    if (hidden) {
+        hidden.value = selectedValues.join('|');
+    }
+}
 
-                    if (prevBtn) prevBtn.disabled = (index === 0);
-                    
-                    if (index === totalQuestions - 1) {
-                        if (nextBtn) {
-                            nextBtn.innerHTML = 'Finish <i class="fas fa-flag-checkered"></i>';
-                            nextBtn.style.background = '#059669';
-                        }
-                        if (submitSection) submitSection.style.display = 'flex';
-                    } else {
-                        if (nextBtn) {
-                            nextBtn.innerHTML = 'Next <i class="fas fa-arrow-right"></i>';
-                            nextBtn.style.background = '#92AB2F';
-                        }
-                        if (submitSection) submitSection.style.display = 'none';
-                    }
-                    
-                    currentQuestionIndex = index;
-                    updateProgress();
-                    
-                    // Update current question highlight in navigation modal if it's open
-                    const modalIcons = document.querySelectorAll('#questionGrid .question-icon');
-                    modalIcons.forEach(icon => {
-                        icon.classList.remove('current');
-                        if (parseInt(icon.getAttribute('data-qindex')) === index) {
-                            icon.classList.add('current');
-                        }
-                    });
-                }
+/* --- ANSWER SELECTION & PROGRESS --- */
+document.addEventListener('change', function(e) {
+    if (!e.target.classList || !e.target.classList.contains('answer-input')) return;
+    
+    var wrapper = e.target.closest('.answers');
+    if (!wrapper) return;
+    
+    var maxSel = parseInt(wrapper.getAttribute('data-max-select') || '1', 10);
+    
+    if (e.target.classList.contains('multi')) {
+        var checkedBoxes = wrapper.querySelectorAll('input.multi:checked');
+        if (checkedBoxes.length > maxSel) {
+            e.target.checked = false;
+            if (typeof showSystemAlertModal === 'function') {
+                showSystemAlertModal('You can only select up to ' + maxSel + ' options for this question.');
+            }
+            return;
+        }
+        var qindex = e.target.getAttribute('data-qindex');
+        updateHiddenForMulti(qindex);
+    }
+    
+    var checkboxes = document.querySelectorAll('.form-check');
+    for (var i = 0; i < checkboxes.length; i++) {
+        if (checkboxes[i].classList) {
+            checkboxes[i].classList.remove('selected');
+        }
+    }
+    
+    var checkedInputs = document.querySelectorAll('.answer-input:checked');
+    for (var i = 0; i < checkedInputs.length; i++) {
+        var fc = checkedInputs[i].closest('.form-check');
+        if (fc && fc.classList) fc.classList.add('selected');
+    }
+    
+    updateProgress();
+    dirty = true;
+});
 
-                function nextQuestion() {
-                    if (currentQuestionIndex < totalQuestions - 1) {
-                        showQuestion(currentQuestionIndex + 1);
-                        window.scrollTo(0, 0);
-                    } else {
-                        // On last question, show submit section if not already visible
-                        document.querySelector('.submit-section').scrollIntoView({ behavior: 'smooth' });
-                    }
-                }
+function showQuestion(index) {
+    var cards = document.querySelectorAll('.question-card');
+    for (var i = 0; i < cards.length; i++) {
+        if (i === index) {
+            cards[i].style.display = 'block';
+        } else {
+            cards[i].style.display = 'none';
+        }
+    }
 
-                function prevQuestion() {
-                    if (currentQuestionIndex > 0) {
-                        showQuestion(currentQuestionIndex - 1);
-                        window.scrollTo(0, 0);
-                    }
-                }
+    var currentQNumEl = document.getElementById('currentQNum');
+    if (currentQNumEl) currentQNumEl.textContent = index + 1;
 
-                function updateProgress(){
-                    var cards = document.querySelectorAll('.question-card');
-                    var answered = 0;
-                    
-                    cards.forEach(function(card){
-                        var box = card.querySelector('.answers');
-                        if(!box) return;
-                        
-                        const qindex = card.getAttribute('data-qindex');
-                        const isDragDrop = card.querySelector('.drag-drop-question') !== null;
-                        
-                        if (isDragDrop) {
-                            // Question is answered if at least one target has an item
-                            if (card.querySelectorAll('.dropped-item').length > 0) {
-                                answered++;
-                            }
-                        } else {
-                            var maxSel = parseInt(box.getAttribute('data-max-select') || '1', 10);
-                            if(maxSel === 1){
-                                if(box.querySelector('input.single:checked')) answered++;
-                            } else {
-                                if(box.querySelectorAll('input.multi:checked').length >= 1) answered++;
-                            }
-                        }
-                    });
-                    
-                    var total = cards.length;
-                    var pct = total ? Math.round((answered / total) * 100) : 0;
-                    
-                    // Update progress bars
-                    var progressBar = document.getElementById('progressBar');
-                    var progressBarHeader = document.getElementById('progressBarHeader');
-                    var modalProgressBar = document.getElementById('modalProgressBar');
-                    if(progressBar) progressBar.style.width = pct + '%';
-                    if(progressBarHeader) progressBarHeader.style.width = pct + '%';
-                    if(modalProgressBar) modalProgressBar.style.width = pct + '%';
-                    
-                    // Update labels
-                    var progressLabel = document.getElementById('progressLabel');
-                    var examProgressPctHeader = document.getElementById('examProgressPctHeader');
-                    var progressPercent = document.querySelector('.progress-percent');
-                    if(progressLabel) progressLabel.textContent = pct + '%';
-                    if(examProgressPctHeader) examProgressPctHeader.textContent = pct + '%';
-                    if(progressPercent) progressPercent.textContent = pct + '%';
-                    
-                    // Update counters
-                    var submitAnswered = document.getElementById('submitAnswered');
-                    var submitUnanswered = document.getElementById('submitUnanswered');
-                    var floatCounter = document.getElementById('floatCounter');
-                    var modalAnswered = document.getElementById('modalAnswered');
-                    var modalUnanswered = document.getElementById('modalUnanswered');
-                    var modalProgressText = document.getElementById('modalProgressText');
-                    
-                    if(submitAnswered) submitAnswered.textContent = answered;
-                    if(submitUnanswered) submitUnanswered.textContent = total - answered;
-                    if(floatCounter) floatCounter.textContent = answered + '/' + total;
-                    if(modalAnswered) modalAnswered.textContent = answered;
-                    if(modalUnanswered) modalUnanswered.textContent = total - answered;
-                    if(modalProgressText) modalProgressText.textContent = answered + ' / ' + total;
-                    
-                    // Update circular progress
-                    var circumference = 2 * Math.PI * 34;
-                    var offset = circumference - (pct / 100) * circumference;
-                    var progressRing = document.querySelector('.progress-ring-progress');
-                    if(progressRing) progressRing.style.strokeDashoffset = offset;
-                }
+    var prevBtn = document.getElementById('prevBtn');
+    var nextBtn = document.getElementById('nextBtn');
+    var submitSection = document.querySelector('.submit-section');
 
-                /* --- ASYNC ANSWER SAVING --- */
-                function saveAnswer(qindex, answer) {
-                    const questionCard = document.querySelector(`.question-card[data-qindex="${qindex}"]`);
-                    if (!questionCard) return;
+    if (prevBtn) prevBtn.disabled = (index === 0);
+    
+    if (index === totalQuestions - 1) {
+        if (nextBtn) {
+            nextBtn.innerHTML = 'Finish <i class="fas fa-flag-checkered"></i>';
+            nextBtn.style.background = '#059669';
+        }
+        if (submitSection) submitSection.style.display = 'flex';
+    } else {
+        if (nextBtn) {
+            nextBtn.innerHTML = 'Next <i class="fas fa-arrow-right"></i>';
+            nextBtn.style.background = '#92AB2F';
+        }
+        if (submitSection) submitSection.style.display = 'none';
+    }
+    
+    currentQuestionIndex = index;
+    updateProgress();
+    
+    var modalIcons = document.querySelectorAll('#questionGrid .question-icon');
+    for (var i = 0; i < modalIcons.length; i++) {
+        modalIcons[i].classList.remove('current');
+        var iconIndex = parseInt(modalIcons[i].getAttribute('data-qindex'));
+        if (iconIndex === index) {
+            modalIcons[i].classList.add('current');
+        }
+    }
+}
 
-                    const qid = questionCard.querySelector('input[name="qid' + qindex + '"]').value;
-                    const question = questionCard.querySelector('input[name="question' + qindex + '"]').value;
+function nextQuestion() {
+    if (currentQuestionIndex < totalQuestions - 1) {
+        showQuestion(currentQuestionIndex + 1);
+        window.scrollTo(0, 0);
+    } else {
+        var submitSection = document.querySelector('.submit-section');
+        if (submitSection) submitSection.scrollIntoView({ behavior: 'smooth' });
+    }
+}
 
-                    const formData = new FormData();
-                    formData.append('page', 'saveAnswer');
-                    formData.append('qid', qid);
-                    formData.append('question', question);
-                    formData.append('ans', answer);
+function prevQuestion() {
+    if (currentQuestionIndex > 0) {
+        showQuestion(currentQuestionIndex - 1);
+        window.scrollTo(0, 0);
+    }
+}
 
-                    navigator.sendBeacon('controller.jsp', new URLSearchParams(formData));
-                }
+/* --- ASYNC ANSWER SAVING --- */
+function saveAnswer(qindex, answer) {
+    var questionCard = document.querySelector('.question-card[data-qindex="' + qindex + '"]');
+    if (!questionCard) return;
 
-                document.addEventListener('change', function(e) {
-                    if (e.target.classList && e.target.classList.contains('answer-input')) {
-                        const qindex = e.target.getAttribute('data-qindex');
-                        let answer = '';
-                        if (e.target.classList.contains('multi')) {
-                            const wrapper = e.target.closest('.answers');
-                            const selectedValues = [];
-                            wrapper.querySelectorAll('input.multi:checked').forEach(function(ch) {
-                                selectedValues.push(ch.value);
-                            });
-                            answer = selectedValues.join('|');
-                        } else {
-                            answer = e.target.value;
-                        }
-                        saveAnswer(qindex, answer);
-                    }
-                });
+    var qidInput = questionCard.querySelector('input[name="qid' + qindex + '"]');
+    var questionInput = questionCard.querySelector('input[name="question' + qindex + '"]');
+    if (!qidInput || !questionInput) return;
+
+    var params = new URLSearchParams();
+    params.append('page', 'saveAnswer');
+    params.append('qid', qidInput.value);
+    params.append('question', questionInput.value);
+    params.append('ans', answer);
+
+    try {
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon('controller.jsp', params);
+        }
+    } catch (e) {
+        // ignore
+    }
+}
+
+document.addEventListener('change', function(e) {
+    if (!e.target.classList || !e.target.classList.contains('answer-input')) return;
+    var qindex = e.target.getAttribute('data-qindex');
+    if (qindex == null) return;
+
+    var answer = '';
+    if (e.target.classList.contains('multi')) {
+        var wrapper = e.target.closest('.answers');
+        if (wrapper) {
+            var selectedValues = [];
+            var checkboxes = wrapper.querySelectorAll('input.multi:checked');
+            for (var i = 0; i < checkboxes.length; i++) {
+                selectedValues.push(checkboxes[i].value);
+            }
+            answer = selectedValues.join('|');
+        }
+    } else {
+        answer = e.target.value;
+    }
+
+    saveAnswer(qindex, answer);
+});
 
                 /* --- TIMER MANAGEMENT --- */
                 function startTimer() {
@@ -3847,6 +3915,22 @@
                         }
                         hiddenAns.value = ansValue;
                     });
+
+                    // Handle Rearrange answers - save before auto-submit
+                    const rearrangeAnswers = getRearrangeAnswers();
+                    Object.keys(rearrangeAnswers).forEach(qindex => {
+                        const orderedIds = rearrangeAnswers[qindex];
+                        const ansValue = JSON.stringify(orderedIds);
+
+                        let hiddenAns = document.querySelector('input[name="ans' + qindex + '"]');
+                        if (!hiddenAns) {
+                            hiddenAns = document.createElement('input');
+                            hiddenAns.type = 'hidden';
+                            hiddenAns.name = 'ans' + qindex;
+                            document.getElementById('myform').appendChild(hiddenAns);
+                        }
+                        hiddenAns.value = ansValue;
+                    });
                     
                     // Show time up modal
                     showTimeUpModal();
@@ -3910,10 +3994,14 @@
                     // Check for unanswered questions
                     if(answeredQuestions < totalQuestions) {
                         var unanswered = totalQuestions - answeredQuestions;
-                        if(!confirm("You have " + unanswered + " unanswered question" + 
-                                (unanswered > 1 ? "s" : "") + ". Submit anyway?")) {
-                            return;
-                        }
+                        showSystemConfirmModal(
+                            "You have " + unanswered + " unanswered question" + (unanswered > 1 ? "s" : "") + ". Submit anyway?",
+                            function(proceed) {
+                                if (!proceed) return;
+                                showConfirmSubmitModal();
+                            }
+                        );
+                        return;
                     }
                     
                     // Final confirmation - show modal
@@ -3944,6 +4032,45 @@
                     
                     // Remove navigation protection
                     window.onbeforeunload = null;
+                }
+
+                function showSystemAlertModal(message) {
+                    var modal = document.getElementById('systemAlertModal');
+                    var msg = document.getElementById('systemAlertMessage');
+                    if (msg) msg.textContent = message || '';
+                    if (modal && modal.classList) {
+                        modal.classList.add('active');
+                    }
+                }
+
+                function closeSystemAlertModal() {
+                    var modal = document.getElementById('systemAlertModal');
+                    if (modal && modal.classList) {
+                        modal.classList.remove('active');
+                    }
+                }
+
+                var _systemConfirmCallback = null;
+
+                function showSystemConfirmModal(message, onResult) {
+                    _systemConfirmCallback = (typeof onResult === 'function') ? onResult : null;
+                    var modal = document.getElementById('systemConfirmModal');
+                    var msg = document.getElementById('systemConfirmMessage');
+                    if (msg) msg.textContent = message || '';
+                    if (modal && modal.classList) {
+                        modal.classList.add('active');
+                    }
+                }
+
+                function closeSystemConfirmModal(result) {
+                    var modal = document.getElementById('systemConfirmModal');
+                    if (modal && modal.classList) {
+                        modal.classList.remove('active');
+                    }
+                    if (_systemConfirmCallback) {
+                        try { _systemConfirmCallback(!!result); } catch (e) {}
+                    }
+                    _systemConfirmCallback = null;
                 }
 
                 /* --- NAVIGATION PROTECTION --- */
@@ -4025,6 +4152,99 @@
                         }
                     }
                 }
+
+                // Leave-window enforcement: 1 attempt, 5 seconds to return
+                var leaveAttempts = 0;
+                var leaveCountdownInterval = null;
+                var leaveTimeout = null;
+
+                function showLeaveWindowModal() {
+                    var modal = document.getElementById('leaveWindowModal');
+                    var countdownEl = document.getElementById('leaveWindowCountdown');
+                    if (countdownEl) countdownEl.textContent = '5';
+                    if (modal && modal.classList) {
+                        modal.classList.add('active');
+                    }
+                }
+
+                function hideLeaveWindowModal() {
+                    var modal = document.getElementById('leaveWindowModal');
+                    if (modal && modal.classList) {
+                        modal.classList.remove('active');
+                    }
+                }
+
+                function terminateForLeavingWindow() {
+                    try {
+                        hideLeaveWindowModal();
+                    } catch (e) {}
+
+                    // Mark state and submit similarly to time-up
+                    var form = document.getElementById('myform');
+                    if (form) {
+                        var input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'left_window_terminated';
+                        input.value = 'true';
+                        form.appendChild(input);
+                    }
+
+                    // Use the same safe submit path as time-up
+                    autoSubmitExam();
+                }
+
+                function startLeaveWindowCountdown() {
+                    if (!examActive) return;
+
+                    // Only one grace attempt
+                    leaveAttempts++;
+                    if (leaveAttempts > 1) {
+                        terminateForLeavingWindow();
+                        return;
+                    }
+
+                    showLeaveWindowModal();
+
+                    var secondsLeft = 5;
+                    var countdownEl = document.getElementById('leaveWindowCountdown');
+                    if (leaveCountdownInterval) clearInterval(leaveCountdownInterval);
+                    if (leaveTimeout) clearTimeout(leaveTimeout);
+
+                    leaveCountdownInterval = setInterval(function() {
+                        secondsLeft--;
+                        if (countdownEl) countdownEl.textContent = String(Math.max(0, secondsLeft));
+                        if (secondsLeft <= 0) {
+                            clearInterval(leaveCountdownInterval);
+                            leaveCountdownInterval = null;
+                        }
+                    }, 1000);
+
+                    leaveTimeout = setTimeout(function() {
+                        terminateForLeavingWindow();
+                    }, 5000);
+                }
+
+                function cancelLeaveWindowCountdown() {
+                    if (leaveCountdownInterval) {
+                        clearInterval(leaveCountdownInterval);
+                        leaveCountdownInterval = null;
+                    }
+                    if (leaveTimeout) {
+                        clearTimeout(leaveTimeout);
+                        leaveTimeout = null;
+                    }
+                    hideLeaveWindowModal();
+                }
+
+                window.addEventListener('blur', function() {
+                    if (!examActive) return;
+                    startLeaveWindowCountdown();
+                });
+
+                window.addEventListener('focus', function() {
+                    if (!examActive) return;
+                    cancelLeaveWindowCountdown();
+                });
                 
                 /* --- TIME UP MODAL FUNCTIONS --- */
                 function showTimeUpModal() {
@@ -4691,11 +4911,9 @@ function createRearrangeItemElement(qIdx, itemId, text, position) {
     element.setAttribute('data-item-id', itemId);
     element.setAttribute('data-text', text);
     
-    element.innerHTML = `
-        <i class="fas fa-grip-vertical drag-handle"></i>
-        <span class="item-position">${position + 1}</span>
-        <span class="item-text">${text}</span>
-    `;
+    element.innerHTML = '<i class="fas fa-grip-vertical drag-handle"></i>' +
+        '<span class="item-position">' + (position + 1) + '</span>' +
+        '<span class="item-text">' + text + '</span>';
     
     // Add drag events
     element.addEventListener('dragstart', handleRearrangeDragStart);
@@ -4957,10 +5175,14 @@ function submitExam() {
     // Check for unanswered questions
     if(answeredQuestions < totalQuestions) {
         var unanswered = totalQuestions - answeredQuestions;
-        if(!confirm("You have " + unanswered + " unanswered question" + 
-                (unanswered > 1 ? "s" : "") + ". Submit anyway?")) {
-            return;
-        }
+        showSystemConfirmModal(
+            "You have " + unanswered + " unanswered question" + (unanswered > 1 ? "s" : "") + ". Submit anyway?",
+            function(proceed) {
+                if (!proceed) return;
+                showConfirmSubmitModal();
+            }
+        );
+        return;
     }
     
     // Final confirmation - show modal
@@ -5049,7 +5271,8 @@ function updateProgress() {
 
             <% } else if ("1".equals(request.getParameter("showresult"))) {
                         // SHOW RESULTS PAGE
-                        Exams result = pDAO.getResultByExamId(Integer.parseInt(request.getParameter("eid")));
+                        int showResultExamId = Integer.parseInt(request.getParameter("eid"));
+                        Exams result = pDAO.getResultByExamId(showResultExamId);
                         
                         // IMPORTANT: Clear exam session when showing results
                         session.removeAttribute("examStarted");
@@ -5068,6 +5291,7 @@ function updateProgress() {
                         int obtainedMarks = 0;
                         int totalMarks = 0;
                         String resultStatus = "Unknown";
+                        ArrayList<Answers> _showResultAnswers = null;
                         
                         if (result != null) {
                             studentFullName = result.getFullName();
@@ -5085,6 +5309,63 @@ function updateProgress() {
                             obtainedMarks = result.getObtMarks();
                             totalMarks = result.gettMarks();
                             resultStatus = result.getStatus();
+
+                            if (endTime == null || endTime.trim().isEmpty() || "null".equalsIgnoreCase(endTime.trim())) {
+                                endTime = "N/A";
+                            }
+
+                            try {
+                                _showResultAnswers = pDAO.getAllAnswersByExamId(result.getExamId());
+                            } catch (Exception ex) {
+                                _showResultAnswers = null;
+                            }
+
+                            int _correct = 0;
+                            if (_showResultAnswers != null) {
+                                for (Answers a : _showResultAnswers) {
+                                    String st = a.getStatus();
+                                    if (st != null && (st.equalsIgnoreCase("correct") || st.startsWith("partial:"))) {
+                                        _correct++;
+                                    }
+                                }
+                            }
+
+                            if (obtainedMarks == 0 && totalMarks > 0 && _correct > 0 && _showResultAnswers != null) {
+                                float computedObt = 0;
+                                float computedTotal = 0;
+                                for (Answers a : _showResultAnswers) {
+                                    Questions qo = null;
+                                    if (a.getQuestionId() > 0) {
+                                        try {
+                                            qo = pDAO.getQuestionById(a.getQuestionId());
+                                        } catch (Exception ex) {
+                                            qo = null;
+                                        }
+                                    }
+
+                                    float qMax = (qo != null) ? qo.getTotalMarks() : 1.0f;
+                                    if (qMax <= 0) qMax = 1.0f;
+                                    computedTotal += qMax;
+
+                                    String st = a.getStatus();
+                                    if (st != null) {
+                                        if (st.equalsIgnoreCase("correct")) {
+                                            computedObt += qMax;
+                                        } else if (st.startsWith("partial:")) {
+                                            try {
+                                                computedObt += Float.parseFloat(st.substring(8));
+                                            } catch (Exception ex) {}
+                                        }
+                                    }
+                                }
+
+                                if (computedTotal > 0) {
+                                    totalMarks = Math.round(computedTotal);
+                                }
+                                if (computedObt > 0) {
+                                    obtainedMarks = Math.round(computedObt);
+                                }
+                            }
                             
                             // Fallback for status if it's missing or just "completed"
                             if (resultStatus == null || resultStatus.isEmpty() || resultStatus.equalsIgnoreCase("completed")) {
@@ -5234,6 +5515,86 @@ function updateProgress() {
             
 <!-- CLEAR EXAM SESSION DATA -->
 <script>
+    function requestFullscreenSafe() {
+        try {
+            if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
+                return;
+            }
+
+            var el = document.documentElement;
+            var req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+            if (req) {
+                var p = req.call(el);
+                if (p && typeof p.catch === 'function') {
+                    p.catch(function() {});
+                }
+            }
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    // Global modal-based messaging (replaces alert() to preserve fullscreen)
+    window.closeSystemAlertModal = window.closeSystemAlertModal || function () {
+        try {
+            var modal = document.getElementById('systemAlertModal');
+            if (modal && modal.classList) {
+                modal.classList.remove('active');
+            }
+        } catch (e) {
+            // ignore
+        }
+    };
+
+    window.showSystemAlertModal = window.showSystemAlertModal || function (message) {
+        try {
+            var modal = document.getElementById('systemAlertModal');
+
+            // Create the modal if it doesn't exist on the current view
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'systemAlertModal';
+                modal.className = 'alert-modal';
+                modal.innerHTML = '' +
+                    '<div class="alert-modal-content" style="max-width: 520px; width: 92%;">' +
+                        '<div class="alert-modal-header" style="background: #09294d; color: white; padding: 18px 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">' +
+                            '<h3 style="margin: 0; display: flex; align-items: center; gap: 10px; font-size: 18px;">' +
+                                '<i class="fas fa-info-circle"></i>' +
+                                'Notice' +
+                            '</h3>' +
+                            '<button type="button" class="close-modal-btn" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">&times;</button>' +
+                        '</div>' +
+                        '<div class="alert-modal-body" style="padding: 18px 20px;">' +
+                            '<p id="systemAlertMessage" style="margin: 0; color: #334155; font-size: 15px; line-height: 1.5;"></p>' +
+                        '</div>' +
+                        '<div class="alert-modal-footer" style="padding: 14px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end;">' +
+                            '<button type="button" class="btn-secondary">OK</button>' +
+                        '</div>' +
+                    '</div>';
+                document.body.appendChild(modal);
+
+                // Wire close handlers
+                var closeBtn = modal.querySelector('.close-modal-btn');
+                if (closeBtn) closeBtn.addEventListener('click', window.closeSystemAlertModal);
+                var okBtn = modal.querySelector('.btn-secondary');
+                if (okBtn) okBtn.addEventListener('click', window.closeSystemAlertModal);
+
+                // Clicking outside closes
+                modal.addEventListener('click', function (e) {
+                    if (e.target === modal) window.closeSystemAlertModal();
+                });
+            }
+
+            var msg = document.getElementById('systemAlertMessage');
+            if (msg) msg.textContent = message || '';
+            if (modal && modal.classList) {
+                modal.classList.add('active');
+            }
+        } catch (e) {
+            // ignore
+        }
+    };
+
     // Clear all exam session data when on course selection page
     Object.keys(sessionStorage).forEach(function(key) {
         if(key.startsWith('examStartTime_')) {
@@ -5301,7 +5662,7 @@ function updateProgress() {
             console.log('Response ok:', response.ok);
 
             if (!response.ok) {
-                throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
+                throw new Error('Network response was not ok: ' + response.status + ' ' + response.statusText);
             }
             return response.text();
         })
@@ -5349,7 +5710,9 @@ function updateProgress() {
         
         var courseSelect = document.getElementById('courseSelect');
         if(!courseSelect || !courseSelect.value) {
-            alert('Please select a course.');
+            if (typeof showSystemAlertModal === 'function') {
+                showSystemAlertModal('Please select a course.');
+            }
             return;
         }
         
@@ -5366,7 +5729,9 @@ function updateProgress() {
         
         if (!confirmationModal || !inactiveModal || !modalCourseName || !modalDuration || !inactiveCourseName) {
             console.error('Modal elements not found');
-            alert('System error: Modal elements not found. Please refresh the page.');
+            if (typeof showSystemAlertModal === 'function') {
+                showSystemAlertModal('System error: Modal elements not found. Please refresh the page.');
+            }
             return;
         }
         
@@ -5375,6 +5740,8 @@ function updateProgress() {
                 modalCourseName.textContent = courseName;
                 modalDuration.textContent = duration + ' minutes';
                 // Show Diagnostics first
+                // Attempt fullscreen immediately from this user gesture (required by browsers).
+                requestFullscreenSafe();
                 document.getElementById('diagnosticsModal').style.display = 'flex';
                 runDiagnostics();
             } else {
@@ -5444,6 +5811,146 @@ function updateProgress() {
             </div>
         </div>
     </main>
+</div>
+
+<!-- Identity Verification Modal -->
+<div id="identityVerificationModal" class="modal-overlay" style="display: none;">
+    <div class="modal-container" style="max-width: 800px; width: 95%;">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fas fa-user-shield"></i> Exam Policy and Candidate Identity Verification</h3>
+        </div>
+        <div class="modal-body">
+            <!-- Step Navigation -->
+            <div style="display: flex; justify-content: space-around; margin-bottom: 30px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px;">
+                <div id="step-nav-1" style="text-align: center; color: var(--primary-blue); font-weight: bold;">
+                    <div style="width: 30px; height: 30px; border-radius: 50%; background: var(--primary-blue); color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 5px;">1</div>
+                    <span style="font-size: 12px;">Code of Honor</span>
+                </div>
+                <div id="step-nav-2" style="text-align: center; color: #cbd5e1;">
+                    <div style="width: 30px; height: 30px; border-radius: 50%; background: #cbd5e1; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 5px;">2</div>
+                    <span style="font-size: 12px;">Face Photo</span>
+                </div>
+                <div id="step-nav-3" style="text-align: center; color: #cbd5e1;">
+                    <div style="width: 30px; height: 30px; border-radius: 50%; background: #cbd5e1; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 5px;">3</div>
+                    <span style="font-size: 12px;">ID Verification</span>
+                </div>
+                <div id="step-nav-4" style="text-align: center; color: #cbd5e1;">
+                    <div style="width: 30px; height: 30px; border-radius: 50%; background: #cbd5e1; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 5px;">4</div>
+                    <span style="font-size: 12px;">Summary</span>
+                </div>
+            </div>
+
+            <!-- Step 1: Code of Honor -->
+            <div id="verification-step-1" class="verification-step">
+                <h4 style="margin-bottom: 15px; color: var(--primary-blue);">Candidate Identity Verification Step 1: Code of Honor</h4>
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; max-height: 300px; overflow-y: auto; font-size: 14px; line-height: 1.6;">
+                    <p><strong>HONOR CODE AGREEMENT</strong></p>
+                    <p>As a candidate for this examination, I hereby acknowledge and agree to the following conditions:</p>
+                    <ul>
+                        <li>I will not use any unauthorized materials, including but not limited to textbooks, notes, or electronic devices during the exam.</li>
+                        <li>I will not communicate with any other individual by any means during the examination.</li>
+                        <li>I will remain within the view of the camera at all times and will not leave my seat without proper authorization.</li>
+                        <li>I understand that my session will be monitored via audio and video, and any suspicious behavior will be flagged for review.</li>
+                        <li>I will not copy, record, or distribute any part of the examination content.</li>
+                        <li>I confirm that I am the person registered to take this exam.</li>
+                    </ul>
+                    <p>Violation of these rules may lead to immediate disqualification and further disciplinary action by the institution.</p>
+                </div>
+                <div style="margin-top: 20px; display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="honorCodeCheckbox" style="width: 20px; height: 20px; cursor: pointer;">
+                    <label for="honorCodeCheckbox" style="font-size: 14px; font-weight: 600; cursor: pointer;">I agree to the Code of Honor and understand the consequences of cheating.</label>
+                </div>
+                <div style="margin-top: 15px;">
+                    <label style="display: block; font-size: 14px; margin-bottom: 5px; color: #64748b;">Type your full name as digital signature:</label>
+                    <input type="text" id="digitalSignature" placeholder="Enter your full name" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                </div>
+            </div>
+
+            <!-- Step 2: Face Photo -->
+            <div id="verification-step-2" class="verification-step" style="display: none;">
+                <h4 style="margin-bottom: 15px; color: var(--primary-blue);">Candidate Identity Verification Step 2: Face Photo</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div style="text-align: center;">
+                        <div style="background: #000; border-radius: 8px; overflow: hidden; position: relative; aspect-ratio: 4/3;">
+                            <video id="faceVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+                            <canvas id="faceOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+                            <div id="faceAlignmentGuide" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 260px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 50% 50% 40% 40%;"></div>
+                        </div>
+                        <button type="button" id="captureFaceBtn" class="btn-primary" style="margin-top: 15px; width: 100%;">
+                            <i class="fas fa-camera"></i> Capture Face Photo
+                        </button>
+                    </div>
+                    <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; border-left: 4px solid var(--info);">
+                        <p style="font-weight: 600; color: var(--primary-blue); margin-bottom: 10px;">Instructions for clear photo:</p>
+                        <ul style="font-size: 13px; color: #0369a1; line-height: 1.8;">
+                            <li>Ensure your face is within the dashed oval.</li>
+                            <li>Look directly at the camera.</li>
+                            <li>Ensure there is proper lighting on your face (avoid strong backlighting).</li>
+                            <li>Do not wear hats, sunglasses, or anything that covers your face.</li>
+                            <li>Ensure you are the only person in the frame.</li>
+                        </ul>
+                        <div id="faceCapturedPreview" style="margin-top: 15px; display: none;">
+                            <p style="font-size: 12px; font-weight: bold; color: var(--success); margin-bottom: 5px;"><i class="fas fa-check-circle"></i> Photo Captured Successfully</p>
+                            <img id="faceImgPreview" style="width: 100%; border-radius: 4px; border: 1px solid #cbd5e1;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: ID Verification -->
+            <div id="verification-step-3" class="verification-step" style="display: none;">
+                <h4 style="margin-bottom: 15px; color: var(--primary-blue);">Candidate Identity Verification Step 3: ID Verification</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div style="text-align: center;">
+                        <div style="background: #000; border-radius: 8px; overflow: hidden; aspect-ratio: 4/3;">
+                            <video id="idVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+                        </div>
+                        <button type="button" id="captureIdBtn" class="btn-primary" style="margin-top: 15px; width: 100%;">
+                            <i class="fas fa-id-card"></i> Capture ID Photo
+                        </button>
+                    </div>
+                    <div style="background: #fffbeb; padding: 20px; border-radius: 8px; border-left: 4px solid var(--warning);">
+                        <p style="font-weight: 600; color: #92400e; margin-bottom: 10px;">ID Guidelines:</p>
+                        <ul style="font-size: 13px; color: #92400e; line-height: 1.8;">
+                            <li>Hold your government-issued ID close to the camera.</li>
+                            <li>Ensure your name and photo on the ID are clearly visible.</li>
+                            <li>Avoid glare on the ID surface.</li>
+                            <li>Keep the ID flat and steady.</li>
+                        </ul>
+                        <div id="idCapturedPreview" style="margin-top: 15px; display: none;">
+                            <p style="font-size: 12px; font-weight: bold; color: var(--success); margin-bottom: 5px;"><i class="fas fa-check-circle"></i> ID Photo Captured Successfully</p>
+                            <img id="idImgPreview" style="width: 100%; border-radius: 4px; border: 1px solid #cbd5e1;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Summary -->
+            <div id="verification-step-4" class="verification-step" style="display: none; text-align: center; padding: 40px 0;">
+                <div style="width: 80px; height: 80px; background: #d1fae5; color: var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; margin: 0 auto 20px;">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h3 style="color: var(--text-dark); margin-bottom: 10px;">Verification Complete!</h3>
+                <p style="color: #64748b; margin-bottom: 30px;">All identity checks have been successfully completed. You are now authorized to begin the examination.</p>
+                
+                <div style="display: flex; justify-content: center; gap: 15px;">
+                    <div style="width: 120px;">
+                        <img id="summaryFaceImg" style="width: 100%; border-radius: 8px; border: 2px solid var(--success);">
+                        <p style="font-size: 11px; margin-top: 5px;">Face Photo</p>
+                    </div>
+                    <div style="width: 120px;">
+                        <img id="summaryIdImg" style="width: 100%; border-radius: 8px; border: 2px solid var(--success);">
+                        <p style="font-size: 11px; margin-top: 5px;">ID Card</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="verifyPrevBtn" class="btn-secondary" style="display: none;">Previous</button>
+            <button id="verifyNextBtn" class="btn-primary">Next</button>
+            <button id="verifyFinalBtn" class="btn-primary" style="display: none; background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));">Proceed to Exam</button>
+        </div>
+    </div>
 </div>
 
 <!-- Diagnostics Modal -->
@@ -5616,13 +6123,54 @@ function updateProgress() {
         if (inactiveModal) inactiveModal.style.display = 'none';
 
         if (beginButton) {
-            beginButton.addEventListener('click', function () {
-                console.log('Begin button clicked, submitting form...');
-                sessionStorage.clear(); // Clear storage and submit
-                if (form) {
-                    // Remove the event listener to prevent infinite loop
-                    form.removeEventListener('submit', arguments.callee);
-                    form.submit();
+            beginButton.addEventListener('click', async function (e) {
+                // Ensure proctoring starts before the exam begins.
+                e.preventDefault();
+
+                try {
+                    // Reuse the verification camera stream if available; otherwise request permissions once.
+                    if (window.verificationStream && window.verificationStream.getTracks && window.verificationStream.getTracks().length > 0) {
+                        // ok
+                    } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                        window.verificationStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    }
+
+                    if (typeof ProctoringSystem === 'function') {
+                        try {
+                            var proctor = new ProctoringSystem();
+                            window.proctor = proctor;
+                            if (typeof proctor.initialize === 'function') {
+                                await proctor.initialize(window.verificationStream);
+                            }
+                        } catch (proctorErr) {
+                            console.warn('Proctoring failed to initialize, continuing with exam start.', proctorErr);
+                        }
+                    }
+
+                    // Clear any stale session storage keys before leaving this page.
+                    // Important: do this BEFORE setting the proctor auto-start flag.
+                    try {
+                        sessionStorage.clear();
+                    } catch (storageErr) {
+                        console.warn('Could not clear sessionStorage.', storageErr);
+                    }
+
+                    // The exam start triggers a navigation; browsers will stop camera streams on unload.
+                    // Set a flag so proctoring is automatically restarted on the exam page.
+                    try {
+                        sessionStorage.setItem('proctorAutoStart', '1');
+                    } catch (storageErr) {
+                        console.warn('Could not set proctor auto-start flag.', storageErr);
+                    }
+
+                    if (form) {
+                        form.submit();
+                    }
+                } catch (err) {
+                    if (typeof showSystemAlertModal === 'function') {
+                        showSystemAlertModal('Camera and microphone access is required for this exam. Please allow permissions and try again.');
+                    }
+                    console.error('Permission error:', err);
                 }
             });
         }
@@ -5675,36 +6223,27 @@ function updateProgress() {
     let deleteStudentName = null;
     let deleteCourseName = null;
 
-    function showDeleteModal(examId, studentName, courseName) {
+    function showDeleteModal(examId) {
         deleteExamId = examId;
-        deleteStudentName = studentName;
-        deleteCourseName = courseName;
-        
-        console.log('Showing delete modal for:', {examId, studentName, courseName});
-        
         const modal = document.getElementById('deleteModal');
         if (!modal) {
             console.error('Delete modal not found!');
-            alert('Error: Delete modal not found.');
+            if (typeof showSystemAlertModal === 'function') {
+                showSystemAlertModal('Error: Delete modal not found.');
+            }
             return;
         }
-        
-        const modalMessage = document.getElementById('deleteModalMessage');
-        if (!modalMessage) {
-            console.error('Modal message element not found!');
-            return;
-        }
-        
+        modal.style.display = 'block';
         // Clean up text
         const cleanStudentName = studentName ? studentName.replace(/'/g, "\\'") : 'Unknown Student';
         const cleanCourseName = courseName ? courseName.replace(/'/g, "\\'") : 'Unknown Course';
         
-        modalMessage.innerHTML = `Are you sure you want to delete the exam result for:<br><br>
-                                 <strong>Student:</strong> ${cleanStudentName}<br>
-                                 <strong>Course:</strong> ${cleanCourseName}<br>
-                                // <strong>Exam ID:</strong> ${examId}<br><br>
-                                 <span style="color: #dc3545; font-weight: bold;">
-                                 <i class="fas fa-exclamation-triangle"></i> This action cannot be undone!</span>`;
+        modalMessage.innerHTML = 'Are you sure you want to delete the exam result for:<br><br>' +
+                                 '<strong>Student:</strong> ' + cleanStudentName + '<br>' +
+                                 '<strong>Course:</strong> ' + cleanCourseName + '<br>' +
+                                '// <strong>Exam ID:</strong> ' + examId + '<br><br>' +
+                                 '<span style="color: #dc3545; font-weight: bold;">' +
+                                 '<i class="fas fa-exclamation-triangle"></i> This action cannot be undone!</span>';
         
         modal.style.display = 'flex';
     }
@@ -5721,7 +6260,9 @@ function updateProgress() {
     
     function confirmDelete() {
         if (!deleteExamId) {
-            alert('No exam selected for deletion.');
+            if (typeof showSystemAlertModal === 'function') {
+                showSystemAlertModal('No exam selected for deletion.');
+            }
             return;
         }
         
@@ -5853,13 +6394,13 @@ function updateProgress() {
             const isAnswered = answersContainer && isQuestionAnswered(answersContainer);
             
             const icon = document.createElement('div');
-            icon.className = `question-icon ${isAnswered ? 'answered' : 'unanswered'}`;
+            icon.className = 'question-icon ' + (isAnswered ? 'answered' : 'unanswered');
             if (parseInt(qindex) === currentQNum) {
                 icon.classList.add('current');
             }
             icon.textContent = parseInt(qindex) + 1;
             icon.setAttribute('data-qindex', qindex);
-            icon.title = `Question ${parseInt(qindex) + 1} (${isAnswered ? 'Answered' : 'Unanswered'})`;
+            icon.title = 'Question ' + (parseInt(qindex) + 1) + ' (' + (isAnswered ? 'Answered' : 'Unanswered') + ')';
             
             // Use IIFE to capture the qindex value properly
             icon.addEventListener('click', (function(questionIndex) {
@@ -5902,7 +6443,7 @@ function updateProgress() {
         } else {
             // Fallback: manually show the question
             const questionCards = document.querySelectorAll('.question-card');
-            questionCards.forEach((card, idx) => {
+            questionCards.forEach(function(card, idx) {
                 if (idx == qindex) {
                     card.style.display = 'block';
                 } else {
@@ -5935,8 +6476,8 @@ function updateProgress() {
         }
         
         // Small delay to ensure the question is visible before scrolling
-        setTimeout(() => {
-            const questionCard = document.querySelector(`.question-card[data-qindex="${qindex}"]`);
+        setTimeout(function() {
+            const questionCard = document.querySelector('.question-card[data-qindex="' + qindex + '"]');
             if (questionCard) {
                 questionCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 
@@ -5944,7 +6485,7 @@ function updateProgress() {
                 questionCard.style.boxShadow = '0 0 0 3px #3b82f6';
                 questionCard.style.transition = 'box-shadow 0.3s';
                 
-                setTimeout(() => {
+                setTimeout(function() {
                     questionCard.style.boxShadow = '';
                 }, 2000);
             }
@@ -5971,25 +6512,25 @@ function updateProgress() {
         // Find all drag-drop questions
         const dragDropContainers = document.querySelectorAll('.drag-drop-container');
         
-        dragDropContainers.forEach((container, index) => {
+        dragDropContainers.forEach(function(container, index) {
             if (container.classList.contains('horizontal-layout')) {
-                console.log(`Question ${index + 1} has horizontal layout`);
+                console.log('Question ' + (index + 1) + ' has horizontal layout');
                 
                 const dropTargetsList = container.querySelector('.drop-targets-list');
                 if (dropTargetsList) {
                     const style = getComputedStyle(dropTargetsList);
-                    console.log(`  justify-content: ${style.justifyContent}`);
-                    console.log(`  flex-direction: ${style.flexDirection}`);
+                    console.log('  justify-content: ' + style.justifyContent);
+                    console.log('  flex-direction: ' + style.flexDirection);
                     
                     // Check if drop targets are aligned to the right
                     const isRightAligned = style.justifyContent === 'flex-end';
-                    console.log(`  Right aligned: ${isRightAligned}`);
+                    console.log('  Right aligned: ' + isRightAligned);
                     
                     // Check drop target sizes
                     const dropTargets = dropTargetsList.querySelectorAll('.drop-target');
-                    dropTargets.forEach((target, targetIndex) => {
+                    dropTargets.forEach(function(target, targetIndex) {
                         const targetStyle = getComputedStyle(target);
-                        console.log(`  Target ${targetIndex + 1}: width=${targetStyle.width}, height=${targetStyle.height}`);
+                        console.log('  Target ' + (targetIndex + 1) + ': width=' + targetStyle.width + ', height=' + targetStyle.height);
                     });
                 }
             }
@@ -6011,14 +6552,28 @@ function updateProgress() {
             { id: 'status-internet', check: async () => ({ pass: navigator.onLine }) },
             { id: 'status-browser', check: async () => {
                 const ua = navigator.userAgent;
-                const isModern = ua.includes("Chrome") || ua.includes("Edg") || ua.includes("Firefox") || (ua.includes("Safari") && !ua.includes("Chrome"));
-                return { pass: isModern };
+                const isChrome = /Chrome/.test(ua) && /Google Inc/.test(navigator.vendor);
+                let version = 0;
+                if (isChrome) {
+                    const match = ua.match(/Chrome\/(\d+)/);
+                    version = match ? parseInt(match[1]) : 0;
+                }
+                return { pass: isChrome && version >= 100 }; // Chrome 100+ required
             }},
             { id: 'status-javascript', check: async () => ({ pass: true }) },
-            { id: 'status-resolution', check: async () => ({ pass: window.screen.width >= 1024 && window.screen.height >= 768 }) },
+            { id: 'status-resolution', check: async () => ({ pass: window.screen.width >= 1536 && window.screen.height >= 864 }) },
             { id: 'status-os', check: async () => {
                 const p = navigator.platform.toLowerCase();
-                return { pass: p.includes("win") || p.includes("mac") || p.includes("linux") || p.includes("x11") };
+                let isWin11 = false;
+                if (navigator.userAgentData) {
+                    const uaData = await navigator.userAgentData.getHighEntropyValues(["platformVersion"]);
+                    // Windows 11 platform version starts from 13.0.0
+                    isWin11 = uaData.platform === "Windows" && parseInt(uaData.platformVersion.split('.')[0]) >= 13;
+                } else {
+                    // Fallback to generic Windows check if userAgentData is not supported
+                    isWin11 = p.includes("win");
+                }
+                return { pass: isWin11 };
             }},
             { id: 'status-camera', check: async () => {
                 try {
@@ -6029,10 +6584,17 @@ function updateProgress() {
                 } catch (e) { return { pass: false }; }
             }},
             { id: 'status-environment', check: async () => {
-                // Simulation of environment check
-                return new Promise(resolve => setTimeout(() => resolve({ pass: true }), 800));
+                // Check if full screen is available for lockdown
+                const fullScreenAvailable = document.fullscreenEnabled || 
+                                           document.webkitFullscreenEnabled || 
+                                           document.mozFullScreenEnabled || 
+                                           document.msFullscreenEnabled;
+                return { pass: !!fullScreenAvailable };
             }}
         ];
+
+        // Screen resolution should not block proceeding (accessibility/device constraints).
+        const nonBlockingCheckIds = { 'status-resolution': true };
 
         let passedCount = 0;
         let completedCount = 0;
@@ -6052,14 +6614,21 @@ function updateProgress() {
                 if (el) {
                     if (result.pass) {
                         el.innerHTML = '<i class="fas fa-check-circle status-pass"></i>';
-                        passedCount++;
+                        if (!nonBlockingCheckIds[c.id]) {
+                            passedCount++;
+                        }
                     } else {
                         el.innerHTML = '<i class="fas fa-times-circle status-fail"></i>';
+                        // Non-blocking checks do not affect gating.
+                        if (nonBlockingCheckIds[c.id]) {
+                            // treat as neutral for pass/fail gating
+                        }
                     }
                 }
                 completedCount++;
                 if (completedCount === checks.length) {
-                    finishDiagnostics(passedCount === checks.length);
+                    const requiredCount = checks.length - Object.keys(nonBlockingCheckIds).length;
+                    finishDiagnostics(passedCount === requiredCount);
                 }
             }, i * 300);
         });
@@ -6088,6 +6657,1195 @@ function updateProgress() {
 
     document.getElementById('diagProceedButton').onclick = () => {
         document.getElementById('diagnosticsModal').style.display = 'none';
+        startIdentityVerification();
+    };
+
+    /* --- IDENTITY VERIFICATION LOGIC --- */
+    let currentVerifyStep = 1;
+    let capturedFaceData = null;
+    let capturedIdData = null;
+    let verificationStream = null;
+
+    function startIdentityVerification() {
+        document.getElementById('identityVerificationModal').style.display = 'flex';
+        showVerifyStep(1);
+    }
+
+    async function showVerifyStep(step) {
+        // Keep the same stream running across steps (face -> ID -> summary)
+
+        // Hide all steps
+            document.querySelectorAll('.verification-step').forEach(function(el) { el.style.display = 'none'; });
+        // Show current step
+        document.getElementById('verification-step-' + step).style.display = 'block';
+
+        // Update nav UI
+        for (let i = 1; i <= 4; i++) {
+            const nav = document.getElementById('step-nav-' + i);
+            const circle = nav.querySelector('div');
+            if (i < step) {
+                circle.style.background = 'var(--success)';
+                circle.innerHTML = '<i class="fas fa-check"></i>';
+                nav.style.color = 'var(--success)';
+            } else if (i === step) {
+                circle.style.background = 'var(--primary-blue)';
+                circle.textContent = i;
+                nav.style.color = 'var(--primary-blue)';
+                nav.style.fontWeight = 'bold';
+            } else {
+                circle.style.background = '#cbd5e1';
+                circle.textContent = i;
+                nav.style.color = '#cbd5e1';
+                nav.style.fontWeight = 'normal';
+            }
+        }
+
+        // Handle buttons
+        document.getElementById('verifyPrevBtn').style.display = (step > 1 && step < 4) ? 'inline-block' : 'none';
+        document.getElementById('verifyNextBtn').style.display = (step < 4) ? 'inline-block' : 'none';
+        document.getElementById('verifyFinalBtn').style.display = (step === 4) ? 'inline-block' : 'none';
+
+        // Initialize camera if needed
+        if (step === 2) {
+            try {
+                if (!verificationStream) {
+                    verificationStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    window.verificationStream = verificationStream;
+                }
+                document.getElementById('faceVideo').srcObject = verificationStream;
+                document.getElementById('faceVideo').play();
+            } catch (err) {
+                if (typeof showSystemAlertModal === 'function') {
+                    showSystemAlertModal('Could not access camera for face verification.');
+                }
+            }
+        } else if (step === 3) {
+            try {
+                if (!verificationStream) {
+                    verificationStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    window.verificationStream = verificationStream;
+                }
+                document.getElementById('idVideo').srcObject = verificationStream;
+                document.getElementById('idVideo').play();
+            } catch (err) {
+                if (typeof showSystemAlertModal === 'function') {
+                    showSystemAlertModal('Could not access camera for ID verification.');
+                }
+            }
+        } else if (step === 4) {
+            document.getElementById('summaryFaceImg').src = capturedFaceData;
+            document.getElementById('summaryIdImg').src = capturedIdData;
+        }
+
+        currentVerifyStep = step;
+    }
+
+    document.getElementById('verifyNextBtn').onclick = async () => {
+        if (currentVerifyStep === 1) {
+            const agreed = document.getElementById('honorCodeCheckbox').checked;
+            const sig = document.getElementById('digitalSignature').value.trim();
+            if (!agreed || !sig) {
+                if (typeof showSystemAlertModal === 'function') {
+                    showSystemAlertModal('Please agree to the Code of Honor and provide your digital signature');
+                }
+                return;
+            }
+            showVerifyStep(2);
+        } else if (currentVerifyStep === 2) {
+            if (!capturedFaceData) {
+                if (typeof showSystemAlertModal === 'function') {
+                    showSystemAlertModal('Please capture your face photo first.');
+                }
+                return;
+            }
+            showVerifyStep(3);
+        } else if (currentVerifyStep === 3) {
+            if (!capturedIdData) {
+                if (typeof showSystemAlertModal === 'function') {
+                    showSystemAlertModal('Please capture your ID photo first.');
+                }
+                return;
+            }
+            // Save everything to backend
+            await saveVerificationToBackend();
+            showVerifyStep(4);
+        }
+    };
+
+    document.getElementById('verifyPrevBtn').onclick = () => {
+        showVerifyStep(currentVerifyStep - 1);
+    };
+
+    document.getElementById('captureFaceBtn').onclick = () => {
+        const video = document.getElementById('faceVideo');
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        capturedFaceData = canvas.toDataURL('image/jpeg');
+        document.getElementById('faceImgPreview').src = capturedFaceData;
+        document.getElementById('faceCapturedPreview').style.display = 'block';
+    };
+
+    document.getElementById('captureIdBtn').onclick = () => {
+        const video = document.getElementById('idVideo');
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        capturedIdData = canvas.toDataURL('image/jpeg');
+        document.getElementById('idImgPreview').src = capturedIdData;
+        document.getElementById('idCapturedPreview').style.display = 'block';
+    };
+
+    async function saveVerificationToBackend() {
+        const formData = new URLSearchParams();
+        formData.append('page', 'proctoring');
+        formData.append('operation', 'save_verification');
+        // Note: userId and examId will be injected via JSP or session
+        formData.append('studentId', '<%= session.getAttribute("userId") != null ? session.getAttribute("userId") : "0" %>');
+        formData.append('examId', '<%= session.getAttribute("examId") != null ? session.getAttribute("examId") : "0" %>');
+        formData.append('honorAccepted', 'true');
+        formData.append('facePhoto', capturedFaceData);
+        formData.append('idPhoto', capturedIdData);
+
+        try {
+            const response = await fetch('controller.jsp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            });
+            console.log('Verification saved:', await response.json());
+        } catch (err) {
+            console.error('Error saving verification:', err);
+        }
+    }
+
+    document.getElementById('verifyFinalBtn').onclick = () => {
+        document.getElementById('identityVerificationModal').style.display = 'none';
         document.getElementById('confirmationModal').style.display = 'flex';
     };
+
+    /* ============================================ 
+       PROFESSIONAL PROCTORING SYSTEM v2.0 
+       Highest Priority: Cheating Detection 
+       ============================================ */ 
+
+    /* ============================================ 
+       PROFESSIONAL PROCTORING SYSTEM v2.0 
+       Highest Priority: Cheating Detection 
+       ============================================ */ 
+
+    class ProctoringSystem { 
+        constructor() { 
+            this.examActive = true; 
+            this.violations = []; 
+            this.warningCount = 0; 
+            this.MAX_WARNINGS = 10; 
+
+            // Anti-false-positive controls
+            this.violationCooldownMs = 15000; // do not count the same violation repeatedly within this window
+            this.lastViolationAt = {}; // key -> timestamp
+            this.examStartAt = Date.now();
+            this.gracePeriodMs = 15000; // ignore most violations during initial startup
+
+            // Natural behavior tolerance
+            // Audio/head movement must be sustained for a short period before flagging.
+            this.audioSampleMs = 500;
+            this.noiseSpikeMinDurationMs = 2500; // tolerate short cough/sneeze/typing bursts
+            this.voiceVarianceMinDurationMs = 5000;
+            this.headMovementMinDurationMs = 2500;
+            this.noiseSpikeStartAt = null;
+            this.voiceVarianceStartAt = null;
+            this.headMovementStartAt = null;
+            this.fastMouseStartAt = null;
+            this.lastFastMouseFlagAt = 0;
+
+            // Detection thresholds (calibrated for real cheating scenarios) 
+            this.NOISE_THRESHOLD = 47; // dB - background noise 
+            this.MULTIPLE_VOICES_THRESHOLD = 500; // frequency variance 
+            this.EYE_OFF_SCREEN_THRESHOLD = 3000; // 3 seconds 
+            this.HEAD_MOVEMENT_THRESHOLD = 0.17; // 20% movement (normalized by face size) 
+            this.FACE_LOST_THRESHOLD = 2000; // 2 seconds 
+            this.MOUTH_MOVEMENT_THRESHOLD = 2; // pixels of movement
+            this.LOOKING_DOWN_ANGLE = -15; // degrees pitch
+
+            // Behavioral thresholds
+            this.FAST_MOUSE_SPEED_PX_PER_S = 6000; // extremely fast movements (px/sec)
+            this.FAST_MOUSE_SUSTAIN_MS = 700; // must be sustained before flagging
+            this.FAST_MOUSE_COOLDOWN_MS = 15000; // prevent repeated false positives
+
+            // State tracking 
+            this.lastEyeContact = Date.now(); 
+            this.lastFaceDetected = Date.now(); 
+            this.backgroundNoiseBaseline = 40; 
+            this.calibrationComplete = false; 
+            this.previousNosePosition = null; 
+            this.previousMouthHeight = null; 
+
+            // Media streams 
+            this.audioStream = null; 
+            this.videoStream = null; 
+
+            // Face detection 
+            this.faceapi = null; 
+            this.detectionInterval = null; 
+            this.audioMonitor = null;
+        } 
+
+        async initialize(sharedStream) { 
+            console.log('🔒 Initializing Professional Proctoring System...'); 
+
+            // Show proctoring status to user 
+            this.showStatusBanner(); 
+
+            // Load face detection library 
+            await this.loadFaceApi(); 
+
+            // Reuse already-approved stream from verification if provided
+            if (sharedStream) {
+                this.audioStream = sharedStream;
+                this.videoStream = sharedStream;
+            }
+
+            // Initialize all monitoring systems 
+            await this.initAudioMonitoring(); 
+            await this.initVideoMonitoring(); 
+            this.initEnvironmentLockdown(); 
+            this.initBehavioralMonitoring(); 
+
+            // Start continuous monitoring loop 
+            this.startMonitoringLoop(); 
+
+            console.log('✅ Proctoring System Active'); 
+            this.logToServer('INFO', 'Proctoring started successfully'); 
+        } 
+
+        showStatusBanner() { 
+            const banner = document.createElement('div'); 
+            banner.id = 'proctoring-banner'; 
+            banner.style.cssText = 'position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); background: #09294d; color: white; padding: 8px 15px; border-radius: 20px; font-size: 12px; z-index: 9999; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);'; 
+            banner.innerHTML = '<span class="live-indicator" style="width: 10px; height: 10px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite;"></span>' + 
+                '<span>Proctoring Active</span>' + 
+                '<span id="violation-counter" style="background: #ef4444; padding: 2px 6px; border-radius: 10px; font-size: 10px;">0</span>'; 
+            document.body.appendChild(banner); 
+
+            // Add pulse animation 
+            const style = document.createElement('style'); 
+            style.textContent = ` 
+                @keyframes pulse { 
+                    0% { opacity: 1; transform: scale(1); } 
+                    50% { opacity: 0.5; transform: scale(1.2); } 
+                    100% { opacity: 1; transform: scale(1); } 
+                } 
+            `; 
+            document.head.appendChild(style); 
+        } 
+
+        async loadFaceApi() { 
+            return new Promise((resolve) => { 
+                // Check if already loaded 
+                if (window.faceapi) { 
+                    this.faceapi = window.faceapi; 
+                    resolve(); 
+                    return; 
+                } 
+
+                const script = document.createElement('script'); 
+                script.src = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js'; 
+                script.onload = async () => { 
+                    try { 
+                        // Use CDN models instead of local files for simplicity 
+                        await faceapi.nets.tinyFaceDetector.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights'); 
+                        await faceapi.nets.faceLandmark68Net.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights'); 
+                        await faceapi.nets.faceExpressionNet.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights'); 
+                        this.faceapi = faceapi; 
+                        console.log('✅ Face detection models loaded from CDN'); 
+                        resolve(); 
+                    } catch (err) { 
+                        console.warn('Could not load face-api models, using fallback detection', err); 
+                        resolve(); // Continue with fallback 
+                    } 
+                }; 
+                script.onerror = () => { 
+                    console.warn('Could not load face-api.js, using fallback detection'); 
+                    resolve(); // Continue without face-api 
+                }; 
+                document.head.appendChild(script); 
+            }); 
+        } 
+
+        async initAudioMonitoring() { 
+            try { 
+                if (!this.audioStream) {
+                    this.audioStream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: false,
+                            noiseSuppression: false,
+                            autoGainControl: false
+                        }
+                    });
+                }
+
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)(); 
+                const source = audioContext.createMediaStreamSource(this.audioStream); 
+                const analyser = audioContext.createAnalyser(); 
+                analyser.fftSize = 2048; 
+
+                source.connect(analyser); 
+
+                const bufferLength = analyser.frequencyBinCount; 
+                const dataArray = new Uint8Array(bufferLength); 
+
+                // Calibration phase (first 5 seconds) 
+                setTimeout(() => this.calibrateNoise(analyser), 5000); 
+
+                // Continuous monitoring 
+                this.audioMonitor = setInterval(() => { 
+                    analyser.getByteFrequencyData(dataArray); 
+                    this.analyzeAudio(dataArray); 
+                }, 500); 
+
+            } catch (err) { 
+                this.logViolation('CRITICAL', 'Audio monitoring unavailable - microphone access denied'); 
+            } 
+        } 
+
+        calibrateNoise(analyser) { 
+            const dataArray = new Uint8Array(analyser.frequencyBinCount); 
+            let sum = 0; 
+
+            // Take 10 samples 
+            for (let i = 0; i < 10; i++) { 
+                analyser.getByteFrequencyData(dataArray); 
+                sum += dataArray.reduce((a, b) => a + b, 0) / dataArray.length; 
+            } 
+
+            this.backgroundNoiseBaseline = sum / 10; 
+            this.calibrationComplete = true; 
+            console.log('✅ Noise baseline calibrated:', this.backgroundNoiseBaseline.toFixed(2)); 
+        } 
+
+        analyzeAudio(dataArray) { 
+            if (!this.calibrationComplete) return; 
+
+            const average = dataArray.reduce(function(a, b) { return a + b; }, 0) / dataArray.length; 
+            const dbLevel = 20 * Math.log10(average || 1); 
+
+            const now = Date.now();
+            const noiseThreshold = this.backgroundNoiseBaseline + 12; // slightly stricter so speaking is detected reliably
+
+            // DETECTION 1: Background Noise (someone talking nearby, TV, etc.) 
+            if (dbLevel > noiseThreshold) {
+                if (!this.noiseSpikeStartAt) this.noiseSpikeStartAt = now;
+                if (now - this.noiseSpikeStartAt >= this.noiseSpikeMinDurationMs) {
+                    this.logViolation('AUDIO', 'Sustained loud background noise detected (' + Math.round(dbLevel) + 'dB)');
+                    this.noiseSpikeStartAt = now; // reset window after logging
+                }
+            } else {
+                this.noiseSpikeStartAt = null;
+            }
+
+            // DETECTION 2: Multiple Voices (using frequency variance) 
+            const variance = this.calculateVariance(dataArray); 
+            if (variance > this.MULTIPLE_VOICES_THRESHOLD) {
+                if (!this.voiceVarianceStartAt) this.voiceVarianceStartAt = now;
+                if (now - this.voiceVarianceStartAt >= this.voiceVarianceMinDurationMs) {
+                    this.logViolation('AUDIO', 'Sustained multiple voices/conversation detected in background');
+                    this.voiceVarianceStartAt = now;
+                }
+            } else {
+                this.voiceVarianceStartAt = null;
+            }
+
+            // DETECTION 3: Sudden Silence (possible phone call or leaving) 
+            // Disabled as it triggers false positives in quiet rooms.
+        } 
+
+        calculateVariance(dataArray) { 
+            const mean = dataArray.reduce((a, b) => a + b, 0) / dataArray.length; 
+            const variance = dataArray.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / dataArray.length; 
+            return variance; 
+        } 
+
+        async initVideoMonitoring() { 
+            try { 
+                if (!this.videoStream) {
+                    this.videoStream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 640 },
+                            height: { ideal: 480 },
+                            frameRate: { ideal: 15 }
+                        }
+                    });
+                }
+
+                // Create hidden video element for processing 
+                let videoElement = document.getElementById('faceVideo'); 
+                if (!videoElement) { 
+                    videoElement = document.createElement('video'); 
+                    videoElement.id = 'proctorVideo'; 
+                    videoElement.style.display = 'none'; 
+                    document.body.appendChild(videoElement); 
+                } 
+
+                videoElement.srcObject = this.videoStream; 
+                videoElement.muted = true; 
+                await videoElement.play(); 
+
+                // Create canvas for processing 
+                this.videoCanvas = document.createElement('canvas'); 
+                this.videoContext = this.videoCanvas.getContext('2d'); 
+
+                // Start face detection 
+                this.startFaceDetection(videoElement); 
+
+            } catch (err) { 
+                this.logViolation('CRITICAL', 'Camera monitoring unavailable - webcam access denied'); 
+            } 
+        } 
+
+        async startFaceDetection(videoElement) { 
+            this.videoElement = videoElement; 
+
+            // Run detection every 500ms 
+            this.detectionInterval = setInterval(async () => { 
+                if (!this.examActive || !videoElement.videoWidth) return; 
+
+                try { 
+                    if (this.faceapi && videoElement.videoWidth > 0) { 
+                        // Use face-api for advanced detection 
+                        const detections = await this.faceapi 
+                            .detectAllFaces(videoElement, new this.faceapi.TinyFaceDetectorOptions()) 
+                            .withFaceLandmarks() 
+                            .withFaceExpressions(); 
+
+                        this.processFaceDetections(detections); 
+                    } else { 
+                        // Fallback: simple motion detection 
+                        this.processFallbackDetection(videoElement); 
+                    } 
+                } catch (err) { 
+                    // Silent fail - continue with next frame 
+                } 
+            }, 500); 
+        } 
+
+        processFaceDetections(detections) { 
+            if (detections.length === 0) { 
+                // DETECTION 4: No face in frame 
+                if (Date.now() - this.lastFaceDetected > this.FACE_LOST_THRESHOLD) { 
+                    this.logViolation('VISUAL', 'No face detected in camera - you left the frame'); 
+                } 
+                return; 
+            } 
+
+            this.lastFaceDetected = Date.now(); 
+
+            // DETECTION 5: Multiple faces 
+            if (detections.length > 1) { 
+                this.logViolation('VISUAL', 'Multiple people detected in camera frame'); 
+            } 
+
+            const face = detections[0]; 
+
+            // DETECTION 6: Gaze away from screen (using eye landmarks) 
+            const lookingAtScreen = this.detectGazeDirection(face.landmarks); 
+            if (!lookingAtScreen) { 
+                if (Date.now() - this.lastEyeContact > this.EYE_OFF_SCREEN_THRESHOLD) { 
+                    this.logViolation('VISUAL', 'Looking away from screen for >3 seconds'); 
+                } 
+            } else { 
+                this.lastEyeContact = Date.now(); 
+            } 
+
+            // DETECTION 7: Head movement (looking around suspiciously) 
+            const headMovement = this.detectHeadMovement(face.landmarks); 
+            if (headMovement > this.HEAD_MOVEMENT_THRESHOLD) {
+                const now = Date.now();
+                if (!this.headMovementStartAt) this.headMovementStartAt = now;
+                if (now - this.headMovementStartAt >= this.headMovementMinDurationMs) {
+                    this.logViolation('VISUAL', 'Sustained excessive head movement detected');
+                    this.headMovementStartAt = now;
+                }
+            } else {
+                this.headMovementStartAt = null;
+            }
+
+            // DETECTION 8: Face partially covered (hand over face, phone) 
+            if (this.detectFaceObstruction(face.landmarks)) { 
+                this.logViolation('VISUAL', 'Face partially obscured - possible phone or notes'); 
+            } 
+
+            // DETECTION 9: Looking down (possible phone in lap) 
+            const headPose = this.estimateHeadPose(face.landmarks); 
+            if (headPose.pitch < this.LOOKING_DOWN_ANGLE) { 
+                this.logViolation('VISUAL', 'Looking down - possible phone use'); 
+            } 
+
+            // DETECTION 10: Reading lips (communicating answers) 
+            if (this.detectLipMovement(face.landmarks, face.expressions)) { 
+                this.logViolation('BEHAVIOR', 'Lip movement detected - possible verbal communication'); 
+            } 
+        } 
+
+        detectGazeDirection(landmarks) { 
+            if (!landmarks) return true; 
+
+            try { 
+                const leftEye = landmarks.getLeftEye(); 
+                const rightEye = landmarks.getRightEye(); 
+
+                // Calculate eye aspect ratio (blink detection) 
+                const leftEAR = this.eyeAspectRatio(leftEye); 
+                const rightEAR = this.eyeAspectRatio(rightEye); 
+
+                // If eyes are closed or looking away 
+                if (leftEAR < 0.15 || rightEAR < 0.15) { 
+                    return false; 
+                } 
+
+                // Check pupil position (simplified) 
+                const leftPupil = leftEye[0]; 
+                const rightPupil = rightEye[3]; 
+
+                return true; 
+            } catch (err) { 
+                return true; 
+            } 
+        } 
+
+        eyeAspectRatio(eye) { 
+            if (!eye || eye.length < 6) return 0.3; 
+
+            try { 
+                const A = Math.hypot(eye[1].x - eye[5].x, eye[1].y - eye[5].y); 
+                const B = Math.hypot(eye[2].x - eye[4].x, eye[2].y - eye[4].y); 
+                const C = Math.hypot(eye[0].x - eye[3].x, eye[0].y - eye[3].y); 
+                return (A + B) / (2 * C); 
+            } catch (err) { 
+                return 0.3; 
+            } 
+        } 
+
+        detectHeadMovement(landmarks) { 
+            if (!landmarks) return 0; 
+
+            try { 
+                const nose = landmarks.getNose(); 
+                if (!nose || nose.length === 0) return 0; 
+
+                // Use inter-eye distance as a scale reference so movement is measured as a percentage.
+                // This avoids false positives when camera distance/zoom changes.
+                let faceScale = 100; 
+                try {
+                    const leftEye = landmarks.getLeftEye();
+                    const rightEye = landmarks.getRightEye();
+                    if (leftEye && leftEye.length > 0 && rightEye && rightEye.length > 0) {
+                        const lx = leftEye[0].x;
+                        const ly = leftEye[0].y;
+                        const rx = rightEye[3] ? rightEye[3].x : rightEye[0].x;
+                        const ry = rightEye[3] ? rightEye[3].y : rightEye[0].y;
+                        const d = Math.hypot(rx - lx, ry - ly);
+                        if (d && d > 20) faceScale = d;
+                    }
+                } catch (e) {
+                    // keep default
+                }
+
+                if (!this.previousNosePosition) { 
+                    this.previousNosePosition = { x: nose[0].x, y: nose[0].y, scale: faceScale }; 
+                    return 0; 
+                } 
+
+                const pxMove = Math.hypot( 
+                    nose[0].x - this.previousNosePosition.x, 
+                    nose[0].y - this.previousNosePosition.y 
+                );
+
+                const scale = this.previousNosePosition.scale || faceScale || 100;
+                const movement = pxMove / scale; // normalized ratio (e.g. 0.20 = 20% of face scale)
+
+                this.previousNosePosition = { x: nose[0].x, y: nose[0].y, scale: faceScale }; 
+                return movement; 
+            } catch (err) { 
+                return 0; 
+            } 
+        } 
+
+        detectFaceObstruction(landmarks) { 
+            if (!landmarks) return false; 
+
+            try { 
+                const jaw = landmarks.getJawOutline(); 
+                const mouth = landmarks.getMouth(); 
+
+                if (!jaw || jaw.length === 0 || !mouth || mouth.length === 0) return false; 
+
+                const jawWidth = Math.abs(jaw[0].x - jaw[jaw.length - 1].x); 
+                const mouthWidth = Math.abs(mouth[0].x - mouth[6].x); 
+
+                // If mouth area is too small, might be covered 
+                return mouthWidth < jawWidth * 0.2; 
+            } catch (err) { 
+                return false; 
+            } 
+        } 
+
+        estimateHeadPose(landmarks) { 
+            if (!landmarks) return { pitch: 0 }; 
+
+            try { 
+                const nose = landmarks.getNose(); 
+                const leftEye = landmarks.getLeftEye(); 
+                const rightEye = landmarks.getRightEye(); 
+
+                if (!nose || nose.length === 0 || !leftEye || leftEye.length === 0 || !rightEye || rightEye.length === 0) { 
+                    return { pitch: 0 }; 
+                } 
+
+                const eyeY = (leftEye[0].y + rightEye[0].y) / 2; 
+                const pitch = nose[0].y - eyeY; 
+
+                return { pitch }; 
+            } catch (err) { 
+                return { pitch: 0 }; 
+            } 
+        } 
+
+        detectLipMovement(landmarks, expressions) { 
+            if (!landmarks) return false; 
+
+            try { 
+                const mouth = landmarks.getMouth(); 
+                if (!mouth || mouth.length < 14) return false; 
+
+                if (!this.previousMouthHeight) { 
+                    this.previousMouthHeight = Math.abs(mouth[13].y - mouth[14].y); 
+                    return false; 
+                } 
+
+                const mouthHeight = Math.abs(mouth[13].y - mouth[14].y); 
+                const movement = Math.abs(mouthHeight - this.previousMouthHeight); 
+
+                this.previousMouthHeight = mouthHeight; 
+
+                // If mouth is moving significantly while not smiling (talking) 
+                return movement > this.MOUTH_MOVEMENT_THRESHOLD &&  
+                       (!expressions || expressions.happy < 0.5); 
+            } catch (err) { 
+                return false; 
+            } 
+        } 
+
+        processFallbackDetection(videoElement) { 
+            if (!this.videoCanvas) return; 
+
+            try { 
+                this.videoCanvas.width = videoElement.videoWidth; 
+                this.videoCanvas.height = videoElement.videoHeight; 
+                this.videoContext.drawImage(videoElement, 0, 0); 
+
+                const frame = this.videoContext.getImageData(0, 0, this.videoCanvas.width, this.videoCanvas.height); 
+
+                if (this.lastFrame) { 
+                    // Simple motion detection 
+                    let diff = 0; 
+                    for (let i = 0; i < frame.data.length; i += 40) { 
+                        diff += Math.abs(frame.data[i] - this.lastFrame.data[i]); 
+                    } 
+
+                    const avgDiff = diff / (frame.data.length / 40); 
+
+                    if (avgDiff > 30) { 
+                        this.logViolation('VISUAL', 'Significant movement detected in frame'); 
+                    } 
+                } 
+
+                this.lastFrame = frame; 
+                this.lastFaceDetected = Date.now(); 
+            } catch (err) { 
+                // Silent fail 
+            } 
+        } 
+
+        initEnvironmentLockdown() { 
+            var self = this;
+            // PREVENT SCREEN CAPTURE 
+            document.addEventListener('keyup', function(e) { 
+                if (e.key === 'PrintScreen') { 
+                    self.logViolation('LOCKDOWN', 'Print screen attempted'); 
+                    navigator.clipboard.writeText('').catch(function() {}); 
+                } 
+            }); 
+
+            // DETECT ALT+TAB and window switching 
+            let lastFocusTime = Date.now(); 
+            window.addEventListener('blur', function() { 
+                lastFocusTime = Date.now(); 
+                self.logViolation('LOCKDOWN', 'Window focus lost - possible Alt+Tab'); 
+            }); 
+
+            window.addEventListener('focus', function() { 
+                if (Date.now() - lastFocusTime > 2000) { 
+                    // This was a real switch, not just a brief flicker 
+                } 
+            }); 
+
+            // BLOCK RIGHT CLICK 
+            document.addEventListener('contextmenu', function(e) { 
+                e.preventDefault(); 
+                self.logViolation('LOCKDOWN', 'Right-click attempted'); 
+                return false; 
+            }); 
+
+            // BLOCK KEYBOARD SHORTCUTS 
+            document.addEventListener('keydown', function(e) { 
+                if (e.ctrlKey || e.altKey || e.metaKey) { 
+                    e.preventDefault(); 
+                    self.logViolation('LOCKDOWN', 'Forbidden key combination: ' + e.key); 
+                } 
+
+                // Block function keys 
+                if (e.key.startsWith('F') && e.key.length > 1 && !isNaN(parseInt(e.key.substring(1)))) { 
+                    e.preventDefault(); 
+                    self.logViolation('LOCKDOWN', 'Function key pressed: ' + e.key); 
+                } 
+            }); 
+
+            // FORCE FULLSCREEN 
+            this.enforceFullscreen(); 
+        } 
+
+        enforceFullscreen() { 
+            // Request fullscreen at start 
+            setTimeout(() => { 
+                if (document.documentElement.requestFullscreen) { 
+                    document.documentElement.requestFullscreen().catch(() => {}); 
+                } 
+            }, 1000); 
+
+            // Check every 3 seconds 
+            setInterval(() => { 
+                if (!document.fullscreenElement && this.examActive) { 
+                    this.logViolation('LOCKDOWN', 'Exited fullscreen mode'); 
+
+                    // Try to re-enter fullscreen 
+                    try { 
+                        document.documentElement.requestFullscreen(); 
+                    } catch (err) {} 
+                } 
+            }, 3000); 
+        } 
+
+        initBehavioralMonitoring() { 
+            // Track mouse behavior 
+            let mouseMovements = []; 
+            let mouseStoppedTime = Date.now(); 
+            let lastMousePosition = { x: 0, y: 0 }; 
+
+            document.addEventListener('mousemove', (e) => { 
+                const now = Date.now(); 
+
+                // Check if mouse went to screen edge (possible second monitor) 
+                if (e.clientX <= 5 || e.clientY <= 5 ||  
+                    e.clientX >= window.innerWidth - 5 ||  
+                    e.clientY >= window.innerHeight - 5) { 
+                    this.logViolation('BEHAVIOR', 'Mouse moved to screen edge - possible second monitor'); 
+                } 
+
+                // Track mouse speed 
+                if (lastMousePosition.x !== 0) { 
+                    const distance = Math.hypot(e.clientX - lastMousePosition.x, e.clientY - lastMousePosition.y); 
+                    const dt = now - mouseStoppedTime; 
+
+                    // Avoid noisy spikes when the browser reports extremely small dt
+                    if (dt >= 20) {
+                        const speedPxPerS = (distance / dt) * 1000;
+
+                        // Only consider truly extreme sustained speed, not normal quick gestures
+                        const isExtreme = speedPxPerS >= this.FAST_MOUSE_SPEED_PX_PER_S;
+                        if (isExtreme) {
+                            // sustain logic
+                            if (!this.fastMouseStartAt) this.fastMouseStartAt = now;
+
+                            const sustainedMs = now - this.fastMouseStartAt;
+                            const cooldownOk = !this.lastFastMouseFlagAt || ((now - this.lastFastMouseFlagAt) >= this.FAST_MOUSE_COOLDOWN_MS);
+
+                            if (sustainedMs >= this.FAST_MOUSE_SUSTAIN_MS && cooldownOk) {
+                                this.lastFastMouseFlagAt = now;
+                                this.fastMouseStartAt = null;
+                                mouseMovements = [];
+                                this.logViolation('BEHAVIOR', 'Unusually fast sustained mouse movements - possible automation');
+                            }
+                        } else {
+                            this.fastMouseStartAt = null;
+                        }
+
+                        // Keep light telemetry for debugging / future tuning (non-actionable)
+                        mouseMovements.push(speedPxPerS);
+                        if (mouseMovements.length > 20) mouseMovements.shift();
+                    }
+                }
+ 
+
+                lastMousePosition = { x: e.clientX, y: e.clientY }; 
+                mouseStoppedTime = now; 
+            }); 
+
+            // Detect if student leaves the page 
+            document.addEventListener('visibilitychange', () => { 
+                if (document.hidden && this.examActive) { 
+                    this.logViolation('BEHAVIOR', 'Tab/window hidden - possible cheating'); 
+                } 
+            }); 
+        } 
+
+        startMonitoringLoop() { 
+            // Check for developer tools 
+            setInterval(() => { 
+                if (!this.examActive) return; 
+
+                const widthThreshold = window.outerWidth - window.innerWidth > 160; 
+                const heightThreshold = window.outerHeight - window.innerHeight > 160; 
+
+                if (widthThreshold || heightThreshold) { 
+                    this.logViolation('SECURITY', 'Developer tools detected - possible inspection'); 
+                } 
+
+                // Check for VM/Remote Desktop (basic detection) 
+                const userAgent = navigator.userAgent.toLowerCase(); 
+                if (userAgent.includes('virtualbox') ||  
+                    userAgent.includes('vmware') || 
+                    userAgent.includes('parallels')) { 
+                    this.logViolation('SECURITY', 'Virtual machine detected'); 
+                } 
+
+                // Check for multiple monitors (simplified) 
+                if (window.screen.width > 2000) { 
+                    // Ultra-wide or multiple monitors 
+                    this.logViolation('SECURITY', 'Wide screen detected - possible multiple monitors'); 
+                } 
+
+            }, 5000); 
+
+            // Heartbeat to keep session alive 
+            setInterval(() => { 
+                if (this.examActive) { 
+                    console.log('Proctoring heartbeat - monitoring active'); 
+                } 
+            }, 30000); 
+        } 
+
+        shouldCountViolation(type, description) {
+            // Never terminate due to system capability issues
+            if (type === 'CRITICAL') return false;
+
+            // SECURITY heuristics are noisy; log them but do not count as warnings.
+            if (type === 'SECURITY') return false;
+
+            // Very noisy in normal exam usage
+            if (type === 'LOCKDOWN') {
+                // Only count exiting fullscreen; ignore other lockdown noise like right click/keys.
+                if (description && description.indexOf('Exited fullscreen mode') !== -1) return true;
+                return false;
+            }
+
+            return true;
+        }
+
+        isInGracePeriod() {
+            return (Date.now() - this.examStartAt) < this.gracePeriodMs;
+        }
+
+        logViolation(type, description) { 
+            if (!this.examActive) return; 
+
+            // Ignore most violations during initial startup to avoid instant termination.
+            if (this.isInGracePeriod() && type !== 'CRITICAL') {
+                // allow logging to server for visibility, but do not count as warning
+                try {
+                    this.sendViolationToServer({
+                        timestamp: new Date().toISOString(),
+                        type: type,
+                        description: description,
+                        examId: '<%= session.getAttribute("examId") %>',
+                        studentId: '<%= session.getAttribute("userId") %>'
+                    });
+                } catch (e) {}
+                return;
+            }
+
+            // Debounce repeated violations
+            var key = String(type) + '|' + String(description);
+            var now = Date.now();
+            if (this.lastViolationAt[key] && (now - this.lastViolationAt[key]) < this.violationCooldownMs) {
+                return;
+            }
+            this.lastViolationAt[key] = now;
+
+            const violation = { 
+                timestamp: new Date().toISOString(), 
+                type: type, 
+                description: description, 
+                examId: (function(){
+                    try {
+                        var el = document.querySelector('input[name="examId"]');
+                        return (el && el.value) ? el.value : '<%= session.getAttribute("examId") %>';
+                    } catch (e) {
+                        return '<%= session.getAttribute("examId") %>';
+                    }
+                })(),
+                studentId: '<%= session.getAttribute("userId") %>' 
+            }; 
+
+            this.violations.push(violation); 
+
+            var countThis = this.shouldCountViolation(type, description);
+            if (countThis) {
+                this.warningCount++; 
+            }
+
+            // Update counter in UI 
+            const counter = document.getElementById('violation-counter'); 
+            if (counter) counter.textContent = this.warningCount; 
+
+            // Capture screenshot evidence 
+            this.captureEvidence(violation); 
+
+            // Show warning to student 
+            if (countThis) {
+                this.showWarning(violation); 
+            }
+
+            // Auto-submit after MAX_WARNINGS 
+            if (countThis && this.warningCount >= this.MAX_WARNINGS) { 
+                this.autoSubmitForCheating(); 
+            } else { 
+                // Send to server 
+                this.sendViolationToServer(violation); 
+            } 
+        } 
+
+        async captureEvidence(violation) { 
+            if (!this.videoElement || !this.videoElement.videoWidth) return; 
+
+            try { 
+                const canvas = document.createElement('canvas'); 
+                canvas.width = this.videoElement.videoWidth; 
+                canvas.height = this.videoElement.videoHeight; 
+                canvas.getContext('2d').drawImage(this.videoElement, 0, 0); 
+                violation.screenshot = canvas.toDataURL('image/jpeg', 0.6); 
+            } catch (err) { 
+                // Can't capture screenshot 
+            } 
+        } 
+
+        showWarning(violation) { 
+            // Create warning modal 
+            const warningModal = document.createElement('div'); 
+            warningModal.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #fee2e2; border: 2px solid #ef4444; border-radius: 8px; padding: 15px 25px; z-index: 10000; box-shadow: 0 4px 20px rgba(0,0,0,0.3); text-align: center; animation: slideDown 0.3s ease-out;'; 
+
+            warningModal.innerHTML = '<div style="color: #b91c1c; font-weight: bold; margin-bottom: 5px;">' + 
+                    '⚠️ Proctoring Warning (' + this.warningCount + '/' + this.MAX_WARNINGS + ')' + 
+                '</div>' + 
+                '<div style="color: #7f1d1d; font-size: 14px;">' + 
+                    violation.type + ': ' + violation.description + 
+                '</div>' + 
+                '<div style="color: #991b1b; font-size: 12px; margin-top: 5px;">' + 
+                    'This incident has been recorded.' + 
+                '</div>'; 
+
+            document.body.appendChild(warningModal); 
+
+            // Add animation 
+            const style = document.createElement('style'); 
+            style.textContent = ` 
+                @keyframes slideDown { 
+                    from { opacity: 0; transform: translate(-50%, -20px); } 
+                    to { opacity: 1; transform: translate(-50%, 0); } 
+                } 
+            `; 
+            document.head.appendChild(style); 
+
+            // Remove after 5 seconds 
+            setTimeout(() => { 
+                if (warningModal.parentNode) { 
+                    warningModal.remove(); 
+                } 
+            }, 5000); 
+        } 
+
+        autoSubmitForCheating() { 
+            this.examActive = false; 
+
+            // Show final message in modal to keep fullscreen, then auto-submit
+            try {
+                if (typeof showSystemAlertModal === 'function') {
+                    showSystemAlertModal('EXAM TERMINATED: Maximum violations exceeded. Your exam will be submitted for review.');
+                }
+            } catch (e) {}
+
+            const form = document.getElementById('myform'); 
+            if (form) { 
+                // Add cheating flag 
+                var existingCheat = form.querySelector('input[name="cheating_terminated"]');
+                if (!existingCheat) {
+                    existingCheat = document.createElement('input');
+                    existingCheat.type = 'hidden';
+                    existingCheat.name = 'cheating_terminated';
+                    form.appendChild(existingCheat);
+                }
+                existingCheat.value = 'true';
+
+                // Serialize answers (including drag-drop + rearrange) before forced submit
+                try {
+                    document.querySelectorAll('.answers[data-max-select="2"]').forEach(function(box){
+                        var card = box.closest('.question-card');
+                        if (!card) return;
+                        var qindex = card.getAttribute('data-qindex');
+                        if(qindex) updateHiddenForMulti(qindex);
+                    });
+
+                    const dragDropAnswers = getDragDropAnswers();
+                    Object.keys(dragDropAnswers).forEach(qindex => {
+                        const mappings = dragDropAnswers[qindex];
+                        const formattedMappings = {};
+                        for (let tId in mappings) {
+                            formattedMappings['target_' + tId] = 'item_' + mappings[tId];
+                        }
+                        const ansValue = JSON.stringify(formattedMappings);
+
+                        let hiddenAns = document.querySelector('input[name="ans' + qindex + '"]');
+                        if (!hiddenAns) {
+                            hiddenAns = document.createElement('input');
+                            hiddenAns.type = 'hidden';
+                            hiddenAns.name = 'ans' + qindex;
+                            form.appendChild(hiddenAns);
+                        }
+                        hiddenAns.value = ansValue;
+                    });
+
+                    const rearrangeAnswers = getRearrangeAnswers();
+                    Object.keys(rearrangeAnswers).forEach(qindex => {
+                        const orderedIds = rearrangeAnswers[qindex];
+                        const ansValue = JSON.stringify(orderedIds);
+
+                        let hiddenAns = document.querySelector('input[name="ans' + qindex + '"]');
+                        if (!hiddenAns) {
+                            hiddenAns = document.createElement('input');
+                            hiddenAns.type = 'hidden';
+                            hiddenAns.name = 'ans' + qindex;
+                            form.appendChild(hiddenAns);
+                        }
+                        hiddenAns.value = ansValue;
+                    });
+                } catch (e) {}
+
+                cleanupExam();
+
+                // Submit shortly to allow the modal to be seen
+                setTimeout(function() {
+                    form.submit();
+                }, 1200);
+            } 
+        } 
+
+        sendViolationToServer(violation) { 
+            const formData = new FormData(); 
+            formData.append('page', 'proctoring'); 
+            formData.append('operation', 'log_violation'); 
+            formData.append('violation_data', JSON.stringify(violation)); 
+
+            // Use sendBeacon for reliability during page unload 
+            if (navigator.sendBeacon) { 
+                navigator.sendBeacon('controller.jsp', formData); 
+            } else { 
+                fetch('controller.jsp', {  
+                    method: 'POST',  
+                    body: formData, 
+                    keepalive: true  
+                }).catch(() => {}); 
+            } 
+        } 
+
+        logToServer(type, message) { 
+            const violation = { 
+                timestamp: new Date().toISOString(), 
+                type: 'INFO', 
+                description: message, 
+                examId: '<%= session.getAttribute("examId") %>', 
+                studentId: '<%= session.getAttribute("userId") %>' 
+            }; 
+            this.sendViolationToServer(violation); 
+        } 
+
+        stop() { 
+            this.examActive = false; 
+
+            if (this.detectionInterval) { 
+                clearInterval(this.detectionInterval); 
+            } 
+
+            if (this.audioMonitor) { 
+                clearInterval(this.audioMonitor); 
+            } 
+
+            if (this.audioStream) { 
+                this.audioStream.getTracks().forEach(t => t.stop()); 
+            } 
+
+            if (this.videoStream) { 
+                this.videoStream.getTracks().forEach(t => t.stop()); 
+            } 
+
+            console.log('🛑 Proctoring stopped'); 
+        } 
+    } 
+
+    // Auto-restart proctoring after the exam starts (page navigation/reload stops media streams).
+    document.addEventListener('DOMContentLoaded', function () {
+        try {
+            // Only auto-start when the actual exam form is present.
+            var examForm = document.getElementById('myform');
+            if (!examForm) return;
+
+            if (window.proctor) return;
+
+            var shouldAutoStart = false;
+            try {
+                shouldAutoStart = sessionStorage.getItem('proctorAutoStart') === '1';
+            } catch (e) {
+                shouldAutoStart = false;
+            }
+
+            if (!shouldAutoStart) return;
+
+            // Clear the flag immediately to avoid double-starts.
+            try {
+                sessionStorage.removeItem('proctorAutoStart');
+            } catch (e) {
+                // ignore
+            }
+
+            (async function () {
+                try {
+                    var stream = null;
+                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    }
+
+                    var p = new ProctoringSystem();
+                    window.proctor = p;
+                    await p.initialize(stream);
+                } catch (err) {
+                    console.error('Auto-start proctoring failed:', err);
+                }
+            })();
+        } catch (outerErr) {
+            console.error('Auto-start proctoring setup failed:', outerErr);
+        }
+    });
+
+    // Begin button proctoring hook moved to the confirmation modal handler above.
 </script>

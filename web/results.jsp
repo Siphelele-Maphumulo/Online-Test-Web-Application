@@ -1694,6 +1694,43 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                 // Get actual values from database
                 int obtainedMarks = examDetails.getObtMarks();
                 int totalMarks = examDetails.gettMarks();
+
+                // Fallback: If DB marks were not updated (commonly after forced/terminated submission),
+                // compute marks from per-question statuses and question marks.
+                if (obtainedMarks == 0 && totalMarks > 0 && correctAnswers > 0) {
+                  float computedObt = 0;
+                  float computedTotal = 0;
+                  for (Answers a : answersList) {
+                    Questions qo = null;
+                    if (a.getQuestionId() > 0) {
+                      try {
+                        qo = pDAO.getQuestionById(a.getQuestionId());
+                      } catch (Exception ex) {
+                        qo = null;
+                      }
+                    }
+
+                    float qMax = (qo != null) ? qo.getTotalMarks() : 1.0f;
+                    if (qMax <= 0) qMax = 1.0f;
+                    computedTotal += qMax;
+
+                    String st = a.getStatus();
+                    if (st != null) {
+                      if (st.equalsIgnoreCase("correct")) {
+                        computedObt += qMax;
+                      } else if (st.startsWith("partial:")) {
+                        try {
+                          computedObt += Float.parseFloat(st.substring(8));
+                        } catch (Exception ex) {}
+                      }
+                    }
+                  }
+
+                  if (computedTotal > 0 && computedObt > 0) {
+                    obtainedMarks = Math.round(computedObt);
+                    totalMarks = Math.round(computedTotal);
+                  }
+                }
                 
                 // Calculate percentage (Weighted Marks Percentage)
                 double percentage = 0;
@@ -1716,6 +1753,11 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                 
                 String statusClass = statusText.equalsIgnoreCase("Pass") ? "status-pass" : "status-fail";
                 String percentageColor = statusText.equalsIgnoreCase("Pass") ? "var(--success)" : "var(--error)";
+
+                if (statusText.equalsIgnoreCase("Cheating Detected") || statusText.toLowerCase().contains("cheating")) {
+                    statusClass = "status-terminated";
+                    percentageColor = "var(--warning)";
+                }
                 
                 // Debug logging
                 // === RESULTS DEBUG ===
@@ -1771,7 +1813,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                 <div style="display: flex; justify-content: center; gap: var(--spacing-xl); align-items: center;">
                   <div style="text-align: center;">
                     <div style="font-size: 2rem; font-weight: 800; color: var(--primary-blue);">
-                      <%= examDetails.getObtMarks() %>/<%= examDetails.gettMarks() %>
+                      <%= obtainedMarks %>/<%= totalMarks %>
                     </div>
                     <div style="color: var(--dark-gray); font-weight: 600;">Marks Obtained</div>
                   </div>
@@ -2006,30 +2048,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                             %>
                           </div>
                         </div>
-                      </div>
-                      
-                      <!-- Score Display -->
-                      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--medium-gray);">
-                        <div style="text-align: center;">
-                          <div style="font-size: 14px; font-weight: 600; color: <%= isCorrect ? "var(--success)" : (qScore > 0 ? "var(--warning)" : "var(--error)") %>;">
-                            <%= isCorrect ? "Full Score" : (qScore > 0 ? "Partial Score" : "Incorrect") %>: <%= qScore %> / <%= qMaxMarks %>
-                          </div>
-                          <!-- <div style="font-size: 12px; color: var(--dark-gray); margin-top: 4px;">
-                            <%= a.getAnswer() %>
-                          </div> -->
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                <% } else if (isRearrange) { %>
-                  <!-- Rearrange Question Answer Display -->
-                  <div style="grid-column: 1 / -1;">
-                    <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 12px; font-size: 13px;">
-                      <i class="fas fa-sort-amount-down"></i> Rearrange Question
-                    </div>
-                    
-                    <div style="background: var(--light-gray); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--medium-gray);">
-                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+
                         <!-- Student's Answer -->
                         <div>
                           <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 8px; font-size: 12px;">
@@ -2085,7 +2104,30 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                             %>
                           </div>
                         </div>
-                        
+                      </div>
+                      
+                      <!-- Score Display -->
+                      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--medium-gray);">
+                        <div style="text-align: center;">
+                          <div style="font-size: 14px; font-weight: 600; color: <%= isCorrect ? "var(--success)" : (qScore > 0 ? "var(--warning)" : "var(--error)") %>;">
+                            <%= isCorrect ? "Full Score" : (qScore > 0 ? "Partial Score" : "Incorrect") %>: <%= qScore %> / <%= qMaxMarks %>
+                          </div>
+                          <!-- <div style="font-size: 12px; color: var(--dark-gray); margin-top: 4px;">
+                            <%= a.getAnswer() %>
+                          </div> -->
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                <% } else if (isRearrange) { %>
+                  <!-- Rearrange Question Answer Display -->
+                  <div style="grid-column: 1 / -1;">
+                    <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 12px; font-size: 13px;">
+                      <i class="fas fa-sort-amount-down"></i> Rearrange Question
+                    </div>
+                    
+                    <div style="background: var(--light-gray); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--medium-gray);">
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                         <!-- Correct Answer -->
                         <div>
                           <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 8px; font-size: 12px;">
