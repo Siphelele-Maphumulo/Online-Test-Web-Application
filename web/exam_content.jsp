@@ -1934,13 +1934,13 @@
             <!-- SCRIPT BLOCK -->
             <script>
                 /* --- GLOBAL VARIABLES --- */
-                var examActive = true;
-                var warningGiven = false;
-                var dirty = false;
-                var timerInterval = null;
-                var examDuration = <%= pDAO.getExamDuration(courseName) %>;
-                var totalQuestions = <%= totalQ %>;
-                var currentCourseName = '<%= courseName %>';
+                examActive = true;
+                warningGiven = false;
+                dirty = false;
+                timerInterval = null;
+                examDuration = <%= pDAO.getExamDuration(courseName) %>;
+                totalQuestions = <%= totalQ %>;
+                currentCourseName = '<%= courseName %>';
 
                 /* --- MULTI-SELECT HIDDEN FIELD --- */
                 function updateHiddenForMulti(qindex){
@@ -2816,7 +2816,7 @@
         </div>
         <div class="modal-footer">
             <button id="cancelButton" class="btn-secondary">Cancel</button>
-            <button id="beginButton" class="btn-primary">Begin Exam</button>
+            <button id="beginExamBtnInitial" class="btn-primary">Begin Exam</button>
         </div>
     </div>
 </div>
@@ -2877,7 +2877,7 @@
         const confirmationModal = document.getElementById('confirmationModal');
         const modalCourseName = document.getElementById('modalCourseName');
         const modalDuration = document.getElementById('modalDuration');
-        const beginButton = document.getElementById('beginButton');
+        const beginExamBtnInitial = document.getElementById('beginExamBtnInitial');
         const cancelButton = document.getElementById('cancelButton');
         
         // Inactive Modal elements
@@ -2889,14 +2889,15 @@
         if (confirmationModal) confirmationModal.style.display = 'none';
         if (inactiveModal) inactiveModal.style.display = 'none';
 
-        if (beginButton) {
-            beginButton.addEventListener('click', function () {
-                console.log('Begin button clicked, submitting form...');
-                sessionStorage.clear(); // Clear storage and submit
-                if (form) {
-                    // Remove the event listener to prevent infinite loop
-                    form.removeEventListener('submit', arguments.callee);
-                    form.submit();
+        if (beginExamBtnInitial) {
+            beginExamBtnInitial.addEventListener('click', function () {
+                console.log('Begin button clicked, starting diagnostics...');
+                if (typeof runDiagnostics === 'function') {
+                    runDiagnostics();
+                    if (confirmationModal) confirmationModal.style.display = 'none';
+                } else {
+                    console.log('runDiagnostics not found, submitting form...');
+                    if (form) form.submit();
                 }
             });
         }

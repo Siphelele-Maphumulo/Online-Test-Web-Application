@@ -128,10 +128,10 @@ class ProctoringSystem {
             script.src = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
             script.onload = async () => {
                 try {
-                    // Use local models from /web/models for offline capability
-                    await faceapi.nets.tinyFaceDetector.load('/models');
-                    await faceapi.nets.faceLandmark68Net.load('/models');
-                    await faceapi.nets.faceExpressionNet.load('/models');
+                    // Use local models from web/models for offline capability
+                    await faceapi.nets.tinyFaceDetector.load('models/');
+                    await faceapi.nets.faceLandmark68Net.load('models/');
+                    await faceapi.nets.faceExpressionNet.load('models/');
                     this.faceapi = faceapi;
                     console.log('✅ Face detection models loaded from local files');
                     resolve();
