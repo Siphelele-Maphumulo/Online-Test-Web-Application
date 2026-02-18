@@ -2562,6 +2562,21 @@
         color: var(--dark-gray);
         line-height: 1.4;
     }
+    .diag-info ul {
+        margin: 5px 0 5px 20px;
+        padding: 0;
+    }
+    .diag-info ul li {
+        display: list-item !important;
+        padding: 2px 0 !important;
+        font-size: 12px !important;
+        list-style-type: disc !important;
+        color: var(--dark-gray) !important;
+        background: none !important;
+        border: none !important;
+        margin: 0 !important;
+        gap: 0 !important;
+    }
     .diag-status {
         width: 40px;
         text-align: right;
@@ -2602,6 +2617,21 @@
         margin: 0;
         font-size: 12px;
         color: var(--secondary-blue);
+    }
+    .diagnostics-simple-words ul {
+        margin: 5px 0 0 20px;
+        padding: 0;
+    }
+    .diagnostics-simple-words li {
+        font-size: 12px !important;
+        color: var(--secondary-blue) !important;
+        margin-bottom: 2px !important;
+        display: list-item !important;
+        list-style-type: disc !important;
+        background: none !important;
+        border: none !important;
+        padding: 0 !important;
+        gap: 0 !important;
     }
 
     @keyframes pulse-success {
@@ -5424,63 +5454,98 @@ function updateProgress() {
         </div>
         <div class="modal-body">
             <div class="diagnostics-intro">
-                <h4>Diagnostics Check</h4>
+                <h4>1. Diagnostics Check</h4>
                 <p>This checks if your computer is ready for the exam. It makes sure everything is working properly so you don’t have problems during the test.</p>
             </div>
 
             <div class="diagnostics-grid">
                 <div class="diag-item" id="diag-internet">
                     <div class="diag-info">
-                        <strong>Active internet connection</strong>
-                        <p>The exam is online. You need internet so questions can load, answers can save, and the system can monitor the exam. If your internet is weak, you might lose your work.</p>
+                        <strong>2. Active Internet Connection</strong>
+                        <p>The exam is online. You need internet so:</p>
+                        <ul>
+                            <li>Questions can load</li>
+                            <li>Your answers can save</li>
+                            <li>The system can monitor the exam</li>
+                        </ul>
+                        <p>If your internet is weak, you might lose your work.</p>
                     </div>
                     <div class="diag-status" id="status-internet"><i class="fas fa-spinner fa-spin"></i></div>
                 </div>
 
                 <div class="diag-item" id="diag-browser">
                     <div class="diag-info">
-                        <strong>Internet browser</strong>
-                        <p>The system checks your browser (like Chrome or Edge). Some exams only work properly on certain browsers. This prevents pages not loading or errors during the test.</p>
+                        <strong>3. Internet Browser</strong>
+                        <p>The system checks your browser (like Chrome or Edge). Some exams only work properly on certain browsers. This prevents:</p>
+                        <ul>
+                            <li>Pages not loading</li>
+                            <li>Buttons not working</li>
+                            <li>Errors during the test</li>
+                        </ul>
                     </div>
                     <div class="diag-status" id="status-browser"><i class="fas fa-spinner fa-spin"></i></div>
                 </div>
 
                 <div class="diag-item" id="diag-javascript">
                     <div class="diag-info">
-                        <strong>JavaScript enabled</strong>
-                        <p>JavaScript helps the website function properly. It allows timers to work, questions to change, and answers to save automatically.</p>
+                        <strong>4. JavaScript Enabled</strong>
+                        <p>JavaScript helps the website function properly. It allows:</p>
+                        <ul>
+                            <li>Timers to work</li>
+                            <li>Questions to change</li>
+                            <li>Answers to save automatically</li>
+                        </ul>
+                        <p>If JavaScript is off, the exam may not work correctly.</p>
                     </div>
                     <div class="diag-status" id="status-javascript"><i class="fas fa-spinner fa-spin"></i></div>
                 </div>
 
                 <div class="diag-item" id="diag-resolution">
                     <div class="diag-info">
-                        <strong>Screen resolution</strong>
-                        <p>This checks your screen size. The exam needs enough space to show all questions clearly, show the timer, and instructions.</p>
+                        <strong>5. Screen Resolution</strong>
+                        <p>This checks your screen size. The exam needs enough space to:</p>
+                        <ul>
+                            <li>Show all questions clearly</li>
+                            <li>Show the timer</li>
+                            <li>Show instructions</li>
+                        </ul>
+                        <p>If your screen is too small, you might not see everything properly.</p>
                     </div>
                     <div class="diag-status" id="status-resolution"><i class="fas fa-spinner fa-spin"></i></div>
                 </div>
 
                 <div class="diag-item" id="diag-os">
                     <div class="diag-info">
-                        <strong>Operating system</strong>
-                        <p>The system checks if you are using Windows, Mac, etc. This helps avoid compatibility problems.</p>
+                        <strong>6. Operating System</strong>
+                        <p>The system checks if you are using Windows, Mac, etc. Some systems work better on certain operating systems. This helps avoid compatibility problems.</p>
                     </div>
                     <div class="diag-status" id="status-os"><i class="fas fa-spinner fa-spin"></i></div>
                 </div>
 
                 <div class="diag-item" id="diag-camera">
                     <div class="diag-info">
-                        <strong>Camera enabled</strong>
-                        <p>The camera is used for monitoring. It helps prevent cheating, confirm your identity, and record the exam session (online proctoring).</p>
+                        <strong>7. Camera Enabled</strong>
+                        <p>The camera is used for monitoring. It helps:</p>
+                        <ul>
+                            <li>Prevent cheating</li>
+                            <li>Confirm your identity</li>
+                            <li>Record the exam session</li>
+                        </ul>
+                        <p>This is called online proctoring.</p>
                     </div>
                     <div class="diag-status" id="status-camera"><i class="fas fa-spinner fa-spin"></i></div>
                 </div>
 
                 <div class="diag-item" id="diag-environment">
                     <div class="diag-info">
-                        <strong>Exam environment</strong>
-                        <p>This checks that no other programs are open, no screen sharing is active, and no suspicious activity is happening.</p>
+                        <strong>8. Exam Environment</strong>
+                        <p>This checks that:</p>
+                        <ul>
+                            <li>No other programs are open</li>
+                            <li>No screen sharing is active</li>
+                            <li>No suspicious activity is happening</li>
+                        </ul>
+                        <p>It makes sure the exam is fair for everyone.</p>
                     </div>
                     <div class="diag-status" id="status-environment"><i class="fas fa-spinner fa-spin"></i></div>
                 </div>
@@ -5488,7 +5553,13 @@ function updateProgress() {
 
             <div class="diagnostics-simple-words">
                 <strong>In Simple Words:</strong>
-                <p>The testing system checks all these things to make sure the exam works properly, prevent cheating, protect your answers, and make the exam fair and secure.</p>
+                <p>The testing system checks all these things to:</p>
+                <ul>
+                    <li>Make sure the exam works properly</li>
+                    <li>Prevent cheating</li>
+                    <li>Protect your answers</li>
+                    <li>Make the exam fair and secure.</li>
+                </ul>
             </div>
         </div>
         <div class="modal-footer">
