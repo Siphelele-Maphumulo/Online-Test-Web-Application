@@ -7860,6 +7860,10 @@ public float[] getRawMarks(int examId) {
 }
 
 public void calculateResult(int eid, int tMarks, String endTime, int size) {
+    calculateResult(eid, tMarks, endTime, size, null);
+}
+
+public void calculateResult(int eid, int tMarks, String endTime, int size, String forcedStatus) {
 
     try {
 
@@ -7908,6 +7912,10 @@ public void calculateResult(int eid, int tMarks, String endTime, int size) {
         // Determine result status based on percentage (45% passing threshold)
 
         String resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
+
+        if (forcedStatus != null && !forcedStatus.isEmpty()) {
+            resultStatus = forcedStatus;
+        }
 
         
 
@@ -12104,6 +12112,94 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
         } finally {
             try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
         }
+    }
+
+    /**
+     * Retrieves a list of active exam sessions that are being proctored.
+     */
+    public ArrayList<Map<String, Object>> getActiveProctoredExams() {
+        ArrayList<Map<String, Object>> list = new ArrayList<>();
+        PreparedStatement pstm = null;
+        ResultSet rs = null;
+        try {
+            ensureConnection();
+            String sql = "SELECT e.exam_id, e.course_name, e.std_id, u.first_name, u.last_name, " +
+                         "(SELECT COUNT(*) FROM proctoring_incidents WHERE exam_id = e.exam_id) as violations_count " +
+                         "FROM exams e " +
+                         "JOIN users u ON e.std_id = u.user_id " +
+                         "WHERE e.status = 'started' OR e.status IS NULL OR e.status = '' " +
+                         "ORDER BY e.exam_id DESC";
+            pstm = conn.prepareStatement(sql);
+            rs = pstm.executeQuery();
+            while (rs.next()) {
+                Map<String, Object> map = new HashMap<>();
+                int examId = rs.getInt("exam_id");
+                map.put("id", examId);
+                map.put("name", rs.getString("first_name") + " " + rs.getString("last_name"));
+                map.put("course", rs.getString("course_name"));
+                int violations = rs.getInt("violations_count");
+                map.put("violations", violations);
+                map.put("status", violations > 5 ? "critical" : (violations > 2 ? "warning" : "clean"));
+
+                Map<String, String> latest = getLatestIncident(examId);
+                map.put("streamUrl", latest.get("screenshot") != null ? latest.get("screenshot") : "");
+
+                // Derive dynamic metrics from latest incident
+                int audioLevel = 42 + (int)(Math.random() * 5); // Default ambient
+                boolean eyeContact = true;
+                if ("AUDIO".equals(latest.get("type"))) {
+                    audioLevel = 65 + (int)(Math.random() * 20);
+                } else if ("VISUAL".equals(latest.get("type"))) {
+                    if (latest.get("description").contains("Looking away") || latest.get("description").contains("No face")) {
+                        eyeContact = false;
+                    }
+                }
+
+                map.put("audioLevel", audioLevel);
+                map.put("eyeContact", eyeContact);
+
+                ArrayList<String> recentViolations = new ArrayList<>();
+                ArrayList<Map<String, String>> incidents = getProctoringIncidents(examId);
+                for (int i = 0; i < Math.min(incidents.size(), 3); i++) {
+                    recentViolations.add(incidents.get(i).get("type") + ": " + incidents.get(i).get("description"));
+                }
+                map.put("recentViolations", recentViolations);
+
+                list.add(map);
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting active proctored exams: " + e.getMessage(), e);
+        } finally {
+            try { if (rs != null) rs.close(); if (pstm != null) pstm.close(); } catch (SQLException e) {}
+        }
+        return list;
+    }
+
+    /**
+     * Gets the latest proctoring incident for a given exam.
+     */
+    public Map<String, String> getLatestIncident(int examId) {
+        Map<String, String> map = new HashMap<>();
+        PreparedStatement pstm = null;
+        ResultSet rs = null;
+        try {
+            ensureConnection();
+            String sql = "SELECT * FROM proctoring_incidents WHERE exam_id = ? ORDER BY timestamp DESC LIMIT 1";
+            pstm = conn.prepareStatement(sql);
+            pstm.setInt(1, examId);
+            rs = pstm.executeQuery();
+            if (rs.next()) {
+                map.put("type", rs.getString("incident_type"));
+                map.put("description", rs.getString("description"));
+                map.put("timestamp", rs.getString("timestamp"));
+                map.put("screenshot", rs.getString("screenshot_path"));
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting latest incident: " + e.getMessage(), e);
+        } finally {
+            try { if (rs != null) rs.close(); if (pstm != null) pstm.close(); } catch (SQLException e) {}
+        }
+        return map;
     }
 
     /**

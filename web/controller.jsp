@@ -2095,7 +2095,9 @@ try {
                     pDAO.insertAnswer(eId, qid, question, ans);
                 }
 
-                pDAO.calculateResult(eId, tMarks, endTime, size);
+                boolean cheatingTerminated = "true".equalsIgnoreCase(request.getParameter("cheating_terminated"));
+                String resultStatus = cheatingTerminated ? "Cheating Detected" : null;
+                pDAO.calculateResult(eId, tMarks, endTime, size, resultStatus);
                 
                 // REGISTER EXAM COMPLETION
                 if (userId > 0) {
@@ -2500,23 +2502,44 @@ try {
         int examId = Integer.parseInt(nz(request.getParameter("examId"), "0"));
         int studentId = Integer.parseInt(nz(request.getParameter("studentId"), "0"));
 
-        if ("log_incident".equalsIgnoreCase(operation)) {
-            String type = nz(request.getParameter("type"), "");
-            String desc = nz(request.getParameter("description"), "");
-            String screenshotData = nz(request.getParameter("screenshot"), ""); // Base64
-            String screenshotPath = "";
+        if ("log_incident".equalsIgnoreCase(operation) || "log_violation".equalsIgnoreCase(operation)) {
+            String type = "";
+            String desc = "";
+            String screenshotData = "";
+            int vExamId = examId;
+            int vStudentId = studentId;
 
-            if (!screenshotData.isEmpty()) {
+            if ("log_violation".equalsIgnoreCase(operation)) {
+                try {
+                    String violationData = request.getParameter("violation_data");
+                    if (violationData != null) {
+                        JSONObject violation = new JSONObject(violationData);
+                        type = violation.optString("type", "Unknown");
+                        desc = violation.optString("description", "");
+                        vExamId = violation.optInt("examId", examId);
+                        vStudentId = violation.optInt("studentId", studentId);
+                        screenshotData = violation.optString("screenshot", "");
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.SEVERE, "Error parsing violation JSON", e);
+                }
+            } else {
+                type = nz(request.getParameter("type"), "");
+                desc = nz(request.getParameter("description"), "");
+                screenshotData = nz(request.getParameter("screenshot"), "");
+            }
+
+            String screenshotPath = "";
+            if (screenshotData != null && !screenshotData.isEmpty()) {
                 try {
                     String uploadPath = getServletContext().getRealPath("/uploads/proctoring");
                     File uploadDir = new File(uploadPath);
                     if (!uploadDir.exists()) uploadDir.mkdirs();
 
-                    String fileName = "incident_" + examId + "_" + Calendar.getInstance().getTimeInMillis() + ".jpg";
+                    String fileName = "incident_" + vExamId + "_" + System.currentTimeMillis() + ".jpg";
                     File file = new File(uploadDir, fileName);
                     
-                    // Decode Base64 and save
-                    String base64Image = screenshotData.split(",")[1];
+                    String base64Image = screenshotData.contains(",") ? screenshotData.split(",")[1] : screenshotData;
                     byte[] imageBytes = Base64.getDecoder().decode(base64Image);
                     try (FileOutputStream fos = new FileOutputStream(file)) {
                         fos.write(imageBytes);
@@ -2527,7 +2550,7 @@ try {
                 }
             }
 
-            boolean success = pDAO.logProctoringIncident(examId, studentId, type, desc, screenshotPath);
+            boolean success = pDAO.logProctoringIncident(vExamId, vStudentId, type, desc, screenshotPath);
             response.setContentType("application/json");
             response.getWriter().write("{\"success\": " + success + "}");
             return;

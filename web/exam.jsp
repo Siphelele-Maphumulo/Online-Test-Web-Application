@@ -92,13 +92,13 @@
         --info: #0ea5e9;
         --info-light: #e0f2fe;
         
-        /* Spacing - 8px grid */
-        --spacing-xs: 4px;
-        --spacing-sm: 8px;
-        --spacing-md: 16px;
-        --spacing-lg: 24px;
-        --spacing-xl: 32px;
-        --spacing-2xl: 48px;
+        /* Spacing - 8px grid - High Density */
+        --spacing-xs: 2px;
+        --spacing-sm: 4px;
+        --spacing-md: 8px;
+        --spacing-lg: 12px;
+        --spacing-xl: 16px;
+        --spacing-2xl: 20px;
         
         /* Border Radius - Modern */
         --radius-sm: 6px;
@@ -135,7 +135,8 @@
     
     body {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-        line-height: 1.5;
+        line-height: 1.3;
+        font-size: 13px;
         color: var(--text-dark);
         background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
         min-height: 100vh;
@@ -143,6 +144,10 @@
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
     }
+    h1 { font-size: 1.5rem !important; }
+    h2 { font-size: 1.3rem !important; }
+    h3 { font-size: 1.1rem !important; }
+    h4 { font-size: 1rem !important; }
     
     /* Dashboard Container */
     .dashboard-container {
@@ -187,7 +192,7 @@
     .main-content {
         flex: 1;
         padding: var(--spacing-xl);
-        padding-top: 100px;
+        padding-top: 60px;
         overflow-y: auto;
         background: transparent;
         margin-left: 0px;
@@ -2333,22 +2338,22 @@
     .drag-items-list, .drop-targets-list {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 6px;
     }
     
     .drag-item {
         background: #92AB2F;
         border: 2px solid #5D8E2F;
-        border-radius: 8px;
-        padding: 15px 14px; /* Reduced horizontal padding by 30% */
+        border-radius: 6px;
+        padding: 6px 10px;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         cursor: grab;
         font-weight: 500;
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 6px;
         transition: all 0.2s;
-        font-size: 14px;
+        font-size: 13px;
         color: white;
         user-select: none;
     }
@@ -2377,14 +2382,15 @@
     .drop-target {
         background: #f8fafc;
         border: 2px dashed #94a3b8;
-        border-radius: 8px;
-        padding: 20px;
-        min-height: 80px;
+        border-radius: 6px;
+        padding: 8px;
+        min-height: 50px;
         position: relative;
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 6px;
         transition: all 0.2s;
+        font-size: 12px;
     }
 
     .drop-target.target-reordering {
@@ -6401,194 +6407,256 @@ function updateProgress() {
         document.getElementById('confirmationModal').style.display = 'flex';
     };
 
-    /* --- REAL-TIME PROCTORING SYSTEM --- */
-    let proctoringInterval = null;
-    let audioContext = null;
-    let audioAnalyser = null;
-    let lastFaceDetectionTime = Date.now();
-    let proctoringActive = false;
-    const NOISE_THRESHOLD = 65; // dB
-    const EYE_CONTACT_THRESHOLD = 5000; // 5 seconds
+    /* ============================================
+       PROFESSIONAL PROCTORING SYSTEM v2.0
+       Highest Priority: Cheating Detection
+       ============================================ */
 
-    function initProctoring() {
-        if (proctoringActive) return;
-        proctoringActive = true;
-        console.log('Initializing Real-Time Proctoring...');
+    class ProctoringSystem {
+        constructor() {
+            this.examActive = true;
+            this.violations = [];
+            this.warningCount = 0;
+            this.MAX_WARNINGS = 3;
+            this.NOISE_THRESHOLD = 55;
+            this.EYE_OFF_SCREEN_THRESHOLD = 3000;
+            this.HEAD_MOVEMENT_THRESHOLD = 0.3;
+            this.FACE_LOST_THRESHOLD = 2000;
+            this.lastEyeContact = Date.now();
+            this.lastFaceDetected = Date.now();
+            this.backgroundNoiseBaseline = 40;
+            this.calibrationComplete = false;
+            this.audioStream = null;
+            this.videoStream = null;
+            this.faceapi = null;
+        }
 
-        // 1. Audio Monitoring
-        initAudioMonitoring();
+        async initialize() {
+            console.log('🔒 Initializing Professional Proctoring System...');
+            await this.loadFaceApi();
+            await this.initAudioMonitoring();
+            await this.initVideoMonitoring();
+            this.initEnvironmentLockdown();
+            this.initBehavioralMonitoring();
+            this.startMonitoringLoop();
+            console.log('✅ Proctoring System Active');
+        }
 
-        // 2. Environment Lockdown
-        initEnvironmentLockdown();
+        async loadFaceApi() {
+            return new Promise((resolve) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
+                script.onload = async () => {
+                    const modelPath = '<%= request.getContextPath() %>/models';
+                    await faceapi.nets.tinyFaceDetector.loadFromUri(modelPath);
+                    await faceapi.nets.faceLandmark68Net.loadFromUri(modelPath);
+                    await faceapi.nets.faceExpressionNet.loadFromUri(modelPath);
+                    this.faceapi = faceapi;
+                    resolve();
+                };
+                document.head.appendChild(script);
+            });
+        }
 
-        // 3. Visual Monitoring (Polling)
-        proctoringInterval = setInterval(async () => {
-            if (!examActive) return;
-            
-            // Environmental check
-            if (!document.fullscreenElement) {
-                logIncident('Environmental', 'User exited full-screen mode');
+        async initAudioMonitoring() {
+            try {
+                this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false } });
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(this.audioStream);
+                const analyser = audioContext.createAnalyser();
+                analyser.fftSize = 2048;
+                source.connect(analyser);
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                setTimeout(() => this.calibrateNoise(analyser), 5000);
+                this.audioMonitor = setInterval(() => {
+                    analyser.getByteFrequencyData(dataArray);
+                    this.analyzeAudio(dataArray);
+                }, 500);
+            } catch (err) { this.logViolation('CRITICAL', 'Audio monitoring unavailable'); }
+        }
+
+        calibrateNoise(analyser) {
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            let sum = 0;
+            for (let i = 0; i < 10; i++) {
+                analyser.getByteFrequencyData(dataArray);
+                sum += dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
             }
+            this.backgroundNoiseBaseline = sum / 10;
+            this.calibrationComplete = true;
+        }
 
-            // Visual tracking
-            performVisualCheck();
+        analyzeAudio(dataArray) {
+            if (!this.calibrationComplete) return;
+            const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+            const dbLevel = 20 * Math.log10(average || 1);
+            if (dbLevel > this.backgroundNoiseBaseline + 15) this.logViolation('AUDIO', 'Excessive background noise');
+            const mean = average;
+            const variance = dataArray.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / dataArray.length;
+            if (variance > 500) this.logViolation('AUDIO', 'Multiple voices detected');
+        }
 
-        }, 1000);
-
-        // Heartbeat to keep session alive and log status
-        setInterval(() => {
-            if (examActive) {
-                console.log('Proctoring Heartbeat: Audio/Video monitoring active');
-            }
-        }, 10000);
-    }
-
-    async function initAudioMonitoring() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioContext.createMediaStreamSource(stream);
-            audioAnalyser = audioContext.createAnalyser();
-            audioAnalyser.fftSize = 256;
-            source.connect(audioAnalyser);
-
-            const bufferLength = audioAnalyser.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
-
-            function checkNoise() {
-                if (!proctoringActive) return;
-                audioAnalyser.getByteFrequencyData(dataArray);
-                let sum = 0;
-                for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
-                const average = sum / bufferLength;
-                
-                // Simple dB approximation
-                const db = 20 * Math.log10(average || 1);
-                if (db > NOISE_THRESHOLD) {
-                    logIncident('Audio', 'Excessive background noise detected (' + Math.round(db) + 'dB)');
+        async initVideoMonitoring() {
+            try {
+                this.videoStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+                let videoElement = document.getElementById('faceVideo');
+                if (!videoElement) {
+                    videoElement = document.createElement('video');
+                    videoElement.id = 'proctorVideo';
+                    videoElement.style.display = 'none';
+                    document.body.appendChild(videoElement);
                 }
-                requestAnimationFrame(checkNoise);
+                videoElement.srcObject = this.videoStream;
+                videoElement.muted = true; videoElement.play();
+                this.startFaceDetection(videoElement);
+            } catch (err) { this.logViolation('CRITICAL', 'Camera monitoring unavailable'); }
+        }
+
+        async startFaceDetection(videoElement) {
+            setInterval(async () => {
+                if (!this.faceapi || !videoElement.videoWidth || !this.examActive) return;
+                const detections = await this.faceapi.detectAllFaces(videoElement, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions();
+                if (detections.length === 0) {
+                    if (Date.now() - this.lastFaceDetected > this.FACE_LOST_THRESHOLD) this.logViolation('VISUAL', 'No face detected');
+                    return;
+                }
+                this.lastFaceDetected = Date.now();
+                if (detections.length > 1) this.logViolation('VISUAL', 'Multiple people detected');
+                const face = detections[0];
+                if (this.detectGazeDirection(face.landmarks) === 'AWAY') {
+                    if (Date.now() - this.lastEyeContact > this.EYE_OFF_SCREEN_THRESHOLD) this.logViolation('VISUAL', 'Looking away from screen');
+                } else { this.lastEyeContact = Date.now(); }
+            }, 500);
+        }
+
+        detectGazeDirection(landmarks) {
+            const leftEye = landmarks.getLeftEye();
+            const rightEye = landmarks.getRightEye();
+            const leftEAR = this.eyeAspectRatio(leftEye);
+            const rightEAR = this.eyeAspectRatio(rightEye);
+            if (leftEAR < 0.15 || rightEAR < 0.15) return 'AWAY';
+            const leftPupil = this.estimatePupilPosition(leftEye);
+            const rightPupil = this.estimatePupilPosition(rightEye);
+            if (Math.abs(leftPupil.x) > 12 || Math.abs(rightPupil.x) > 12) return 'AWAY';
+            return 'SCREEN';
+        }
+
+        estimatePupilPosition(eye) {
+            const eyeCenter = { x: (eye[0].x + eye[3].x) / 2, y: (eye[1].y + eye[2].y) / 2 };
+            return { x: (eye[0].x + eye[1].x + eye[2].x + eye[3].x + eye[4].x + eye[5].x) / 6 - eyeCenter.x, y: 0 };
+        }
+
+        eyeAspectRatio(eye) {
+            const A = Math.hypot(eye[1].x - eye[5].x, eye[1].y - eye[5].y);
+            const B = Math.hypot(eye[2].x - eye[4].x, eye[2].y - eye[4].y);
+            const C = Math.hypot(eye[0].x - eye[3].x, eye[0].y - eye[3].y);
+            return (A + B) / (2 * C);
+        }
+
+        initEnvironmentLockdown() {
+            window.addEventListener('blur', () => { if (this.examActive) this.logViolation('LOCKDOWN', 'Window focus lost'); });
+            document.addEventListener('contextmenu', (e) => { e.preventDefault(); this.logViolation('LOCKDOWN', 'Right-click attempt'); });
+            this.enforceFullscreen();
+        }
+
+        enforceFullscreen() {
+            const check = () => {
+                if (!document.fullscreenElement && this.examActive) {
+                    this.logViolation('LOCKDOWN', 'Exited fullscreen mode');
+                    document.documentElement.requestFullscreen().catch(() => {});
+                }
+            };
+            setInterval(check, 3000);
+        }
+
+        initBehavioralMonitoring() {
+            document.addEventListener('mousemove', (e) => {
+                if (e.clientX <= 0 || e.clientY <= 0 || e.clientX >= window.innerWidth - 1 || e.clientY >= window.innerHeight - 1) {
+                    this.logViolation('BEHAVIOR', 'Mouse moved to screen edge');
+                }
+            });
+        }
+
+        startMonitoringLoop() {
+            setInterval(() => {
+                if (!this.examActive) return;
+                if (window.outerWidth - window.innerWidth > 160 || window.outerHeight - window.innerHeight > 160) {
+                    this.logViolation('SECURITY', 'Developer tools possibly open');
+                }
+            }, 5000);
+        }
+
+        logViolation(type, description) {
+            if (!this.examActive) return;
+            const violation = {
+                timestamp: new Date().toISOString(),
+                type: type,
+                description: description,
+                examId: '<%= session.getAttribute("examId") %>',
+                studentId: '<%= session.getAttribute("userId") %>'
+            };
+            this.violations.push(violation);
+            this.warningCount++;
+            this.captureEvidence(violation);
+            this.showWarning(violation);
+            if (this.warningCount >= this.MAX_WARNINGS) this.autoSubmitForCheating();
+            this.sendViolationToServer(violation);
+        }
+
+        captureEvidence(violation) {
+            const video = document.getElementById('faceVideo') || document.querySelector('video');
+            if (!video || !video.videoWidth) return;
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            violation.screenshot = canvas.toDataURL('image/jpeg', 0.6);
+        }
+
+        showWarning(violation) {
+            const div = document.createElement('div');
+            div.style = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;background:#fee2e2;border:2px solid #ef4444;padding:10px 20px;border-radius:8px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.2);';
+            div.innerHTML = `<div style="color:#b91c1c;font-weight:bold;">⚠️ Proctoring Warning (${this.warningCount}/${this.MAX_WARNINGS})</div>
+                             <div style="color:#7f1d1d;font-size:13px;">${violation.type}: ${violation.description}</div>`;
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 5000);
+        }
+
+        autoSubmitForCheating() {
+            this.examActive = false;
+            alert('EXAM TERMINATED: Maximum violations exceeded.');
+            const form = document.getElementById('myform');
+            if (form) {
+                const input = document.createElement('input');
+                input.type = 'hidden'; input.name = 'cheating_terminated'; input.value = 'true';
+                form.appendChild(input);
+                form.submit();
             }
-            checkNoise();
-        } catch (err) {
-            console.error('Audio proctoring failed:', err);
+        }
+
+        sendViolationToServer(violation) {
+            const formData = new FormData();
+            formData.append('page', 'proctoring');
+            formData.append('operation', 'log_violation');
+            formData.append('violation_data', JSON.stringify(violation));
+            if (navigator.sendBeacon) navigator.sendBeacon('controller.jsp', formData);
+            else fetch('controller.jsp', { method: 'POST', body: formData, keepalive: true });
         }
     }
 
-    function initEnvironmentLockdown() {
-        // Disable Right-Click
-        document.oncontextmenu = (e) => {
-            e.preventDefault();
-            logIncident('Lockdown', 'Right-click attempt blocked');
-            return false;
-        };
-
-        // Monitor focus/blur
-        window.onblur = () => {
-            if (examActive) {
-                logIncident('Environmental', 'User switched tabs or left the browser window');
-            }
-        };
-
-        // Keyboard Shortcuts
-        document.onkeydown = (e) => {
-            // Block Alt+Tab, Ctrl+C, Ctrl+V, PrintScreen, etc.
-            if (e.altKey || e.ctrlKey || e.metaKey || e.keyCode === 44) {
-                logIncident('Lockdown', 'Unauthorized keyboard shortcut detected: ' + e.key);
-                // We can't really block Alt+Tab, but we can detect blur
-            }
-        };
-    }
-
-    let lastFrameData = null;
-    async function performVisualCheck() {
-        const video = document.getElementById('faceVideo');
-        if (!video || !video.srcObject) return;
-
-        // Simple Movement Detection using Canvas Difference
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = 160; // Low res for performance
-        canvas.height = 120;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const currentFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-        if (lastFrameData) {
-            let diff = 0;
-            for (let i = 0; i < currentFrame.data.length; i += 4) {
-                diff += Math.abs(currentFrame.data[i] - lastFrameData.data[i]);
-            }
-            const movementScore = diff / (canvas.width * canvas.height);
-            if (movementScore > 30) { // Arbitrary threshold for significant movement
-                logIncident('Visual', 'Significant movement or background activity detected');
-            }
-        }
-        lastFrameData = currentFrame;
-
-        // Loss of Eye Contact / Face Presence Logic
-        // In a full implementation, we'd use: const detections = await faceapi.detectAllFaces(video)...
-        // For now, we assume face is present if movement is reasonable, or use a placeholder.
-        const isFaceVisible = true; 
-        const isLookingAtScreen = true; 
-
-        if (!isFaceVisible) {
-            if (Date.now() - lastFaceDetectionTime > EYE_CONTACT_THRESHOLD) {
-                logIncident('Visual', 'No face detected in frame (>5 seconds)');
-            }
-        } else {
-            lastFaceDetectionTime = Date.now();
-        }
-    }
-
-    async function logIncident(type, description) {
-        console.warn('PROCTORING FLAG [' + type + ']: ' + description);
-        
-        // Capture a silent screenshot if video is available
-        let screenshot = '';
-        try {
-            const video = document.getElementById('faceVideo'); // Reuse video from verification or hidden video
-            if (video && video.srcObject) {
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                canvas.getContext('2d').drawImage(video, 0, 0);
-                screenshot = canvas.toDataURL('image/jpeg', 0.5);
-            }
-        } catch (e) {}
-
-        const formData = new URLSearchParams();
-        formData.append('page', 'proctoring');
-        formData.append('operation', 'log_incident');
-        formData.append('examId', '<%= session.getAttribute("examId") != null ? session.getAttribute("examId") : "0" %>');
-        formData.append('studentId', '<%= session.getAttribute("userId") != null ? session.getAttribute("userId") : "0" %>');
-        formData.append('type', type);
-        formData.append('description', description);
-        formData.append('screenshot', screenshot);
-
-        try {
-            navigator.sendBeacon('controller.jsp', formData);
-        } catch (err) {
-            console.error('Failed to log incident:', err);
-        }
-    }
-
-    // Hook into Begin Exam button to start proctoring and fullscreen
     const originalBeginBtn = document.getElementById('beginButton');
     if (originalBeginBtn) {
         const oldClick = originalBeginBtn.onclick;
         originalBeginBtn.onclick = async (e) => {
-            // Request full screen
             try {
                 const elem = document.documentElement;
                 if (elem.requestFullscreen) await elem.requestFullscreen();
-                else if (elem.webkitRequestFullscreen) await elem.webkitRequestFullscreen();
-                else if (elem.msRequestFullscreen) await elem.msRequestFullscreen();
-            } catch (err) {
-                console.warn('Fullscreen request denied');
-            }
+            } catch (err) {}
+
+            const proctor = new ProctoringSystem();
+            window.proctor = proctor;
+            await proctor.initialize();
             
-            initProctoring();
-            if (oldClick) oldClick.apply(this, [e]);
+            if (oldClick) oldClick.apply(originalBeginBtn, [e]);
         };
     }
 </script>
