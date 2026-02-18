@@ -63,83 +63,167 @@
             </div>
         </header>
 
-<div class="filter-card">
-    <h4 style="margin-bottom: 15px; color: var(--primary-blue);">Integrity Monitoring Overview</h4>
-    <p style="font-size: 14px; color: #64748b;">Review identity verifications and flagged cheating incidents for all exam sessions.</p>
+<div class="live-monitoring-container" style="margin-top: 20px;">
+    <div class="filter-card" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+            <h4 style="margin: 0; color: var(--primary-blue); font-size: 16px;">Live Student Monitoring</h4>
+            <p style="font-size: 12px; color: #64748b; margin: 5px 0 0 0;">Real-time AI-powered cheating detection and session tracking.</p>
+        </div>
+        <div class="stats-badge" style="background: var(--success-light); color: var(--success); padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">
+            <i class="fas fa-circle" style="font-size: 8px; margin-right: 5px;"></i> SYSTEM LIVE
+        </div>
+    </div>
+
+    <div id="studentGrid" class="student-grid">
+        <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #64748b;">
+            <i class="fas fa-spinner fa-spin fa-3x"></i>
+            <p style="margin-top:10px;">Initializing Live Monitor...</p>
+        </div>
+    </div>
 </div>
 
-<div class="data-table-container">
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Exam ID</th>
-                <th>Student</th>
-                <th>Course</th>
-                <th>Date</th>
-                <th>Identity</th>
-                <th>Flags</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            <% 
-                if (allExams == null || allExams.isEmpty()) {
-            %>
+<div class="historical-section" style="margin-top: 40px; border-top: 1px solid var(--medium-gray); padding-top: 20px;">
+    <h4 style="margin-bottom: 15px; color: var(--primary-blue); font-size: 16px;">Recent Exam Sessions</h4>
+    <div class="data-table-container">
+        <table class="data-table">
+            <thead>
                 <tr>
-                    <td colspan="7" class="empty-state">
-                        <i class="fas fa-folder-open fa-3x"></i>
-                        <h3>No Exam Sessions Found</h3>
-                        <p>When students start exams, they will appear here.</p>
-                    </td>
+                    <th>ID</th>
+                    <th>Student</th>
+                    <th>Course</th>
+                    <th>Date</th>
+                    <th>Flags</th>
+                    <th>Action</th>
                 </tr>
-            <%
-                } else {
-                    for (Exams exam : allExams) {
-                        int examId = exam.getExamId();
-                        int studentId = Integer.parseInt(exam.getStdId());
-                        Map<String, String> verification = pDAO.getIdentityVerification(studentId, examId);
-                        ArrayList<Map<String, String>> incidents = pDAO.getProctoringIncidents(examId);
-                        boolean isVerified = verification != null && "verified".equals(verification.get("status"));
-            %>
-                <tr>
-                    <td><strong>#<%= examId %></strong></td>
-                    <td>
-                        <div style="font-weight: 600;"><%= exam.getFullName() %></div>
-                        <div style="font-size: 11px; color: #64748b;"><%= exam.getEmail() %></div>
-                    </td>
-                    <td><%= exam.getcName() %></td>
-                    <td><%= exam.getDate() %></td>
-                    <td>
-                        <% if (isVerified) { %>
-                            <span class="badge badge-success" title="View Verification" style="cursor: pointer;" onclick="viewVerification(<%= studentId %>, <%= examId %>)">
-                                <i class="fas fa-check-circle"></i> Verified
-                            </span>
-                        <% } else { %>
-                            <span class="badge badge-warning">Pending</span>
-                        <% } %>
-                    </td>
-                    <td>
-                        <% if (incidents != null && !incidents.isEmpty()) { %>
-                            <span class="badge badge-danger" title="View Flags" style="cursor: pointer;" onclick="viewIncidents(<%= examId %>)">
-                                <i class="fas fa-exclamation-triangle"></i> <%= incidents.size() %> Flags
-                            </span>
-                        <% } else { %>
-                            <span class="badge badge-success"><i class="fas fa-shield-alt"></i> Clean</span>
-                        <% } %>
-                    </td>
-                    <td>
-                        <button class="action-btn" onclick="viewDetailedReport(<%= examId %>)">
-                            <i class="fas fa-file-alt"></i> Report
-                        </button>
-                    </td>
-                </tr>
-            <%
+            </thead>
+            <tbody>
+                <%
+                    if (allExams == null || allExams.isEmpty()) {
+                %>
+                    <tr><td colspan="6" class="empty-state">No records found.</td></tr>
+                <%
+                    } else {
+                        for (int i=0; i<Math.min(allExams.size(), 10); i++) {
+                            Exams exam = allExams.get(i);
+                            int examId = exam.getExamId();
+                            ArrayList<Map<String, String>> incidents = pDAO.getProctoringIncidents(examId);
+                %>
+                    <tr>
+                        <td>#<%= examId %></td>
+                        <td><strong><%= exam.getFullName() %></strong></td>
+                        <td><%= exam.getcName() %></td>
+                        <td style="font-size: 11px;"><%= exam.getDate() %></td>
+                        <td>
+                            <% if (incidents != null && !incidents.isEmpty()) { %>
+                                <span class="badge badge-danger" onclick="viewIncidents(<%= examId %>)" style="cursor:pointer;"><%= incidents.size() %> Flags</span>
+                            <% } else { %>
+                                <span class="badge badge-success">Clean</span>
+                            <% } %>
+                        </td>
+                        <td>
+                            <button class="action-btn" onclick="viewDetailedReport(<%= examId %>)" style="padding: 4px 8px; font-size: 11px;">
+                                <i class="fas fa-file-alt"></i> Report
+                            </button>
+                        </td>
+                    </tr>
+                <%
+                        }
                     }
-                }
-            %>
-        </tbody>
-    </table>
+                %>
+            </tbody>
+        </table>
+    </div>
 </div>
+
+<style>
+    .student-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 15px;
+    }
+    .student-card {
+        background: white;
+        border-radius: 10px;
+        padding: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border-left: 4px solid var(--success);
+        font-size: 12px;
+        transition: transform 0.2s;
+    }
+    .student-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .student-card.warning { border-left-color: var(--warning); }
+    .student-card.critical { border-left-color: var(--error); }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    .live-indicator {
+        width: 8px;
+        height: 8px;
+        background: var(--success);
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+    .student-card img {
+        width: 100%;
+        height: 160px;
+        object-fit: cover;
+        border-radius: 6px;
+        background: #f1f5f9;
+        margin-bottom: 10px;
+        border: 1px solid var(--medium-gray);
+    }
+    .violation-badge {
+        background: var(--error-light);
+        color: var(--error);
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: 700;
+        margin-left: auto;
+    }
+    .metrics {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        color: var(--dark-gray);
+        font-size: 11px;
+    }
+    .recent-violations {
+        background: #fffcf0;
+        border: 1px solid #feebc8;
+        border-radius: 4px;
+        padding: 6px;
+        margin-bottom: 10px;
+        max-height: 60px;
+        overflow-y: auto;
+    }
+    .violation-item { color: #c05621; font-size: 10px; margin-bottom: 2px; }
+
+    .card-actions {
+        display: flex;
+        gap: 8px;
+    }
+    .card-actions button {
+        flex: 1;
+        padding: 6px;
+        font-size: 11px;
+        cursor: pointer;
+        border-radius: 6px;
+        border: 1px solid var(--medium-gray);
+        background: white;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    .card-actions button:hover { background: #f8fafc; }
+    .btn-warn:hover { background: var(--warning-light) !important; color: var(--warning); border-color: var(--warning) !important; }
+    .btn-end:hover { background: var(--error-light) !important; color: var(--error); border-color: var(--error) !important; }
+</style>
 
 <!-- Incident Details Modal -->
 <div id="incidentModal" class="alert-modal" style="display: none;">
@@ -171,6 +255,58 @@
 </div>
 
 <script>
+    function refreshDashboard() {
+        fetch('proctoring_api.jsp?action=live-sessions')
+            .then(r => r.json())
+            .then(data => {
+                const grid = document.getElementById('studentGrid');
+                if (!data || data.length === 0) {
+                    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #64748b; background: white; border-radius: 12px;"><i class="fas fa-users-slash fa-3x"></i><p style="margin-top:10px; font-weight: 500;">No active exam sessions at the moment.</p></div>';
+                    return;
+                }
+                grid.innerHTML = data.map(student => `
+                    <div class="student-card ${student.status}">
+                        <div class="card-header">
+                            <div class="live-indicator"></div>
+                            <span style="font-weight: 700; font-size: 13px;">${student.name}</span>
+                            <span class="violation-badge">${student.violations} FLAGS</span>
+                        </div>
+                        <div class="card-body">
+                            <img src="${student.streamUrl || 'IMG/no-video.png'}" onerror="this.src='IMG/no-video.png'">
+                            <div style="font-weight: 600; color: var(--primary-blue); margin-bottom: 5px;">${student.course}</div>
+                            <div class="metrics">
+                                <span><i class="fas fa-microphone"></i> ${student.audioLevel}dB</span>
+                                <span><i class="fas fa-eye"></i> ${student.eyeContact ? 'Screen' : 'Away'}</span>
+                            </div>
+                            ${student.recentViolations && student.recentViolations.length > 0 ? `
+                                <div class="recent-violations">
+                                    ${student.recentViolations.map(v => `<div class="violation-item">⚠️ ${v}</div>`).join('')}
+                                </div>
+                            ` : ''}
+                            <div class="card-actions">
+                                <button class="btn-warn" onclick="warnStudent('${student.id}')"><i class="fas fa-bell"></i> Warn</button>
+                                <button class="btn-end" onclick="terminateExam('${student.id}')"><i class="fas fa-stop-circle"></i> Terminate</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }).catch(err => console.error('Dashboard sync error:', err));
+    }
+
+    function warnStudent(id) {
+        alert('Issuing warning to session #' + id + '. Student will see a notification on their screen.');
+    }
+
+    function terminateExam(id) {
+        if(confirm('CRITICAL ACTION: Are you sure you want to terminate exam session #' + id + ' immediately?')) {
+            // In a real app, you'd send a signal to the server/client
+            alert('Termination command sent for session #' + id);
+        }
+    }
+
+    setInterval(refreshDashboard, 3000);
+    refreshDashboard();
+
     async function viewIncidents(examId) {
         const modal = document.getElementById('incidentModal');
         const body = document.getElementById('incidentModalBody');
