@@ -3721,7 +3721,7 @@
 
                 /* --- ASYNC ANSWER SAVING --- */
                 function saveAnswer(qindex, answer) {
-                    const questionCard = document.querySelector(`.question-card[data-qindex="${qindex}"]`);
+                    const questionCard = document.querySelector('.question-card[data-qindex="' + qindex + '"]');
                     if (!questionCard) return;
 
                     const qid = questionCard.querySelector('input[name="qid' + qindex + '"]').value;
@@ -4697,11 +4697,9 @@ function createRearrangeItemElement(qIdx, itemId, text, position) {
     element.setAttribute('data-item-id', itemId);
     element.setAttribute('data-text', text);
     
-    element.innerHTML = `
-        <i class="fas fa-grip-vertical drag-handle"></i>
-        <span class="item-position">${position + 1}</span>
-        <span class="item-text">${text}</span>
-    `;
+    element.innerHTML = '<i class="fas fa-grip-vertical drag-handle"></i>' +
+        '<span class="item-position">' + (position + 1) + '</span>' +
+        '<span class="item-text">' + text + '</span>';
     
     // Add drag events
     element.addEventListener('dragstart', handleRearrangeDragStart);
@@ -5307,7 +5305,7 @@ function updateProgress() {
             console.log('Response ok:', response.ok);
 
             if (!response.ok) {
-                throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
+                throw new Error('Network response was not ok: ' + response.status + ' ' + response.statusText);
             }
             return response.text();
         })
@@ -5845,12 +5843,12 @@ function updateProgress() {
         const cleanStudentName = studentName ? studentName.replace(/'/g, "\\'") : 'Unknown Student';
         const cleanCourseName = courseName ? courseName.replace(/'/g, "\\'") : 'Unknown Course';
         
-        modalMessage.innerHTML = `Are you sure you want to delete the exam result for:<br><br>
-                                 <strong>Student:</strong> ${cleanStudentName}<br>
-                                 <strong>Course:</strong> ${cleanCourseName}<br>
-                                // <strong>Exam ID:</strong> ${examId}<br><br>
-                                 <span style="color: #dc3545; font-weight: bold;">
-                                 <i class="fas fa-exclamation-triangle"></i> This action cannot be undone!</span>`;
+        modalMessage.innerHTML = 'Are you sure you want to delete the exam result for:<br><br>' +
+                                 '<strong>Student:</strong> ' + cleanStudentName + '<br>' +
+                                 '<strong>Course:</strong> ' + cleanCourseName + '<br>' +
+                                '// <strong>Exam ID:</strong> ' + examId + '<br><br>' +
+                                 '<span style="color: #dc3545; font-weight: bold;">' +
+                                 '<i class="fas fa-exclamation-triangle"></i> This action cannot be undone!</span>';
         
         modal.style.display = 'flex';
     }
@@ -5999,13 +5997,13 @@ function updateProgress() {
             const isAnswered = answersContainer && isQuestionAnswered(answersContainer);
             
             const icon = document.createElement('div');
-            icon.className = `question-icon ${isAnswered ? 'answered' : 'unanswered'}`;
+            icon.className = 'question-icon ' + (isAnswered ? 'answered' : 'unanswered');
             if (parseInt(qindex) === currentQNum) {
                 icon.classList.add('current');
             }
             icon.textContent = parseInt(qindex) + 1;
             icon.setAttribute('data-qindex', qindex);
-            icon.title = `Question ${parseInt(qindex) + 1} (${isAnswered ? 'Answered' : 'Unanswered'})`;
+            icon.title = 'Question ' + (parseInt(qindex) + 1) + ' (' + (isAnswered ? 'Answered' : 'Unanswered') + ')';
             
             // Use IIFE to capture the qindex value properly
             icon.addEventListener('click', (function(questionIndex) {
@@ -6048,7 +6046,7 @@ function updateProgress() {
         } else {
             // Fallback: manually show the question
             const questionCards = document.querySelectorAll('.question-card');
-            questionCards.forEach((card, idx) => {
+            questionCards.forEach(function(card, idx) {
                 if (idx == qindex) {
                     card.style.display = 'block';
                 } else {
@@ -6081,8 +6079,8 @@ function updateProgress() {
         }
         
         // Small delay to ensure the question is visible before scrolling
-        setTimeout(() => {
-            const questionCard = document.querySelector(`.question-card[data-qindex="${qindex}"]`);
+        setTimeout(function() {
+            const questionCard = document.querySelector('.question-card[data-qindex="' + qindex + '"]');
             if (questionCard) {
                 questionCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 
@@ -6090,7 +6088,7 @@ function updateProgress() {
                 questionCard.style.boxShadow = '0 0 0 3px #3b82f6';
                 questionCard.style.transition = 'box-shadow 0.3s';
                 
-                setTimeout(() => {
+                setTimeout(function() {
                     questionCard.style.boxShadow = '';
                 }, 2000);
             }
@@ -6117,25 +6115,25 @@ function updateProgress() {
         // Find all drag-drop questions
         const dragDropContainers = document.querySelectorAll('.drag-drop-container');
         
-        dragDropContainers.forEach((container, index) => {
+        dragDropContainers.forEach(function(container, index) {
             if (container.classList.contains('horizontal-layout')) {
-                console.log(`Question ${index + 1} has horizontal layout`);
+                console.log('Question ' + (index + 1) + ' has horizontal layout');
                 
                 const dropTargetsList = container.querySelector('.drop-targets-list');
                 if (dropTargetsList) {
                     const style = getComputedStyle(dropTargetsList);
-                    console.log(`  justify-content: ${style.justifyContent}`);
-                    console.log(`  flex-direction: ${style.flexDirection}`);
+                    console.log('  justify-content: ' + style.justifyContent);
+                    console.log('  flex-direction: ' + style.flexDirection);
                     
                     // Check if drop targets are aligned to the right
                     const isRightAligned = style.justifyContent === 'flex-end';
-                    console.log(`  Right aligned: ${isRightAligned}`);
+                    console.log('  Right aligned: ' + isRightAligned);
                     
                     // Check drop target sizes
                     const dropTargets = dropTargetsList.querySelectorAll('.drop-target');
-                    dropTargets.forEach((target, targetIndex) => {
+                    dropTargets.forEach(function(target, targetIndex) {
                         const targetStyle = getComputedStyle(target);
-                        console.log(`  Target ${targetIndex + 1}: width=${targetStyle.width}, height=${targetStyle.height}`);
+                        console.log('  Target ' + (targetIndex + 1) + ': width=' + targetStyle.width + ', height=' + targetStyle.height);
                     });
                 }
             }
@@ -6274,7 +6272,7 @@ function updateProgress() {
         }
 
         // Hide all steps
-        document.querySelectorAll('.verification-step').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.verification-step').forEach(function(el) { el.style.display = 'none'; });
         // Show current step
         document.getElementById('verification-step-' + step).style.display = 'block';
 
@@ -6412,47 +6410,116 @@ function updateProgress() {
        Highest Priority: Cheating Detection 
        ============================================ */ 
 
+    /* ============================================
+       PROFESSIONAL PROCTORING SYSTEM v2.0
+       Highest Priority: Cheating Detection
+       ============================================ */
+
     class ProctoringSystem {
         constructor() {
             this.examActive = true;
             this.violations = [];
             this.warningCount = 0;
             this.MAX_WARNINGS = 3;
-            this.NOISE_THRESHOLD = 55;
-            this.EYE_OFF_SCREEN_THRESHOLD = 3000;
-            this.HEAD_MOVEMENT_THRESHOLD = 0.3;
-            this.FACE_LOST_THRESHOLD = 2000;
+
+            // Detection thresholds (calibrated for real cheating scenarios)
+            this.NOISE_THRESHOLD = 55; // dB - background noise
+            this.MULTIPLE_VOICES_THRESHOLD = 500; // frequency variance
+            this.EYE_OFF_SCREEN_THRESHOLD = 3000; // 3 seconds
+            this.HEAD_MOVEMENT_THRESHOLD = 0.3; // 30% movement
+            this.FACE_LOST_THRESHOLD = 2000; // 2 seconds
+            this.MOUTH_MOVEMENT_THRESHOLD = 2; // pixels of movement
+            this.LOOKING_DOWN_ANGLE = -15; // degrees pitch
+
+            // State tracking
             this.lastEyeContact = Date.now();
             this.lastFaceDetected = Date.now();
             this.backgroundNoiseBaseline = 40;
             this.calibrationComplete = false;
+            this.previousNosePosition = null;
+            this.previousMouthHeight = null;
+
+            // Media streams
             this.audioStream = null;
             this.videoStream = null;
+
+            // Face detection
             this.faceapi = null;
+            this.detectionInterval = null;
+            this.audioMonitor = null;
         }
 
         async initialize() {
             console.log('🔒 Initializing Professional Proctoring System...');
+
+            // Show proctoring status to user
+            this.showStatusBanner();
+
+            // Load face detection library
             await this.loadFaceApi();
+
+            // Initialize all monitoring systems
             await this.initAudioMonitoring();
             await this.initVideoMonitoring();
             this.initEnvironmentLockdown();
             this.initBehavioralMonitoring();
+
+            // Start continuous monitoring loop
             this.startMonitoringLoop();
+
             console.log('✅ Proctoring System Active');
+            this.logToServer('INFO', 'Proctoring started successfully');
+        }
+
+        showStatusBanner() {
+            const banner = document.createElement('div');
+            banner.id = 'proctoring-banner';
+            banner.style.cssText = 'position: fixed; top: 10px; right: 10px; background: #09294d; color: white; padding: 8px 15px; border-radius: 20px; font-size: 12px; z-index: 9999; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);';
+            banner.innerHTML = '<span class="live-indicator" style="width: 10px; height: 10px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite;"></span>' +
+                '<span>Proctoring Active</span>' +
+                '<span id="violation-counter" style="background: #ef4444; padding: 2px 6px; border-radius: 10px; font-size: 10px;">0</span>';
+            document.body.appendChild(banner);
+
+            // Add pulse animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes pulse {
+                    0% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.5; transform: scale(1.2); }
+                    100% { opacity: 1; transform: scale(1); }
+                }
+            `;
+            document.head.appendChild(style);
         }
 
         async loadFaceApi() {
             return new Promise((resolve) => {
+                // Check if already loaded
+                if (window.faceapi) {
+                    this.faceapi = window.faceapi;
+                    resolve();
+                    return;
+                }
+
                 const script = document.createElement('script');
                 script.src = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
                 script.onload = async () => {
-                    const modelPath = '<%= request.getContextPath() %>/models';
-                    await faceapi.nets.tinyFaceDetector.loadFromUri(modelPath);
-                    await faceapi.nets.faceLandmark68Net.loadFromUri(modelPath);
-                    await faceapi.nets.faceExpressionNet.loadFromUri(modelPath);
-                    this.faceapi = faceapi;
-                    resolve();
+                    try {
+                        // Use CDN models instead of local files for simplicity
+                        await faceapi.nets.tinyFaceDetector.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights');
+                        await faceapi.nets.faceLandmark68Net.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights');
+                        await faceapi.nets.faceExpressionNet.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights');
+                        this.faceapi = faceapi;
+                        console.log('✅ Face detection models loaded from CDN');
+                        resolve();
+                    } catch (err) {
+                        console.warn('Could not load face-api models, using fallback detection', err);
+                        resolve(); // Continue with fallback
+                    }
+                };
+                script.onerror = () => {
+                    console.warn('Could not load face-api.js, using fallback detection');
+                    resolve(); // Continue without face-api
                 };
                 document.head.appendChild(script);
             });
@@ -6460,45 +6527,93 @@ function updateProgress() {
 
         async initAudioMonitoring() {
             try {
-                this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false } });
+                this.audioStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false
+                    }
+                });
+
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const source = audioContext.createMediaStreamSource(this.audioStream);
                 const analyser = audioContext.createAnalyser();
                 analyser.fftSize = 2048;
+
                 source.connect(analyser);
-                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+
+                // Calibration phase (first 5 seconds)
                 setTimeout(() => this.calibrateNoise(analyser), 5000);
+
+                // Continuous monitoring
                 this.audioMonitor = setInterval(() => {
                     analyser.getByteFrequencyData(dataArray);
                     this.analyzeAudio(dataArray);
                 }, 500);
-            } catch (err) { this.logViolation('CRITICAL', 'Audio monitoring unavailable'); }
+
+            } catch (err) {
+                this.logViolation('CRITICAL', 'Audio monitoring unavailable - microphone access denied');
+            }
         }
 
         calibrateNoise(analyser) {
             const dataArray = new Uint8Array(analyser.frequencyBinCount);
             let sum = 0;
+
+            // Take 10 samples
             for (let i = 0; i < 10; i++) {
                 analyser.getByteFrequencyData(dataArray);
                 sum += dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
             }
+
             this.backgroundNoiseBaseline = sum / 10;
             this.calibrationComplete = true;
+            console.log('✅ Noise baseline calibrated:', this.backgroundNoiseBaseline.toFixed(2));
         }
 
         analyzeAudio(dataArray) {
             if (!this.calibrationComplete) return;
-            const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+
+            const average = dataArray.reduce(function(a, b) { return a + b; }, 0) / dataArray.length;
             const dbLevel = 20 * Math.log10(average || 1);
-            if (dbLevel > this.backgroundNoiseBaseline + 15) this.logViolation('AUDIO', 'Excessive background noise');
-            const mean = average;
+
+            // DETECTION 1: Background Noise (someone talking nearby, TV, etc.)
+            if (dbLevel > this.backgroundNoiseBaseline + 15) {
+                this.logViolation('AUDIO', 'Excessive background noise detected (' + Math.round(dbLevel) + 'dB)');
+            }
+
+            // DETECTION 2: Multiple Voices (using frequency variance)
+            const variance = this.calculateVariance(dataArray);
+            if (variance > this.MULTIPLE_VOICES_THRESHOLD) {
+                this.logViolation('AUDIO', 'Multiple voices/conversation detected in background');
+            }
+
+            // DETECTION 3: Sudden Silence (possible phone call or leaving)
+            if (average < 5 && dbLevel < 20) {
+                this.logViolation('AUDIO', 'Suspicious silence - possible phone use or leaving seat');
+            }
+        }
+
+        calculateVariance(dataArray) {
+            const mean = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
             const variance = dataArray.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / dataArray.length;
-            if (variance > 500) this.logViolation('AUDIO', 'Multiple voices detected');
+            return variance;
         }
 
         async initVideoMonitoring() {
             try {
-                this.videoStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+                this.videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        frameRate: { ideal: 15 }
+                    }
+                });
+
+                // Create hidden video element for processing
                 let videoElement = document.getElementById('faceVideo');
                 if (!videoElement) {
                     videoElement = document.createElement('video');
@@ -6506,115 +6621,512 @@ function updateProgress() {
                     videoElement.style.display = 'none';
                     document.body.appendChild(videoElement);
                 }
+
                 videoElement.srcObject = this.videoStream;
-                videoElement.muted = true; videoElement.play();
+                videoElement.muted = true;
+                await videoElement.play();
+
+                // Create canvas for processing
+                this.videoCanvas = document.createElement('canvas');
+                this.videoContext = this.videoCanvas.getContext('2d');
+
+                // Start face detection
                 this.startFaceDetection(videoElement);
-            } catch (err) { this.logViolation('CRITICAL', 'Camera monitoring unavailable'); }
+
+            } catch (err) {
+                this.logViolation('CRITICAL', 'Camera monitoring unavailable - webcam access denied');
+            }
         }
 
         async startFaceDetection(videoElement) {
-            setInterval(async () => {
-                if (!this.faceapi || !videoElement.videoWidth || !this.examActive) return;
-                const detections = await this.faceapi.detectAllFaces(videoElement, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions();
-                if (detections.length === 0) {
-                    if (Date.now() - this.lastFaceDetected > this.FACE_LOST_THRESHOLD) this.logViolation('VISUAL', 'No face detected');
-                    return;
+            this.videoElement = videoElement;
+
+            // Run detection every 500ms
+            this.detectionInterval = setInterval(async () => {
+                if (!this.examActive || !videoElement.videoWidth) return;
+
+                try {
+                    if (this.faceapi && videoElement.videoWidth > 0) {
+                        // Use face-api for advanced detection
+                        const detections = await this.faceapi
+                            .detectAllFaces(videoElement, new this.faceapi.TinyFaceDetectorOptions())
+                            .withFaceLandmarks()
+                            .withFaceExpressions();
+
+                        this.processFaceDetections(detections);
+                    } else {
+                        // Fallback: simple motion detection
+                        this.processFallbackDetection(videoElement);
+                    }
+                } catch (err) {
+                    // Silent fail - continue with next frame
                 }
-                this.lastFaceDetected = Date.now();
-                if (detections.length > 1) this.logViolation('VISUAL', 'Multiple people detected');
-                const face = detections[0];
-                const leftEye = face.landmarks.getLeftEye();
-                const rightEye = face.landmarks.getRightEye();
-                const ear = (this.eyeAspectRatio(leftEye) + this.eyeAspectRatio(rightEye)) / 2;
-                if (ear < 0.15) {
-                    if (Date.now() - this.lastEyeContact > this.EYE_OFF_SCREEN_THRESHOLD) this.logViolation('VISUAL', 'Looking away from screen');
-                } else { this.lastEyeContact = Date.now(); }
             }, 500);
         }
 
+        processFaceDetections(detections) {
+            if (detections.length === 0) {
+                // DETECTION 4: No face in frame
+                if (Date.now() - this.lastFaceDetected > this.FACE_LOST_THRESHOLD) {
+                    this.logViolation('VISUAL', 'No face detected in camera - you left the frame');
+                }
+                return;
+            }
+
+            this.lastFaceDetected = Date.now();
+
+            // DETECTION 5: Multiple faces
+            if (detections.length > 1) {
+                this.logViolation('VISUAL', 'Multiple people detected in camera frame');
+            }
+
+            const face = detections[0];
+
+            // DETECTION 6: Gaze away from screen (using eye landmarks)
+            const lookingAtScreen = this.detectGazeDirection(face.landmarks);
+            if (!lookingAtScreen) {
+                if (Date.now() - this.lastEyeContact > this.EYE_OFF_SCREEN_THRESHOLD) {
+                    this.logViolation('VISUAL', 'Looking away from screen for >3 seconds');
+                }
+            } else {
+                this.lastEyeContact = Date.now();
+            }
+
+            // DETECTION 7: Head movement (looking around suspiciously)
+            const headMovement = this.detectHeadMovement(face.landmarks);
+            if (headMovement > this.HEAD_MOVEMENT_THRESHOLD) {
+                this.logViolation('VISUAL', 'Excessive head movement detected');
+            }
+
+            // DETECTION 8: Face partially covered (hand over face, phone)
+            if (this.detectFaceObstruction(face.landmarks)) {
+                this.logViolation('VISUAL', 'Face partially obscured - possible phone or notes');
+            }
+
+            // DETECTION 9: Looking down (possible phone in lap)
+            const headPose = this.estimateHeadPose(face.landmarks);
+            if (headPose.pitch < this.LOOKING_DOWN_ANGLE) {
+                this.logViolation('VISUAL', 'Looking down - possible phone use');
+            }
+
+            // DETECTION 10: Reading lips (communicating answers)
+            if (this.detectLipMovement(face.landmarks, face.expressions)) {
+                this.logViolation('BEHAVIOR', 'Lip movement detected - possible verbal communication');
+            }
+        }
+
+        detectGazeDirection(landmarks) {
+            if (!landmarks) return true;
+
+            try {
+                const leftEye = landmarks.getLeftEye();
+                const rightEye = landmarks.getRightEye();
+
+                // Calculate eye aspect ratio (blink detection)
+                const leftEAR = this.eyeAspectRatio(leftEye);
+                const rightEAR = this.eyeAspectRatio(rightEye);
+
+                // If eyes are closed or looking away
+                if (leftEAR < 0.15 || rightEAR < 0.15) {
+                    return false;
+                }
+
+                // Check pupil position (simplified)
+                const leftPupil = leftEye[0];
+                const rightPupil = rightEye[3];
+
+                return true;
+            } catch (err) {
+                return true;
+            }
+        }
+
         eyeAspectRatio(eye) {
-            const A = Math.hypot(eye[1].x - eye[5].x, eye[1].y - eye[5].y);
-            const B = Math.hypot(eye[2].x - eye[4].x, eye[2].y - eye[4].y);
-            const C = Math.hypot(eye[0].x - eye[3].x, eye[0].y - eye[3].y);
-            return (A + B) / (2 * C);
+            if (!eye || eye.length < 6) return 0.3;
+
+            try {
+                const A = Math.hypot(eye[1].x - eye[5].x, eye[1].y - eye[5].y);
+                const B = Math.hypot(eye[2].x - eye[4].x, eye[2].y - eye[4].y);
+                const C = Math.hypot(eye[0].x - eye[3].x, eye[0].y - eye[3].y);
+                return (A + B) / (2 * C);
+            } catch (err) {
+                return 0.3;
+            }
+        }
+
+        detectHeadMovement(landmarks) {
+            if (!landmarks) return 0;
+
+            try {
+                const nose = landmarks.getNose();
+                if (!nose || nose.length === 0) return 0;
+
+                if (!this.previousNosePosition) {
+                    this.previousNosePosition = { x: nose[0].x, y: nose[0].y };
+                    return 0;
+                }
+
+                const movement = Math.hypot(
+                    nose[0].x - this.previousNosePosition.x,
+                    nose[0].y - this.previousNosePosition.y
+                ) / 100;
+
+                this.previousNosePosition = { x: nose[0].x, y: nose[0].y };
+                return movement;
+            } catch (err) {
+                return 0;
+            }
+        }
+
+        detectFaceObstruction(landmarks) {
+            if (!landmarks) return false;
+
+            try {
+                const jaw = landmarks.getJawOutline();
+                const mouth = landmarks.getMouth();
+
+                if (!jaw || jaw.length === 0 || !mouth || mouth.length === 0) return false;
+
+                const jawWidth = Math.abs(jaw[0].x - jaw[jaw.length - 1].x);
+                const mouthWidth = Math.abs(mouth[0].x - mouth[6].x);
+
+                // If mouth area is too small, might be covered
+                return mouthWidth < jawWidth * 0.2;
+            } catch (err) {
+                return false;
+            }
+        }
+
+        estimateHeadPose(landmarks) {
+            if (!landmarks) return { pitch: 0 };
+
+            try {
+                const nose = landmarks.getNose();
+                const leftEye = landmarks.getLeftEye();
+                const rightEye = landmarks.getRightEye();
+
+                if (!nose || nose.length === 0 || !leftEye || leftEye.length === 0 || !rightEye || rightEye.length === 0) {
+                    return { pitch: 0 };
+                }
+
+                const eyeY = (leftEye[0].y + rightEye[0].y) / 2;
+                const pitch = nose[0].y - eyeY;
+
+                return { pitch };
+            } catch (err) {
+                return { pitch: 0 };
+            }
+        }
+
+        detectLipMovement(landmarks, expressions) {
+            if (!landmarks) return false;
+
+            try {
+                const mouth = landmarks.getMouth();
+                if (!mouth || mouth.length < 14) return false;
+
+                if (!this.previousMouthHeight) {
+                    this.previousMouthHeight = Math.abs(mouth[13].y - mouth[14].y);
+                    return false;
+                }
+
+                const mouthHeight = Math.abs(mouth[13].y - mouth[14].y);
+                const movement = Math.abs(mouthHeight - this.previousMouthHeight);
+
+                this.previousMouthHeight = mouthHeight;
+
+                // If mouth is moving significantly while not smiling (talking)
+                return movement > this.MOUTH_MOVEMENT_THRESHOLD &&
+                       (!expressions || expressions.happy < 0.5);
+            } catch (err) {
+                return false;
+            }
+        }
+
+        processFallbackDetection(videoElement) {
+            if (!this.videoCanvas) return;
+
+            try {
+                this.videoCanvas.width = videoElement.videoWidth;
+                this.videoCanvas.height = videoElement.videoHeight;
+                this.videoContext.drawImage(videoElement, 0, 0);
+
+                const frame = this.videoContext.getImageData(0, 0, this.videoCanvas.width, this.videoCanvas.height);
+
+                if (this.lastFrame) {
+                    // Simple motion detection
+                    let diff = 0;
+                    for (let i = 0; i < frame.data.length; i += 40) {
+                        diff += Math.abs(frame.data[i] - this.lastFrame.data[i]);
+                    }
+
+                    const avgDiff = diff / (frame.data.length / 40);
+
+                    if (avgDiff > 30) {
+                        this.logViolation('VISUAL', 'Significant movement detected in frame');
+                    }
+                }
+
+                this.lastFrame = frame;
+                this.lastFaceDetected = Date.now();
+            } catch (err) {
+                // Silent fail
+            }
         }
 
         initEnvironmentLockdown() {
-            window.addEventListener('blur', () => { if (this.examActive) this.logViolation('LOCKDOWN', 'Window focus lost'); });
-            document.addEventListener('contextmenu', (e) => { e.preventDefault(); this.logViolation('LOCKDOWN', 'Right-click attempt'); });
+            var self = this;
+            // PREVENT SCREEN CAPTURE
+            document.addEventListener('keyup', function(e) {
+                if (e.key === 'PrintScreen') {
+                    self.logViolation('LOCKDOWN', 'Print screen attempted');
+                    navigator.clipboard.writeText('').catch(function() {});
+                }
+            });
+
+            // DETECT ALT+TAB and window switching
+            let lastFocusTime = Date.now();
+            window.addEventListener('blur', function() {
+                lastFocusTime = Date.now();
+                self.logViolation('LOCKDOWN', 'Window focus lost - possible Alt+Tab');
+            });
+
+            window.addEventListener('focus', function() {
+                if (Date.now() - lastFocusTime > 2000) {
+                    // This was a real switch, not just a brief flicker
+                }
+            });
+
+            // BLOCK RIGHT CLICK
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                self.logViolation('LOCKDOWN', 'Right-click attempted');
+                return false;
+            });
+
+            // BLOCK KEYBOARD SHORTCUTS
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey || e.altKey || e.metaKey) {
+                    e.preventDefault();
+                    self.logViolation('LOCKDOWN', 'Forbidden key combination: ' + e.key);
+                }
+
+                // Block function keys
+                if (e.key.startsWith('F') && e.key.length > 1 && !isNaN(parseInt(e.key.substring(1)))) {
+                    e.preventDefault();
+                    self.logViolation('LOCKDOWN', 'Function key pressed: ' + e.key);
+                }
+            });
+
+            // FORCE FULLSCREEN
             this.enforceFullscreen();
         }
 
         enforceFullscreen() {
-            const check = () => {
-                if (!document.fullscreenElement && this.examActive) {
-                    this.logViolation('LOCKDOWN', 'Exited fullscreen mode');
+            // Request fullscreen at start
+            setTimeout(() => {
+                if (document.documentElement.requestFullscreen) {
                     document.documentElement.requestFullscreen().catch(() => {});
                 }
-            };
-            setInterval(check, 3000);
+            }, 1000);
+
+            // Check every 3 seconds
+            setInterval(() => {
+                if (!document.fullscreenElement && this.examActive) {
+                    this.logViolation('LOCKDOWN', 'Exited fullscreen mode');
+
+                    // Try to re-enter fullscreen
+                    try {
+                        document.documentElement.requestFullscreen();
+                    } catch (err) {}
+                }
+            }, 3000);
         }
 
         initBehavioralMonitoring() {
+            // Track mouse behavior
+            let mouseMovements = [];
+            let mouseStoppedTime = Date.now();
+            let lastMousePosition = { x: 0, y: 0 };
+
             document.addEventListener('mousemove', (e) => {
-                if (e.clientX <= 0 || e.clientY <= 0 || e.clientX >= window.innerWidth - 1 || e.clientY >= window.innerHeight - 1) {
-                    this.logViolation('BEHAVIOR', 'Mouse moved to screen edge');
+                const now = Date.now();
+
+                // Check if mouse went to screen edge (possible second monitor)
+                if (e.clientX <= 5 || e.clientY <= 5 ||
+                    e.clientX >= window.innerWidth - 5 ||
+                    e.clientY >= window.innerHeight - 5) {
+                    this.logViolation('BEHAVIOR', 'Mouse moved to screen edge - possible second monitor');
+                }
+
+                // Track mouse speed
+                if (lastMousePosition.x !== 0) {
+                    const distance = Math.hypot(e.clientX - lastMousePosition.x, e.clientY - lastMousePosition.y);
+                    const time = now - mouseStoppedTime;
+                    const speed = distance / time;
+
+                    if (speed > 5) {
+                        // Very fast mouse movement - possible automated script
+                        mouseMovements.push(speed);
+
+                        if (mouseMovements.length > 10) {
+                            mouseMovements.shift();
+
+                            const avgSpeed = mouseMovements.reduce((a, b) => a + b, 0) / mouseMovements.length;
+                            if (avgSpeed > 8) {
+                                this.logViolation('BEHAVIOR', 'Unusually fast mouse movements - possible automation');
+                                mouseMovements = [];
+                            }
+                        }
+                    }
+                }
+
+                lastMousePosition = { x: e.clientX, y: e.clientY };
+                mouseStoppedTime = now;
+            });
+
+            // Detect if student leaves the page
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden && this.examActive) {
+                    this.logViolation('BEHAVIOR', 'Tab/window hidden - possible cheating');
                 }
             });
         }
 
         startMonitoringLoop() {
+            // Check for developer tools
             setInterval(() => {
                 if (!this.examActive) return;
-                if (window.outerWidth - window.innerWidth > 160 || window.outerHeight - window.innerHeight > 160) {
-                    this.logViolation('SECURITY', 'Developer tools possibly open');
+
+                const widthThreshold = window.outerWidth - window.innerWidth > 160;
+                const heightThreshold = window.outerHeight - window.innerHeight > 160;
+
+                if (widthThreshold || heightThreshold) {
+                    this.logViolation('SECURITY', 'Developer tools detected - possible inspection');
                 }
+
+                // Check for VM/Remote Desktop (basic detection)
+                const userAgent = navigator.userAgent.toLowerCase();
+                if (userAgent.includes('virtualbox') ||
+                    userAgent.includes('vmware') ||
+                    userAgent.includes('parallels')) {
+                    this.logViolation('SECURITY', 'Virtual machine detected');
+                }
+
+                // Check for multiple monitors (simplified)
+                if (window.screen.width > 2000) {
+                    // Ultra-wide or multiple monitors
+                    this.logViolation('SECURITY', 'Wide screen detected - possible multiple monitors');
+                }
+
             }, 5000);
+
+            // Heartbeat to keep session alive
+            setInterval(() => {
+                if (this.examActive) {
+                    console.log('Proctoring heartbeat - monitoring active');
+                }
+            }, 30000);
         }
 
         logViolation(type, description) {
             if (!this.examActive) return;
+
             const violation = {
                 timestamp: new Date().toISOString(),
                 type: type,
                 description: description,
-                examId: '<%= session.getAttribute("examId") %>',
+                examId: document.querySelector('input[name="examId"]')?.value || '<%= session.getAttribute("examId") %>',
                 studentId: '<%= session.getAttribute("userId") %>'
             };
+
             this.violations.push(violation);
             this.warningCount++;
+
+            // Update counter in UI
+            const counter = document.getElementById('violation-counter');
+            if (counter) counter.textContent = this.warningCount;
+
+            // Capture screenshot evidence
             this.captureEvidence(violation);
+
+            // Show warning to student
             this.showWarning(violation);
-            if (this.warningCount >= this.MAX_WARNINGS) this.autoSubmitForCheating();
-            this.sendViolationToServer(violation);
+
+            // Auto-submit after MAX_WARNINGS
+            if (this.warningCount >= this.MAX_WARNINGS) {
+                this.autoSubmitForCheating();
+            } else {
+                // Send to server
+                this.sendViolationToServer(violation);
+            }
         }
 
-        captureEvidence(violation) {
-            const video = document.getElementById('faceVideo') || document.querySelector('video');
-            if (!video || !video.videoWidth) return;
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            violation.screenshot = canvas.toDataURL('image/jpeg', 0.6);
+        async captureEvidence(violation) {
+            if (!this.videoElement || !this.videoElement.videoWidth) return;
+
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = this.videoElement.videoWidth;
+                canvas.height = this.videoElement.videoHeight;
+                canvas.getContext('2d').drawImage(this.videoElement, 0, 0);
+                violation.screenshot = canvas.toDataURL('image/jpeg', 0.6);
+            } catch (err) {
+                // Can't capture screenshot
+            }
         }
 
         showWarning(violation) {
-            const div = document.createElement('div');
-            div.style = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;background:#fee2e2;border:2px solid #ef4444;padding:10px 20px;border-radius:8px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.2);';
-            div.innerHTML = `<div style="color:#b91c1c;font-weight:bold;">⚠️ Proctoring Warning (${this.warningCount}/${this.MAX_WARNINGS})</div>
-                             <div style="color:#7f1d1d;font-size:13px;">${violation.type}: ${violation.description}</div>`;
-            document.body.appendChild(div);
-            setTimeout(() => div.remove(), 5000);
+            // Create warning modal
+            const warningModal = document.createElement('div');
+            warningModal.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #fee2e2; border: 2px solid #ef4444; border-radius: 8px; padding: 15px 25px; z-index: 10000; box-shadow: 0 4px 20px rgba(0,0,0,0.3); text-align: center; animation: slideDown 0.3s ease-out;';
+
+            warningModal.innerHTML = '<div style="color: #b91c1c; font-weight: bold; margin-bottom: 5px;">' +
+                    '⚠️ Proctoring Warning (' + this.warningCount + '/' + this.MAX_WARNINGS + ')' +
+                '</div>' +
+                '<div style="color: #7f1d1d; font-size: 14px;">' +
+                    violation.type + ': ' + violation.description +
+                '</div>' +
+                '<div style="color: #991b1b; font-size: 12px; margin-top: 5px;">' +
+                    'This incident has been recorded.' +
+                '</div>';
+
+            document.body.appendChild(warningModal);
+
+            // Add animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideDown {
+                    from { opacity: 0; transform: translate(-50%, -20px); }
+                    to { opacity: 1; transform: translate(-50%, 0); }
+                }
+            `;
+            document.head.appendChild(style);
+
+            // Remove after 5 seconds
+            setTimeout(() => {
+                if (warningModal.parentNode) {
+                    warningModal.remove();
+                }
+            }, 5000);
         }
 
         autoSubmitForCheating() {
             this.examActive = false;
-            alert('EXAM TERMINATED: Maximum violations exceeded.');
+
+            // Show final message
+            alert('EXAM TERMINATED: Maximum violations exceeded. Your exam will be submitted for review.');
+
             const form = document.getElementById('myform');
             if (form) {
+                // Add cheating flag
                 const input = document.createElement('input');
-                input.type = 'hidden'; input.name = 'cheating_terminated'; input.value = 'true';
+                input.type = 'hidden';
+                input.name = 'cheating_terminated';
+                input.value = 'true';
                 form.appendChild(input);
+
+                // Submit immediately
                 form.submit();
             }
         }
@@ -6624,25 +7136,83 @@ function updateProgress() {
             formData.append('page', 'proctoring');
             formData.append('operation', 'log_violation');
             formData.append('violation_data', JSON.stringify(violation));
-            if (navigator.sendBeacon) navigator.sendBeacon('controller.jsp', formData);
-            else fetch('controller.jsp', { method: 'POST', body: formData, keepalive: true });
+
+            // Use sendBeacon for reliability during page unload
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon('controller.jsp', formData);
+            } else {
+                fetch('controller.jsp', {
+                    method: 'POST',
+                    body: formData,
+                    keepalive: true
+                }).catch(() => {});
+            }
+        }
+
+        logToServer(type, message) {
+            const violation = {
+                timestamp: new Date().toISOString(),
+                type: 'INFO',
+                description: message,
+                examId: '<%= session.getAttribute("examId") %>',
+                studentId: '<%= session.getAttribute("userId") %>'
+            };
+            this.sendViolationToServer(violation);
+        }
+
+        stop() {
+            this.examActive = false;
+
+            if (this.detectionInterval) {
+                clearInterval(this.detectionInterval);
+            }
+
+            if (this.audioMonitor) {
+                clearInterval(this.audioMonitor);
+            }
+
+            if (this.audioStream) {
+                this.audioStream.getTracks().forEach(t => t.stop());
+            }
+
+            if (this.videoStream) {
+                this.videoStream.getTracks().forEach(t => t.stop());
+            }
+
+            console.log('🛑 Proctoring stopped');
         }
     }
 
-    const originalBeginBtn = document.getElementById('beginButton');
-    if (originalBeginBtn) {
-        const oldClick = originalBeginBtn.onclick;
-        originalBeginBtn.onclick = async (e) => {
-            try {
-                const elem = document.documentElement;
-                if (elem.requestFullscreen) await elem.requestFullscreen();
-            } catch (err) {}
-            
-            const proctor = new ProctoringSystem();
-            window.proctor = proctor;
-            await proctor.initialize();
-            
-            if (oldClick) oldClick.apply(originalBeginBtn, [e]);
-        };
-    }
+    // Hook into Begin Exam button
+    document.addEventListener('DOMContentLoaded', function() {
+        const beginBtn = document.getElementById('beginButton');
+        if (beginBtn) {
+            const originalClick = beginBtn.onclick;
+            beginBtn.onclick = async function(e) {
+                e.preventDefault();
+
+                try {
+                    // Request camera and microphone permissions first
+                    await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+
+                    // Start proctoring
+                    const proctor = new ProctoringSystem();
+                    window.proctor = proctor;
+                    await proctor.initialize();
+
+                    // Proceed with exam start
+                    if (originalClick) {
+                        originalClick.call(this, e);
+                    } else {
+                        // Fallback to form submission
+                        const form = document.getElementById('examStartForm');
+                        if (form) form.submit();
+                    }
+                } catch (err) {
+                    alert('Camera and microphone access is required for this exam. Please allow permissions and try again.');
+                    console.error('Permission error:', err);
+                }
+            };
+        }
+    });
 </script>

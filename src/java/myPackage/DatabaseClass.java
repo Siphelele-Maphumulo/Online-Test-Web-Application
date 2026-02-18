@@ -12091,30 +12091,6 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
     // ==================== PROCTORING METHODS ====================
 
     /**
-     * Logs a proctoring incident (e.g., noise, movement, eye contact loss).
-     */
-    public boolean logProctoringIncident(int examId, int studentId, String type, String desc, String screenshotPath) {
-        PreparedStatement pstm = null;
-        try {
-            ensureConnection();
-            String sql = "INSERT INTO proctoring_incidents (exam_id, student_id, incident_type, description, screenshot_path) VALUES (?, ?, ?, ?, ?)";
-            pstm = conn.prepareStatement(sql);
-            pstm.setInt(1, examId);
-            pstm.setInt(2, studentId);
-            pstm.setString(3, type);
-            pstm.setString(4, desc);
-            pstm.setString(5, screenshotPath);
-            int rows = pstm.executeUpdate();
-            return rows > 0;
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error logging proctoring incident: " + e.getMessage(), e);
-            return false;
-        } finally {
-            try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
-        }
-    }
-
-    /**
      * Retrieves a list of active exam sessions that are being proctored.
      */
     public ArrayList<Map<String, Object>> getActiveProctoredExams() {
@@ -12127,7 +12103,7 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
                          "(SELECT COUNT(*) FROM proctoring_incidents WHERE exam_id = e.exam_id) as violations_count " +
                          "FROM exams e " +
                          "JOIN users u ON e.std_id = u.user_id " +
-                         "WHERE e.status = 'started' OR e.status IS NULL OR e.status = '' " +
+                         "WHERE e.status = 'incomplete' OR e.status IS NULL OR e.status = '' " +
                          "ORDER BY e.exam_id DESC";
             pstm = conn.prepareStatement(sql);
             rs = pstm.executeQuery();
@@ -12140,19 +12116,19 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
                 int violations = rs.getInt("violations_count");
                 map.put("violations", violations);
                 map.put("status", violations > 5 ? "critical" : (violations > 2 ? "warning" : "clean"));
-                
+
                 Map<String, String> latest = getLatestIncident(examId);
                 map.put("streamUrl", latest.get("screenshot") != null ? latest.get("screenshot") : "");
-                map.put("audioLevel", 45); 
-                map.put("eyeContact", true); 
-                
+                map.put("audioLevel", 45);
+                map.put("eyeContact", true);
+
                 ArrayList<String> recentViolations = new ArrayList<>();
                 ArrayList<Map<String, String>> incidents = getProctoringIncidents(examId);
                 for (int i = 0; i < Math.min(incidents.size(), 3); i++) {
                     recentViolations.add(incidents.get(i).get("type") + ": " + incidents.get(i).get("description"));
                 }
                 map.put("recentViolations", recentViolations);
-                
+
                 list.add(map);
             }
         } catch (SQLException e) {
@@ -12188,6 +12164,60 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             try { if (rs != null) rs.close(); if (pstm != null) pstm.close(); } catch (SQLException e) {}
         }
         return map;
+    }
+
+    /**
+     * Gets all proctoring incidents for a specific exam attempt.
+     */
+    public ArrayList<Map<String, String>> getProctoringIncidents(int examId) {
+        ArrayList<Map<String, String>> incidents = new ArrayList<>();
+        PreparedStatement pstm = null;
+        ResultSet rs = null;
+        try {
+            ensureConnection();
+            String sql = "SELECT * FROM proctoring_incidents WHERE exam_id = ? ORDER BY timestamp DESC";
+            pstm = conn.prepareStatement(sql);
+            pstm.setInt(1, examId);
+            rs = pstm.executeQuery();
+            while (rs.next()) {
+                Map<String, String> incident = new HashMap<>();
+                incident.put("id", rs.getString("id"));
+                incident.put("type", rs.getString("incident_type"));
+                incident.put("description", rs.getString("description"));
+                incident.put("timestamp", rs.getString("timestamp"));
+                incident.put("screenshot", rs.getString("screenshot_path"));
+                incidents.add(incident);
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error fetching proctoring incidents", e);
+        } finally {
+            try { if (rs != null) rs.close(); if (pstm != null) pstm.close(); } catch (SQLException e) {}
+        }
+        return incidents;
+    }
+
+    /**
+     * Logs a proctoring incident (e.g., noise, movement, eye contact loss).
+     */
+    public boolean logProctoringIncident(int examId, int studentId, String type, String desc, String screenshotPath) {
+        PreparedStatement pstm = null;
+        try {
+            ensureConnection();
+            String sql = "INSERT INTO proctoring_incidents (exam_id, student_id, incident_type, description, screenshot_path) VALUES (?, ?, ?, ?, ?)";
+            pstm = conn.prepareStatement(sql);
+            pstm.setInt(1, examId);
+            pstm.setInt(2, studentId);
+            pstm.setString(3, type);
+            pstm.setString(4, desc);
+            pstm.setString(5, screenshotPath);
+            int rows = pstm.executeUpdate();
+            return rows > 0;
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error logging proctoring incident: " + e.getMessage(), e);
+            return false;
+        } finally {
+            try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
+        }
     }
 
     /**
@@ -12236,36 +12266,6 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             try { if (pstmCheck != null) pstmCheck.close(); } catch (SQLException e) {}
             try { if (pstmAction != null) pstmAction.close(); } catch (SQLException e) {}
         }
-    }
-
-    /**
-     * Gets all proctoring incidents for a specific exam attempt.
-     */
-    public ArrayList<Map<String, String>> getProctoringIncidents(int examId) {
-        ArrayList<Map<String, String>> incidents = new ArrayList<>();
-        PreparedStatement pstm = null;
-        ResultSet rs = null;
-        try {
-            ensureConnection();
-            String sql = "SELECT * FROM proctoring_incidents WHERE exam_id = ? ORDER BY timestamp DESC";
-            pstm = conn.prepareStatement(sql);
-            pstm.setInt(1, examId);
-            rs = pstm.executeQuery();
-            while (rs.next()) {
-                Map<String, String> incident = new HashMap<>();
-                incident.put("id", rs.getString("id"));
-                incident.put("type", rs.getString("incident_type"));
-                incident.put("description", rs.getString("description"));
-                incident.put("timestamp", rs.getString("timestamp"));
-                incident.put("screenshot", rs.getString("screenshot_path"));
-                incidents.add(incident);
-            }
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error fetching proctoring incidents", e);
-        } finally {
-            try { if (rs != null) rs.close(); if (pstm != null) pstm.close(); } catch (SQLException e) {}
-        }
-        return incidents;
     }
 
     /**
