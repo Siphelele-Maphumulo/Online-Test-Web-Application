@@ -5876,27 +5876,42 @@ function updateProgress() {
 
             <!-- Step 1: Code of Honor -->
             <div id="verification-step-1" class="verification-step">
-                <h4 style="margin-bottom: 15px; color: var(--primary-blue);">Candidate Identity Verification Step 1: Code of Honor</h4>
-                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; max-height: 300px; overflow-y: auto; font-size: 14px; line-height: 1.6;">
-                    <p><strong>HONOR CODE AGREEMENT</strong></p>
-                    <p>As a candidate for this examination, I hereby acknowledge and agree to the following conditions:</p>
-                    <ul>
-                        <li>I will not use any unauthorized materials, including but not limited to textbooks, notes, or electronic devices during the exam.</li>
-                        <li>I will not communicate with any other individual by any means during the examination.</li>
-                        <li>I will remain within the view of the camera at all times and will not leave my seat without proper authorization.</li>
-                        <li>I understand that my session will be monitored via audio and video, and any suspicious behavior will be flagged for review.</li>
-                        <li>I will not copy, record, or distribute any part of the examination content.</li>
-                        <li>I confirm that I am the person registered to take this exam.</li>
-                    </ul>
-                    <p>Violation of these rules may lead to immediate disqualification and further disciplinary action by the institution.</p>
+                <h4 style="margin-bottom: 15px; color: var(--primary-blue);">Candidate Identity Verification Step 1: Name Verification</h4>
+
+                <!-- Name Verification Field -->
+                <div id="nameVerificationSection" style="margin-bottom: 25px; padding: 20px; background: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd;">
+                    <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 10px; color: var(--primary-blue);">Please enter your name to begin:</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="studentNameInput" placeholder="Enter your registered name" style="flex: 1; padding: 12px; border: 2px solid #cbd5e1; border-radius: 6px; font-size: 15px;">
+                        <button type="button" id="verifyNameBtn" class="btn-primary" style="padding: 0 25px; border-radius: 6px;">Verify</button>
+                    </div>
+                    <div id="nameVerificationMessage" style="margin-top: 10px; font-size: 13px; display: none;"></div>
                 </div>
-                <div style="margin-top: 20px; display: flex; align-items: center; gap: 10px;">
-                    <input type="checkbox" id="honorCodeCheckbox" style="width: 20px; height: 20px; cursor: pointer;">
-                    <label for="honorCodeCheckbox" style="font-size: 14px; font-weight: 600; cursor: pointer;">I agree to the Code of Honor and understand the consequences of cheating.</label>
-                </div>
-                <div style="margin-top: 15px;">
-                    <label style="display: block; font-size: 14px; margin-bottom: 5px; color: #64748b;">Type your full name as digital signature:</label>
-                    <input type="text" id="digitalSignature" placeholder="Enter your full name" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 4px;">
+
+                <!-- Honor Code Section (Initially Hidden) -->
+                <div id="honorCodeSection" style="display: none;">
+                    <h4 style="margin-bottom: 15px; color: var(--primary-blue);">Code of Honor</h4>
+                    <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; max-height: 250px; overflow-y: auto; font-size: 14px; line-height: 1.6;">
+                        <p><strong>HONOR CODE AGREEMENT</strong></p>
+                        <p>As a candidate for this examination, I hereby acknowledge and agree to the following conditions:</p>
+                        <ul>
+                            <li>I will not use any unauthorized materials, including but not limited to textbooks, notes, or electronic devices during the exam.</li>
+                            <li>I will not communicate with any other individual by any means during the examination.</li>
+                            <li>I will remain within the view of the camera at all times and will not leave my seat without proper authorization.</li>
+                            <li>I understand that my session will be monitored via audio and video, and any suspicious behavior will be flagged for review.</li>
+                            <li>I will not copy, record, or distribute any part of the examination content.</li>
+                            <li>I confirm that I am the person registered to take this exam.</li>
+                        </ul>
+                        <p>Violation of these rules may lead to immediate disqualification and further disciplinary action by the institution.</p>
+                    </div>
+                    <div style="margin-top: 20px; display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="honorCodeCheckbox" style="width: 20px; height: 20px; cursor: pointer;">
+                        <label for="honorCodeCheckbox" style="font-size: 14px; font-weight: 600; cursor: pointer;">I agree to the Code of Honor and understand the consequences of cheating.</label>
+                    </div>
+                    <div id="signatureSection" style="margin-top: 15px; display: none;">
+                        <label style="display: block; font-size: 14px; margin-bottom: 5px; color: #64748b;">Type your full name as digital signature:</label>
+                        <input type="text" id="digitalSignature" placeholder="Enter your full name" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    </div>
                 </div>
             </div>
 
@@ -6708,6 +6723,87 @@ function updateProgress() {
     function startIdentityVerification() {
         document.getElementById('identityVerificationModal').style.display = 'flex';
         showVerifyStep(1);
+
+        // Setup name verification listeners
+        const verifyBtn = document.getElementById('verifyNameBtn');
+        const nameInput = document.getElementById('studentNameInput');
+
+        if (verifyBtn && nameInput) {
+            verifyBtn.onclick = async () => {
+                const name = nameInput.value.trim();
+                const messageDiv = document.getElementById('nameVerificationMessage');
+                const honorSection = document.getElementById('honorCodeSection');
+
+                if (!name) {
+                    messageDiv.style.display = 'block';
+                    messageDiv.style.color = '#ef4444';
+                    messageDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> Please enter your name';
+                    return;
+                }
+
+                verifyBtn.disabled = true;
+                verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                try {
+                    const response = await fetch('controller.jsp?page=verify_student_name&enteredName=' + encodeURIComponent(name) + '&userId=' + studentId);
+                    const data = await response.json();
+
+                    if (data.success) {
+                        messageDiv.style.display = 'block';
+                        messageDiv.style.color = '#10b981';
+                        messageDiv.innerHTML = '<i class="fas fa-check-circle"></i> Name verified successfully! Welcome, <strong>' + data.fullName + '</strong>';
+
+                        // Show honor code section
+                        honorSection.style.display = 'block';
+
+                        // Update digital signature placeholder
+                        const signatureInput = document.getElementById('digitalSignature');
+                        if (signatureInput) {
+                            signatureInput.placeholder = 'Type: ' + data.fullName;
+                            signatureInput.dataset.expected = data.fullName;
+                        }
+
+                        // Store verified name
+                        window.verifiedFullName = data.fullName;
+
+                        // Disable name input and button
+                        nameInput.disabled = true;
+                        verifyBtn.style.display = 'none';
+                    } else {
+                        messageDiv.style.display = 'block';
+                        messageDiv.style.color = '#ef4444';
+                        messageDiv.innerHTML = '<i class="fas fa-times-circle"></i> Name verification failed. Please try again.';
+                        verifyBtn.disabled = false;
+                        verifyBtn.innerHTML = 'Verify';
+                    }
+                } catch (err) {
+                    console.error('Verification error:', err);
+                    verifyBtn.disabled = false;
+                    verifyBtn.innerHTML = 'Verify';
+                }
+            };
+
+            // Allow Enter key to trigger verification
+            nameInput.onkeypress = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    verifyBtn.click();
+                }
+            };
+        }
+
+        // Setup honor code checkbox listener
+        const honorCheckbox = document.getElementById('honorCodeCheckbox');
+        if (honorCheckbox) {
+            honorCheckbox.onchange = (e) => {
+                const sigSection = document.getElementById('signatureSection');
+                if (e.target.checked) {
+                    sigSection.style.display = 'block';
+                } else {
+                    sigSection.style.display = 'none';
+                }
+            };
+        }
     }
 
     async function showVerifyStep(step) {
@@ -6781,11 +6877,27 @@ function updateProgress() {
 
     document.getElementById('verifyNextBtn').onclick = async () => {
         if (currentVerifyStep === 1) {
-            const agreed = document.getElementById('honorCodeCheckbox').checked;
-            const sig = document.getElementById('digitalSignature').value.trim();
-            if (!agreed || !sig) {
+            if (!window.verifiedFullName) {
                 if (typeof showSystemAlertModal === 'function') {
-                    showSystemAlertModal('Please agree to the Code of Honor and provide your digital signature');
+                    showSystemAlertModal('Please verify your name first.');
+                }
+                return;
+            }
+            const agreed = document.getElementById('honorCodeCheckbox').checked;
+            const sigInput = document.getElementById('digitalSignature');
+            const sig = sigInput ? sigInput.value.trim() : "";
+            const expectedSig = sigInput ? sigInput.dataset.expected : "";
+
+            if (!agreed) {
+                if (typeof showSystemAlertModal === 'function') {
+                    showSystemAlertModal('Please agree to the Code of Honor to proceed.');
+                }
+                return;
+            }
+
+            if (!sig || sig !== expectedSig) {
+                if (typeof showSystemAlertModal === 'function') {
+                    showSystemAlertModal('Digital signature does not match. Please type your full name exactly as: ' + expectedSig);
                 }
                 return;
             }

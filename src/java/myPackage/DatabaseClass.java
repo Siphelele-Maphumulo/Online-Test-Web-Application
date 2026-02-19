@@ -12162,29 +12162,36 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
     /**
      * Verify that the entered name matches the logged-in user's name
      */
-    public boolean verifyStudentName(String enteredName, String userId) {
+    public String verifyStudentName(String enteredName, String userId) {
         PreparedStatement pstm = null;
         ResultSet rs = null;
         try {
             ensureConnection();
-            String sql = "SELECT CONCAT(first_name, ' ', last_name) as full_name FROM users WHERE user_id = ? AND user_type = 'student'";
+            String sql = "SELECT first_name, last_name, CONCAT(first_name, ' ', last_name) as full_name FROM users WHERE user_id = ? AND user_type = 'student'";
             pstm = conn.prepareStatement(sql);
             pstm.setString(1, userId);
             rs = pstm.executeQuery();
             
             if (rs.next()) {
-                String storedName = rs.getString("full_name");
-                if (storedName != null) {
-                    // Compare names ignoring case and extra whitespace
+                String firstName = rs.getString("first_name");
+                String lastName = rs.getString("last_name");
+                String fullName = rs.getString("full_name");
+
+                if (fullName != null) {
                     String normalizedEntered = enteredName.trim().replaceAll("\\s+", " ").toLowerCase();
-                    String normalizedStored = storedName.trim().replaceAll("\\s+", " ").toLowerCase();
-                    return normalizedEntered.equals(normalizedStored);
+                    String normalizedFull = fullName.trim().replaceAll("\\s+", " ").toLowerCase();
+                    String normalizedFirst = (firstName != null) ? firstName.trim().toLowerCase() : "";
+
+                    // Accept if it matches full name OR first name
+                    if (normalizedEntered.equals(normalizedFull) || normalizedEntered.equals(normalizedFirst)) {
+                        return fullName;
+                    }
                 }
             }
-            return false;
+            return null;
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error verifying student name", e);
-            return false;
+            return null;
         } finally {
             try { if (rs != null) rs.close(); if (pstm != null) pstm.close(); } catch (SQLException e) {}
         }

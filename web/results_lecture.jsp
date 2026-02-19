@@ -1138,7 +1138,13 @@ function applyFilters() {
             showRow = false;
         }
         if (statusFilter && row.dataset.status !== statusFilter) {
-            showRow = false;
+            if (statusFilter === 'Terminated') {
+                if (row.dataset.status !== 'Terminated' && row.dataset.status !== 'Copying Detected' && row.dataset.status !== 'Cheating Detected') {
+                    showRow = false;
+                }
+            } else {
+                showRow = false;
+            }
         }
         
         if (dateFrom || dateTo) {
