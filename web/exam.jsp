@@ -134,22 +134,24 @@
         box-sizing: border-box;
     }
     
-    body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-        line-height: 1.3;
-        font-size: 13px;
-        color: var(--text-dark);
-    }
-    h1 { font-size: 1.5rem; }
-    h2 { font-size: 1.3rem; }
-    h3 { font-size: 1.1rem; }
-    h4 { font-size: 1rem; }
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        min-height: 100vh;
-        font-weight: 400;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-    }
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    line-height: 1.3;
+    font-size: 13px;
+    color: var(--text-dark);
+
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    min-height: 100vh;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+h1 { font-size: 1.5rem; }
+h2 { font-size: 1.3rem; }
+h3 { font-size: 1.1rem; }
+h4 { font-size: 1rem; }
+
     
     /* Dashboard Container */
     .dashboard-container {
@@ -1055,6 +1057,7 @@
     }
     
     .status-pass {
+        font-size: medium;
         color: var(--success);
     }
     
@@ -1063,8 +1066,8 @@
     }
     
     .percentage-badge {
-        background: linear-gradient(90deg, var(--info), #0ea5e9);
-        color: var(--white);
+        background: #55f2f780;
+        color: var(--dark-gray);
         padding: 6px 16px;
         border-radius: 16px;
         font-weight: 600;
@@ -5294,6 +5297,7 @@ function updateProgress() {
                         ArrayList<Answers> _showResultAnswers = null;
                         
                         if (result != null) {
+                            // Normal processing for all exams (including incomplete)
                             studentFullName = result.getFullName();
                             if (studentFullName == null || studentFullName.trim().isEmpty()) {
                                 studentFullName = result.getUserName();
@@ -5330,47 +5334,52 @@ function updateProgress() {
                                 }
                             }
 
-                            if (obtainedMarks == 0 && totalMarks > 0 && _correct > 0 && _showResultAnswers != null) {
-                                float computedObt = 0;
-                                float computedTotal = 0;
-                                for (Answers a : _showResultAnswers) {
-                                    Questions qo = null;
-                                    if (a.getQuestionId() > 0) {
+                            // Always compute marks from answers to show what user has earned so far
+                            float computedObt = 0;
+                            float computedTotal = 0;
+                            for (Answers a : _showResultAnswers) {
+                                Questions qo = null;
+                                if (a.getQuestionId() > 0) {
+                                    try {
+                                        qo = pDAO.getQuestionById(a.getQuestionId());
+                                    } catch (Exception ex) {
+                                        qo = null;
+                                    }
+                                }
+
+                                float qMax = (qo != null) ? qo.getTotalMarks() : 1.0f;
+                                if (qMax <= 0) qMax = 1.0f;
+                                computedTotal += qMax;
+
+                                String st = a.getStatus();
+                                if (st != null) {
+                                    if (st.equalsIgnoreCase("correct")) {
+                                        computedObt += qMax;
+                                    } else if (st.startsWith("partial:")) {
                                         try {
-                                            qo = pDAO.getQuestionById(a.getQuestionId());
-                                        } catch (Exception ex) {
-                                            qo = null;
-                                        }
+                                            computedObt += Float.parseFloat(st.substring(8));
+                                        } catch (Exception ex) {}
                                     }
-
-                                    float qMax = (qo != null) ? qo.getTotalMarks() : 1.0f;
-                                    if (qMax <= 0) qMax = 1.0f;
-                                    computedTotal += qMax;
-
-                                    String st = a.getStatus();
-                                    if (st != null) {
-                                        if (st.equalsIgnoreCase("correct")) {
-                                            computedObt += qMax;
-                                        } else if (st.startsWith("partial:")) {
-                                            try {
-                                                computedObt += Float.parseFloat(st.substring(8));
-                                            } catch (Exception ex) {}
-                                        }
-                                    }
-                                }
-
-                                if (computedTotal > 0) {
-                                    totalMarks = Math.round(computedTotal);
-                                }
-                                if (computedObt > 0) {
-                                    obtainedMarks = Math.round(computedObt);
                                 }
                             }
+
+                            // Use computed marks if DB marks are 0 or if exam is incomplete
+                            if (obtainedMarks == 0 || computedObt > 0) {
+                                obtainedMarks = Math.round(computedObt);
+                            }
+                            if (totalMarks == 0 || computedTotal > 0) {
+                                totalMarks = Math.round(computedTotal);
+                            }
                             
-                            // Fallback for status if it's missing or just "completed"
+                            // Determine result status
                             if (resultStatus == null || resultStatus.isEmpty() || resultStatus.equalsIgnoreCase("completed")) {
-                                double percentage = (totalMarks > 0) ? (double) obtainedMarks / totalMarks * 100 : 0;
-                                resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
+                                // Check if exam is incomplete
+                                if (!"completed".equalsIgnoreCase(result.getStatus()) || result.getObtMarks() == 0) {
+                                    resultStatus = "Incomplete";
+                                } else {
+                                    double percentage = (totalMarks > 0) ? (double) obtainedMarks / totalMarks * 100 : 0;
+                                    resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
+                                }
                             }
                         }
                     %>
@@ -5379,6 +5388,8 @@ function updateProgress() {
                 <div class="page-title"><i class="fas fa-chart-line"></i> Exam Result</div>
                 <div class="stats-badge"><i class="fas fa-graduation-cap"></i> <%= resultStatus %></div>
             </div>
+            
+            <%-- Show results for all exams (complete or incomplete) --%>
             <div class="result-card">
                 <div class="result-grid">
                     <div class="result-item"><strong><i class="fas fa-calendar-alt"></i> Exam Date</strong><div class="result-value"><%= examDate %></div></div>
@@ -5389,8 +5400,8 @@ function updateProgress() {
                     <div class="result-item"><strong><i class="fas fa-star-half-alt"></i> Total Marks</strong><div class="result-value"><%= totalMarks %></div></div>
                     <div class="result-item">
                         <strong><i class="fas fa-flag"></i> Result Status</strong>
-                        <div class="result-value <%= resultStatus.equalsIgnoreCase("Pass")?"status-pass":"status-fail" %>">
-                            <i class="fas <%= resultStatus.equalsIgnoreCase("Pass")?"fa-check-circle":"fa-times-circle" %>"></i> <%= resultStatus %>
+                        <div class="result-value <%= resultStatus.equalsIgnoreCase("Pass")?"status-pass":resultStatus.equalsIgnoreCase("Incomplete")?"status-incomplete":"status-fail" %>">
+                            <i class="fas <%= resultStatus.equalsIgnoreCase("Pass")?"fa-check-circle":resultStatus.equalsIgnoreCase("Incomplete")?"fa-exclamation-triangle":"fa-times-circle" %>"></i> <%= resultStatus %>
                         </div>
                     </div>
                     <div class="result-item">
@@ -5402,7 +5413,7 @@ function updateProgress() {
                                     percentage = (double)obtainedMarks / totalMarks * 100;
                                 }
                             %>
-                            <span class="percentage-badge"><%= String.format("%.1f", percentage) %>%</span>
+                            <span class="percentage-badge" style="color: <%= resultStatus.equalsIgnoreCase("Pass")?"var(--success)":resultStatus.equalsIgnoreCase("Incomplete")?"var(--warning)":"var(--error)" %>;"><%= String.format("%.1f", percentage) %>%</span>
                         </div>
                     </div>
                 </div>
@@ -5861,8 +5872,11 @@ function updateProgress() {
                     <label for="honorCodeCheckbox" style="font-size: 14px; font-weight: 600; cursor: pointer;">I agree to the Code of Honor and understand the consequences of cheating.</label>
                 </div>
                 <div style="margin-top: 15px;">
-                    <label style="display: block; font-size: 14px; margin-bottom: 5px; color: #64748b;">Type your full name as digital signature:</label>
-                    <input type="text" id="digitalSignature" placeholder="Enter your full name" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    <label style="display: block; font-size: 14px; margin-bottom: 5px; color: #64748b;">Type your full name as digital signature [here must be the name of the person logged in]:</label>
+                    <input type="text" id="digitalSignature" 
+                           value="<%= session.getAttribute("fullName") != null ? session.getAttribute("fullName") : "" %>" 
+                           placeholder="Enter your full name" 
+                           style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 4px; background-color: #f8fafc; font-weight: 500; color: #1e293b;">
                 </div>
             </div>
 

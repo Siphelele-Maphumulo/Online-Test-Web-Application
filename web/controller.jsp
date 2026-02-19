@@ -1997,17 +1997,8 @@ try {
                            .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
             
             int size = Integer.parseInt(nz(request.getParameter("size"), "0"));
-            int eId = 0;
-            Object sessionExamIdObj = session.getAttribute("examId");
-            if (sessionExamIdObj != null) {
-                eId = Integer.parseInt(sessionExamIdObj.toString());
-            } else {
-                // Fallback: allow forced/terminated submissions to still finalize results
-                // even if the session examId was lost.
-                eId = Integer.parseInt(nz(request.getParameter("examId"), "0"));
-            }
-
-            if (eId > 0) {
+            if (session.getAttribute("examId") != null) {
+                int eId    = Integer.parseInt(session.getAttribute("examId").toString());
                 int tMarks = Integer.parseInt(nz(request.getParameter("totalmarks"), "0"));
                 
                 // Get student ID
@@ -2603,4 +2594,6 @@ try {
     session.setAttribute("error","An unexpected error occurred: "+e.getMessage());
     response.sendRedirect("error.jsp");
 }
-%>
+%>}   e l s e   i f   ( \  
+ v e r i f y _ s t u d e n t _ n a m e \ . e q u a l s I g n o r e C a s e ( p a g e P a r a m ) )   {  
+ 

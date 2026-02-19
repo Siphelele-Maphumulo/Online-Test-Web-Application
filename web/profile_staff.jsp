@@ -967,6 +967,10 @@
                         <i class="fas fa-users"></i>
                         <h2>Registers</h2>
                     </a>
+                    <a href="adm-page.jsp?pgprt=9" class="nav-item">
+                        <i class="fas fa-user-shield"></i>
+                        <h2>Proctoring</h2>
+                    </a>
                 <% } else { %>
                     <a href="std-page.jsp?pgprt=0" class="nav-item active">
                         <i class="fas fa-user"></i>
