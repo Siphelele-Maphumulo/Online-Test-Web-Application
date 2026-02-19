@@ -1814,7 +1814,11 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                 <div style="display: flex; justify-content: center; gap: var(--spacing-xl); align-items: center;">
                   <div style="text-align: center;">
                     <div style="font-size: 2rem; font-weight: 800; color: var(--primary-blue);">
-                      <%= obtainedMarks %>/<%= totalMarks %>
+                      <% if (statusText.toLowerCase().contains("cheating") || statusText.toLowerCase().contains("copying") || statusText.equalsIgnoreCase("Terminated")) { %>
+                        Terminated
+                      <% } else { %>
+                        <%= obtainedMarks %>/<%= totalMarks %>
+                      <% } %>
                     </div>
                     <div style="color: var(--dark-gray); font-weight: 600;">Marks Obtained</div>
                   </div>
@@ -2387,7 +2391,13 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                   </td>
                   <td class="exam-date"><%= e.getDate() %></td>
                   <td class="exam-time"><%= e.getStartTime() + " - " + e.getEndTime() %></td>
-                  <td class="exam-marks"><%= e.getObtMarks() %> / <%= e.gettMarks() %></td>
+                  <td class="exam-marks">
+                    <% if (statusText.toLowerCase().contains("cheating") || statusText.toLowerCase().contains("copying") || statusText.equalsIgnoreCase("Terminated")) { %>
+                        Terminated
+                    <% } else { %>
+                        <%= e.getObtMarks() %> / <%= e.gettMarks() %>
+                    <% } %>
+                  </td>
                   <td>
                     <span class="status-badge <%= statusClass %>">
                       <i class="fas <%= statusClass.equals("status-pass") ? "fa-check-circle" : 
