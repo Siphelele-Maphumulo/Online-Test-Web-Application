@@ -12158,66 +12158,107 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
             try { if (pstm != null) pstm.close(); } catch (SQLException e) {}
         }
     }
+    
+     // ================================
+    // VERIFY STUDENT NAME
+    // ================================
+    public String verifyStudentName(String enteredName, String userId) {
 
-    /**
-     * Verify that the entered name matches the logged-in user's name
-     */
-    public boolean verifyStudentName(String enteredName, String userId) {
         PreparedStatement pstm = null;
         ResultSet rs = null;
+        String fullName = null;
+
         try {
             ensureConnection();
-            String sql = "SELECT CONCAT(first_name, ' ', last_name) as full_name FROM users WHERE user_id = ? AND user_type = 'student'";
+
+            String sql = "SELECT first_name, last_name FROM users WHERE user_id = ? AND user_type = 'student'";
             pstm = conn.prepareStatement(sql);
             pstm.setString(1, userId);
             rs = pstm.executeQuery();
-            
+
             if (rs.next()) {
-                String storedName = rs.getString("full_name");
-                if (storedName != null) {
-                    // Compare names ignoring case and extra whitespace
-                    String normalizedEntered = enteredName.trim().replaceAll("\\s+", " ").toLowerCase();
-                    String normalizedStored = storedName.trim().replaceAll("\\s+", " ").toLowerCase();
-                    return normalizedEntered.equals(normalizedStored);
+
+                String firstName = rs.getString("first_name");
+                String lastName = rs.getString("last_name");
+
+                String dbFullName = firstName + " " + lastName;
+
+                // Normalize
+                String cleanEnteredName = enteredName.trim().replaceAll("\\s+", " ").toLowerCase();
+                String cleanDbFullName = dbFullName.trim().replaceAll("\\s+", " ").toLowerCase();
+                String cleanFirstName = firstName != null ? firstName.trim().toLowerCase() : "";
+
+                if (cleanDbFullName.equals(cleanEnteredName)) {
+                    fullName = dbFullName;
+                    LOGGER.info("Name verification successful: Full name match");
+                } else if (cleanFirstName.equals(cleanEnteredName)) {
+                    fullName = dbFullName;
+                    LOGGER.info("Name verification successful: First name match");
+                } else {
+                    LOGGER.warning("Name verification failed for user " + userId +
+                            ". Entered: '" + cleanEnteredName +
+                            "', Expected: '" + cleanDbFullName + "'");
                 }
+            } else {
+                LOGGER.warning("User not found with ID: " + userId);
             }
-            return false;
+
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error verifying student name", e);
-            return false;
         } finally {
-            try { if (rs != null) rs.close(); if (pstm != null) pstm.close(); } catch (SQLException e) {}
+            closeResources(rs, pstm);
         }
+
+        return fullName;
     }
 
-    /**
-     * Stores candidate identity verification data.
-     */
-    public boolean saveIdentityVerification(int studentId, int examId, boolean honorAccepted, String facePath, String idPath) {
+    // ================================
+    // SAVE IDENTITY VERIFICATION
+    // ================================
+    public boolean saveIdentityVerification(int studentId,
+                                            int examId,
+                                            boolean honorAccepted,
+                                            String facePath,
+                                            String idPath) {
+
         PreparedStatement pstmCheck = null;
         PreparedStatement pstmAction = null;
         ResultSet rs = null;
+
         try {
             ensureConnection();
-            // Check if record already exists for this student/exam
+
+            // Check if record exists
             String checkSql = "SELECT id FROM student_verifications WHERE student_id = ? AND exam_id = ?";
             pstmCheck = conn.prepareStatement(checkSql);
             pstmCheck.setInt(1, studentId);
             pstmCheck.setInt(2, examId);
             rs = pstmCheck.executeQuery();
-            
+
             if (rs.next()) {
-                // Update existing record
+
                 int id = rs.getInt("id");
-                String updateSql = "UPDATE student_verifications SET honor_code_accepted = ?, honor_code_timestamp = CURRENT_TIMESTAMP, face_photo_path = ?, id_photo_path = ?, status = 'verified' WHERE id = ?";
+
+                String updateSql = "UPDATE student_verifications " +
+                        "SET honor_code_accepted = ?, " +
+                        "honor_code_timestamp = CURRENT_TIMESTAMP, " +
+                        "face_photo_path = ?, " +
+                        "id_photo_path = ?, " +
+                        "status = 'verified' " +
+                        "WHERE id = ?";
+
                 pstmAction = conn.prepareStatement(updateSql);
                 pstmAction.setBoolean(1, honorAccepted);
                 pstmAction.setString(2, facePath);
                 pstmAction.setString(3, idPath);
                 pstmAction.setInt(4, id);
+
             } else {
-                // Insert new record
-                String insertSql = "INSERT INTO student_verifications (student_id, exam_id, honor_code_accepted, honor_code_timestamp, face_photo_path, id_photo_path, status) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, 'verified')";
+
+                String insertSql = "INSERT INTO student_verifications " +
+                        "(student_id, exam_id, honor_code_accepted, honor_code_timestamp, face_photo_path, id_photo_path, status) " +
+                        "VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, 'verified')";
+
                 pstmAction = conn.prepareStatement(insertSql);
                 pstmAction.setInt(1, studentId);
                 pstmAction.setInt(2, examId);
@@ -12225,33 +12266,37 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
                 pstmAction.setString(4, facePath);
                 pstmAction.setString(5, idPath);
             }
-            
+
             int rows = pstmAction.executeUpdate();
             return rows > 0;
+
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error saving identity verification: " + e.getMessage(), e);
+            LOGGER.log(Level.SEVERE, "Error saving identity verification", e);
             return false;
         } finally {
-            try { if (rs != null) rs.close(); } catch (SQLException e) {}
-            try { if (pstmCheck != null) pstmCheck.close(); } catch (SQLException e) {}
-            try { if (pstmAction != null) pstmAction.close(); } catch (SQLException e) {}
+            closeResources(rs, pstmCheck);
+            closeResources(null, pstmAction);
         }
     }
 
-    /**
-     * Gets verification data for a specific student exam.
-     */
+    // ================================
+    // GET IDENTITY VERIFICATION
+    // ================================
     public Map<String, String> getIdentityVerification(int studentId, int examId) {
+
         Map<String, String> data = new HashMap<>();
         PreparedStatement pstm = null;
         ResultSet rs = null;
+
         try {
             ensureConnection();
+
             String sql = "SELECT * FROM student_verifications WHERE student_id = ? AND exam_id = ?";
             pstm = conn.prepareStatement(sql);
             pstm.setInt(1, studentId);
             pstm.setInt(2, examId);
             rs = pstm.executeQuery();
+
             if (rs.next()) {
                 data.put("honor_accepted", rs.getString("honor_code_accepted"));
                 data.put("timestamp", rs.getString("honor_code_timestamp"));
@@ -12259,11 +12304,26 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
                 data.put("id_photo", rs.getString("id_photo_path"));
                 data.put("status", rs.getString("status"));
             }
+
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error fetching identity verification", e);
         } finally {
-            try { if (rs != null) rs.close(); if (pstm != null) pstm.close(); } catch (SQLException e) {}
+            closeResources(rs, pstm);
         }
+
         return data;
+    }
+
+    // ================================
+    // CLOSE RESOURCES HELPER
+    // ================================
+    private void closeResources(ResultSet rs, PreparedStatement pstm) {
+        try {
+            if (rs != null) rs.close();
+        } catch (SQLException ignored) {}
+
+        try {
+            if (pstm != null) pstm.close();
+        } catch (SQLException ignored) {}
     }
 }

@@ -146,10 +146,15 @@ try {
     } else if ("verify_student_name".equalsIgnoreCase(pageParam)) {
         String enteredName = request.getParameter("enteredName");
         String userId = request.getParameter("userId");
-        boolean success = pDAO.verifyStudentName(enteredName, userId);
+        String fullName = pDAO.verifyStudentName(enteredName, userId);
+        boolean success = (fullName != null);
         
         response.setContentType("application/json");
-        response.getWriter().write("{\"success\": " + success + "}");
+        if (success) {
+            response.getWriter().write("{\"success\": true, \"fullName\": \"" + fullName + "\"}");
+        } else {
+            response.getWriter().write("{\"success\": false}");
+        }
         return;
 
     /* =========================
@@ -311,10 +316,10 @@ try {
             if (cause != null && cause.getMessage() != null) {
                 if (cause.getMessage().contains("Duplicate")) {
                     errorMsg += "The information may already be registered.";
-                } else {
+        } else {
                     errorMsg += "Database error: " + cause.getMessage();
                 }
-            } else {
+        } else {
                 errorMsg += "Please check all fields and try again.";
             }
             session.setAttribute("error", errorMsg);
@@ -482,7 +487,7 @@ try {
 
             if (password == null || password.trim().isEmpty()) {
                 password = existingUser.getPassword();
-            } else {
+        } else {
                 password = BCrypt.hashpw(password, BCrypt.gensalt());
             }
 
@@ -493,10 +498,10 @@ try {
             User updatedUser = new User(userId, firstName, lastName, userName, email, password, userType, contact, city, address, courseName);
 
             boolean success = pDAO.updateUser(updatedUser);
-            if (success) {
+        if (success) {
                 session.setAttribute("message", "User updated successfully!");
                 response.sendRedirect("lecture".equalsIgnoreCase(userType) || "lecturer".equalsIgnoreCase(userType) ? "adm-page.jsp?pgprt=6" : "adm-page.jsp?pgprt=1");
-            } else {
+        } else {
                 session.setAttribute("error", "Failed to update user.");
                 response.sendRedirect("edit-user.jsp?uid=" + userId);
             }
@@ -562,7 +567,7 @@ try {
             String courseName = nz(request.getParameter("coursename"), "");
             if (!courseName.isEmpty()) {
                 response.sendRedirect("showall.jsp?coursename=" + java.net.URLEncoder.encode(courseName, "UTF-8") + "&error=csrf");
-            } else {
+        } else {
                 response.sendRedirect("showall.jsp?error=csrf");
             }
             return;
@@ -601,9 +606,9 @@ try {
                 
                 LOGGER.info("DELETE QUESTION - success for ID " + questionId + ": " + success);
                 
-                if (success) {
+        if (success) {
                     session.setAttribute("message", "Question deleted successfully");
-                } else {
+        } else {
                     session.setAttribute("error", "Failed to delete question ID: " + qid);
                 }
             } catch (NumberFormatException e) {
@@ -663,14 +668,14 @@ try {
                     String timestamp = String.valueOf(new Date().getTime());
                     if (!courseName.isEmpty()) {
                         response.sendRedirect("showall.jsp?coursename=" + courseName + "&_=" + timestamp);
-                    } else {
+        } else {
                         response.sendRedirect("showall.jsp?_=" + timestamp);
                     }
                     return;
-                } else {
+        } else {
                     session.setAttribute("error", "Failed to delete selected questions.");
                 }
-            } else {
+        } else {
                 session.setAttribute("error", "No valid questions selected for deletion.");
             }
         } else {
@@ -760,7 +765,7 @@ try {
                                 } else if ("removeImage".equals(fieldName)) {
                                     removeImage = "true".equals(fieldValue);
                                 }
-                            } else {
+        } else {
                                 // Process file upload field - ONLY ACCEPT IMAGES
                                 String fieldName = item.getFieldName();
                                 String fileName = item.getName();
@@ -790,7 +795,7 @@ try {
                                             String redirectCourse = nz(request.getParameter("coursename"), "");
                                             if (!redirectCourse.isEmpty()) {
                                                 response.sendRedirect("showall.jsp?coursename=" + redirectCourse);
-                                            } else {
+        } else {
                                                 response.sendRedirect("showall.jsp");
                                             }
                                             return;
@@ -857,7 +862,7 @@ try {
                                 }
                             }
                             question.setImagePath(imagePath);
-                        } else {
+        } else {
                             // Keep existing image path if no new image was uploaded and not removing
                             if (currentImagePath != null && !currentImagePath.isEmpty() && question.getImagePath() == null) {
                                 question.setImagePath(currentImagePath);
@@ -1029,7 +1034,7 @@ try {
                         // Redirect to showall.jsp after editing
                         if (!courseName.isEmpty()) {
                             response.sendRedirect("showall.jsp?coursename=" + courseName);
-                        } else {
+        } else {
                             response.sendRedirect("showall.jsp");
                         }
                         return;
@@ -1043,12 +1048,12 @@ try {
                         
                         if (!courseName.isEmpty()) {
                             response.sendRedirect("showall.jsp?coursename=" + courseName);
-                        } else {
+        } else {
                             response.sendRedirect("showall.jsp");
                         }
                         return;
                     }
-                } else {
+        } else {
                     // Handle regular form submission (without file upload)
                     question.setQuestion(nz(request.getParameter("question"), ""));
                     question.setOpt1(nz(request.getParameter("opt1"), ""));
@@ -1126,7 +1131,7 @@ try {
                     // Redirect to showall.jsp after editing
                     if (!courseName.isEmpty()) {
                         response.sendRedirect("showall.jsp?coursename=" + courseName);
-                    } else {
+        } else {
                         response.sendRedirect("showall.jsp");
                     }
                     return;
@@ -1224,7 +1229,7 @@ try {
                         } else if ("orientation".equals(fieldName)) {
                             orientation = fieldValue;
                         }
-                    } else {
+        } else {
                         // Process file upload field - ONLY ACCEPT IMAGES
                         String fieldName = item.getFieldName();
                         String fileName = item.getName();
@@ -1253,7 +1258,7 @@ try {
                                     session.setAttribute("error", "Only image files are allowed (JPG, JPEG, PNG, GIF, WEBP, BMP).");
                                     if (!courseName.isEmpty()) {
                                         response.sendRedirect("showall.jsp?coursename=" + courseName);
-                                    } else {
+        } else {
                                         response.sendRedirect("showall.jsp");
                                     }
                                     return;
@@ -1428,7 +1433,7 @@ try {
                                 if (rearrangeItemsHidden != null && !rearrangeItemsHidden.trim().isEmpty()) {
                                     org.json.JSONArray itemsArr = new org.json.JSONArray(rearrangeItemsHidden);
                                     for(int i=0; i<itemsArr.length(); i++) rearrangeItemsList.add(itemsArr.getString(i));
-                                } else {
+        } else {
                                     for (String val : itemsMap.values()) rearrangeItemsList.add(val);
                                     rearrangeItemsHidden = pDAO.toJsonArray(rearrangeItemsList);
                                 }
@@ -1462,14 +1467,14 @@ try {
                 
                 if (isAjax) {
                     response.setContentType("application/json");
-                    response.getWriter().write("{\"success\": true, \"message\": \"Question added successfully\", \"qid\": " + newQuestionIdInserted + "}");
+            response.getWriter().write("{\"success\": true, \"message\": \"Question added successfully\", \"qid\": " + newQuestionIdInserted + "}");
                     return;
                 }
                 
                 // Redirect to success page with modal
                 if (!courseName.isEmpty()) {
                     response.sendRedirect("question-success.jsp?coursename=" + java.net.URLEncoder.encode(courseName, "UTF-8"));
-                } else {
+        } else {
                     response.sendRedirect("question-success.jsp");
                 }
                 return;
@@ -1624,14 +1629,14 @@ try {
 
             if (isAjax) {
                 response.setContentType("application/json");
-                response.getWriter().write("{\"success\": true, \"message\": \"Question added successfully\", \"qid\": " + newQuestionIdInserted + "}");
+            response.getWriter().write("{\"success\": true, \"message\": \"Question added successfully\", \"qid\": " + newQuestionIdInserted + "}");
                 return;
             }
 
             courseName = nz(request.getParameter("coursename"), "");
             if (!courseName.isEmpty()) {
                 response.sendRedirect("question-success.jsp?coursename=" + java.net.URLEncoder.encode(courseName, "UTF-8")+"&questionType="+questionType);
-            } else {
+        } else {
                 response.sendRedirect("question-success.jsp?questionType="+questionType);
             }
             return;
@@ -1748,10 +1753,10 @@ try {
                         result.put("success", true);
                         result.put("questions", arr);
                         outJSON.print(result.toString());
-                    } else {
+        } else {
                         outJSON.print("{\"success\": false, \"message\": \"AI returned JSON but no questions were found.\"}");
                     }
-                } else {
+        } else {
                     // Try to find JSON within the text if it didn't start with [ or {
                     int firstBracket = aiResponse.indexOf("[");
                     int firstBrace = aiResponse.indexOf("{");
@@ -1768,7 +1773,7 @@ try {
                                 result.put("success", true);
                                 result.put("questions", arr);
                                 outJSON.print(result.toString());
-                            } else {
+        } else {
                                 JSONObject obj = new JSONObject(potentialJson);
                                 obj.put("success", true);
                                 outJSON.print(obj.toString());
@@ -1776,7 +1781,7 @@ try {
                         } catch (JSONException je) {
                             outJSON.print("{\"success\": false, \"message\": \"Found potential JSON but failed to parse: " + je.getMessage() + "\"}");
                         }
-                    } else {
+        } else {
                         outJSON.print("{\"success\": false, \"message\": \"AI returned non-JSON response.\"}");
                     }
                 }
@@ -1820,10 +1825,10 @@ try {
                     res.put("success", true);
                     res.put("extractedText", extractedText);
                     outJSON.print(res.toString());
-                } else {
+        } else {
                     outJSON.print("{\"success\": false, \"message\": \"No file found in request.\"}");
                 }
-            } else {
+        } else {
                 outJSON.print("{\"success\": false, \"message\": \"Request is not multipart.\"}");
             }
         } catch (Exception e) {
@@ -1832,7 +1837,7 @@ try {
         }
         return;
 
-    } else {
+        } else {
         session.setAttribute("error", "Invalid operation for questions");
         String courseName = nz(request.getParameter("coursename"), "");
         if (!courseName.isEmpty()) {
@@ -1895,15 +1900,15 @@ try {
                 try {
                     int examId = Integer.parseInt(singleExamId);
                     boolean success = pDAO.deleteExamResult(examId);
-                    if (success) {
+        if (success) {
                         session.setAttribute("message", "Exam result deleted successfully!");
-                    } else {
+        } else {
                         session.setAttribute("error", "Failed to delete exam result.");
                     }
                 } catch (NumberFormatException e) {
                     session.setAttribute("error", "Invalid Exam ID format.");
                 }
-            } else {
+        } else {
                 session.setAttribute("error", "No exam result selected for deletion.");
             }
             response.sendRedirect("adm-page.jsp?pgprt=5");
@@ -2075,13 +2080,13 @@ try {
                                 if (!dragDropMatches.isEmpty() && userId > 0) {
                                     float marks = pDAO.submitDragDropAnswers(eId, qid, String.valueOf(userId), dragDropMatches);
                                     application.log("Drag-drop marks for Q" + qid + ": " + marks);
-                                } else {
+        } else {
                                     application.log("Drag-drop: No matches found or invalid userId. Matches: " + dragDropMatches.size() + ", userId: " + userId);
                                 }
                             } catch (Exception e) {
                                 application.log("Error processing drag-drop JSON for Q" + qid + ": " + e.getMessage());
                             }
-                        } else {
+        } else {
                             application.log("Drag-drop answer empty or invalid format for Q" + qid + ": " + ans);
                         }
                     } else if ("rearrange".equals(qtype)) {
@@ -2107,7 +2112,7 @@ try {
                 }
 
                 boolean cheatingTerminated = "true".equalsIgnoreCase(request.getParameter("cheating_terminated"));
-                String resultStatus = cheatingTerminated ? "Cheating Detected" : null;
+                String resultStatus = cheatingTerminated ? "Copying Detected" : null;
                 pDAO.calculateResult(eId, tMarks, endTime, size, resultStatus);
                 
                 // REGISTER EXAM COMPLETION
@@ -2128,7 +2133,7 @@ try {
                 session.removeAttribute("examCourse");
 
                 response.sendRedirect("std-page.jsp?pgprt=1&eid="+eId+"&showresult=1");
-            } else {
+        } else {
                 response.sendRedirect("std-page.jsp");
             }
         } catch(Exception e){
@@ -2142,6 +2147,10 @@ try {
             boolean isActive = pDAO.isCourseActive(courseNameToCheck);
             response.setContentType("text/plain");
             response.getWriter().write(String.valueOf(isActive));
+            return;
+        } else {
+            response.setContentType("text/plain");
+            response.getWriter().write("false");
             return;
         }
     } else {
@@ -2166,7 +2175,7 @@ try {
             if (examIds != null && examIds.length > 0) {
                 pDAO.deleteExamResults(examIds);
                 session.setAttribute("message", "Selected exam results deleted successfully.");
-            } else {
+        } else {
                 session.setAttribute("error", "No exam results selected for deletion.");
             }
             response.sendRedirect("adm-page.jsp?pgprt=5");
@@ -2184,12 +2193,12 @@ try {
                 int examId = Integer.parseInt(nz(request.getParameter("eid"), "0"));
                 if (examId > 0) {
                     boolean success = pDAO.deleteExamResult(examId);
-                    if (success) {
+        if (success) {
                         session.setAttribute("message", "Exam result deleted successfully.");
-                    } else {
+        } else {
                         session.setAttribute("error", "Failed to delete exam result.");
                     }
-                } else {
+        } else {
                     session.setAttribute("error", "Invalid Exam ID.");
                 }
             } catch (NumberFormatException e) {
@@ -2208,7 +2217,7 @@ try {
             if (registerIds != null && registerIds.length > 0) {
                 pDAO.deleteExamRegisterRecords(registerIds);
                 session.setAttribute("message", "Selected exam register records deleted successfully.");
-            } else {
+        } else {
                 session.setAttribute("error", "No records selected for deletion.");
             }
             response.sendRedirect("adm-page.jsp?pgprt=7");
@@ -2223,7 +2232,7 @@ try {
             if (registerIds != null && registerIds.length > 0) {
                 pDAO.deleteDailyRegisterRecords(registerIds);
                 session.setAttribute("message", "Selected class register records deleted successfully.");
-            } else {
+        } else {
                 session.setAttribute("error", "No records selected for deletion.");
             }
             response.sendRedirect("adm-page.jsp?pgprt=8");
@@ -2239,7 +2248,7 @@ try {
             if (registerIds != null && registerIds.length > 0) {
                 pDAO.deleteDailyRegisterRecords(registerIds);
                 session.setAttribute("message", "Selected attendance records deleted successfully.");
-            } else {
+        } else {
                 session.setAttribute("error", "No records selected for deletion.");
             }
             response.sendRedirect("std-page.jsp?pgprt=3");
@@ -2262,7 +2271,7 @@ try {
             
             if (exists) {
                 response.getWriter().write("exists");
-            } else {
+        } else {
                 response.getWriter().write("not_exists");
             }
             response.getWriter().flush();
@@ -2296,14 +2305,14 @@ try {
                             // Code is stored but email failed - still return success so user can check DB
                             response.getWriter().write("success");
                         }
-                    } else {
+        } else {
                         response.getWriter().write("error");
                     }
                 } catch (Exception e) {
                     LOGGER.log(Level.SEVERE, "Error in send_code action", e);
                     response.getWriter().write("error");
                 }
-            } else {
+        } else {
                 response.getWriter().write("error");
             }
             return;
@@ -2316,7 +2325,7 @@ try {
             
             if (pDAO.verifyResetCode(email, code)) {
                 response.getWriter().write("valid");
-            } else {
+        } else {
                 response.getWriter().write("invalid");
             }
             return;
@@ -2339,14 +2348,14 @@ try {
                         // Send email
                         Email.sendPasswordResetEmail(email, user.getFirstName(), code);
                         response.getWriter().write("success");
-                    } else {
+        } else {
                         response.getWriter().write("error");
                     }
                 } catch (Exception e) {
                     LOGGER.log(Level.SEVERE, "Error resending verification code", e);
                     response.getWriter().write("error");
                 }
-            } else {
+        } else {
                 response.getWriter().write("error");
             }
             return;
@@ -2380,7 +2389,7 @@ try {
                 
                 if (updated) {
                     response.getWriter().write("success");
-                } else {
+        } else {
                     response.getWriter().write("error");
                 }
             } catch (Exception e) {
@@ -2420,7 +2429,7 @@ try {
                         LOGGER.log(Level.SEVERE, "Failed to send verification email", emailEx);
                         response.getWriter().write("email_error");
                     }
-                } else {
+        } else {
                     response.getWriter().write("error");
                 }
             } catch (Exception e) {
@@ -2593,7 +2602,7 @@ try {
             return;
         }
 
-    } else {
+        } else {
         // Handle case when page parameter is not recognized
         session.setAttribute("error", "Invalid page parameter: " + pageParam);
         response.sendRedirect("login.jsp");
@@ -2603,8 +2612,4 @@ try {
     session.setAttribute("error","An unexpected error occurred: "+e.getMessage());
     response.sendRedirect("error.jsp");
 }
-%>}   e l s e   i f   ( \ 
- 
- v e r i f y _ s t u d e n t _ n a m e \ . e q u a l s I g n o r e C a s e ( p a g e P a r a m ) )   { 
- 
- 
+%>
