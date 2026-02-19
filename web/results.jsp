@@ -2048,7 +2048,30 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                             %>
                           </div>
                         </div>
-
+                      </div>
+                      
+                      <!-- Score Display -->
+                      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--medium-gray);">
+                        <div style="text-align: center;">
+                          <div style="font-size: 14px; font-weight: 600; color: <%= isCorrect ? "var(--success)" : (qScore > 0 ? "var(--warning)" : "var(--error)") %>;">
+                            <%= isCorrect ? "Full Score" : (qScore > 0 ? "Partial Score" : "Incorrect") %>: <%= qScore %> / <%= qMaxMarks %>
+                          </div>
+                          <!-- <div style="font-size: 12px; color: var(--dark-gray); margin-top: 4px;">
+                            <%= a.getAnswer() %>
+                          </div> -->
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                <% } else if (isRearrange) { %>
+                  <!-- Rearrange Question Answer Display -->
+                  <div style="grid-column: 1 / -1;">
+                    <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 12px; font-size: 13px;">
+                      <i class="fas fa-sort-amount-down"></i> Rearrange Question
+                    </div>
+                    
+                    <div style="background: var(--light-gray); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--medium-gray);">
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                         <!-- Student's Answer -->
                         <div>
                           <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 8px; font-size: 12px;">
@@ -2104,30 +2127,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                             %>
                           </div>
                         </div>
-                      </div>
-                      
-                      <!-- Score Display -->
-                      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--medium-gray);">
-                        <div style="text-align: center;">
-                          <div style="font-size: 14px; font-weight: 600; color: <%= isCorrect ? "var(--success)" : (qScore > 0 ? "var(--warning)" : "var(--error)") %>;">
-                            <%= isCorrect ? "Full Score" : (qScore > 0 ? "Partial Score" : "Incorrect") %>: <%= qScore %> / <%= qMaxMarks %>
-                          </div>
-                          <!-- <div style="font-size: 12px; color: var(--dark-gray); margin-top: 4px;">
-                            <%= a.getAnswer() %>
-                          </div> -->
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                <% } else if (isRearrange) { %>
-                  <!-- Rearrange Question Answer Display -->
-                  <div style="grid-column: 1 / -1;">
-                    <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 12px; font-size: 13px;">
-                      <i class="fas fa-sort-amount-down"></i> Rearrange Question
-                    </div>
-                    
-                    <div style="background: var(--light-gray); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--medium-gray);">
-                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        
                         <!-- Correct Answer -->
                         <div>
                           <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 8px; font-size: 12px;">
