@@ -752,7 +752,13 @@ public String escapeHtml(String input) {
                             <td><%= e.getDate() %></td>
                             <td><%= e.getcName() %></td>
                             <td><%= e.getStartTime() + " - " + e.getEndTime() %></td>
-                            <td><strong><%= e.getObtMarks() %> / <%= e.gettMarks() %></strong></td>
+                            <td><strong>
+                                <% if (statusText.toLowerCase().contains("cheating") || statusText.toLowerCase().contains("copying") || statusText.equalsIgnoreCase("Terminated")) { %>
+                                    Terminated
+                                <% } else { %>
+                                    <%= e.getObtMarks() %> / <%= e.gettMarks() %>
+                                <% } %>
+                            </strong></td>
                             <td><span class="<%= statusClass %>"><%= statusText %></span></td>
                             <td>
                                 <a href="adm-page.jsp?pgprt=5&eid=<%= e.getExamId() %>" class="action-link">Details</a>
@@ -1139,7 +1145,7 @@ function applyFilters() {
         }
         if (statusFilter && row.dataset.status !== statusFilter) {
             if (statusFilter === 'Terminated') {
-                if (row.dataset.status !== 'Terminated' && row.dataset.status !== 'Copying Detected' && row.dataset.status !== 'Cheating Detected') {
+                if (row.dataset.status !== 'Terminated' && row.dataset.status !== 'Copying Detected' && row.dataset.status !== 'Cheating Detected' && row.dataset.status !== 'Cheating') {
                     showRow = false;
                 }
             } else {

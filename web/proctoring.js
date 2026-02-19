@@ -20,6 +20,8 @@ class ProctoringSystem {
         // State tracking
         this.lastEyeContact = Date.now();
         this.lastFaceDetected = Date.now();
+        this.faceLostStartTime = null;
+        this.countdownOverlay = null;
         this.backgroundNoiseBaseline = 40;
         this.calibrationComplete = false;
         this.previousNosePosition = null;
@@ -287,13 +289,35 @@ class ProctoringSystem {
     processFaceDetections(detections) {
         if (detections.length === 0) {
             // DETECTION 4: No face in frame
-            if (Date.now() - this.lastFaceDetected > this.FACE_LOST_THRESHOLD) {
+            if (!this.faceLostStartTime) {
+                this.faceLostStartTime = Date.now();
+            }
+
+            const timeLost = Date.now() - this.faceLostStartTime;
+
+            // After 2s buffer, start 5s countdown
+            if (timeLost > 2000) {
+                const remaining = 5 - Math.floor((timeLost - 2000) / 1000);
+                if (remaining >= 0) {
+                    this.showTerminationCountdown(remaining);
+                }
+            }
+
+            // After buffer (2s) + countdown (5s) = 7s total, terminate
+            if (timeLost > 7000) {
+                this.autoSubmitForCheating('Face lost for >5 seconds');
+                return;
+            }
+
+            if (timeLost > this.FACE_LOST_THRESHOLD && (timeLost % 5000 < 500)) {
                 this.logViolation('VISUAL', 'No face detected in camera - you left the frame');
             }
             return;
         }
 
         this.lastFaceDetected = Date.now();
+        this.faceLostStartTime = null;
+        this.hideTerminationCountdown();
 
         // DETECTION 5: Multiple faces
         if (detections.length > 1) {
@@ -740,11 +764,45 @@ class ProctoringSystem {
         }, 5000);
     }
 
-    autoSubmitForCheating() {
+    showTerminationCountdown(seconds) {
+        if (!this.countdownOverlay) {
+            this.countdownOverlay = document.createElement('div');
+            this.countdownOverlay.id = 'termination-countdown-overlay';
+            this.countdownOverlay.style.cssText =
+                'position: fixed; top: 0; left: 0; width: 100%; height: 100%; ' +
+                'background: rgba(220, 38, 38, 0.95); color: white; z-index: 10001; ' +
+                'display: flex; flex-direction: column; align-items: center; justify-content: center; ' +
+                'text-align: center; font-family: "Inter", sans-serif; backdrop-filter: blur(5px);';
+            document.body.appendChild(this.countdownOverlay);
+        }
+
+        this.countdownOverlay.innerHTML =
+            '<div style="font-size: 60px; font-weight: 800; margin-bottom: 10px; color: white;">⚠️ FACE LOST</div>' +
+            '<div style="font-size: 24px; margin-bottom: 40px; opacity: 0.9;">Please return to the camera frame immediately!</div>' +
+            '<div style="font-size: 120px; font-weight: 900; background: white; color: #dc2626; ' +
+            'width: 180px; height: 180px; border-radius: 50%; display: flex; align-items: center; justify-content: center; ' +
+            'box-shadow: 0 0 50px rgba(0,0,0,0.3);">' +
+            seconds + '</div>' +
+            '<div style="font-size: 20px; margin-top: 40px; font-weight: 600; letter-spacing: 1px;">' +
+            'EXAM WILL AUTOMATICALLY TERMINATE IN ' + seconds + ' SECONDS</div>';
+    }
+
+    hideTerminationCountdown() {
+        if (this.countdownOverlay) {
+            this.countdownOverlay.remove();
+            this.countdownOverlay = null;
+        }
+    }
+
+    autoSubmitForCheating(reason) {
+        if (!this.examActive) return;
         this.examActive = false;
 
+        this.hideTerminationCountdown();
+
         // Show final message
-        alert('EXAM TERMINATED: Maximum violations exceeded. Your exam will be submitted for review.');
+        const message = reason ? 'EXAM TERMINATED: ' + reason : 'EXAM TERMINATED: Maximum violations exceeded.';
+        alert(message + '\n\nYour exam will be submitted for review.');
 
         const form = document.getElementById('myform');
         if (form) {
