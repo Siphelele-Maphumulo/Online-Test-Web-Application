@@ -1082,7 +1082,7 @@ public String escapeHtml(String input) {
                                         <span class="badge badge-error status-display">
                                             <i class="fas fa-times-circle"></i> <%= status %>
                                         </span>
-                                    <% } else if ("Copying Detected".equals(status) || "Cheating Detected".equals(status)) { %>
+                                    <% } else if ("Copying Detected".equals(status) || "Cheating Detected".equals(status) || "Cheating".equals(status)) { %>
                                         <span class="badge badge-warning status-display">
                                             <i class="fas fa-exclamation-triangle"></i> <%= status %>
                                         </span>
@@ -1876,7 +1876,7 @@ public String escapeHtml(String input) {
             if (statusFilter) {
                 const rowStatus = row.getAttribute('data-status');
                 if (statusFilter === 'terminated') {
-                    if (rowStatus !== 'terminated' && rowStatus !== 'copying detected' && rowStatus !== 'cheating detected') showRow = false;
+                    if (rowStatus !== 'terminated' && rowStatus !== 'copying detected' && rowStatus !== 'cheating detected' && rowStatus !== 'cheating') showRow = false;
                 } else if (rowStatus !== statusFilter) {
                     showRow = false;
                 }

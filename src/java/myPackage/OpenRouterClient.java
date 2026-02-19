@@ -415,4 +415,270 @@ public class OpenRouterClient {
         fallback.put("obstructions", new JSONArray());
         return fallback;
     }
+    
+    /**
+     * Analyzes an ID photo to verify it's a valid government ID
+     * @param base64Image The captured ID photo as base64 string
+     * @return JSONObject with analysis results
+     */
+    public static JSONObject analyzeIdPhoto(String base64Image) {
+        String apiKey = OpenRouterConfig.getApiKey();
+        
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            LOGGER.severe("OPENROUTER_API_KEY not found for ID analysis");
+            return createFallbackIdResult(true, "API key not configured");
+        }
+
+        try {
+            // Clean the base64 string
+            if (base64Image.contains(",")) {
+                base64Image = base64Image.split(",")[1];
+            }
+
+            JSONObject payload = new JSONObject();
+            payload.put("model", "anthropic/claude-3.5-sonnet"); // Best for vision tasks
+            payload.put("temperature", 0.1);
+            payload.put("max_tokens", 800);
+
+            JSONArray messages = new JSONArray();
+            JSONObject userMessage = new JSONObject();
+            userMessage.put("role", "user");
+            
+            JSONArray content = new JSONArray();
+            
+            // Text prompt for ID verification
+            JSONObject textPart = new JSONObject();
+            textPart.put("type", "text");
+            textPart.put("text", 
+                "You are an identity verification system. Analyze this ID photo and respond with a JSON object only.\n\n" +
+                "Check these criteria strictly:\n" +
+                "1. Is this a government-issued ID document (passport, driver's license, national ID card)?\n" +
+                "2. Is the entire ID visible and in frame?\n" +
+                "3. Is the text on the ID clearly readable?\n" +
+                "4. Is there a visible photo on the ID?\n" +
+                "5. Is the ID free from glare or reflections?\n" +
+                "6. Is the ID held flat (not bent or folded)?\n\n" +
+                "RESPOND WITH A VALID JSON OBJECT IN THIS EXACT FORMAT:\n" +
+                "{\n" +
+                "  \"passed\": false,\n" +
+                "  \"reason\": \"Detailed reason if failed, or 'ID verification passed' if successful\",\n" +
+                "  \"confidence\": 0-100,\n" +
+                "  \"documentType\": \"passport/driversLicense/nationalId/unknown\",\n" +
+                "  \"issues\": [\"list\", \"of\", \"specific\", \"issues\"]\n" +
+                "}\n\n" +
+                "IMPORTANT: Return ONLY the JSON object, no other text."
+            );
+            content.put(textPart);
+            
+            // Image part
+            JSONObject imagePart = new JSONObject();
+            imagePart.put("type", "image_url");
+            JSONObject imageUrl = new JSONObject();
+            imageUrl.put("url", "data:image/jpeg;base64," + base64Image);
+            imagePart.put("image_url", imageUrl);
+            content.put(imagePart);
+            
+            userMessage.put("content", content);
+            messages.put(userMessage);
+            payload.put("messages", messages);
+
+            LOGGER.info("Sending ID photo to OpenRouter for analysis...");
+            String response = sendRequest(payload.toString(), apiKey);
+            
+            if (response == null) {
+                LOGGER.severe("Received null response from ID analysis API");
+                return createFallbackIdResult(true, "API returned null");
+            }
+            
+            LOGGER.info("Received ID analysis response, extracting content...");
+            String content_str = extractContent(response);
+            
+            if (content_str == null) {
+                return createFallbackIdResult(true, "Could not extract content");
+            }
+            
+            // Parse the JSON response
+            try {
+                content_str = content_str.replace("```json", "").replace("```", "").trim();
+                
+                // Handle array responses if they occur
+                if (content_str.trim().startsWith("[")) {
+                    JSONArray errorArray = new JSONArray(content_str);
+                    JSONObject result = new JSONObject();
+                    result.put("passed", false);
+                    result.put("reason", errorArray.length() > 0 ? errorArray.getString(0) : "ID verification failed");
+                    result.put("confidence", 50);
+                    result.put("documentType", "unknown");
+                    result.put("issues", errorArray);
+                    LOGGER.info("Converted array response to object: " + result.toString());
+                    return result;
+                }
+                
+                JSONObject result = new JSONObject(content_str);
+                LOGGER.info("ID analysis result: " + result.toString());
+                return result;
+                
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Failed to parse ID analysis JSON: " + content_str, e);
+                return createFallbackIdResult(true, "Failed to parse AI response");
+            }
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error calling OpenRouter for ID analysis", e);
+            return createFallbackIdResult(true, "Error: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Simplified version for ID verification
+     */
+    public static boolean isIdPhotoValid(String base64Image, StringBuilder reason) {
+        JSONObject result = analyzeIdPhoto(base64Image);
+        boolean passed = result.optBoolean("passed", true);
+        
+        if (reason != null) {
+            reason.append(result.optString("reason", "Unknown"));
+        }
+        
+        LOGGER.info("ID analysis confidence: " + result.optInt("confidence", 0) + "%");
+        if (!passed) {
+            JSONArray issues = result.optJSONArray("issues");
+            if (issues != null && issues.length() > 0) {
+                LOGGER.info("ID issues: " + issues.toString());
+            }
+        }
+        
+        return passed;
+    }
+    
+    /**
+     * Creates a fallback result for ID verification
+     */
+    private static JSONObject createFallbackIdResult(boolean passed, String reason) {
+        JSONObject fallback = new JSONObject();
+        fallback.put("passed", passed);
+        fallback.put("reason", reason + " - using fallback approval");
+        fallback.put("confidence", 50);
+        fallback.put("documentType", "unknown");
+        fallback.put("issues", new JSONArray());
+        return fallback;
+    }
+    
+    /**
+     * Simplified ID verification - checks if user is holding an ID/card/paper toward camera
+     * @param base64Image The captured ID photo as base64 string
+     * @return JSONObject with simple pass/fail result
+     */
+    public static JSONObject verifyHoldingId(String base64Image) {
+        String apiKey = OpenRouterConfig.getApiKey();
+        
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            LOGGER.severe("OPENROUTER_API_KEY not found for ID verification");
+            return createSimpleIdResult(true, "API key not configured");
+        }
+
+        try {
+            // Clean up base64 string
+            if (base64Image.contains(",")) {
+                base64Image = base64Image.split(",")[1];
+            }
+
+            JSONObject payload = new JSONObject();
+            payload.put("model", "anthropic/claude-3.5-sonnet");
+            payload.put("temperature", 0.1);
+            payload.put("max_tokens", 300);
+
+            JSONArray messages = new JSONArray();
+            JSONObject userMessage = new JSONObject();
+            userMessage.put("role", "user");
+            
+            JSONArray content = new JSONArray();
+            
+            // Simple prompt - just check if holding ID/card/paper
+            JSONObject textPart = new JSONObject();
+            textPart.put("type", "text");
+            textPart.put("text", 
+                "Look at this image. Is the person holding some form of identification (ID card, passport, driver's license, or any paper/document) toward the camera?\n\n" +
+                "Respond with ONLY a JSON object in this exact format:\n" +
+                "{\n" +
+                "  \"holdingId\": true or false,\n" +
+                "  \"reason\": \"Brief reason if false, or 'ID detected' if true\"\n" +
+                "}\n\n" +
+                "Examples:\n" +
+                "- If they're holding an ID card: {\"holdingId\": true, \"reason\": \"ID card detected\"}\n" +
+                "- If no ID visible: {\"holdingId\": false, \"reason\": \"No ID or document visible in frame\"}\n" +
+                "- If holding something else: {\"holdingId\": false, \"reason\": \"Holding object but not an ID\"}"
+            );
+            content.put(textPart);
+            
+            // Image part
+            JSONObject imagePart = new JSONObject();
+            imagePart.put("type", "image_url");
+            JSONObject imageUrl = new JSONObject();
+            imageUrl.put("url", "data:image/jpeg;base64," + base64Image);
+            imagePart.put("image_url", imageUrl);
+            content.put(imagePart);
+            
+            userMessage.put("content", content);
+            messages.put(userMessage);
+            payload.put("messages", messages);
+
+            LOGGER.info("Sending ID photo to OpenRouter for simple verification...");
+            String response = sendRequest(payload.toString(), apiKey);
+            
+            if (response == null) {
+                return createSimpleIdResult(true, "API unavailable");
+            }
+            
+            String content_str = extractContent(response);
+            if (content_str == null) {
+                return createSimpleIdResult(true, "Could not extract content");
+            }
+            
+            // Clean and parse response
+            content_str = content_str.replace("```json", "").replace("```", "").trim();
+            
+            // Handle array responses
+            if (content_str.trim().startsWith("[")) {
+                JSONArray arr = new JSONArray(content_str);
+                JSONObject result = new JSONObject();
+                result.put("holdingId", false);
+                result.put("reason", arr.length() > 0 ? arr.getString(0) : "ID not detected");
+                return result;
+            }
+            
+            // Parse as JSON object
+            JSONObject result = new JSONObject(content_str);
+            LOGGER.info("ID verification result: " + result.toString());
+            return result;
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error in ID verification", e);
+            return createSimpleIdResult(true, "Error: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Simple check - returns true if holding ID
+     */
+    public static boolean isHoldingId(String base64Image, StringBuilder reason) {
+        JSONObject result = verifyHoldingId(base64Image);
+        boolean holdingId = result.optBoolean("holdingId", true);
+        
+        if (reason != null) {
+            reason.append(result.optString("reason", "Unknown"));
+        }
+        
+        return holdingId;
+    }
+    
+    /**
+     * Creates a simple fallback result
+     */
+    private static JSONObject createSimpleIdResult(boolean holdingId, String reason) {
+        JSONObject fallback = new JSONObject();
+        fallback.put("holdingId", holdingId);
+        fallback.put("reason", reason);
+        return fallback;
+    }
 }

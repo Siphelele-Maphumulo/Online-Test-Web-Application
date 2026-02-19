@@ -1754,7 +1754,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                 String statusClass = statusText.equalsIgnoreCase("Pass") ? "status-pass" : "status-fail";
                 String percentageColor = statusText.equalsIgnoreCase("Pass") ? "var(--success)" : "var(--error)";
 
-                if (statusText.equalsIgnoreCase("Cheating Detected") || statusText.equalsIgnoreCase("Copying Detected") || 
+                if (statusText.equalsIgnoreCase("Cheating") || statusText.equalsIgnoreCase("Cheating Detected") || statusText.equalsIgnoreCase("Copying Detected") || 
                     statusText.toLowerCase().contains("cheating") || statusText.toLowerCase().contains("copying")) {
                     statusClass = "status-terminated";
                     percentageColor = "var(--warning)";
@@ -2357,7 +2357,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                           } else if (statusText.equalsIgnoreCase("completed") || statusText.equalsIgnoreCase("terminated")) {
                               statusText = "Terminated";
                               statusClass = "status-terminated";
-                          } else if (statusText.equalsIgnoreCase("Copying Detected") || statusText.equalsIgnoreCase("Cheating Detected")) {
+                          } else if (statusText.equalsIgnoreCase("Copying Detected") || statusText.equalsIgnoreCase("Cheating Detected") || statusText.equalsIgnoreCase("Cheating")) {
                               statusClass = "status-terminated";
                           } else {
                               statusClass = "status-terminated";

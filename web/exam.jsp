@@ -90,7 +90,11 @@
         <% if ("false".equals(showExamForm)) { 
             // SHOW ACTIVE EXAM
             // Set user details in session for verification
-            String userIdStr = (String) session.getAttribute("userId");
+            Object userIdObj = session.getAttribute("userId");
+            String userIdStr = null;
+            if (userIdObj != null) {
+                userIdStr = userIdObj.toString();
+            }
             if (userIdStr != null && !userIdStr.isEmpty()) {
                 try {
                     myPackage.classes.User user = pDAO.getUserDetails(userIdStr);
@@ -603,7 +607,7 @@ var currentQuestionIndex = 0;
 
 // Proctoring variables - get from JSP safely
 var examId = '<%= session.getAttribute("examId") != null ? session.getAttribute("examId") : "0" %>';
-var studentId = '<%= session.getAttribute("userId") != null ? session.getAttribute("userId") : "0" %>';
+var studentId = '<%= session.getAttribute("userId") != null ? session.getAttribute("userId").toString() : "0" %>';
 
 // Make variables globally available for external scripts
 window.examId = examId;
@@ -731,7 +735,6 @@ var globalVideoStream = null;
                 
                 // Also clear any other exam-related data
                 sessionStorage.clear();
-            });
         
         // Verification JavaScript for name validation and digital signature
         document.addEventListener('DOMContentLoaded', function() {
@@ -2185,7 +2188,7 @@ var globalVideoStream = null;
     // User details from server-side (embedded as JavaScript variables)
     const userName = '<%= session.getAttribute("uname") != null ? session.getAttribute("uname") : "" %>';
     const userFullName = '<%= session.getAttribute("userFullName") != null ? session.getAttribute("userFullName") : "" %>';
-    const userId = '<%= session.getAttribute("userId") != null ? session.getAttribute("userId") : "" %>';
+    const userId = '<%= session.getAttribute("userId") != null ? session.getAttribute("userId").toString() : "" %>';
 
     // Name verification functionality
     function startIdentityVerification() {
@@ -2620,23 +2623,110 @@ var globalVideoStream = null;
         setInterval(() => analyzeLighting(this), 500);
     });
 
-    document.getElementById('captureIdBtn').onclick = () => {
+    // Simple ID verification - just checks if holding ID/card/paper
+    document.getElementById('captureIdBtn').onclick = async () => {
         const video = document.getElementById('idVideo');
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        capturedIdData = canvas.toDataURL('image/jpeg');
-        document.getElementById('idImgPreview').src = capturedIdData;
-        document.getElementById('idCapturedPreview').style.display = 'block';
+        
+        // Show checking status
+        const originalText = document.getElementById('captureIdBtn').innerHTML;
+        document.getElementById('captureIdBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking ID...';
+        document.getElementById('captureIdBtn').disabled = true;
+        
+        try {
+            // Capture the photo
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            capturedIdData = canvas.toDataURL('image/jpeg');
+            
+            // Send to server for simple verification
+            const formData = new URLSearchParams();
+            formData.append('page', 'verify_id');
+            formData.append('idImage', capturedIdData);
+            
+            const response = await fetch('controller.jsp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                showSimpleIdError(result.reason);
+                document.getElementById('captureIdBtn').innerHTML = originalText;
+                document.getElementById('captureIdBtn').disabled = false;
+                return;
+            }
+            
+            // ID detected - proceed
+            document.getElementById('idImgPreview').src = capturedIdData;
+            document.getElementById('idCapturedPreview').style.display = 'block';
+            
+            // Hide any error messages
+            const errorDiv = document.getElementById('simpleIdError');
+            if (errorDiv) errorDiv.remove();
+            
+        } catch (err) {
+            console.error('Error:', err);
+            showSimpleIdError('Could not verify ID. Please try again.');
+            document.getElementById('captureIdBtn').innerHTML = originalText;
+            document.getElementById('captureIdBtn').disabled = false;
+        }
     };
+
+// Simple error display
+function showSimpleIdError(message) {
+    let errorDiv = document.getElementById('simpleIdError');
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.id = 'simpleIdError';
+        
+        // Insert after capture button
+        const idSection = document.querySelector('#verification-step-3 .info-section') || 
+                         document.querySelector('#verification-step-3 > div:last-child');
+        if (idSection) {
+            idSection.appendChild(errorDiv);
+        }
+    }
+    
+    errorDiv.innerHTML = `
+        <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; color: #856404; animation: slideIn 0.3s ease;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <i class="fas fa-id-card" style="font-size: 20px; color: #856404;"></i>
+                <div>
+                    <strong style="display: block; margin-bottom: 3px;">ID Not Detected</strong>
+                    <span style="font-size: 13px;">${message}</span>
+                </div>
+            </div>
+            <div style="margin-top: 10px; font-size: 12px; padding: 8px; background: #fff9e6; border-radius: 4px;">
+                <strong>Tips:</strong>
+                <ul style="margin-top: 5px; padding-left: 20px;">
+                    <li>Hold your ID card toward the camera</li>
+                    <li>Make sure it's clearly visible</li>
+                    <li>Avoid glare on the surface</li>
+                    <li>Keep it flat and steady</li>
+                </ul>
+            </div>
+            <button onclick="this.parentElement.remove()" style="position: absolute; top: 5px; right: 5px; background: none; border: none; color: #856404; cursor: pointer;">&times;</button>
+        </div>
+    `;
+    
+    // Auto-remove after 8 seconds
+    setTimeout(() => {
+        if (errorDiv.parentNode) {
+            errorDiv.remove();
+        }
+    }, 8000);
+}
 
     async function saveVerificationToBackend() {
         const formData = new URLSearchParams();
         formData.append('page', 'proctoring');
         formData.append('operation', 'save_verification');
         // Note: userId and examId will be injected via JSP or session
-        formData.append('studentId', '<%= session.getAttribute("userId") != null ? session.getAttribute("userId") : "0" %>');
+        formData.append('studentId', '<%= session.getAttribute("userId") != null ? session.getAttribute("userId").toString() : "0" %>');
         formData.append('examId', '<%= session.getAttribute("examId") != null ? session.getAttribute("examId") : "0" %>');
         formData.append('honorAccepted', 'true');
         formData.append('facePhoto', capturedFaceData);

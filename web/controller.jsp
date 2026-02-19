@@ -171,6 +171,34 @@ try {
         response.getWriter().write(result.toString());
         return;
 
+    } else if ("analyze_id".equalsIgnoreCase(pageParam)) {
+        String idImage = request.getParameter("idImage");
+        StringBuilder reason = new StringBuilder();
+        
+        boolean isValid = myPackage.OpenRouterClient.isIdPhotoValid(idImage, reason);
+        
+        JSONObject result = new JSONObject();
+        result.put("success", isValid);
+        result.put("reason", reason.toString());
+        
+        response.setContentType("application/json");
+        response.getWriter().write(result.toString());
+        return;
+
+    } else if ("verify_id".equalsIgnoreCase(pageParam)) {
+        String idImage = request.getParameter("idImage");
+        StringBuilder reason = new StringBuilder();
+        
+        boolean holdingId = OpenRouterClient.isHoldingId(idImage, reason);
+        
+        JSONObject result = new JSONObject();
+        result.put("success", holdingId);
+        result.put("reason", reason.toString());
+        
+        response.setContentType("application/json");
+        response.getWriter().write(result.toString());
+        return;
+
     /* =========================
        LOGIN
        ========================= */
@@ -2126,7 +2154,7 @@ try {
                 }
 
                 boolean cheatingTerminated = "true".equalsIgnoreCase(request.getParameter("cheating_terminated"));
-                String resultStatus = cheatingTerminated ? "Copying Detected" : null;
+                String resultStatus = cheatingTerminated ? "Cheating" : null;
                 pDAO.calculateResult(eId, tMarks, endTime, size, resultStatus);
                 
                 // REGISTER EXAM COMPLETION

@@ -24,13 +24,13 @@
             this.lastFastMouseFlagAt = 0;
 
             // Detection thresholds (calibrated for real cheating scenarios) 
-            this.NOISE_THRESHOLD = 47; // dB - background noise 
-            this.MULTIPLE_VOICES_THRESHOLD = 500; // frequency variance 
-            this.EYE_OFF_SCREEN_THRESHOLD = 3000; // 3 seconds 
-            this.HEAD_MOVEMENT_THRESHOLD = 0.17; // 20% movement (normalized by face size) 
-            this.FACE_LOST_THRESHOLD = 2000; // 2 seconds 
-            this.MOUTH_MOVEMENT_THRESHOLD = 2; // pixels of movement
-            this.LOOKING_DOWN_ANGLE = -15; // degrees pitch
+            this.NOISE_THRESHOLD = 37.6; // dB - background noise (47 * 0.8 = 37.6, 20% more sensitive)
+            this.MULTIPLE_VOICES_THRESHOLD = 400; // frequency variance (500 * 0.8 = 400, 20% more sensitive)
+            this.EYE_OFF_SCREEN_THRESHOLD = 2700; // 2.7 seconds (3000 * 0.9 = 2700, 10% more sensitive)
+            this.HEAD_MOVEMENT_THRESHOLD = 0.153; // 17% movement (0.17 * 0.9 = 0.153, 10% more sensitive)
+            this.FACE_LOST_THRESHOLD = 1800; // 1.8 seconds (2000 * 0.9 = 1800, 10% more sensitive)
+            this.MOUTH_MOVEMENT_THRESHOLD = 1.8; // pixels of movement (2 * 0.9 = 1.8, 10% more sensitive)
+            this.LOOKING_DOWN_ANGLE = -13.5; // degrees pitch (-15 * 0.9 = -13.5, 10% more sensitive)
 
             // Behavioral thresholds
             this.FAST_MOUSE_SPEED_PX_PER_S = 6000; // extremely fast movements (px/sec)
