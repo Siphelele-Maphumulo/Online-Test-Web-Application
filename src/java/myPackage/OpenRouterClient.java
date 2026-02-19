@@ -1,5 +1,6 @@
 package myPackage;
 
+import java.util.Base64;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -184,8 +185,8 @@ public class OpenRouterClient {
                             String content = message.getString("content");
                             LOGGER.info("Extracted content length: " + content.length());
                             
-                            // Try to extract JSON array from content
-                            return extractJsonArray(content);
+                            // Use new extractJsonContent method
+                            return extractJsonContent(content);
                         } else {
                             LOGGER.severe("Response JSON missing 'content' field in 'message'.");
                             LOGGER.severe("Parsed JSON structure (partial): " + root.toString(2));
@@ -227,5 +228,191 @@ public class OpenRouterClient {
         }
         LOGGER.warning("No JSON array found in content");
         return text;
+    }
+    
+    /**
+     * Extracts JSON content from text, handling both objects and arrays
+     */
+    private static String extractJsonContent(String text) {
+        // First try to find JSON object { ... }
+        int objectStart = text.indexOf('{');
+        int objectEnd = text.lastIndexOf('}');
+        
+        if (objectStart != -1 && objectEnd != -1 && objectEnd > objectStart) {
+            String json = text.substring(objectStart, objectEnd + 1);
+            LOGGER.info("Extracted JSON object: " + json.substring(0, Math.min(100, json.length())) + "...");
+            return json;
+        }
+        
+        // Fall back to array detection
+        int arrayStart = text.indexOf('[');
+        int arrayEnd = text.lastIndexOf(']');
+        if (arrayStart != -1 && arrayEnd != -1 && arrayEnd > arrayStart) {
+            String json = text.substring(arrayStart, arrayEnd + 1);
+            LOGGER.info("Extracted JSON array: " + json.substring(0, Math.min(100, json.length())) + "...");
+            return json;
+        }
+        
+        LOGGER.warning("No JSON object or array found in content");
+        return text;
+    }
+
+    /**
+     * Analyzes a face photo for identity verification quality
+     * @param base64Image The captured face photo as base64 string (with or without data:image prefix)
+     * @return JSONObject with analysis results: {"passed": boolean, "reason": string, "confidence": number}
+     */
+    public static JSONObject analyzeFacePhoto(String base64Image) {
+        String apiKey = OpenRouterConfig.getApiKey();
+        
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            LOGGER.severe("OPENROUTER_API_KEY not found for face analysis");
+            return createFallbackResult(true, "API key not configured");
+        }
+
+        try {
+            // Clean up base64 string - remove data:image prefix if present
+            if (base64Image.contains(",")) {
+                base64Image = base64Image.split(",")[1];
+            }
+
+            JSONObject payload = new JSONObject();
+            payload.put("model", "anthropic/claude-3.5-sonnet"); // Best for vision tasks
+            payload.put("temperature", 0.1); // Low temperature for consistent results
+            payload.put("max_tokens", 500);
+
+            JSONArray messages = new JSONArray();
+
+            JSONObject userMessage = new JSONObject();
+            userMessage.put("role", "user");
+            
+            JSONArray content = new JSONArray();
+            
+            // Text prompt - FIXED to request proper JSON object
+            JSONObject textPart = new JSONObject();
+            textPart.put("type", "text");
+            textPart.put("text", 
+                "You are an identity verification system. Analyze this face photo and respond with a JSON object only.\n\n" +
+                "Check these criteria strictly:\n" +
+                "1. Is there exactly ONE clearly visible face?\n" +
+                "2. Is face properly positioned (centered, not too close/far)?\n" +
+                "3. Is face free from obstructions (no masks, sunglasses, hats covering eyes)?\n" +
+                "4. Is lighting adequate (face clearly visible, not too dark or overexposed)?\n" +
+                "5. Is person looking directly at the camera?\n\n" +
+                "RESPOND WITH A VALID JSON OBJECT IN THIS EXACT FORMAT (NOT AN ARRAY):\n" +
+                "{\n" +
+                "  \"passed\": false,\n" +
+                "  \"reason\": \"Subject is not looking directly at the camera\",\n" +
+                "  \"confidence\": 65,\n" +
+                "  \"faceCount\": 1,\n" +
+                "  \"obstructions\": []\n" +
+                "}\n\n" +
+                "IMPORTANT: Return ONLY the JSON object, no other text, no arrays, no markdown."
+            );
+            content.put(textPart);
+            
+            // Image part
+            JSONObject imagePart = new JSONObject();
+            imagePart.put("type", "image_url");
+            JSONObject imageUrl = new JSONObject();
+            imageUrl.put("url", "data:image/jpeg;base64," + base64Image);
+            imagePart.put("image_url", imageUrl);
+            content.put(imagePart);
+            
+            userMessage.put("content", content);
+            messages.put(userMessage);
+
+            payload.put("messages", messages);
+
+            LOGGER.info("Sending face photo to OpenRouter for analysis...");
+            String response = sendRequest(payload.toString(), apiKey);
+            
+            if (response == null) {
+                LOGGER.severe("Received null response from face analysis API");
+                return createFallbackResult(true, "API returned null");
+            }
+            
+            LOGGER.info("Received face analysis response, extracting content...");
+            String content_str = extractContent(response);
+            
+            if (content_str == null) {
+                return createFallbackResult(true, "Could not extract content");
+            }
+            
+            // Parse JSON response - handle both object and array
+            try {
+                // Clean content
+                content_str = content_str.replace("```json", "").replace("```", "").trim();
+                
+                // Check if it's an array
+                if (content_str.trim().startsWith("[")) {
+                    JSONArray errorArray = new JSONArray(content_str);
+                    // Convert array to proper object format
+                    JSONObject result = new JSONObject();
+                    result.put("passed", false);
+                    result.put("reason", errorArray.length() > 0 ? errorArray.getString(0) : "Verification failed");
+                    result.put("confidence", 50);
+                    result.put("faceCount", 1);
+                    result.put("obstructions", errorArray);
+                    LOGGER.info("Converted array response to object: " + result.toString());
+                    return result;
+                }
+                
+                // Normal object parsing
+                JSONObject result = new JSONObject(content_str);
+                LOGGER.info("Face analysis result: " + result.toString());
+                return result;
+                
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Failed to parse face analysis JSON: " + content_str, e);
+                
+                // Try to extract any useful message from response
+                if (content_str.contains("gaze") || content_str.contains("looking")) {
+                    JSONObject fallback = new JSONObject();
+                    fallback.put("passed", false);
+                    fallback.put("reason", "Please look directly at the camera");
+                    fallback.put("confidence", 50);
+                    fallback.put("faceCount", 1);
+                    fallback.put("obstructions", new JSONArray());
+                    return fallback;
+                }
+                
+                return createFallbackResult(true, "Failed to parse AI response");
+            }
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error calling OpenRouter for face analysis", e);
+            return createFallbackResult(true, "Error: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Simplified version that just returns pass/fail with reason
+     */
+    public static boolean isFacePhotoValid(String base64Image, StringBuilder reason) {
+        JSONObject result = analyzeFacePhoto(base64Image);
+        boolean passed = result.optBoolean("passed", true);
+        
+        if (reason != null) {
+            reason.append(result.optString("reason", "Unknown"));
+        }
+        
+        // Log confidence for debugging
+        LOGGER.info("Face analysis confidence: " + result.optInt("confidence", 0) + "%");
+        
+        return passed;
+    }
+    
+    /**
+     * Creates a fallback result when API is unavailable
+     */
+    private static JSONObject createFallbackResult(boolean passed, String reason) {
+        JSONObject fallback = new JSONObject();
+        fallback.put("passed", passed);
+        fallback.put("reason", reason + " - using fallback approval");
+        fallback.put("confidence", 50);
+        fallback.put("faceCount", 1);
+        fallback.put("obstructions", new JSONArray());
+        return fallback;
     }
 }

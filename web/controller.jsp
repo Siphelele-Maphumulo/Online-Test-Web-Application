@@ -157,6 +157,20 @@ try {
         }
         return;
 
+    } else if ("analyze_face".equalsIgnoreCase(pageParam)) {
+        String faceImage = request.getParameter("faceImage");
+        StringBuilder reason = new StringBuilder();
+        
+        boolean isValid = myPackage.OpenRouterClient.isFacePhotoValid(faceImage, reason);
+        
+        JSONObject result = new JSONObject();
+        result.put("success", isValid);
+        result.put("reason", reason.toString());
+        
+        response.setContentType("application/json");
+        response.getWriter().write(result.toString());
+        return;
+
     /* =========================
        LOGIN
        ========================= */
@@ -2134,8 +2148,8 @@ try {
 
                 response.sendRedirect("std-page.jsp?pgprt=1&eid="+eId+"&showresult=1");
         } else {
-                response.sendRedirect("std-page.jsp");
-            }
+            response.sendRedirect("std-page.jsp");
+        }
         } catch(Exception e){
             session.setAttribute("error","Error submitting exam: "+e.getMessage());
             response.sendRedirect("std-page.jsp");

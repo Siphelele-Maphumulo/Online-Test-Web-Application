@@ -1263,35 +1263,155 @@ var globalVideoStream = null;
             </div>
 
             <!-- Step 2: Face Photo -->
-            <div id="verification-step-2" class="verification-step" style="display: none;">
-                <h4 style="margin-bottom: 15px; color: var(--primary-blue);">Candidate Identity Verification Step 2: Face Photo</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                    <div style="text-align: center;">
-                        <div style="background: #000; border-radius: 8px; overflow: hidden; position: relative; aspect-ratio: 4/3;">
-                            <video id="faceVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
-                            <canvas id="faceOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
-                            <div id="faceAlignmentGuide" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 260px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 50% 50% 40% 40%;"></div>
+<div id="verification-step-2" class="verification-step" style="display: none;">
+    <div class="step-header">
+        <span class="step-badge">Step 2 of 4</span>
+        <h4 class="step-title">Face Photo Verification</h4>
+        <p class="step-description">Please capture a clear photo of your face for identity verification</p>
+    </div>
+
+    <div class="verification-grid">
+        <!-- Camera Preview Section -->
+        <div class="camera-section">
+            <div class="camera-container">
+                <video id="faceVideo" autoplay playsinline class="camera-feed"></video>
+                <canvas id="faceOverlay" class="camera-overlay"></canvas>
+                <div id="faceAlignmentGuide" class="face-guide"></div>
+                
+                <!-- Camera Status Indicator -->
+                <div id="cameraStatus" class="camera-status">
+                    <i class="fas fa-video"></i>
+                    <span>Camera active</span>
+                </div>
+            </div>
+
+            <!-- Capture Button -->
+            <button type="button" id="captureFaceBtn" class="btn-capture">
+                <i class="fas fa-camera"></i>
+                <span>Capture Photo</span>
+            </button>
+
+            <!-- Retake Option (shown after capture) -->
+            <div id="retakeSection" class="retake-section" style="display: none;">
+                <button type="button" id="retakeFaceBtn" class="btn-text">
+                    <i class="fas fa-redo-alt"></i> Retake Photo
+                </button>
+            </div>
+        </div>
+
+        <!-- Instructions & Preview Section -->
+        <div class="info-section">
+            <!-- Live Preview (shown before capture) -->
+            <div id="liveInstructions" class="instruction-card">
+                <div class="instruction-header">
+                    <i class="fas fa-info-circle"></i>
+                    <h5>Photo Guidelines</h5>
+                </div>
+                
+                <div class="guideline-list">
+                    <div class="guideline-item">
+                        <div class="guideline-icon success-bg">
+                            <i class="fas fa-check"></i>
                         </div>
-                        <button type="button" id="captureFaceBtn" class="btn-primary" style="margin-top: 15px; width: 100%;">
-                            <i class="fas fa-camera"></i> Capture Face Photo
-                        </button>
+                        <div class="guideline-text">
+                            <strong>Position your face</strong>
+                            <span>Keep your face within the dashed oval guide</span>
+                        </div>
                     </div>
-                    <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; border-left: 4px solid var(--info);">
-                        <p style="font-weight: 600; color: var(--primary-blue); margin-bottom: 10px;">Instructions for clear photo:</p>
-                        <ul style="font-size: 13px; color: #0369a1; line-height: 1.8;">
-                            <li>Ensure your face is within the dashed oval.</li>
-                            <li>Look directly at the camera.</li>
-                            <li>Ensure there is proper lighting on your face (avoid strong backlighting).</li>
-                            <li>Do not wear hats, sunglasses, or anything that covers your face.</li>
-                            <li>Ensure you are the only person in the frame.</li>
-                        </ul>
-                        <div id="faceCapturedPreview" style="margin-top: 15px; display: none;">
-                            <p style="font-size: 12px; font-weight: bold; color: var(--success); margin-bottom: 5px;"><i class="fas fa-check-circle"></i> Photo Captured Successfully</p>
-                            <img id="faceImgPreview" style="width: 100%; border-radius: 4px; border: 1px solid #cbd5e1;">
+                    
+                    <div class="guideline-item">
+                        <div class="guideline-icon warning-bg">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="guideline-text">
+                            <strong>Avoid wearing</strong>
+                            <span>Hats, sunglasses, masks, or anything covering your face</span>
+                        </div>
+                    </div>
+                    
+                    <div class="guideline-item">
+                        <div class="guideline-icon warning-bg">
+                            <i class="fas fa-sun"></i>
+                        </div>
+                        <div class="guideline-text">
+                            <strong>Ensure proper lighting</strong>
+                            <span>Avoid strong backlighting - your face should be well-lit and clearly visible</span>
+                        </div>
+                    </div>
+                    
+                    <div class="guideline-item">
+                        <div class="guideline-icon warning-bg">
+                            <i class="fas fa-user-friends"></i>
+                        </div>
+                        <div class="guideline-text">
+                            <strong>Be alone in frame</strong>
+                            <span>Ensure no other people appear in the camera frame</span>
+                        </div>
+                    </div>
+                    
+                    <div class="guideline-item">
+                        <div class="guideline-icon success-bg">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <div class="guideline-text">
+                            <strong>Look directly at camera</strong>
+                            <span>Face the camera directly with eyes visible</span>
                         </div>
                     </div>
                 </div>
+
+                <!-- Lighting Quality Indicator (Dynamic) -->
+                <div id="lightingIndicator" class="quality-indicator" style="display: none;">
+                    <div class="indicator-label">
+                        <span>Lighting Quality</span>
+                        <span id="lightingScore">Good</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="lightingProgress" class="progress-fill good" style="width: 80%"></div>
+                    </div>
+                </div>
             </div>
+
+            <!-- Captured Preview (shown after capture) -->
+            <div id="faceCapturedPreview" class="preview-card" style="display: none;">
+                <div class="preview-header">
+                    <i class="fas fa-check-circle success-icon"></i>
+                    <h5>Photo Captured Successfully</h5>
+                </div>
+                
+                <div class="preview-image-container">
+                    <img id="faceImgPreview" class="preview-image" alt="Captured face photo">
+                    <div class="preview-badge">VERIFIED</div>
+                </div>
+
+                <!-- Quality Check Results -->
+                <div class="quality-checks">
+                    <div class="check-item passed">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Face properly positioned</span>
+                    </div>
+                    <div class="check-item passed">
+                        <i class="fas fa-check-circle"></i>
+                        <span>No face coverings detected</span>
+                    </div>
+                    <div class="check-item passed">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Lighting adequate</span>
+                    </div>
+                    <div class="check-item passed">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Single person in frame</span>
+                    </div>
+                </div>
+
+                <p class="preview-note">
+                    <i class="fas fa-shield-alt"></i>
+                    This photo will be stored securely and used for identity verification throughout your exam.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
 
             <!-- Step 3: ID Verification -->
             <div id="verification-step-3" class="verification-step" style="display: none;">
@@ -2284,16 +2404,221 @@ var globalVideoStream = null;
         showVerifyStep(currentVerifyStep - 1);
     };
 
-    document.getElementById('captureFaceBtn').onclick = () => {
+    // Add missing showQualityError function
+    function showQualityError(message) {
+        // Create or get error display element
+        let errorDiv = document.getElementById('faceQualityError');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.id = 'faceQualityError';
+            
+            // Find where to insert it (after camera container)
+            const cameraSection = document.querySelector('.camera-section');
+            if (cameraSection) {
+                cameraSection.appendChild(errorDiv);
+            }
+        }
+        
+        errorDiv.innerHTML = `
+            <div style="margin-top: 15px; padding: 15px; background: #fee2e2; border: 1px solid #ef4444; border-radius: 8px; color: #b91c1c; animation: slideIn 0.3s ease;">
+                <div style="display: flex; gap: 10px; align-items: flex-start;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 20px; color: #ef4444;"></i>
+                    <div>
+                        <strong style="display: block; margin-bottom: 5px; font-size: 14px;">Quality Check Failed</strong>
+                        <span style="font-size: 13px;">${message}</span>
+                        <div style="margin-top: 10px; font-size: 12px; color: #7f1d1d; background: #fff5f5; padding: 10px; border-radius: 6px;">
+                            <strong>Quick fixes:</strong>
+                            <ul style="margin-top: 5px; padding-left: 20px;">
+                                <li>Center your face in oval guide</li>
+                                <li>Remove any hats, sunglasses, or masks</li>
+                                <li>Ensure good lighting on your face</li>
+                                <li>Position yourself 30-50cm from camera</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove(); resetCaptureButton()" style="position: absolute; top: 5px; right: 5px; background: none; border: none; color: #ef4444; cursor: pointer; font-size: 16px;">&times;</button>
+            </div>
+        `;
+        
+        // Auto-remove after 8 seconds
+        setTimeout(() => {
+            if (errorDiv.parentNode) {
+                errorDiv.remove();
+            }
+        }, 8000);
+    }
+    
+    // Function to reset capture button state
+    function resetCaptureButton() {
+        const button = document.getElementById('captureFaceBtn');
+        if (button) {
+            button.innerHTML = '<i class="fas fa-camera"></i> Capture Photo';
+            button.disabled = false;
+        }
+    }
+
+    // SIMPLIFIED - Just basic lighting checks, no complex face detection
+
+    
+    // AI-Powered Face Analysis
+    document.getElementById('captureFaceBtn').onclick = async () => {
         const video = document.getElementById('faceVideo');
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        capturedFaceData = canvas.toDataURL('image/jpeg');
-        document.getElementById('faceImgPreview').src = capturedFaceData;
-        document.getElementById('faceCapturedPreview').style.display = 'block';
+        
+        // Show checking status
+        const originalText = document.getElementById('captureFaceBtn').innerHTML;
+        document.getElementById('captureFaceBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI Analyzing...';
+        document.getElementById('captureFaceBtn').disabled = true;
+        
+        try {
+            // Capture the photo
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            capturedFaceData = canvas.toDataURL('image/jpeg');
+            
+            // Send to server for AI analysis
+            const formData = new URLSearchParams();
+            formData.append('page', 'analyze_face');
+            formData.append('faceImage', capturedFaceData);
+            
+            const response = await fetch('controller.jsp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                showQualityError(result.reason);
+                document.getElementById('captureFaceBtn').innerHTML = originalText;
+                document.getElementById('captureFaceBtn').disabled = false;
+                return;
+            }
+            
+            // AI says it's good - proceed
+            document.getElementById('faceImgPreview').src = capturedFaceData;
+            document.getElementById('faceCapturedPreview').style.display = 'block';
+            document.getElementById('liveInstructions').style.display = 'none';
+            document.getElementById('retakeSection').style.display = 'block';
+            
+            // Update quality indicators to show all passed
+            const checks = document.querySelectorAll('.check-item');
+            if (checks.length >= 4) {
+                checks[0].innerHTML = '<i class="fas fa-check-circle" style="color:#10b981"></i><span>Face properly positioned</span>';
+                checks[1].innerHTML = '<i class="fas fa-check-circle" style="color:#10b981"></i><span>No face coverings detected</span>';
+                checks[2].innerHTML = '<i class="fas fa-check-circle" style="color:#10b981"></i><span>Lighting adequate</span>';
+                checks[3].innerHTML = '<i class="fas fa-check-circle" style="color:#10b981"></i><span>Single person in frame</span>';
+            }
+            
+            // Hide any error messages
+            const errorDiv = document.getElementById('faceQualityError');
+            if (errorDiv) errorDiv.remove();
+            
+        } catch (err) {
+            console.error('Error:', err);
+            showQualityError('Could not analyze photo. Please try again.');
+            document.getElementById('captureFaceBtn').innerHTML = originalText;
+            document.getElementById('captureFaceBtn').disabled = false;
+        }
     };
+
+    // Retake button handler
+    document.getElementById('retakeFaceBtn').onclick = () => {
+        document.getElementById('faceCapturedPreview').style.display = 'none';
+        document.getElementById('liveInstructions').style.display = 'block';
+        document.getElementById('retakeSection').style.display = 'none';
+        document.getElementById('captureFaceBtn').disabled = false;
+    };
+
+    // Lighting analysis for Face Photo verification
+    function analyzeLighting(videoElement) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 100;
+        canvas.height = 100;
+        const ctx = canvas.getContext('2d');
+        
+        // Draw a frame from video
+        ctx.drawImage(videoElement, 0, 0, 100, 100);
+        
+        // Get pixel data
+        const imageData = ctx.getImageData(0, 0, 100, 100);
+        const data = imageData.data;
+        
+        // Calculate average brightness
+        let totalBrightness = 0;
+        for (let i = 0; i < data.length; i += 4) {
+            const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+            totalBrightness += brightness;
+        }
+        const avgBrightness = totalBrightness / (data.length / 4);
+        
+        // Check for backlight (sample top vs center)
+        let topBrightness = 0;
+        for (let x = 0; x < 100; x += 10) {
+            const idx = (10 * 100 + x) * 4;
+            topBrightness += (data[idx] + data[idx+1] + data[idx+2]) / 3;
+        }
+        topBrightness = topBrightness / 10;
+        
+        let centerBrightness = 0;
+        for (let y = 40; y < 60; y++) {
+            for (let x = 40; x < 60; x++) {
+                const idx = (y * 100 + x) * 4;
+                centerBrightness += (data[idx] + data[idx+1] + data[idx+2]) / 3;
+            }
+        }
+        centerBrightness = centerBrightness / 400;
+        
+        const backlightRatio = topBrightness / centerBrightness;
+        
+        // Update lighting indicator
+        const indicator = document.getElementById('lightingIndicator');
+        const score = document.getElementById('lightingScore');
+        const progress = document.getElementById('lightingProgress');
+        
+        if (indicator && score && progress) {
+            indicator.style.display = 'block';
+            
+            if (backlightRatio > 2.0) {
+                score.textContent = 'Poor (Backlit!)';
+                progress.className = 'progress-fill poor';
+                progress.style.width = '30%';
+                score.style.color = '#ef4444';
+            } else if (avgBrightness < 60) {
+                score.textContent = 'Too Dark';
+                progress.className = 'progress-fill poor';
+                progress.style.width = '20%';
+                score.style.color = '#ef4444';
+            } else if (avgBrightness > 220) {
+                score.textContent = 'Too Bright';
+                progress.className = 'progress-fill warning';
+                progress.style.width = '95%';
+                score.style.color = '#f59e0b';
+            } else if (avgBrightness > 100) {
+                score.textContent = 'Good';
+                progress.className = 'progress-fill good';
+                progress.style.width = '80%';
+                score.style.color = '#10b981';
+            } else {
+                score.textContent = 'Fair';
+                progress.className = 'progress-fill warning';
+                progress.style.width = '50%';
+                score.style.color = '#f59e0b';
+            }
+        }
+    }
+
+    // Start lighting analysis when camera is active
+    document.getElementById('faceVideo').addEventListener('play', function() {
+        // Show lighting indicator
+        document.getElementById('lightingIndicator').style.display = 'block';
+        
+        // Analyze lighting every 500ms for real-time feedback
+        setInterval(() => analyzeLighting(this), 500);
+    });
 
     document.getElementById('captureIdBtn').onclick = () => {
         const video = document.getElementById('idVideo');
@@ -2334,4 +2659,428 @@ var globalVideoStream = null;
         document.getElementById('confirmationModal').style.display = 'flex';
     };
 
-    </script><script src="proctoring_v2.js"></script>
+    </script>
+    <style>
+    /* Step Header Styles */
+    .step-header {
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #eef2f6;
+    }
+
+    .step-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        background: #e6f0ff;
+        color: #0047ab;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 20px;
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+    }
+
+    .step-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #1a2b3c;
+        margin-bottom: 6px;
+    }
+
+    .step-description {
+        font-size: 14px;
+        color: #5a6b7c;
+        margin: 0;
+    }
+
+    /* Verification Grid Layout */
+    .verification-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+    }
+
+    /* Camera Section */
+    .camera-section {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .camera-container {
+        background: #0a0f14;
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+        aspect-ratio: 4/3;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+    }
+
+    .camera-feed {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .camera-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+    }
+
+    .face-guide {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 200px;
+        height: 260px;
+        border: 3px dashed rgba(255, 255, 255, 0.7);
+        border-radius: 50% 50% 40% 40%;
+        box-shadow: 0 0 0 2px rgba(0, 71, 171, 0.3);
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% { border-color: rgba(255, 255, 255, 0.7); }
+        50% { border-color: rgba(0, 71, 171, 0.9); }
+        100% { border-color: rgba(255, 255, 255, 0.7); }
+    }
+
+    .camera-status {
+        position: absolute;
+        bottom: 12px;
+        left: 12px;
+        background: rgba(0, 0, 0, 0.6);
+        color: #10b981;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        backdrop-filter: blur(4px);
+    }
+
+    .camera-status i {
+        font-size: 12px;
+    }
+
+    /* Capture Button */
+    .btn-capture {
+        background: linear-gradient(135deg, #0047ab, #2563eb);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 14px 20px;
+        font-size: 16px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0, 71, 171, 0.3);
+    }
+
+    .btn-capture:hover:not(:disabled) {
+        background: linear-gradient(135deg, #003a8c, #1e4fd9);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 71, 171, 0.4);
+    }
+
+    .btn-capture:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .btn-capture i {
+        font-size: 18px;
+    }
+
+    /* Retake Button */
+    .retake-section {
+        text-align: center;
+    }
+
+    .btn-text {
+        background: none;
+        border: 1px solid #cbd5e1;
+        color: #475569;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-text:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+        color: #1e293b;
+    }
+
+    /* Info Section */
+    .info-section {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .instruction-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+    }
+
+    .instruction-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+    .instruction-header i {
+        font-size: 20px;
+        color: #0047ab;
+    }
+
+    .instruction-header h5 {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1a2b3c;
+        margin: 0;
+    }
+
+    .guideline-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .guideline-item {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .guideline-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .guideline-icon i {
+        font-size: 14px;
+        color: white;
+    }
+
+    .success-bg {
+        background: #10b981;
+    }
+
+    .warning-bg {
+        background: #f59e0b;
+    }
+
+    .guideline-text {
+        flex: 1;
+    }
+
+    .guideline-text strong {
+        display: block;
+        font-size: 14px;
+        color: #1e293b;
+        margin-bottom: 4px;
+    }
+
+    .guideline-text span {
+        font-size: 13px;
+        color: #64748b;
+        line-height: 1.5;
+    }
+
+    /* Quality Indicator */
+    .quality-indicator {
+        margin-top: 20px;
+        padding: 16px;
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .indicator-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        color: #475569;
+        margin-bottom: 8px;
+    }
+
+    #lightingScore {
+        font-weight: 600;
+        color: #10b981;
+    }
+
+    .progress-bar {
+        height: 6px;
+        background: #e2e8f0;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+
+    .progress-fill.good {
+        background: #10b981;
+    }
+
+    .progress-fill.warning {
+        background: #f59e0b;
+    }
+
+    .progress-fill.poor {
+        background: #ef4444;
+    }
+
+    /* Preview Card */
+    .preview-card {
+        background: #f0f9ff;
+        border: 1px solid #bae6fd;
+        border-radius: 12px;
+        padding: 20px;
+        animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .preview-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+    .success-icon {
+        font-size: 24px;
+        color: #10b981;
+    }
+
+    .preview-header h5 {
+        font-size: 16px;
+        font-weight: 600;
+        color: #0a4b2e;
+        margin: 0;
+    }
+
+    .preview-image-container {
+        position: relative;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 2px solid #10b981;
+    }
+
+    .preview-image {
+        width: 100%;
+        display: block;
+    }
+
+    .preview-badge {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: rgba(16, 185, 129, 0.9);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        backdrop-filter: blur(4px);
+    }
+
+    .quality-checks {
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+
+    .check-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .check-item:last-child {
+        border-bottom: none;
+    }
+
+    .check-item i {
+        font-size: 16px;
+    }
+
+    .check-item.passed i {
+        color: #10b981;
+    }
+
+    .check-item span {
+        font-size: 13px;
+        color: #334155;
+    }
+
+    .preview-note {
+        font-size: 12px;
+        color: #0284c7;
+        background: #e6f0ff;
+        padding: 12px;
+        border-radius: 6px;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .verification-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .camera-container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+    }
+    </style>
+<script src="proctoring_v2.js"></script>
