@@ -143,6 +143,15 @@ try {
         response.getWriter().write("{\"exists\": " + exists + "}");
         return;
 
+    } else if ("verify_student_name".equalsIgnoreCase(pageParam)) {
+        String enteredName = request.getParameter("enteredName");
+        String userId = request.getParameter("userId");
+        boolean success = pDAO.verifyStudentName(enteredName, userId);
+        
+        response.setContentType("application/json");
+        response.getWriter().write("{\"success\": " + success + "}");
+        return;
+
     /* =========================
        LOGIN
        ========================= */
@@ -2594,6 +2603,8 @@ try {
     session.setAttribute("error","An unexpected error occurred: "+e.getMessage());
     response.sendRedirect("error.jsp");
 }
-%>}   e l s e   i f   ( \  
- v e r i f y _ s t u d e n t _ n a m e \ . e q u a l s I g n o r e C a s e ( p a g e P a r a m ) )   {  
+%>}   e l s e   i f   ( \ 
+ 
+ v e r i f y _ s t u d e n t _ n a m e \ . e q u a l s I g n o r e C a s e ( p a g e P a r a m ) )   { 
+ 
  

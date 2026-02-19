@@ -4,7 +4,6 @@
 <%@page import="java.util.ArrayList"%>
 <%@page import="myPackage.classes.Questions"%>
 <%@page import="myPackage.classes.Exams"%>
-<%@page import="myPackage.classes.Answers"%>
 <%@ page isELIgnored="true" %>
 <%
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
@@ -134,24 +133,22 @@
         box-sizing: border-box;
     }
     
-body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-    line-height: 1.3;
-    font-size: 13px;
-    color: var(--text-dark);
-
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    min-height: 100vh;
-    font-weight: 400;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-
-h1 { font-size: 1.5rem; }
-h2 { font-size: 1.3rem; }
-h3 { font-size: 1.1rem; }
-h4 { font-size: 1rem; }
-
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        line-height: 1.3;
+        font-size: 13px;
+        color: var(--text-dark);
+    }
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.3rem; }
+    h3 { font-size: 1.1rem; }
+    h4 { font-size: 1rem; }
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        min-height: 100vh;
+        font-weight: 400;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
     
     /* Dashboard Container */
     .dashboard-container {
@@ -1057,7 +1054,6 @@ h4 { font-size: 1rem; }
     }
     
     .status-pass {
-        font-size: medium;
         color: var(--success);
     }
     
@@ -1066,8 +1062,8 @@ h4 { font-size: 1rem; }
     }
     
     .percentage-badge {
-        background: #55f2f780;
-        color: var(--dark-gray);
+        background: linear-gradient(90deg, var(--info), #0ea5e9);
+        color: var(--white);
         padding: 6px 16px;
         border-radius: 16px;
         font-weight: 600;
@@ -2996,6 +2992,20 @@ h4 { font-size: 1rem; }
     <main class="content-area">
         <% if ("false".equals(showExamForm)) { 
             // SHOW ACTIVE EXAM
+            // Set user details in session for verification
+            String userIdStr = (String) session.getAttribute("userId");
+            if (userIdStr != null && !userIdStr.isEmpty()) {
+                try {
+                    myPackage.classes.User user = pDAO.getUserDetails(userIdStr);
+                    if (user != null) {
+                        session.setAttribute("uname", user.getUserName());
+                        session.setAttribute("userFullName", user.getFirstName() + " " + user.getLastName());
+                    }
+                } catch (Exception e) {
+                    // Handle error gracefully
+                }
+            }
+            
             String courseName = request.getParameter("coursename");
             ArrayList<Questions> questionsList = pDAO.getQuestions(courseName, 20);
             int totalQ = questionsList.size();
@@ -3909,22 +3919,6 @@ document.addEventListener('change', function(e) {
                         }
                         const ansValue = JSON.stringify(formattedMappings);
                         
-                        let hiddenAns = document.querySelector('input[name="ans' + qindex + '"]');
-                        if (!hiddenAns) {
-                            hiddenAns = document.createElement('input');
-                            hiddenAns.type = 'hidden';
-                            hiddenAns.name = 'ans' + qindex;
-                            document.getElementById('myform').appendChild(hiddenAns);
-                        }
-                        hiddenAns.value = ansValue;
-                    });
-
-                    // Handle Rearrange answers - save before auto-submit
-                    const rearrangeAnswers = getRearrangeAnswers();
-                    Object.keys(rearrangeAnswers).forEach(qindex => {
-                        const orderedIds = rearrangeAnswers[qindex];
-                        const ansValue = JSON.stringify(orderedIds);
-
                         let hiddenAns = document.querySelector('input[name="ans' + qindex + '"]');
                         if (!hiddenAns) {
                             hiddenAns = document.createElement('input');
@@ -5274,8 +5268,7 @@ function updateProgress() {
 
             <% } else if ("1".equals(request.getParameter("showresult"))) {
                         // SHOW RESULTS PAGE
-                        int showResultExamId = Integer.parseInt(request.getParameter("eid"));
-                        Exams result = pDAO.getResultByExamId(showResultExamId);
+                        Exams result = pDAO.getResultByExamId(Integer.parseInt(request.getParameter("eid")));
                         
                         // IMPORTANT: Clear exam session when showing results
                         session.removeAttribute("examStarted");
@@ -5294,10 +5287,9 @@ function updateProgress() {
                         int obtainedMarks = 0;
                         int totalMarks = 0;
                         String resultStatus = "Unknown";
-                        ArrayList<Answers> _showResultAnswers = null;
                         
+                        // Fallback for status if it's missing or just "completed"
                         if (result != null) {
-                            // Normal processing for all exams (including incomplete)
                             studentFullName = result.getFullName();
                             if (studentFullName == null || studentFullName.trim().isEmpty()) {
                                 studentFullName = result.getUserName();
@@ -5313,73 +5305,9 @@ function updateProgress() {
                             obtainedMarks = result.getObtMarks();
                             totalMarks = result.gettMarks();
                             resultStatus = result.getStatus();
-
-                            if (endTime == null || endTime.trim().isEmpty() || "null".equalsIgnoreCase(endTime.trim())) {
-                                endTime = "N/A";
-                            }
-
-                            try {
-                                _showResultAnswers = pDAO.getAllAnswersByExamId(result.getExamId());
-                            } catch (Exception ex) {
-                                _showResultAnswers = null;
-                            }
-
-                            int _correct = 0;
-                            if (_showResultAnswers != null) {
-                                for (Answers a : _showResultAnswers) {
-                                    String st = a.getStatus();
-                                    if (st != null && (st.equalsIgnoreCase("correct") || st.startsWith("partial:"))) {
-                                        _correct++;
-                                    }
-                                }
-                            }
-
-                            // Always compute marks from answers to show what user has earned so far
-                            float computedObt = 0;
-                            float computedTotal = 0;
-                            for (Answers a : _showResultAnswers) {
-                                Questions qo = null;
-                                if (a.getQuestionId() > 0) {
-                                    try {
-                                        qo = pDAO.getQuestionById(a.getQuestionId());
-                                    } catch (Exception ex) {
-                                        qo = null;
-                                    }
-                                }
-
-                                float qMax = (qo != null) ? qo.getTotalMarks() : 1.0f;
-                                if (qMax <= 0) qMax = 1.0f;
-                                computedTotal += qMax;
-
-                                String st = a.getStatus();
-                                if (st != null) {
-                                    if (st.equalsIgnoreCase("correct")) {
-                                        computedObt += qMax;
-                                    } else if (st.startsWith("partial:")) {
-                                        try {
-                                            computedObt += Float.parseFloat(st.substring(8));
-                                        } catch (Exception ex) {}
-                                    }
-                                }
-                            }
-
-                            // Use computed marks if DB marks are 0 or if exam is incomplete
-                            if (obtainedMarks == 0 || computedObt > 0) {
-                                obtainedMarks = Math.round(computedObt);
-                            }
-                            if (totalMarks == 0 || computedTotal > 0) {
-                                totalMarks = Math.round(computedTotal);
-                            }
-                            
-                            // Determine result status
                             if (resultStatus == null || resultStatus.isEmpty() || resultStatus.equalsIgnoreCase("completed")) {
-                                // Check if exam is incomplete
-                                if (!"completed".equalsIgnoreCase(result.getStatus()) || result.getObtMarks() == 0) {
-                                    resultStatus = "Incomplete";
-                                } else {
-                                    double percentage = (totalMarks > 0) ? (double) obtainedMarks / totalMarks * 100 : 0;
-                                    resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
-                                }
+                                double percentage = (totalMarks > 0) ? (double) obtainedMarks / totalMarks * 100 : 0;
+                                resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
                             }
                         }
                     %>
@@ -5388,8 +5316,6 @@ function updateProgress() {
                 <div class="page-title"><i class="fas fa-chart-line"></i> Exam Result</div>
                 <div class="stats-badge"><i class="fas fa-graduation-cap"></i> <%= resultStatus %></div>
             </div>
-            
-            <%-- Show results for all exams (complete or incomplete) --%>
             <div class="result-card">
                 <div class="result-grid">
                     <div class="result-item"><strong><i class="fas fa-calendar-alt"></i> Exam Date</strong><div class="result-value"><%= examDate %></div></div>
@@ -5400,8 +5326,8 @@ function updateProgress() {
                     <div class="result-item"><strong><i class="fas fa-star-half-alt"></i> Total Marks</strong><div class="result-value"><%= totalMarks %></div></div>
                     <div class="result-item">
                         <strong><i class="fas fa-flag"></i> Result Status</strong>
-                        <div class="result-value <%= resultStatus.equalsIgnoreCase("Pass")?"status-pass":resultStatus.equalsIgnoreCase("Incomplete")?"status-incomplete":"status-fail" %>">
-                            <i class="fas <%= resultStatus.equalsIgnoreCase("Pass")?"fa-check-circle":resultStatus.equalsIgnoreCase("Incomplete")?"fa-exclamation-triangle":"fa-times-circle" %>"></i> <%= resultStatus %>
+                        <div class="result-value <%= resultStatus.equalsIgnoreCase("Pass")?"status-pass":"status-fail" %>">
+                            <i class="fas <%= resultStatus.equalsIgnoreCase("Pass")?"fa-check-circle":"fa-times-circle" %>"></i> <%= resultStatus %>
                         </div>
                     </div>
                     <div class="result-item">
@@ -5413,7 +5339,7 @@ function updateProgress() {
                                     percentage = (double)obtainedMarks / totalMarks * 100;
                                 }
                             %>
-                            <span class="percentage-badge" style="color: <%= resultStatus.equalsIgnoreCase("Pass")?"var(--success)":resultStatus.equalsIgnoreCase("Incomplete")?"var(--warning)":"var(--error)" %>;"><%= String.format("%.1f", percentage) %>%</span>
+                            <span class="percentage-badge"><%= String.format("%.1f", percentage) %>%</span>
                         </div>
                     </div>
                 </div>
@@ -5458,9 +5384,106 @@ function updateProgress() {
                 
                 // Also clear any other exam-related data
                 sessionStorage.clear();
-            </script>
-
-        <% } else { 
+            });
+        
+        // Verification JavaScript for name validation and digital signature
+        document.addEventListener('DOMContentLoaded', function() {
+            const nameInput = document.getElementById('nameInput');
+            const digitalSignature = document.getElementById('digitalSignature');
+            
+            if (nameInput) {
+                nameInput.addEventListener('input', function(e) {
+                    const nameInput = e.target.value.trim();
+                    const nameValidation = document.getElementById('nameValidation');
+                    const honorCodeCheckbox = document.getElementById('honorCodeCheckbox');
+                    
+                    if (nameInput.length < 2) {
+                        if (nameValidation) {
+                            nameValidation.style.display = 'block';
+                            nameValidation.style.color = '#ef4444';
+                            nameValidation.innerHTML = '<i class="fas fa-times-circle"></i> Name is too short';
+                        }
+                        if (honorCodeCheckbox) honorCodeCheckbox.disabled = true;
+                        const signatureSection = document.getElementById('signatureSection');
+                        if (signatureSection) signatureSection.style.display = 'none';
+                        return;
+                    }
+                    
+                    // Check if name exists in system (using session user info)
+                    const currentUserName = '<%= session.getAttribute("userName") != null ? session.getAttribute("userName") : "" %>';
+                    const currentUserFullName = '<%= session.getAttribute("userFullName") != null ? session.getAttribute("userFullName") : "" %>';
+                    
+                    if (nameInput.toLowerCase() === currentUserName.toLowerCase() || 
+                        nameInput.toLowerCase() === currentUserFullName.toLowerCase()) {
+                        if (nameValidation) {
+                            nameValidation.style.display = 'block';
+                            nameValidation.style.color = '#22c55e';
+                            nameValidation.innerHTML = '<i class="fas fa-check-circle"></i> Name verified in system';
+                        }
+                        if (honorCodeCheckbox) honorCodeCheckbox.disabled = false;
+                        window.verifiedUserName = nameInput;
+                    } else {
+                        if (nameValidation) {
+                            nameValidation.style.display = 'block';
+                            nameValidation.style.color = '#ef4444';
+                            nameValidation.innerHTML = '<i class="fas fa-times-circle"></i> Name not found in system. Please enter your registered name.';
+                        }
+                        if (honorCodeCheckbox) honorCodeCheckbox.disabled = true;
+                        const signatureSection = document.getElementById('signatureSection');
+                        if (signatureSection) signatureSection.style.display = 'none';
+                    }
+                });
+            }
+            
+            const honorCodeCheckbox = document.getElementById('honorCodeCheckbox');
+            if (honorCodeCheckbox) {
+                honorCodeCheckbox.addEventListener('change', function(e) {
+                    const signatureSection = document.getElementById('signatureSection');
+                    const displayName = document.getElementById('displayName');
+                    
+                    if (e.target.checked && window.verifiedUserName) {
+                        if (signatureSection) {
+                            signatureSection.style.display = 'block';
+                            if (displayName) displayName.textContent = window.verifiedUserName;
+                        }
+                    } else {
+                        if (signatureSection) signatureSection.style.display = 'none';
+                    }
+                });
+            }
+            
+            if (digitalSignature) {
+                digitalSignature.addEventListener('input', function(e) {
+                    const signature = e.target.value.trim();
+                    const signatureValidation = document.getElementById('signatureValidation');
+                    
+                    if (signature.length < 2) {
+                        if (signatureValidation) {
+                            signatureValidation.style.display = 'block';
+                            signatureValidation.style.color = '#ef4444';
+                            signatureValidation.innerHTML = '<i class="fas fa-times-circle"></i> Please enter your full name';
+                        }
+                        return;
+                    }
+                    
+                    if (signature === window.verifiedUserName) {
+                        if (signatureValidation) {
+                            signatureValidation.style.display = 'block';
+                            signatureValidation.style.color = '#22c55e';
+                            signatureValidation.innerHTML = '<i class="fas fa-check-circle"></i> Digital signature confirmed';
+                        }
+                    } else {
+                        if (signatureValidation) {
+                            signatureValidation.style.display = 'block';
+                            signatureValidation.style.color = '#ef4444';
+                            signatureValidation.innerHTML = '<i class="fas fa-times-circle"></i> Names do not match. Please retype your name exactly as shown above.';
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+    <% } else { 
             // SHOW COURSE SELECTION FORM (DEFAULT VIEW)
             // Clear any stale session data
             session.removeAttribute("examStarted");
@@ -5872,11 +5895,8 @@ function updateProgress() {
                     <label for="honorCodeCheckbox" style="font-size: 14px; font-weight: 600; cursor: pointer;">I agree to the Code of Honor and understand the consequences of cheating.</label>
                 </div>
                 <div style="margin-top: 15px;">
-                    <label style="display: block; font-size: 14px; margin-bottom: 5px; color: #64748b;">Type your full name as digital signature [here must be the name of the person logged in]:</label>
-                    <input type="text" id="digitalSignature" 
-                           value="<%= session.getAttribute("fullName") != null ? session.getAttribute("fullName") : "" %>" 
-                           placeholder="Enter your full name" 
-                           style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 4px; background-color: #f8fafc; font-weight: 500; color: #1e293b;">
+                    <label style="display: block; font-size: 14px; margin-bottom: 5px; color: #64748b;">Type your full name as digital signature:</label>
+                    <input type="text" id="digitalSignature" placeholder="Enter your full name" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 4px;">
                 </div>
             </div>
 
@@ -6680,6 +6700,11 @@ function updateProgress() {
     let capturedIdData = null;
     let verificationStream = null;
 
+    // User details from server-side (embedded as JavaScript variables)
+    const userName = '<%= session.getAttribute("uname") != null ? session.getAttribute("uname") : "" %>';
+    const userFullName = '<%= session.getAttribute("userFullName") != null ? session.getAttribute("userFullName") : "" %>';
+
+    // Name verification functionality
     function startIdentityVerification() {
         document.getElementById('identityVerificationModal').style.display = 'flex';
         showVerifyStep(1);
@@ -7703,60 +7728,11 @@ function updateProgress() {
             const form = document.getElementById('myform'); 
             if (form) { 
                 // Add cheating flag 
-                var existingCheat = form.querySelector('input[name="cheating_terminated"]');
-                if (!existingCheat) {
-                    existingCheat = document.createElement('input');
-                    existingCheat.type = 'hidden';
-                    existingCheat.name = 'cheating_terminated';
-                    form.appendChild(existingCheat);
-                }
-                existingCheat.value = 'true';
-
-                // Serialize answers (including drag-drop + rearrange) before forced submit
-                try {
-                    document.querySelectorAll('.answers[data-max-select="2"]').forEach(function(box){
-                        var card = box.closest('.question-card');
-                        if (!card) return;
-                        var qindex = card.getAttribute('data-qindex');
-                        if(qindex) updateHiddenForMulti(qindex);
-                    });
-
-                    const dragDropAnswers = getDragDropAnswers();
-                    Object.keys(dragDropAnswers).forEach(qindex => {
-                        const mappings = dragDropAnswers[qindex];
-                        const formattedMappings = {};
-                        for (let tId in mappings) {
-                            formattedMappings['target_' + tId] = 'item_' + mappings[tId];
-                        }
-                        const ansValue = JSON.stringify(formattedMappings);
-
-                        let hiddenAns = document.querySelector('input[name="ans' + qindex + '"]');
-                        if (!hiddenAns) {
-                            hiddenAns = document.createElement('input');
-                            hiddenAns.type = 'hidden';
-                            hiddenAns.name = 'ans' + qindex;
-                            form.appendChild(hiddenAns);
-                        }
-                        hiddenAns.value = ansValue;
-                    });
-
-                    const rearrangeAnswers = getRearrangeAnswers();
-                    Object.keys(rearrangeAnswers).forEach(qindex => {
-                        const orderedIds = rearrangeAnswers[qindex];
-                        const ansValue = JSON.stringify(orderedIds);
-
-                        let hiddenAns = document.querySelector('input[name="ans' + qindex + '"]');
-                        if (!hiddenAns) {
-                            hiddenAns = document.createElement('input');
-                            hiddenAns.type = 'hidden';
-                            hiddenAns.name = 'ans' + qindex;
-                            form.appendChild(hiddenAns);
-                        }
-                        hiddenAns.value = ansValue;
-                    });
-                } catch (e) {}
-
-                cleanupExam();
+                const input = document.createElement('input'); 
+                input.type = 'hidden'; 
+                input.name = 'cheating_terminated'; 
+                input.value = 'true'; 
+                form.appendChild(input); 
 
                 // Submit shortly to allow the modal to be seen
                 setTimeout(function() {
