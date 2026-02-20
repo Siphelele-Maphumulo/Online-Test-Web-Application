@@ -9,7 +9,7 @@ class ProctoringSystem {
         this.examActive = true;
         this.violations = [];
         this.warningCount = 0;
-        this.MAX_WARNINGS = 3;
+        this.MAX_WARNINGS = 5; // Increased from 3 - more attempts before termination
         this.cameraActive = false;
         this.lastFrameProcessed = Date.now();
         this.frameCheckInterval = null;
@@ -70,15 +70,15 @@ class ProctoringSystem {
         
         // Countdown state - FASTER termination
         this.countdownActive = false;
-        this.countdownValue = 3; // Reduced from 5 seconds
+        this.countdownValue = 5; // Reduced from 5 seconds
         this.GRACE_PERIOD = 500; // 0.5 seconds grace (was 1500)
-        this.COUNTDOWN_DURATION = 3000; // 3 seconds total countdown (was 5000)
+        this.COUNTDOWN_DURATION = 5000; // 3 seconds total countdown (was 5000)
         this.TOTAL_TERMINATION_TIME = this.GRACE_PERIOD + this.COUNTDOWN_DURATION; // 3.5 seconds total
         this.terminationReason = null;
         
         // Camera reconnection attempts
         this.cameraReconnectAttempts = 0;
-        this.MAX_RECONNECT_ATTEMPTS = 2; // Reduced from 3
+        this.MAX_RECONNECT_ATTEMPTS = 5; // Reduced from 3
     }
 
     generateSessionId() {
@@ -214,7 +214,7 @@ class ProctoringSystem {
             </div>
             <div style="display: flex; align-items: center; gap: 15px;">
                 <span style="background: #ef4444; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">
-                    WARNINGS: <span id="proctor-warning-count">0</span>/3
+                    WARNINGS: <span id="proctor-warning-count">0</span>/5
                 </span>
                 <span style="color: #94a3b8;" id="proctor-timestamp">${new Date().toLocaleTimeString()}</span>
             </div>

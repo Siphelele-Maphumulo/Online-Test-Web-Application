@@ -437,18 +437,18 @@
                                         <input class="form-check-input answer-input <%= isMultiTwo?"multi":"single" %>" 
                                             type="<%= isMultiTwo?"checkbox":"radio" %>" 
                                             id="<%= inputId %>" 
-                                            name="<%= isMultiTwo ? ("ans"+i+"_"+oi) : ("ans"+i) %>" 
+                                            name="<%= isMultiTwo ? ("question"+i+"_"+oi) : ("question"+i) %>" 
                                             value="<%= optVal %>" 
                                             data-qindex="<%= i %>">
                                         <label class="form-check-label" for="<%= inputId %>"><%= optVal %></label>
                                     </div>
                                 <% } %>
                                 <% if(isMultiTwo){ %>
-                                    <input type="hidden" id="ans<%= i %>-hidden" name="ans<%= i %>" value="">
+                                    <input type="hidden" id="question<%= i %>-hidden" name="question<%= i %>" value="">
                                 <% } %>
                             <% } %>
                         </div>
-                        <input type="hidden" name="question<%= i %>" value="<%= q.getQuestion() %>">
+                        <input type="hidden" name="qtext<%= i %>" value="<%= q.getQuestion() %>">
                         <input type="hidden" name="qid<%= i %>" value="<%= q.getQuestionId() %>">
                         <input type="hidden" name="qtype<%= i %>" value="<%= isDragDrop?"dragdrop":(isRearrange?"rearrange":(isMultiTwo?"multi2":"single")) %>">
                     </div>
@@ -742,7 +742,7 @@ var globalVideoStream = null;
             try {
                 const proctorAutoStart = sessionStorage.getItem('proctorAutoStart');
                 if (proctorAutoStart === '1' && typeof ProctoringSystem === 'function') {
-                    console.log('🔒 Auto-starting proctoring system...');
+                    console.log('? Auto-starting proctoring system...');
                     
                     // Clear the flag immediately
                     sessionStorage.removeItem('proctorAutoStart');
@@ -769,14 +769,14 @@ var globalVideoStream = null;
                             window.proctor = proctor;
                             await proctor.initialize(stream);
                             
-                            console.log('✅ Proctoring auto-started successfully');
+                            console.log('? Proctoring auto-started successfully');
                             
                         } catch (err) {
-                            console.error('❌ Proctoring auto-start failed:', err);
+                            console.error('? Proctoring auto-start failed:', err);
                             
                             // Show manual start option
                             const startBtn = document.createElement('button');
-                            startBtn.innerHTML = '🔒 Start Proctoring';
+                            startBtn.innerHTML = '? Start Proctoring';
                             startBtn.style.cssText = 
                                 'position: fixed; top: 20px; right: 20px; background: #ef4444; color: white; ' +
                                 'padding: 15px 25px; border: none; border-radius: 8px; cursor: pointer; ' +
@@ -797,11 +797,11 @@ var globalVideoStream = null;
                                     await proctor.initialize(stream);
                                     
                                     startBtn.remove();
-                                    console.log('✅ Manual proctoring started successfully');
+                                    console.log('? Manual proctoring started successfully');
                                     
                                 } catch (manualErr) {
                                     console.error('Manual proctoring start failed:', manualErr);
-                                    startBtn.innerHTML = '❌ Failed - Retry';
+                                    startBtn.innerHTML = '? Failed - Retry';
                                     startBtn.disabled = false;
                                     startBtn.style.background = '#dc2626';
                                 }
@@ -817,9 +817,9 @@ var globalVideoStream = null;
                     // Add proctoring status indicator
                     setInterval(() => {
                         if (window.proctor && window.proctor.examActive) {
-                            console.log('✅ Proctoring is active and monitoring');
+                            console.log('? Proctoring is active and monitoring');
                         } else {
-                            console.warn('⚠️ Proctoring is not active');
+                            console.warn('?? Proctoring is not active');
                         }
                     }, 10000); // Check every 10 seconds
                 }
@@ -2110,7 +2110,10 @@ var globalVideoStream = null;
         // For drag and drop questions
         const droppedItems = answersContainer.querySelectorAll('.dropped-item').length > 0;
         
-        return singleSelect || multiSelect || hasText || droppedItems;
+        // For rearrange questions
+        const rearrangeItems = answersContainer.querySelectorAll('.rearrange-item').length > 0;
+        
+        return singleSelect || multiSelect || hasText || droppedItems || rearrangeItems;
     }
     
     // Test function to verify horizontal orientation layout
@@ -3447,8 +3450,8 @@ class DragDropManager {
         }
         
         input.value = JSON.stringify(matches);
-        console.log('🔍 Drag drop JSON for question', questionIndex, ':', input.value);
-        console.log('🔍 Expected format: {"target_X":"item_Y"}');
+        console.log('? Drag drop JSON for question', questionIndex, ':', input.value);
+        console.log('? Expected format: {"target_X":"item_Y"}');
         
         // Debug: Show what correct mappings should be
         const correctMappings = {};
@@ -3459,7 +3462,7 @@ class DragDropManager {
                 correctMappings[`target_${targetId}`] = `item_${correctItemId}`;
             }
         });
-        console.log('🔍 Correct mappings should be:', correctMappings);
+        console.log('? Correct mappings should be:', correctMappings);
     }
 
     initializeRearrange() {
@@ -3570,13 +3573,13 @@ class DragDropManager {
         
         // Use JSON array format as expected by backend
         input.value = JSON.stringify(itemIds);
-        console.log('🔍 Rearrange JSON for question', questionIndex, ':', input.value);
-        console.log('🔍 Expected format: [1,3,2,4]');
+        console.log('? Rearrange JSON for question', questionIndex, ':', input.value);
+        console.log('? Expected format: [1,3,2,4]');
         
         // Debug: Show what correct order should be
         const correctOrder = items.map(item => parseInt(item.dataset.originalIndex) + 1);
-        console.log('🔍 Original order should be:', correctOrder);
-        console.log('🔍 Current item order:', items.map((item, idx) => `pos${idx}: item${item.dataset.itemId}`));
+        console.log('? Original order should be:', correctOrder);
+        console.log('? Current item order:', items.map((item, idx) => `pos${idx}: item${item.dataset.itemId}`));
     }
 }
 

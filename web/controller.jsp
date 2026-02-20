@@ -2065,13 +2065,13 @@ try {
                 }
 
                 for (int i=0;i<size;i++){
-                    String question = nz(request.getParameter("question"+i), "");
-                    String ans      = nz(request.getParameter("ans"+i), "");
+                    String question = nz(request.getParameter("qtext"+i), "");
+                    String ans      = nz(request.getParameter("question"+i), "");
                     String qtype     = nz(request.getParameter("qtype"+i), "");
                     int qid         = Integer.parseInt(nz(request.getParameter("qid"+i), "0"));
                     
                     // Check if this is a multiple select question and get the hidden field value
-                    String multiSelectAns = nz(request.getParameter("ans"+i+"-hidden"), "");
+                    String multiSelectAns = nz(request.getParameter("question"+i+"-hidden"), "");
                     if (!multiSelectAns.isEmpty()) {
                         ans = multiSelectAns; // Use the multi-select answer instead
                     }
@@ -2154,7 +2154,7 @@ try {
                 }
 
                 boolean cheatingTerminated = "true".equalsIgnoreCase(request.getParameter("cheating_terminated"));
-                String resultStatus = cheatingTerminated ? "Cheating" : null;
+                String resultStatus = cheatingTerminated ? "Cheat" : null;
                 pDAO.calculateResult(eId, tMarks, endTime, size, resultStatus);
                 
                 // REGISTER EXAM COMPLETION

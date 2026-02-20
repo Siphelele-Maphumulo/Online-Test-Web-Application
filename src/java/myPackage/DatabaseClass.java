@@ -7849,12 +7849,16 @@ public void calculateResult(int eid, int tMarks, String endTime, int size, Strin
         
 
         // Determine result status based on percentage (45% passing threshold)
-
         String resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
         
         if (forcedStatus != null && !forcedStatus.isEmpty()) {
             resultStatus = forcedStatus;
         }
+
+        // Truncate result_status to fit database column (max 5 characters)
+        String truncatedStatus = resultStatus != null && resultStatus.length() > 5 
+            ? resultStatus.substring(0, 5) 
+            : resultStatus;
 
         
 
@@ -7870,19 +7874,19 @@ public void calculateResult(int eid, int tMarks, String endTime, int size, Strin
 
         LOGGER.info("=== SAVING EXAM RESULTS (UNSCALED) ===");
 
-        LOGGER.info("Exam ID: " + eid);
+        LOGGER.log(Level.INFO, "Exam ID: {0}", eid);
 
-        LOGGER.info("Raw Obtained: " + obtRaw);
+        LOGGER.log(Level.INFO, "Raw Obtained: {0}", obtRaw);
 
-        LOGGER.info("Raw Total: " + totalRaw);
+        LOGGER.log(Level.INFO, "Raw Total: {0}", totalRaw);
 
-        LOGGER.info("Saved Obtained: " + obtRounded);
+        LOGGER.log(Level.INFO, "Saved Obtained: {0}", obtRounded);
 
-        LOGGER.info("Saved Total: " + totalRounded);
+        LOGGER.log(Level.INFO, "Saved Total: {0}", totalRounded);
 
-        LOGGER.info("Percentage: " + String.format("%.1f", percentage) + "%");
+        LOGGER.log(Level.INFO, "Percentage: {0}%", String.format("%.1f", percentage));
 
-        LOGGER.info("Result Status: " + resultStatus);
+        LOGGER.log(Level.INFO, "Result Status: {0} (truncated to: ''{1}'')", new Object[]{resultStatus, truncatedStatus});
 
         LOGGER.info("===========================");
 
@@ -7892,27 +7896,24 @@ public void calculateResult(int eid, int tMarks, String endTime, int size, Strin
 
         String sql = "UPDATE exams SET obt_marks=?, total_marks=?, end_time=?, status='completed', result_status=? WHERE exam_id=?";
 
-        PreparedStatement pstm = conn.prepareStatement(sql);
-
-        pstm.setInt(1, obtRounded);
-
-        pstm.setInt(2, totalRounded);
-
-        pstm.setString(3, endTime);
-
-        pstm.setString(4, resultStatus);
-
-        pstm.setInt(5, eid);
-
-        
-
-        int rowsUpdated = pstm.executeUpdate();
-
-        LOGGER.info("Rows updated: " + rowsUpdated);
-
-        
-
-        pstm.close();
+        try (PreparedStatement pstm = conn.prepareStatement(sql)) {
+            pstm.setInt(1, obtRounded);
+            
+            pstm.setInt(2, totalRounded);
+            
+            pstm.setString(3, endTime);
+            
+            LOGGER.log(Level.INFO, "Truncated result_status: ''{0}'' (original: ''{1}'')", new Object[]{truncatedStatus, resultStatus});
+            pstm.setString(4, truncatedStatus);
+            
+            pstm.setInt(5, eid);
+            
+            
+            
+            int rowsUpdated = pstm.executeUpdate();
+            
+            LOGGER.log(Level.INFO, "Rows updated: {0}", rowsUpdated);
+        }
 
         
 
@@ -7920,23 +7921,17 @@ public void calculateResult(int eid, int tMarks, String endTime, int size, Strin
 
         String verifySql = "SELECT obt_marks, result_status FROM exams WHERE exam_id = ?";
 
-        PreparedStatement verifyStmt = conn.prepareStatement(verifySql);
-
-        verifyStmt.setInt(1, eid);
-
-        ResultSet verifyRs = verifyStmt.executeQuery();
-
-        if (verifyRs.next()) {
-
-            LOGGER.info("VERIFIED - Exam " + eid + ": obt_marks=" + verifyRs.getInt("obt_marks") + 
-
-                       ", result_status=" + verifyRs.getString("result_status"));
-
+        try (PreparedStatement verifyStmt = conn.prepareStatement(verifySql)) {
+            verifyStmt.setInt(1, eid);
+            
+            try (ResultSet verifyRs = verifyStmt.executeQuery()) {
+                if (verifyRs.next()) {
+                    
+                    LOGGER.log(Level.INFO, "VERIFIED - Exam {0}: obt_marks={1}, result_status={2}", new Object[]{eid, verifyRs.getInt("obt_marks"), verifyRs.getString("result_status")});
+                    
+                }
+            }
         }
-
-        verifyRs.close();
-
-        verifyStmt.close();
 
 
 
@@ -7974,15 +7969,13 @@ public void logExamCompletion(int examId) {
 
         String sql = "UPDATE exam_register SET end_time = ? WHERE exam_id = ?";
 
-        PreparedStatement pstm = conn.prepareStatement(sql);
-
-        pstm.setTime(1, java.sql.Time.valueOf(LocalTime.now()));
-
-        pstm.setInt(2, examId);
-
-        pstm.executeUpdate();
-
-        pstm.close();
+        try (PreparedStatement pstm = conn.prepareStatement(sql)) {
+            pstm.setTime(1, java.sql.Time.valueOf(LocalTime.now()));
+            
+            pstm.setInt(2, examId);
+            
+            pstm.executeUpdate();
+        }
 
     } catch (SQLException ex) {
 

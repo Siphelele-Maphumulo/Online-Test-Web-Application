@@ -162,7 +162,7 @@ function updateHiddenForMulti(qindex) {
     for (var i = 0; i < checkboxes.length; i++) {
         selectedValues.push(checkboxes[i].value);
     }
-    var hidden = document.getElementById('ans' + qindex + '-hidden');
+    var hidden = document.getElementById('question' + qindex + '-hidden');
     if (hidden) {
         hidden.value = selectedValues.join('|');
     }
@@ -276,7 +276,7 @@ function saveAnswer(qindex, answer) {
     if (!questionCard) return;
 
     var qidInput = questionCard.querySelector('input[name="qid' + qindex + '"]');
-    var questionInput = questionCard.querySelector('input[name="question' + qindex + '"]');
+    var questionInput = questionCard.querySelector('input[name="qtext' + qindex + '"]');
     if (!qidInput || !questionInput) return;
 
     var params = new URLSearchParams();
@@ -407,11 +407,11 @@ document.addEventListener('change', function(e) {
                         }
                         const ansValue = JSON.stringify(formattedMappings);
                         
-                        let hiddenAns = document.querySelector('input[name="ans' + qindex + '"]');
+                        let hiddenAns = document.querySelector('input[name="question' + qindex + '"]');
                         if (!hiddenAns) {
                             hiddenAns = document.createElement('input');
                             hiddenAns.type = 'hidden';
-                            hiddenAns.name = 'ans' + qindex;
+                            hiddenAns.name = 'question' + qindex;
                             document.getElementById('myform').appendChild(hiddenAns);
                         }
                         hiddenAns.value = ansValue;
@@ -425,72 +425,6 @@ document.addEventListener('change', function(e) {
                     setTimeout(function() {
                         document.getElementById('myform').submit();
                     }, 3000);
-                }
-
-                /* --- EXAM SUBMISSION --- */
-                function submitExam() {
-                    // Save all multi-select answers
-                    document.querySelectorAll('.answers[data-max-select="2"]').forEach(function(box){
-                        var card = box.closest('.question-card');
-                        if (!card) return;
-                        var qindex = card.getAttribute('data-qindex');
-                        if (qindex) updateHiddenForMulti(qindex);
-                    });
-                    
-                    // Handle Drag and Drop answers - PHASE 5 Integration
-                    const dragDropAnswers = getDragDropAnswers();
-                    Object.keys(dragDropAnswers).forEach(qindex => {
-                        const mappings = dragDropAnswers[qindex];
-                        const formattedMappings = {};
-                        for (let tId in mappings) {
-                            formattedMappings['target_' + tId] = 'item_' + mappings[tId];
-                        }
-                        const ansValue = JSON.stringify(formattedMappings);
-                        
-                        let hiddenAns = document.querySelector('input[name="ans' + qindex + '"]');
-                        if (!hiddenAns) {
-                            hiddenAns = document.createElement('input');
-                            hiddenAns.type = 'hidden';
-                            hiddenAns.name = 'ans' + qindex;
-                            document.getElementById('myform').appendChild(hiddenAns);
-                        }
-                        hiddenAns.value = ansValue;
-                    });
-                    
-                    var answeredQuestions = 0;
-                    document.querySelectorAll('.question-card').forEach(function(card){
-                        const isDragDrop = card.querySelector('.drag-drop-question') !== null;
-                        if (isDragDrop) {
-                            if (card.querySelectorAll('.dropped-item').length > 0) {
-                                answeredQuestions++;
-                            }
-                        } else {
-                            var box = card.querySelector('.answers');
-                            if(!box) return;
-                            var maxSel = parseInt(box.getAttribute('data-max-select') || '1', 10);
-                            if(maxSel === 1) {
-                                if(box.querySelector('input.single:checked')) answeredQuestions++;
-                            } else {
-                                if(box.querySelectorAll('input.multi:checked').length >= 1) answeredQuestions++;
-                            }
-                        }
-                    });
-                    
-                    // Check for unanswered questions
-                    if(answeredQuestions < totalQuestions) {
-                        var unanswered = totalQuestions - answeredQuestions;
-                        showSystemConfirmModal(
-                            "You have " + unanswered + " unanswered question" + (unanswered > 1 ? "s" : "") + ". Submit anyway?",
-                            function(proceed) {
-                                if (!proceed) return;
-                                showConfirmSubmitModal();
-                            }
-                        );
-                        return;
-                    }
-                    
-                    // Final confirmation - show modal
-                    showConfirmSubmitModal();
                 }
 
                 /* --- CLEANUP FUNCTION --- */
@@ -1547,6 +1481,7 @@ function saveRearrangeAnswer(qIdx) {
     const orderedIds = orderedItemIds.map(id => parseInt(id));
     
     const answer = JSON.stringify(orderedIds);
+    console.log('🔍 Rearrange Order (Q' + qIdx + '):', answer);
     
     // Save using existing saveAnswer function
     if (typeof saveAnswer === 'function') {
@@ -1604,14 +1539,15 @@ function submitExam() {
         }
         const ansValue = JSON.stringify(formattedMappings);
         
-        let hiddenAns = document.querySelector('input[name="ans' + qindex + '"]');
+        let hiddenAns = document.querySelector('input[name="question' + qindex + '"]');
         if (!hiddenAns) {
             hiddenAns = document.createElement('input');
             hiddenAns.type = 'hidden';
-            hiddenAns.name = 'ans' + qindex;
+            hiddenAns.name = 'question' + qindex;
             document.getElementById('myform').appendChild(hiddenAns);
         }
         hiddenAns.value = ansValue;
+        console.log('🔍 Drag & Drop Submit (Q' + qindex + '):', ansValue);
     });
     
     // Handle Rearrange answers
@@ -1620,14 +1556,15 @@ function submitExam() {
         const orderedIds = rearrangeAnswers[qindex];
         const ansValue = JSON.stringify(orderedIds);
         
-        let hiddenAns = document.querySelector('input[name="ans' + qindex + '"]');
+        let hiddenAns = document.querySelector('input[name="question' + qindex + '"]');
         if (!hiddenAns) {
             hiddenAns = document.createElement('input');
             hiddenAns.type = 'hidden';
-            hiddenAns.name = 'ans' + qindex;
+            hiddenAns.name = 'question' + qindex;
             document.getElementById('myform').appendChild(hiddenAns);
         }
         hiddenAns.value = ansValue;
+        console.log('🔍 Rearrange Submit (Q' + qindex + '):', ansValue);
     });
     
     var answeredQuestions = 0;
