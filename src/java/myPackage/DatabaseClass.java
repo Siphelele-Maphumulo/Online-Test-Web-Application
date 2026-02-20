@@ -7855,9 +7855,9 @@ public void calculateResult(int eid, int tMarks, String endTime, int size, Strin
             resultStatus = forcedStatus;
         }
 
-        // Truncate result_status to fit database column (max 5 characters)
-        String truncatedStatus = resultStatus != null && resultStatus.length() > 5 
-            ? resultStatus.substring(0, 5) 
+        // Truncate result_status to fit database column (Increased from 5 to 15 to allow 'Terminated')
+        String truncatedStatus = resultStatus != null && resultStatus.length() > 15 
+            ? resultStatus.substring(0, 15) 
             : resultStatus;
 
         
@@ -7893,8 +7893,10 @@ public void calculateResult(int eid, int tMarks, String endTime, int size, Strin
         
 
         // Update exams table with unscaled obt_marks, total_marks, end_time, and status
+        // If resultStatus is 'Terminated', we also set status to 'terminated'
+        String examStatus = "Terminated".equalsIgnoreCase(resultStatus) ? "terminated" : "completed";
 
-        String sql = "UPDATE exams SET obt_marks=?, total_marks=?, end_time=?, status='completed', result_status=? WHERE exam_id=?";
+        String sql = "UPDATE exams SET obt_marks=?, total_marks=?, end_time=?, status=?, result_status=? WHERE exam_id=?";
 
         try (PreparedStatement pstm = conn.prepareStatement(sql)) {
             pstm.setInt(1, obtRounded);
@@ -7902,11 +7904,13 @@ public void calculateResult(int eid, int tMarks, String endTime, int size, Strin
             pstm.setInt(2, totalRounded);
             
             pstm.setString(3, endTime);
+
+            pstm.setString(4, examStatus);
             
-            LOGGER.log(Level.INFO, "Truncated result_status: ''{0}'' (original: ''{1}'')", new Object[]{truncatedStatus, resultStatus});
-            pstm.setString(4, truncatedStatus);
+            LOGGER.log(Level.INFO, "Final result_status: ''{0}'' (original: ''{1}'')", new Object[]{truncatedStatus, resultStatus});
+            pstm.setString(5, truncatedStatus);
             
-            pstm.setInt(5, eid);
+            pstm.setInt(6, eid);
             
             
             
