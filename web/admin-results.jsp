@@ -1063,7 +1063,11 @@ public String escapeHtml(String input) {
                                 <td><%= e.getStartTime() %> - <%= e.getEndTime() %></td>
                                 <td>
                                     <span class="marks-display">
-                                        <%= e.getObtMarks() %> / <%= e.gettMarks() %>
+                                        <% if (status.toLowerCase().contains("cheating") || status.toLowerCase().contains("copying") || status.equalsIgnoreCase("Terminated")) { %>
+                                            Terminated
+                                        <% } else { %>
+                                            <%= e.getObtMarks() %> / <%= e.gettMarks() %>
+                                        <% } %>
                                     </span>
                                     <div class="marks-edit" style="display: none;">
                                         <input type="number" class="form-control" 

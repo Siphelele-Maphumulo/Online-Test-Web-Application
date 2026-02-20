@@ -738,6 +738,95 @@ var globalVideoStream = null;
         
         // Verification JavaScript for name validation and digital signature
         document.addEventListener('DOMContentLoaded', function() {
+            // Auto-start proctoring if flag is set (from exam start page)
+            try {
+                const proctorAutoStart = sessionStorage.getItem('proctorAutoStart');
+                if (proctorAutoStart === '1' && typeof ProctoringSystem === 'function') {
+                    console.log('🔒 Auto-starting proctoring system...');
+                    
+                    // Clear the flag immediately
+                    sessionStorage.removeItem('proctorAutoStart');
+                    
+                    // Initialize proctoring
+                    async function startProctoring() {
+                        try {
+                            // Request camera and microphone
+                            const stream = await navigator.mediaDevices.getUserMedia({ 
+                                video: {
+                                    width: { ideal: 1280 },
+                                    height: { ideal: 720 },
+                                    frameRate: { ideal: 30 }
+                                }, 
+                                audio: true 
+                            });
+                            
+                            // Create proctor instance
+                            const proctor = new ProctoringSystem(
+                                '<%= request.getParameter("eid") != null ? request.getParameter("eid") : "0" %>',
+                                '<%= session.getAttribute("userId") != null ? session.getAttribute("userId") : "0" %>'
+                            );
+                            
+                            window.proctor = proctor;
+                            await proctor.initialize(stream);
+                            
+                            console.log('✅ Proctoring auto-started successfully');
+                            
+                        } catch (err) {
+                            console.error('❌ Proctoring auto-start failed:', err);
+                            
+                            // Show manual start option
+                            const startBtn = document.createElement('button');
+                            startBtn.innerHTML = '🔒 Start Proctoring';
+                            startBtn.style.cssText = 
+                                'position: fixed; top: 20px; right: 20px; background: #ef4444; color: white; ' +
+                                'padding: 15px 25px; border: none; border-radius: 8px; cursor: pointer; ' +
+                                'font-size: 16px; font-weight: 600; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.3);';
+                            
+                            startBtn.onclick = async () => {
+                                try {
+                                    startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+                                    startBtn.disabled = true;
+                                    
+                                    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                                    const proctor = new ProctoringSystem(
+                                        '<%= request.getParameter("eid") != null ? request.getParameter("eid") : "0" %>',
+                                        '<%= session.getAttribute("userId") != null ? session.getAttribute("userId") : "0" %>'
+                                    );
+                                    
+                                    window.proctor = proctor;
+                                    await proctor.initialize(stream);
+                                    
+                                    startBtn.remove();
+                                    console.log('✅ Manual proctoring started successfully');
+                                    
+                                } catch (manualErr) {
+                                    console.error('Manual proctoring start failed:', manualErr);
+                                    startBtn.innerHTML = '❌ Failed - Retry';
+                                    startBtn.disabled = false;
+                                    startBtn.style.background = '#dc2626';
+                                }
+                            };
+                            
+                            document.body.appendChild(startBtn);
+                        }
+                    }
+                    
+                    // Start proctoring
+                    startProctoring();
+                    
+                    // Add proctoring status indicator
+                    setInterval(() => {
+                        if (window.proctor && window.proctor.examActive) {
+                            console.log('✅ Proctoring is active and monitoring');
+                        } else {
+                            console.warn('⚠️ Proctoring is not active');
+                        }
+                    }, 10000); // Check every 10 seconds
+                }
+            } catch (err) {
+                console.warn('Could not check proctor auto-start flag:', err);
+            }
+            
             const nameInput = document.getElementById('nameInput');
             const digitalSignature = document.getElementById('digitalSignature');
             
@@ -3174,3 +3263,335 @@ function showSimpleIdError(message) {
     }
     </style>
 <script src="proctoring_v2.js"></script>
+<script>
+// ==================== DRAG AND DROP FUNCTIONALITY ====================
+
+class DragDropManager {
+    constructor() {
+        this.draggedElement = null;
+        this.draggedData = null;
+        this.originalParent = null;
+        this.init();
+    }
+
+    init() {
+        document.addEventListener('DOMContentLoaded', () => {
+            this.initializeDragDrop();
+            this.initializeRearrange();
+        });
+    }
+
+    initializeDragDrop() {
+        const dragContainers = document.querySelectorAll('.drag-drop-container');
+        
+        dragContainers.forEach((container, questionIndex) => {
+            const itemsJson = container.dataset.itemsJson;
+            const targetsJson = container.dataset.targetsJson;
+            
+            if (itemsJson && targetsJson) {
+                try {
+                    const items = JSON.parse(itemsJson);
+                    const targets = JSON.parse(targetsJson);
+                    
+                    this.populateDragItems(questionIndex, items);
+                    this.populateDropTargets(questionIndex, targets);
+                    this.setupDragEvents(questionIndex);
+                } catch (e) {
+                    console.error('Error parsing drag/drop data:', e);
+                }
+            }
+        });
+    }
+
+    populateDragItems(questionIndex, items) {
+        const itemsContainer = document.getElementById(`dragItems_${questionIndex}`);
+        if (!itemsContainer || !items) return;
+
+        itemsContainer.innerHTML = '';
+        
+        items.forEach((item, index) => {
+            const dragElement = document.createElement('div');
+            dragElement.className = 'drag-item';
+            dragElement.draggable = true;
+            dragElement.dataset.itemId = item.id;
+            dragElement.dataset.itemText = item.text;
+            dragElement.innerHTML = `
+                <i class="fas fa-grip-vertical"></i>
+                <span>${item.text}</span>
+            `;
+            itemsContainer.appendChild(dragElement);
+        });
+    }
+
+    populateDropTargets(questionIndex, targets) {
+        const targetsContainer = document.getElementById(`dropTargets_${questionIndex}`);
+        if (!targetsContainer || !targets) return;
+
+        targetsContainer.innerHTML = '';
+        
+        targets.forEach((target, index) => {
+            const targetElement = document.createElement('div');
+            targetElement.className = 'drop-target';
+            targetElement.dataset.targetId = target.id;
+            targetElement.dataset.correctItem = target.correctItemId;
+            targetElement.innerHTML = `
+                <div class="target-label">${target.text}</div>
+                <div class="drop-zone"></div>
+            `;
+            targetsContainer.appendChild(targetElement);
+        });
+    }
+
+    setupDragEvents(questionIndex) {
+        const container = document.querySelector(`#dragDrop_${questionIndex} .drag-drop-container`);
+        if (!container) return;
+
+        // Drag events
+        container.addEventListener('dragstart', (e) => {
+            if (e.target.classList.contains('drag-item')) {
+                this.draggedElement = e.target;
+                this.draggedData = {
+                    itemId: e.target.dataset.itemId,
+                    itemText: e.target.dataset.itemText
+                };
+                this.originalParent = e.target.parentElement;
+                e.target.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            }
+        });
+
+        container.addEventListener('dragend', (e) => {
+            if (e.target.classList.contains('drag-item')) {
+                e.target.classList.remove('dragging');
+                this.draggedElement = null;
+                this.draggedData = null;
+                this.originalParent = null;
+            }
+        });
+
+        // Drop events
+        container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            
+            const dropZone = e.target.closest('.drop-zone');
+            if (dropZone) {
+                dropZone.classList.add('drag-over');
+            }
+        });
+
+        container.addEventListener('dragleave', (e) => {
+            const dropZone = e.target.closest('.drop-zone');
+            if (dropZone) {
+                dropZone.classList.remove('drag-over');
+            }
+        });
+
+        container.addEventListener('drop', (e) => {
+            e.preventDefault();
+            
+            const dropZone = e.target.closest('.drop-zone');
+            if (dropZone && this.draggedElement) {
+                dropZone.classList.remove('drag-over');
+                
+                // Remove any existing item in this drop zone
+                const existingItem = dropZone.querySelector('.dropped-item');
+                if (existingItem) {
+                    existingItem.remove();
+                }
+                
+                // Clone and place the dragged item
+                const droppedItem = this.draggedElement.cloneNode(true);
+                droppedItem.classList.remove('dragging');
+                droppedItem.classList.add('dropped-item');
+                droppedItem.draggable = false;
+                dropZone.appendChild(droppedItem);
+                
+                // Update JSON input for form submission
+                this.updateDragDropJson(questionIndex);
+            }
+        });
+    }
+
+    updateDropInput(questionIndex, dropZone) {
+        // Instead of creating individual inputs, we'll collect all drop data
+        // and create a single JSON input when the form is submitted
+        this.updateDragDropJson(questionIndex);
+    }
+
+    updateDragDropJson(questionIndex) {
+        const container = document.querySelector(`#dragDrop_${questionIndex} .drag-drop-container`);
+        if (!container) return;
+
+        const dropTargets = container.querySelectorAll('.drop-target');
+        const matches = {};
+
+        dropTargets.forEach(target => {
+            const targetId = target.dataset.targetId;
+            const droppedItem = target.querySelector('.dropped-item');
+            const itemId = droppedItem ? droppedItem.dataset.itemId : '';
+            
+            if (itemId) {
+                matches[`target_${targetId}`] = `item_${itemId}`;
+            }
+        });
+
+        // Find or create the JSON input
+        let input = document.getElementById(`dragDropJson_${questionIndex}`);
+        if (!input) {
+            input = document.createElement('input');
+            input.type = 'hidden';
+            input.id = `dragDropJson_${questionIndex}`;
+            input.name = `question${questionIndex}`; // This will be picked up as the answer
+            container.appendChild(input);
+        }
+        
+        input.value = JSON.stringify(matches);
+        console.log('🔍 Drag drop JSON for question', questionIndex, ':', input.value);
+        console.log('🔍 Expected format: {"target_X":"item_Y"}');
+        
+        // Debug: Show what correct mappings should be
+        const correctMappings = {};
+        dropTargets.forEach(target => {
+            const targetId = target.dataset.targetId;
+            const correctItemId = target.dataset.correctItem;
+            if (correctItemId) {
+                correctMappings[`target_${targetId}`] = `item_${correctItemId}`;
+            }
+        });
+        console.log('🔍 Correct mappings should be:', correctMappings);
+    }
+
+    initializeRearrange() {
+        const rearrangeContainers = document.querySelectorAll('.rearrange-interface');
+        
+        rearrangeContainers.forEach((container, questionIndex) => {
+            const itemsJson = container.dataset.itemsJson;
+            
+            if (itemsJson) {
+                try {
+                    const items = JSON.parse(itemsJson);
+                    this.populateRearrangeItems(questionIndex, items);
+                    this.setupRearrangeEvents(questionIndex);
+                } catch (e) {
+                    console.error('Error parsing rearrange data:', e);
+                }
+            }
+        });
+    }
+
+    populateRearrangeItems(questionIndex, items) {
+        const container = document.getElementById(`rearrange_${questionIndex}`);
+        if (!container || !items) return;
+
+        container.innerHTML = '';
+        
+        items.forEach((item, index) => {
+            const itemElement = document.createElement('div');
+            itemElement.className = 'rearrange-item';
+            itemElement.draggable = true;
+            itemElement.dataset.itemId = item.id;
+            itemElement.dataset.originalIndex = index;
+            itemElement.innerHTML = `
+                <i class="fas fa-grip-vertical"></i>
+                <span>${item.text}</span>
+            `;
+            container.appendChild(itemElement);
+        });
+    }
+
+    setupRearrangeEvents(questionIndex) {
+        const container = document.getElementById(`rearrange_${questionIndex}`);
+        if (!container) return;
+
+        let draggedItem = null;
+
+        container.addEventListener('dragstart', (e) => {
+            if (e.target.classList.contains('rearrange-item')) {
+                draggedItem = e.target;
+                e.target.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            }
+        });
+
+        container.addEventListener('dragend', (e) => {
+            if (e.target.classList.contains('rearrange-item')) {
+                e.target.classList.remove('dragging');
+            }
+        });
+
+        container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            
+            const afterElement = this.getDragAfterElement(container, e.clientY);
+            if (afterElement == null) {
+                container.appendChild(draggedItem);
+            } else {
+                container.insertBefore(draggedItem, afterElement);
+            }
+        });
+
+        container.addEventListener('drop', (e) => {
+            e.preventDefault();
+            this.updateRearrangeInput(questionIndex);
+        });
+    }
+
+    getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.rearrange-item:not(.dragging)')];
+        
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    updateRearrangeInput(questionIndex) {
+        const container = document.getElementById(`rearrange_${questionIndex}`);
+        const items = [...container.querySelectorAll('.rearrange-item')];
+        const itemIds = items.map(item => parseInt(item.dataset.itemId));
+        
+        // Find or create hidden input
+        let input = document.getElementById(`rearrange_${questionIndex}`);
+        if (!input) {
+            input = document.createElement('input');
+            input.type = 'hidden';
+            input.id = `rearrange_${questionIndex}`;
+            input.name = `question${questionIndex}`; // This will be picked up as the answer
+            container.appendChild(input);
+        }
+        
+        // Use JSON array format as expected by backend
+        input.value = JSON.stringify(itemIds);
+        console.log('🔍 Rearrange JSON for question', questionIndex, ':', input.value);
+        console.log('🔍 Expected format: [1,3,2,4]');
+        
+        // Debug: Show what correct order should be
+        const correctOrder = items.map(item => parseInt(item.dataset.originalIndex) + 1);
+        console.log('🔍 Original order should be:', correctOrder);
+        console.log('🔍 Current item order:', items.map((item, idx) => `pos${idx}: item${item.dataset.itemId}`));
+    }
+}
+
+// Shuffle function for drag items
+function shuffleDraggableItems(questionIndex) {
+    const container = document.getElementById(`dragItems_${questionIndex}`);
+    if (!container) return;
+    
+    const items = [...container.children];
+    for (let i = items.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        container.appendChild(items[j]);
+    }
+}
+
+// Initialize the drag drop manager
+const dragDropManager = new DragDropManager();
+</script>
