@@ -7911,22 +7911,15 @@ public void calculateResult(int eid, int tMarks, String endTime, int size, Strin
         
         // Check if exam was terminated due to cheating
         if (forcedStatus != null && !forcedStatus.isEmpty()) {
-            if (forcedStatus.equalsIgnoreCase("Terminated") || 
-                forcedStatus.toLowerCase().contains("cheat") || 
-                forcedStatus.toLowerCase().contains("copy")) {
-                // For terminated exams, store 'Terminated' in result_status
-                resultStatusForDb = "Terminated";
-            } else if (forcedStatus.equalsIgnoreCase("Pass") || forcedStatus.equalsIgnoreCase("Fail")) {
-                // If forced status is explicitly Pass or Fail
-                resultStatusForDb = forcedStatus;
-            } else {
-                // For any other forced status, calculate based on percentage
-                resultStatusForDb = (percentage >= 45.0) ? "Pass" : "Fail";
-            }
-        } else {
-            // Normal case: determine Pass/Fail based on percentage
-            resultStatusForDb = (percentage >= 45.0) ? "Pass" : "Fail";
+            resultStatus = forcedStatus;
         }
+
+        // Truncate result_status to fit database column (max 5 characters)
+        String truncatedStatus = resultStatus != null && resultStatus.length() > 5 
+            ? resultStatus.substring(0, 5) 
+            : resultStatus;
+
+        
 
         // Round for DB storage (since schema is INT)
         int obtRounded = Math.round(obtRaw);
@@ -7944,36 +7937,21 @@ public void calculateResult(int eid, int tMarks, String endTime, int size, Strin
         LOGGER.log(Level.INFO, "Result Status (DB): {0}", resultStatusForDb);
         LOGGER.info("===========================");
 
-        // Determine exam status - MUST match ENUM values: 'incomplete', 'completed', 'cancelled'
-        String examStatus;
         
-        // Check if the exam was terminated due to cheating
-        if ("Terminated".equals(resultStatusForDb)) {
-            // Use 'cancelled' for terminated/cheating exams
-            examStatus = "cancelled";
-        } 
-        // Check if exam is still in progress (no end time)
-        else if (endTime == null || endTime.trim().isEmpty()) {
-            examStatus = "incomplete";
-        }
-        // Exam was completed normally (has end time)
-        else {
-            examStatus = "completed";
-        }
 
-        // Update exams table
-        String sql = "UPDATE exams SET obt_marks=?, total_marks=?, end_time=?, status=?, result_status=? WHERE exam_id=?";
+        // Update exams table with unscaled obt_marks, total_marks, end_time, and status
+
+        String sql = "UPDATE exams SET obt_marks=?, total_marks=?, end_time=?, status='completed', result_status=? WHERE exam_id=?";
 
         try (PreparedStatement pstm = conn.prepareStatement(sql)) {
             pstm.setInt(1, obtRounded);
             pstm.setInt(2, totalRounded);
             pstm.setString(3, endTime);
             
-            // Use only allowed ENUM values: 'incomplete', 'completed', 'cancelled'
-            pstm.setString(4, examStatus);
+            LOGGER.log(Level.INFO, "Truncated result_status: ''{0}'' (original: ''{1}'')", new Object[]{truncatedStatus, resultStatus});
+            pstm.setString(4, truncatedStatus);
             
-            // Use only allowed ENUM values: 'Pass', 'Fail', 'Terminated'
-            pstm.setString(5, resultStatusForDb);
+            pstm.setInt(5, eid);
             
             LOGGER.log(Level.INFO, "Final exam_status: ''{0}''", examStatus);
             LOGGER.log(Level.INFO, "Final result_status: ''{0}''", resultStatusForDb);
