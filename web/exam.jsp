@@ -2588,6 +2588,7 @@ var globalVideoStream = null;
             
             if (!result.success) {
                 showQualityError(result.reason);
+                // Reset button on failure
                 document.getElementById('captureFaceBtn').innerHTML = originalText;
                 document.getElementById('captureFaceBtn').disabled = false;
                 return;
@@ -2612,9 +2613,14 @@ var globalVideoStream = null;
             const errorDiv = document.getElementById('faceQualityError');
             if (errorDiv) errorDiv.remove();
             
+            // Reset button on success - change to "Retake" or keep original
+            document.getElementById('captureFaceBtn').innerHTML = '<i class="fas fa-camera"></i> Retake Photo';
+            document.getElementById('captureFaceBtn').disabled = false;
+            
         } catch (err) {
             console.error('Error:', err);
             showQualityError('Could not analyze photo. Please try again.');
+            // Reset button on error
             document.getElementById('captureFaceBtn').innerHTML = originalText;
             document.getElementById('captureFaceBtn').disabled = false;
         }
@@ -2747,6 +2753,7 @@ var globalVideoStream = null;
             
             if (!result.success) {
                 showSimpleIdError(result.reason);
+                // Reset button on failure
                 document.getElementById('captureIdBtn').innerHTML = originalText;
                 document.getElementById('captureIdBtn').disabled = false;
                 return;
@@ -2760,9 +2767,14 @@ var globalVideoStream = null;
             const errorDiv = document.getElementById('simpleIdError');
             if (errorDiv) errorDiv.remove();
             
+            // Reset button on success - change to "Retake" or keep original
+            document.getElementById('captureIdBtn').innerHTML = '<i class="fas fa-id-card"></i> Retake ID';
+            document.getElementById('captureIdBtn').disabled = false;
+            
         } catch (err) {
             console.error('Error:', err);
             showSimpleIdError('Could not verify ID. Please try again.');
+            // Reset button on error
             document.getElementById('captureIdBtn').innerHTML = originalText;
             document.getElementById('captureIdBtn').disabled = false;
         }
@@ -3597,4 +3609,690 @@ function shuffleDraggableItems(questionIndex) {
 
 // Initialize the drag drop manager
 const dragDropManager = new DragDropManager();
+
+// ==================== FACE CAPTURE BUTTON FUNCTIONALITY ====================
+
+// Enhanced face capture with AI analysis simulation and quality checks
+document.addEventListener('DOMContentLoaded', function() {
+    const captureFaceBtn = document.getElementById('captureFaceBtn');
+    const retakeFaceBtn = document.getElementById('retakeFaceBtn');
+    const faceVideo = document.getElementById('faceVideo');
+    
+    if (!captureFaceBtn) return;
+    
+    // Store original button text
+    const originalFaceBtnText = captureFaceBtn.innerHTML;
+    
+    // Face capture click handler
+    captureFaceBtn.addEventListener('click', async function() {
+        const video = document.getElementById('faceVideo');
+        
+        if (!video || !video.srcObject) {
+            showSystemAlertModal('Camera not initialized. Please refresh and try again.');
+            return;
+        }
+        
+        // Show loading state
+        const originalText = this.innerHTML;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI Analyzing...';
+        this.disabled = true;
+        
+        try {
+            // Capture the photo
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            // Convert to blob for server upload
+            const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+            const imageBase64 = canvas.toDataURL('image/jpeg', 0.9);
+            
+            // Perform client-side quality checks first
+            const qualityChecks = await performFaceQualityChecks(ctx, canvas.width, canvas.height);
+            
+            if (!qualityChecks.passed) {
+                showQualityError(qualityChecks.reason);
+                this.innerHTML = originalText;
+                this.disabled = false;
+                return;
+            }
+            
+            // Send to server for AI analysis
+            const formData = new FormData();
+            formData.append('page', 'verify_face');
+            formData.append('operation', 'analyze');
+            formData.append('faceImage', imageBlob, 'face.jpg');
+            formData.append('userId', window.studentId || '');
+            
+            const response = await fetch('controller.jsp', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                showQualityError(result.reason || 'Face analysis failed. Please try again.');
+                this.innerHTML = originalText;
+                this.disabled = false;
+                return;
+            }
+            
+            // Success - update UI
+            capturedFaceData = imageBase64;
+            
+            // Show preview
+            document.getElementById('faceImgPreview').src = imageBase64;
+            document.getElementById('faceCapturedPreview').style.display = 'block';
+            document.getElementById('liveInstructions').style.display = 'none';
+            document.getElementById('retakeSection').style.display = 'block';
+            
+            // Update quality indicators
+            updateFaceQualityIndicators(true);
+            
+            // Change button to "Retake" state
+            this.innerHTML = '<i class="fas fa-camera"></i> Retake Photo';
+            this.disabled = false;
+            
+            // Store in session for later verification
+            sessionStorage.setItem('faceCaptured', 'true');
+            sessionStorage.setItem('faceCaptureTime', Date.now().toString());
+            
+        } catch (error) {
+            console.error('Face capture error:', error);
+            showQualityError('Network error during analysis. Please try again.');
+            this.innerHTML = originalText;
+            this.disabled = false;
+        }
+    });
+    
+    // Retake button handler
+    if (retakeFaceBtn) {
+        retakeFaceBtn.addEventListener('click', function() {
+            document.getElementById('faceCapturedPreview').style.display = 'none';
+            document.getElementById('liveInstructions').style.display = 'block';
+            document.getElementById('retakeSection').style.display = 'none';
+            captureFaceBtn.innerHTML = '<i class="fas fa-camera"></i> Capture Photo';
+            capturedFaceData = null;
+            sessionStorage.removeItem('faceCaptured');
+        });
+    }
+    
+    // Real-time face quality monitoring
+    if (faceVideo) {
+        faceVideo.addEventListener('play', function() {
+            startFaceQualityMonitoring(this);
+        });
+    }
+});
+
+// Client-side face quality checks
+async function performFaceQualityChecks(ctx, width, height) {
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    
+    // 1. Check brightness
+    let totalBrightness = 0;
+    for (let i = 0; i < data.length; i += 4) {
+        totalBrightness += (data[i] + data[i + 1] + data[i + 2]) / 3;
+    }
+    const avgBrightness = totalBrightness / (data.length / 4);
+    
+    if (avgBrightness < 50) {
+        return { passed: false, reason: 'Image too dark. Please ensure proper lighting.' };
+    }
+    if (avgBrightness > 230) {
+        return { passed: false, reason: 'Image too bright. Please reduce glare.' };
+    }
+    
+    // 2. Check contrast
+    let min = 255, max = 0;
+    for (let i = 0; i < data.length; i += 4) {
+        const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        min = Math.min(min, brightness);
+        max = Math.max(max, brightness);
+    }
+    const contrast = max - min;
+    
+    if (contrast < 30) {
+        return { passed: false, reason: 'Low contrast image. Please improve lighting.' };
+    }
+    
+    // 3. Check for face in frame (simple skin tone detection in center region)
+    const centerX = Math.floor(width / 2);
+    const centerY = Math.floor(height / 2);
+    const sampleSize = 50;
+    
+    let skinPixels = 0;
+    let totalPixels = 0;
+    
+    for (let y = centerY - sampleSize; y < centerY + sampleSize; y++) {
+        for (let x = centerX - sampleSize; x < centerX + sampleSize; x++) {
+            if (x >= 0 && x < width && y >= 0 && y < height) {
+                const idx = (y * width + x) * 4;
+                const r = data[idx];
+                const g = data[idx + 1];
+                const b = data[idx + 2];
+                
+                // Simple skin tone detection
+                if (r > 60 && g > 40 && b > 20 && 
+                    r > g && r > b && 
+                    Math.abs(r - g) > 15) {
+                    skinPixels++;
+                }
+                totalPixels++;
+            }
+        }
+    }
+    
+    const skinRatio = skinPixels / totalPixels;
+    
+    if (skinRatio < 0.3) {
+        return { passed: false, reason: 'No face detected in center. Please position your face in the guide.' };
+    }
+    
+    return { passed: true };
+}
+
+// Real-time quality monitoring
+function startFaceQualityMonitoring(video) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const indicator = document.getElementById('lightingIndicator');
+    const scoreEl = document.getElementById('lightingScore');
+    const progressEl = document.getElementById('lightingProgress');
+    
+    let lastCheck = 0;
+    
+    function checkQuality() {
+        if (!video.videoWidth) return;
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        
+        // Calculate average brightness
+        let brightness = 0;
+        for (let i = 0; i < data.length; i += 40) {
+            brightness += (data[i] + data[i + 1] + data[i + 2]) / 3;
+        }
+        brightness = brightness / (data.length / 40);
+        
+        // Update indicator
+        if (indicator && scoreEl && progressEl) {
+            indicator.style.display = 'block';
+            
+            if (brightness < 60) {
+                scoreEl.textContent = 'Too Dark';
+                progressEl.className = 'progress-fill poor';
+                progressEl.style.width = '30%';
+                scoreEl.style.color = '#ef4444';
+            } else if (brightness > 200) {
+                scoreEl.textContent = 'Too Bright';
+                progressEl.className = 'progress-fill warning';
+                progressEl.style.width = '90%';
+                scoreEl.style.color = '#f59e0b';
+            } else {
+                scoreEl.textContent = 'Good';
+                progressEl.className = 'progress-fill good';
+                progressEl.style.width = '75%';
+                scoreEl.style.color = '#10b981';
+            }
+        }
+        
+        requestAnimationFrame(checkQuality);
+    }
+    
+    requestAnimationFrame(checkQuality);
+}
+
+function updateFaceQualityIndicators(passed) {
+    const checks = document.querySelectorAll('.check-item');
+    if (checks.length >= 4) {
+        const statuses = [
+            'Face properly positioned',
+            'No face coverings detected',
+            'Lighting adequate',
+            'Single person in frame'
+        ];
+        
+        checks.forEach((check, index) => {
+            check.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981"></i><span>${statuses[index]}</span>`;
+        });
+    }
+}
+
+// ==================== ID CAPTURE BUTTON FUNCTIONALITY ====================
+
+document.addEventListener('DOMContentLoaded', function() {
+    const captureIdBtn = document.getElementById('captureIdBtn');
+    const idVideo = document.getElementById('idVideo');
+    
+    if (!captureIdBtn) return;
+    
+    const originalIdBtnText = captureIdBtn.innerHTML;
+    
+    captureIdBtn.addEventListener('click', async function() {
+        const video = document.getElementById('idVideo');
+        
+        if (!video || !video.srcObject) {
+            showSystemAlertModal('Camera not initialized. Please refresh and try again.');
+            return;
+        }
+        
+        // Show loading state
+        const originalText = this.innerHTML;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking ID...';
+        this.disabled = true;
+        
+        try {
+            // Capture the photo
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            // Convert to blob
+            const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+            const imageBase64 = canvas.toDataURL('image/jpeg', 0.95);
+            
+            // Client-side ID detection
+            const idDetection = await detectIDCard(ctx, canvas.width, canvas.height);
+            
+            if (!idDetection.detected) {
+                showSimpleIdError(idDetection.reason || 'No ID card detected. Please hold your ID clearly.');
+                this.innerHTML = originalText;
+                this.disabled = false;
+                return;
+            }
+            
+            // Send to server for OCR and verification
+            const formData = new FormData();
+            formData.append('page', 'verify_id');
+            formData.append('operation', 'verify');
+            formData.append('idImage', imageBlob, 'id.jpg');
+            formData.append('userId', window.studentId || '');
+            formData.append('userName', window.verifiedFullName || '');
+            
+            const response = await fetch('controller.jsp', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                showSimpleIdError(result.reason || 'ID verification failed. Please ensure ID is clearly visible.');
+                this.innerHTML = originalText;
+                this.disabled = false;
+                return;
+            }
+            
+            // Success
+            capturedIdData = imageBase64;
+            
+            // Show preview
+            document.getElementById('idImgPreview').src = imageBase64;
+            document.getElementById('idCapturedPreview').style.display = 'block';
+            
+            // Hide any error messages
+            const errorDiv = document.getElementById('simpleIdError');
+            if (errorDiv) errorDiv.remove();
+            
+            // Change button text
+            this.innerHTML = '<i class="fas fa-id-card"></i> Retake ID';
+            this.disabled = false;
+            
+            // Store verification status
+            sessionStorage.setItem('idCaptured', 'true');
+            sessionStorage.setItem('idVerified', 'true');
+            
+            // Show success message
+            showTemporaryMessage('ID verified successfully!', 'success');
+            
+        } catch (error) {
+            console.error('ID capture error:', error);
+            showSimpleIdError('Network error during verification. Please try again.');
+            this.innerHTML = originalText;
+            this.disabled = false;
+        }
+    });
+});
+
+// Client-side ID detection
+async function detectIDCard(ctx, width, height) {
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    
+    // 1. Check for rectangular shape (edges)
+    let edgePixels = 0;
+    let totalEdgePixels = 0;
+    
+    // Simple edge detection (check for high contrast areas)
+    for (let y = 10; y < height - 10; y += 5) {
+        for (let x = 10; x < width - 10; x += 5) {
+            const idx = (y * width + x) * 4;
+            const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+            
+            // Check surrounding pixels for contrast
+            let contrast = 0;
+            for (let dy = -5; dy <= 5; dy += 5) {
+                for (let dx = -5; dx <= 5; dx += 5) {
+                    if (dx === 0 && dy === 0) continue;
+                    const checkIdx = ((y + dy) * width + (x + dx)) * 4;
+                    const checkBrightness = (data[checkIdx] + data[checkIdx + 1] + data[checkIdx + 2]) / 3;
+                    contrast += Math.abs(brightness - checkBrightness);
+                }
+            }
+            contrast /= 24; // Average contrast
+            
+            if (contrast > 30) {
+                edgePixels++;
+            }
+            totalEdgePixels++;
+        }
+    }
+    
+    const edgeRatio = edgePixels / totalEdgePixels;
+    
+    if (edgeRatio < 0.15) {
+        return { detected: false, reason: 'No clear edges detected. Please ensure ID is in focus.' };
+    }
+    
+    // 2. Check for text-like patterns (high frequency changes)
+    let textRegions = 0;
+    for (let y = height / 3; y < 2 * height / 3; y += 10) {
+        let prevBrightness = null;
+        let changes = 0;
+        
+        for (let x = width / 4; x < 3 * width / 4; x += 5) {
+            const idx = (Math.floor(y) * width + Math.floor(x)) * 4;
+            const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+            
+            if (prevBrightness !== null && Math.abs(brightness - prevBrightness) > 20) {
+                changes++;
+            }
+            prevBrightness = brightness;
+        }
+        
+        if (changes > 5) {
+            textRegions++;
+        }
+    }
+    
+    if (textRegions < 3) {
+        return { detected: false, reason: 'No text detected. Please ensure ID card is readable.' };
+    }
+    
+    // 3. Check for glare
+    let glarePixels = 0;
+    for (let i = 0; i < data.length; i += 40) {
+        const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        if (brightness > 240) {
+            glarePixels++;
+        }
+    }
+    
+    const glareRatio = glarePixels / (data.length / 40);
+    
+    if (glareRatio > 0.3) {
+        return { detected: false, reason: 'Too much glare on ID. Please adjust angle.' };
+    }
+    
+    return { detected: true };
+}
+
+// Improved error display
+function showSimpleIdError(message) {
+    let errorDiv = document.getElementById('simpleIdError');
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.id = 'simpleIdError';
+        
+        // Insert after capture button
+        const idSection = document.querySelector('#verification-step-3 .info-section') || 
+                         document.querySelector('#verification-step-3 > div:last-child');
+        if (idSection) {
+            idSection.appendChild(errorDiv);
+        }
+    }
+    
+    errorDiv.innerHTML = `
+        <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; color: #856404; animation: slideIn 0.3s ease;">
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                <i class="fas fa-id-card" style="font-size: 20px; color: #856404;"></i>
+                <div style="flex: 1;">
+                    <strong style="display: block; margin-bottom: 5px;">ID Not Detected</strong>
+                    <span style="font-size: 13px;">${message}</span>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: #856404; cursor: pointer; font-size: 16px;">&times;</button>
+            </div>
+            <div style="margin-top: 10px; font-size: 12px; padding: 8px; background: #fff9e6; border-radius: 4px;">
+                <strong>Tips:</strong>
+                <ul style="margin-top: 5px; padding-left: 20px; margin-bottom: 0;">
+                    <li>Hold your ID card steady toward the camera</li>
+                    <li>Make sure all text is clearly visible</li>
+                    <li>Avoid glare by adjusting angle</li>
+                    <li>Ensure good lighting on the ID</li>
+                    <li>Keep ID flat - avoid bending</li>
+                </ul>
+            </div>
+        </div>
+    `;
+    
+    // Auto-remove after 10 seconds
+    setTimeout(() => {
+        if (errorDiv.parentNode) {
+            errorDiv.remove();
+        }
+    }, 10000);
+}
+
+// Temporary success/error message
+function showTemporaryMessage(message, type = 'info') {
+    const msgDiv = document.createElement('div');
+    msgDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        background: ${type === 'success' ? '#10b981' : '#3b82f6'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        animation: slideInRight 0.3s ease;
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    `;
+    
+    msgDiv.innerHTML = `
+        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+        ${message}
+    `;
+    
+    document.body.appendChild(msgDiv);
+    
+    setTimeout(() => {
+        msgDiv.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => msgDiv.remove(), 300);
+    }, 3000);
+}
+
+// Add animation styles
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOutRight {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
+
+// ==================== SESSION MANAGEMENT FIXES ====================
+
+// Enhanced session cleanup
+function cleanupExamSession() {
+    // Clear session storage
+    const keysToKeep = ['userTheme', 'userPrefs']; // Keep non-exam related items
+    const sessionKeys = Object.keys(sessionStorage);
+    
+    sessionKeys.forEach(key => {
+        if (!keysToKeep.includes(key) && 
+            (key.startsWith('exam') || 
+             key.includes('timer') || 
+             key.includes('answer') ||
+             key.includes('question'))) {
+            sessionStorage.removeItem(key);
+        }
+    });
+    
+    // Clear exam-specific cookies if any
+    document.cookie.split(';').forEach(cookie => {
+        const [name] = cookie.split('=');
+        if (name.trim().startsWith('exam_')) {
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        }
+    });
+}
+
+// Enhanced timer synchronization
+class ExamTimerManager {
+    constructor(duration, examId, studentId) {
+        this.duration = duration * 60; // Convert to seconds
+        this.examId = examId;
+        this.studentId = studentId;
+        this.remainingTime = this.duration;
+        this.timerInterval = null;
+        this.lastSyncTime = Date.now();
+        this.syncInterval = 30000; // Sync every 30 seconds
+    }
+
+    start() {
+        this.loadSavedTime();
+        this.startTimer();
+        this.startSyncTimer();
+    }
+
+    loadSavedTime() {
+        const saved = localStorage.getItem(`exam_timer_${this.examId}_${this.studentId}`);
+        if (saved) {
+            const { remaining, timestamp } = JSON.parse(saved);
+            const elapsed = Math.floor((Date.now() - timestamp) / 1000);
+            this.remainingTime = Math.max(0, remaining - elapsed);
+        }
+    }
+
+    saveTime() {
+        localStorage.setItem(`exam_timer_${this.examId}_${this.studentId}`, 
+            JSON.stringify({
+                remaining: this.remainingTime,
+                timestamp: Date.now()
+            })
+        );
+    }
+
+    startTimer() {
+        this.timerInterval = setInterval(() => {
+            this.remainingTime--;
+            this.saveTime();
+            this.updateDisplay();
+            
+            if (this.remainingTime <= 0) {
+                this.timeUp();
+            }
+        }, 1000);
+    }
+
+    startSyncTimer() {
+        setInterval(() => {
+            this.syncWithServer();
+        }, this.syncInterval);
+    }
+
+    async syncWithServer() {
+        try {
+            const response = await fetch('controller.jsp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `page=exams&operation=syncTimer&examId=${this.examId}&remaining=${this.remainingTime}` 
+            });
+            
+            const data = await response.json();
+            if (data.serverTime && Math.abs(data.serverTime - this.remainingTime) > 5) {
+                this.remainingTime = data.serverTime;
+            }
+        } catch (error) {
+            console.warn('Timer sync failed:', error);
+        }
+    }
+
+    updateDisplay() {
+        const minutes = Math.floor(this.remainingTime / 60);
+        const seconds = this.remainingTime % 60;
+        const display = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        const headerTimer = document.getElementById('remainingTimeHeader');
+        if (headerTimer) headerTimer.textContent = display;
+        
+        // Update document title
+        document.title = `(${display}) Exam in Progress`;
+    }
+
+    timeUp() {
+        clearInterval(this.timerInterval);
+        document.getElementById('timeUpModal').style.display = 'flex';
+        
+        let countdown = 3;
+        const countdownEl = document.getElementById('timeUpCountdown');
+        
+        const submitInterval = setInterval(() => {
+            countdown--;
+            if (countdownEl) countdownEl.textContent = countdown;
+            
+            if (countdown <= 0) {
+                clearInterval(submitInterval);
+                document.getElementById('myform').submit();
+            }
+        }, 1000);
+    }
+}
+
+// Initialize timer on exam page
+if (document.querySelector('.exam-header-container')) {
+    const duration = parseInt('<%= request.getParameter("duration") != null ? request.getParameter("duration") : "60" %>');
+    const examId = '<%= session.getAttribute("examId") != null ? session.getAttribute("examId") : "0" %>';
+    const studentId = '<%= session.getAttribute("userId") != null ? session.getAttribute("userId") : "0" %>';
+    
+    window.timerManager = new ExamTimerManager(duration, examId, studentId);
+    window.timerManager.start();
+}
 </script>

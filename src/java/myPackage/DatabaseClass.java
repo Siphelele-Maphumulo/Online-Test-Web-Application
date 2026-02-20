@@ -7907,19 +7907,33 @@ public void calculateResult(int eid, int tMarks, String endTime, int size, Strin
         }
 
         // FIXED: Determine result_status - Now accepts 'Pass', 'Fail', or 'Terminated'
-        String resultStatusForDb;
+        String resultStatus;
+        String examStatus;
         
         // Check if exam was terminated due to cheating
         if (forcedStatus != null && !forcedStatus.isEmpty()) {
             resultStatus = forcedStatus;
+        } else {
+            // Normal result calculation based on percentage
+            resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
         }
 
-        // Truncate result_status to fit database column (max 5 characters)
-        String truncatedStatus = resultStatus != null && resultStatus.length() > 5 
-            ? resultStatus.substring(0, 5) 
+        // Truncate result_status to fit database column (max 15 characters to allow 'Terminated')
+        String truncatedStatus = resultStatus != null && resultStatus.length() > 15 
+            ? resultStatus.substring(0, 15) 
             : resultStatus;
 
-        
+        // FIXED: Determine exam status - MUST match ENUM values: 'incomplete', 'completed', 'cancelled'
+        if ("Terminated".equalsIgnoreCase(resultStatus) || 
+            resultStatus.toLowerCase().contains("cheat") || 
+            resultStatus.toLowerCase().contains("copy")) {
+            // Use 'cancelled' for terminated/cheating exams
+            examStatus = "cancelled";
+        } else if (endTime == null || endTime.trim().isEmpty()) {
+            examStatus = "incomplete";
+        } else {
+            examStatus = "completed";
+        }
 
         // Round for DB storage (since schema is INT)
         int obtRounded = Math.round(obtRaw);
@@ -7934,34 +7948,27 @@ public void calculateResult(int eid, int tMarks, String endTime, int size, Strin
         LOGGER.log(Level.INFO, "Saved Total: {0}", totalRounded);
         LOGGER.log(Level.INFO, "Percentage: {0}%", String.format("%.1f", percentage));
         LOGGER.log(Level.INFO, "Forced Status: {0}", forcedStatus);
-        LOGGER.log(Level.INFO, "Result Status (DB): {0}", resultStatusForDb);
+        LOGGER.log(Level.INFO, "Result Status: {0}", resultStatus);
+        LOGGER.log(Level.INFO, "Truncated Status: {0}", truncatedStatus);
+        LOGGER.log(Level.INFO, "Exam Status: {0}", examStatus);
         LOGGER.info("===========================");
 
-        
-
-        // Update exams table with unscaled obt_marks, total_marks, end_time, and status
-
-        String sql = "UPDATE exams SET obt_marks=?, total_marks=?, end_time=?, status='completed', result_status=? WHERE exam_id=?";
+        // Update exams table with obt_marks, total_marks, end_time, status, and result_status
+        String sql = "UPDATE exams SET obt_marks=?, total_marks=?, end_time=?, status=?, result_status=? WHERE exam_id=?";
 
         try (PreparedStatement pstm = conn.prepareStatement(sql)) {
             pstm.setInt(1, obtRounded);
             pstm.setInt(2, totalRounded);
             pstm.setString(3, endTime);
-            
-            LOGGER.log(Level.INFO, "Truncated result_status: ''{0}'' (original: ''{1}'')", new Object[]{truncatedStatus, resultStatus});
-            pstm.setString(4, truncatedStatus);
-            
-            pstm.setInt(5, eid);
-            
-            LOGGER.log(Level.INFO, "Final exam_status: ''{0}''", examStatus);
-            LOGGER.log(Level.INFO, "Final result_status: ''{0}''", resultStatusForDb);
+            pstm.setString(4, examStatus);
+            pstm.setString(5, truncatedStatus);
             pstm.setInt(6, eid);
             
             int rowsUpdated = pstm.executeUpdate();
             LOGGER.log(Level.INFO, "Rows updated: {0}", rowsUpdated);
         } catch (SQLException e) {
             // If we still get an error, log the actual value that caused it
-            LOGGER.log(Level.SEVERE, "SQL Error when inserting result_status: '" + resultStatusForDb + "'", e);
+            LOGGER.log(Level.SEVERE, "SQL Error when inserting result_status: '" + truncatedStatus + "'", e);
             throw e; // Re-throw to be caught by outer catch
         }
 

@@ -3,15 +3,11 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/web/proctoring_v2.js</file>
-            <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/web/showall.jsp</file>
             <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/src/java/myPackage/DatabaseClass.java</file>
-            <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/web/exam.jsp</file>
-            <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/web/results_lecture.jsp</file>
+            <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/src/java/myPackage/OpenRouterClient.java</file>
+            <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/web/exam_logic.js</file>
             <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/web/controller.jsp</file>
-            <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/web/admin-results.jsp</file>
-            <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/web/proctoring.js</file>
-            <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/web/results.jsp</file>
+            <file>file:/C:/xampp/htdocs/Online-Test-Web-Application-master/Online-Test-Web-Application/src/java/myPackage/OpenRouterConfig.java</file>
         </group>
     </open-files>
 </project-private>

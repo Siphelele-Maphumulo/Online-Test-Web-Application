@@ -457,6 +457,7 @@ for (User user : studentList) {
         vertical-align: middle;
         color: var(--dark-gray);
         font-size: 13px;
+        position: relative;
     }
     
     .accounts-table tbody tr {
@@ -701,7 +702,68 @@ for (User user : studentList) {
         100% { transform: rotate(360deg); }
     }
 
-   /* Floating delete button */
+    /* FIXED: Checkbox Styles - Make them visible and clickable */
+    .checkbox-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        cursor: pointer;
+    }
+    
+    .checkbox-container input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        cursor: pointer;
+        z-index: 10;
+    }
+    
+    .checkbox-container .custom-checkbox {
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--dark-gray);
+        border-radius: var(--radius-sm);
+        background: var(--white);
+        transition: all 0.2s ease;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    
+    .checkbox-container input[type="checkbox"]:checked + .custom-checkbox {
+        background: var(--error) !important;
+        border-color: var(--error) !important;
+    }
+    
+    .checkbox-container input[type="checkbox"]:checked + .custom-checkbox::after {
+        content: '✓' !important;
+        color: white !important;
+        font-size: 14px !important;
+        font-weight: bold !important;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+    
+    .checkbox-container input[type="checkbox"]:hover + .custom-checkbox {
+        border-color: var(--error);
+    }
+    
+    /* Multi-selected row style */
+    .student-row.multi-selected {
+        background-color: rgba(220, 38, 38, 0.1);
+    }
+    
+    /* Floating delete button */
     .floating-delete-selected {
         position: fixed;
         bottom: 30px;
@@ -720,6 +782,8 @@ for (User user : studentList) {
         display: none;
         transition: all 0.3s ease;
         text-decoration: none;
+        align-items: center;
+        gap: 8px;
     }
     
     .floating-delete-selected:hover {
@@ -728,21 +792,13 @@ for (User user : studentList) {
     }
     
     .floating-delete-selected.show {
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        display: flex !important;
     }
     
     .floating-delete-selected i {
         font-size: 18px;
     }
     
-    /* Checkbox container to avoid interfering with card clicks */
-    .checkbox-container {
-        position: relative;
-        display: inline-block;
-    }
-
     /* Floating Scroll Button */
     .floating-scroll {
         position: fixed;
@@ -805,6 +861,72 @@ for (User user : studentList) {
     .scroll-btn:active::before {
         width: 100%;
         height: 100%;
+    }
+    
+    /* Modal Styles */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+    }
+    
+    .modal-content {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: var(--shadow-xl);
+    }
+    
+    .modal-header {
+        padding: var(--spacing-lg);
+        border-bottom: 1px solid var(--medium-gray);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .modal-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-dark);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+    }
+    
+    .close-button {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: var(--dark-gray);
+    }
+    
+    .close-button:hover {
+        color: var(--error);
+    }
+    
+    .modal-body {
+        padding: var(--spacing-lg);
+        color: var(--dark-gray);
+    }
+    
+    .modal-footer {
+        padding: var(--spacing-lg);
+        border-top: 1px solid var(--medium-gray);
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--spacing-sm);
     }
 </style>
 
@@ -963,11 +1085,17 @@ for (User user : studentList) {
                 <table class="accounts-table" id="studentTable">
                     <thead>
                         <tr>
-                            <th onclick="sortTable(0)">Student <span class="sort-indicator"></span></th>
-                            <th onclick="sortTable(1)">Student Number <span class="sort-indicator"></span></th>
-                            <th onclick="sortTable(2)">Email <span class="sort-indicator"></span></th>
-                            <th onclick="sortTable(3)">Contact <span class="sort-indicator"></span></th>
-                            <th onclick="sortTable(4)">Location <span class="sort-indicator"></span></th>
+                            <th style="width: 50px; text-align: center;">
+                                <div class="checkbox-container" style="margin: 0 auto;">
+                                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                                    <span class="custom-checkbox"></span>
+                                </div>
+                            </th>
+                            <th onclick="sortTable(1)">Student <span class="sort-indicator"></span></th>
+                            <th onclick="sortTable(2)">Student Number <span class="sort-indicator"></span></th>
+                            <th onclick="sortTable(3)">Email <span class="sort-indicator"></span></th>
+                            <th onclick="sortTable(4)">Contact <span class="sort-indicator"></span></th>
+                            <th onclick="sortTable(5)">Location <span class="sort-indicator"></span></th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -996,6 +1124,12 @@ for (User user : studentList) {
                             data-city="<%= user.getCity() != null ? user.getCity().toLowerCase() : "" %>"
                             data-address="<%= user.getAddress() != null ? user.getAddress().toLowerCase() : "" %>"
                             data-fullname="<%= (user.getFirstName() + " " + user.getLastName()).toLowerCase() %>">
+                            <td style="text-align: center;">
+                                <div class="checkbox-container" style="margin: 0 auto;">
+                                    <input type="checkbox" class="row-checkbox" data-user-id="<%= user.getUserId() %>" onchange="toggleRowSelection(this)">
+                                    <span class="custom-checkbox"></span>
+                                </div>
+                            </td>
                             <td>
                                 <div class="student-name">
                                     <div class="student-avatar">
@@ -1055,7 +1189,7 @@ for (User user : studentList) {
                             if (!hasStudents) {
                         %>
                             <tr>
-                                <td colspan="6" class="no-results">
+                                <td colspan="7" class="no-results">
                                     <i class="fas fa-user-graduate" style="font-size: 3rem; margin-bottom: 16px; display: block; opacity: 0.5;"></i>
                                     No students registered yet. Add your first student to get started.
                                 </td>
@@ -1071,35 +1205,72 @@ for (User user : studentList) {
                 </div>
             </div>
         </div>
-         <!-- Delete Confirmation Modal -->
-    <div id="deleteStudentModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title"><i class="fas fa-trash"></i> Confirm Deletion</h2>
-                <button class="close-button" onclick="closeDeleteModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to permanently delete the following student account? This action cannot be undone.</p>
-                <div id="studentDetails">
-                    <!-- Student details will be populated by JavaScript -->
-                </div>
-            </div>
-            <div class="modal-footer">
-                <form id="deleteStudentForm" action="controller.jsp" method="post" style="display: flex; gap: 8px;">
-                     <input type="hidden" name="page" value="accounts">
-                    <input type="hidden" name="operation" value="del">
-                    <input type="hidden" name="uid" id="deleteStudentId">
-                    <input type="hidden" name="csrfToken" value="<%= session.getAttribute("csrfToken") %>">
-                    <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">
-                        <i class="fas fa-times-circle"></i> Cancel
-                    </button>
-                    <button type="submit" class="btn btn-error" id="confirmDeleteBtn">
-                        <i class="fas fa-trash-alt"></i> Yes, Delete
-                    </button>
-                </form>
+
+<!-- Floating Delete Selected Button -->
+<button id="floatingDeleteSelected" class="floating-delete-selected" onclick="openBatchDeleteModal()">
+    <i class="fas fa-trash"></i>
+    Delete Selected (<span id="selectedCount">0</span>)
+</button>
+
+<!-- Batch Delete Confirmation Modal -->
+<div id="batchDeleteModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title"><i class="fas fa-trash"></i> Confirm Batch Deletion</h2>
+            <button class="close-button" onclick="closeBatchDeleteModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to permanently delete <strong><span id="batchDeleteCount">0</span></strong> selected student accounts? This action cannot be undone.</p>
+            <div id="batchDeleteDetails" style="max-height: 200px; overflow-y: auto; margin: 15px 0;">
+                <!-- Selected student details will be populated by JavaScript -->
             </div>
         </div>
+        <div class="modal-footer">
+            <form id="batchDeleteForm" action="controller.jsp" method="post" style="display: flex; gap: 8px;">
+                <input type="hidden" name="page" value="accounts">
+                <input type="hidden" name="operation" value="batch_delete">
+                <input type="hidden" name="selectedIds" id="selectedIdsInput">
+                <input type="hidden" name="csrfToken" value="<%= session.getAttribute("csrfToken") %>">
+                <button type="button" class="btn btn-secondary" onclick="closeBatchDeleteModal()">
+                    <i class="fas fa-times-circle"></i> Cancel
+                </button>
+                <button type="submit" class="btn btn-error" id="confirmBatchDeleteBtn">
+                    <i class="fas fa-trash-alt"></i> Delete All Selected
+                </button>
+            </form>
+        </div>
     </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteStudentModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title"><i class="fas fa-trash"></i> Confirm Deletion</h2>
+            <button class="close-button" onclick="closeDeleteModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to permanently delete the following student account? This action cannot be undone.</p>
+            <div id="studentDetails">
+                <!-- Student details will be populated by JavaScript -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <form id="deleteStudentForm" action="controller.jsp" method="post" style="display: flex; gap: 8px;">
+                 <input type="hidden" name="page" value="accounts">
+                <input type="hidden" name="operation" value="del">
+                <input type="hidden" name="uid" id="deleteStudentId">
+                <input type="hidden" name="csrfToken" value="<%= session.getAttribute("csrfToken") %>">
+                <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">
+                    <i class="fas fa-times-circle"></i> Cancel
+                </button>
+                <button type="submit" class="btn btn-error" id="confirmDeleteBtn">
+                    <i class="fas fa-trash-alt"></i> Yes, Delete
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
     </main>
 </div>
 
@@ -1116,10 +1287,8 @@ for (User user : studentList) {
 <!-- Font Awesome for Icons (if not already included) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-
-
 <script>
-// Enhanced scroll button functionality
+// FIXED: Enhanced scroll button functionality
 (function() {
     'use strict';
     
@@ -1247,263 +1416,403 @@ for (User user : studentList) {
     });
     
 })();
-     // Modal handling functions
-    const deleteModal = document.getElementById('deleteStudentModal');
-    const deleteStudentIdInput = document.getElementById('deleteStudentId');
-    const studentDetailsDiv = document.getElementById('studentDetails');
-    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
 
-    function openDeleteStudentModal(userId, studentName, studentNumber) {
-        // Use standard string concatenation
-        studentDetailsDiv.innerHTML = '<strong>Name:</strong> ' + studentName + '<br><strong>Student Number:</strong> ' + studentNumber;
-        deleteStudentIdInput.value = userId;
-        deleteModal.style.display = 'flex';
+// FIXED: Modal handling functions
+let deleteModal = document.getElementById('deleteStudentModal');
+let deleteStudentIdInput = document.getElementById('deleteStudentId');
+let studentDetailsDiv = document.getElementById('studentDetails');
+let confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+function openDeleteStudentModal(userId, studentName, studentNumber) {
+    if (!deleteModal) {
+        deleteModal = document.getElementById('deleteStudentModal');
+        deleteStudentIdInput = document.getElementById('deleteStudentId');
+        studentDetailsDiv = document.getElementById('studentDetails');
+        confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
     }
+    
+    // Use standard string concatenation
+    studentDetailsDiv.innerHTML = '<strong>Name:</strong> ' + studentName + '<br><strong>Student Number:</strong> ' + studentNumber;
+    deleteStudentIdInput.value = userId;
+    deleteModal.style.display = 'flex';
+}
 
-    function closeDeleteModal() {
+function closeDeleteModal() {
+    if (deleteModal) {
         deleteModal.style.display = 'none';
     }
+}
 
-    // Close modal if user clicks outside of it
-    window.onclick = function(event) {
-        if (event.target === deleteModal) {
-            closeDeleteModal();
-        }
-    };
+// Close modal if user clicks outside of it
+window.onclick = function(event) {
+    if (event.target === deleteModal) {
+        closeDeleteModal();
+    }
+    if (event.target === document.getElementById('batchDeleteModal')) {
+        closeBatchDeleteModal();
+    }
+};
 
-    document.getElementById('deleteStudentForm').addEventListener('submit', function() {
-        confirmDeleteBtn.classList.add('loading');
-        confirmDeleteBtn.disabled = true;
-        confirmDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
-    });
-    // Global variables for sorting
-    let currentSortColumn = -1;
-    let sortDirection = 1; // 1 = ascending, -1 = descending
+// FIXED: Delete form submission handler
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteForm = document.getElementById('deleteStudentForm');
+    if (deleteForm) {
+        deleteForm.addEventListener('submit', function() {
+            if (confirmDeleteBtn) {
+                confirmDeleteBtn.classList.add('loading');
+                confirmDeleteBtn.disabled = true;
+                confirmDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+            }
+        });
+    }
+});
+
+// FIXED: Multi-select functionality
+let selectedStudents = new Set();
+
+function toggleRowSelection(checkbox) {
+    const row = checkbox.closest('tr');
+    const userId = parseInt(checkbox.dataset.userId);
     
-    // Initialize when page loads
-    document.addEventListener('DOMContentLoaded', function() {
-        updateStudentsCount();
-        setupQuickFilterButtons();
-    });
-    
-    // Update student counts
-    function updateStudentsCount() {
-        const totalRows = document.querySelectorAll('#studentTableBody tr.student-row').length;
-        const visibleRows = document.querySelectorAll('#studentTableBody tr.student-row:not([style*="display: none"])').length;
-        
-        document.getElementById('totalStudentsCount').textContent = totalRows;
-        document.getElementById('visibleStudentsCount').textContent = visibleRows;
-        document.getElementById('totalCount').textContent = totalRows;
-        document.getElementById('visibleCount').textContent = visibleRows;
-        document.getElementById('totalStudents').textContent = totalRows;
+    if (checkbox.checked) {
+        selectedStudents.add(userId);
+        row.classList.add('multi-selected');
+    } else {
+        selectedStudents.delete(userId);
+        row.classList.remove('multi-selected');
     }
     
-    // Setup quick filter buttons
-    function setupQuickFilterButtons() {
-        const quickFilterBtns = document.querySelectorAll('.quick-filter-btn');
-        quickFilterBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                quickFilterBtns.forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
+    updateFloatingDeleteButton();
+    updateSelectAllCheckbox();
+}
+
+function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+    const isChecked = selectAllCheckbox.checked;
+    
+    rowCheckboxes.forEach(checkbox => {
+        checkbox.checked = isChecked;
+        const row = checkbox.closest('tr');
+        const userId = parseInt(checkbox.dataset.userId);
+        
+        if (isChecked) {
+            selectedStudents.add(userId);
+            row.classList.add('multi-selected');
+        } else {
+            selectedStudents.delete(userId);
+            row.classList.remove('multi-selected');
+        }
+    });
+    
+    updateFloatingDeleteButton();
+}
+
+function updateSelectAllCheckbox() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+    const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+    
+    if (checkedBoxes.length === 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+    } else if (checkedBoxes.length === rowCheckboxes.length) {
+        selectAllCheckbox.checked = true;
+        selectAllCheckbox.indeterminate = false;
+    } else {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = true;
+    }
+}
+
+function updateFloatingDeleteButton() {
+    const floatingButton = document.getElementById('floatingDeleteSelected');
+    const selectedCount = document.getElementById('selectedCount');
+    
+    if (floatingButton && selectedCount) {
+        selectedCount.textContent = selectedStudents.size;
+        
+        if (selectedStudents.size > 0) {
+            floatingButton.classList.add('show');
+        } else {
+            floatingButton.classList.remove('show');
+        }
+    }
+}
+
+function openBatchDeleteModal() {
+    if (selectedStudents.size === 0) return;
+    
+    const modal = document.getElementById('batchDeleteModal');
+    const countSpan = document.getElementById('batchDeleteCount');
+    const detailsDiv = document.getElementById('batchDeleteDetails');
+    const idsInput = document.getElementById('selectedIdsInput');
+    
+    countSpan.textContent = selectedStudents.size;
+    idsInput.value = Array.from(selectedStudents).join(',');
+    
+    // Populate details with selected student names
+    detailsDiv.innerHTML = '';
+    selectedStudents.forEach(userId => {
+        const row = document.querySelector(`tr[data-id="${userId}"]`);
+        if (row) {
+            const studentName = row.querySelector('.student-name div').textContent.trim();
+            const studentNumber = row.querySelector('.badge-info').textContent.trim();
+            detailsDiv.innerHTML += '<div style="padding: 5px 0; border-bottom: 1px solid #eee;">' +
+                '<strong>' + studentName + '</strong> (' + studentNumber + ')' +
+                '</div>';
+        }
+    });
+    
+    modal.style.display = 'flex';
+}
+
+function closeBatchDeleteModal() {
+    const modal = document.getElementById('batchDeleteModal');
+    modal.style.display = 'none';
+}
+
+// FIXED: Batch delete form submission handler
+document.addEventListener('DOMContentLoaded', function() {
+    const batchForm = document.getElementById('batchDeleteForm');
+    if (batchForm) {
+        batchForm.addEventListener('submit', function() {
+            const confirmBtn = document.getElementById('confirmBatchDeleteBtn');
+            if (confirmBtn) {
+                confirmBtn.classList.add('loading');
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+            }
+        });
+    }
+});
+
+// FIXED: Global variables for sorting
+let currentSortColumn = -1;
+let sortDirection = 1; // 1 = ascending, -1 = descending
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    updateStudentsCount();
+    setupQuickFilterButtons();
+});
+
+// Update student counts
+function updateStudentsCount() {
+    const totalRows = document.querySelectorAll('#studentTableBody tr.student-row').length;
+    const visibleRows = document.querySelectorAll('#studentTableBody tr.student-row:not([style*="display: none"])').length;
+    
+    document.getElementById('totalStudentsCount').textContent = totalRows;
+    document.getElementById('visibleStudentsCount').textContent = visibleRows;
+    document.getElementById('totalCount').textContent = totalRows;
+    document.getElementById('visibleCount').textContent = visibleRows;
+    document.getElementById('totalStudents').textContent = totalRows;
+}
+
+// Setup quick filter buttons
+function setupQuickFilterButtons() {
+    const quickFilterBtns = document.querySelectorAll('.quick-filter-btn');
+    quickFilterBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            quickFilterBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+}
+
+// Apply all filters
+function applyFilters() {
+    const nameFilter = document.getElementById('searchName').value.toLowerCase();
+    const studentNumberFilter = document.getElementById('searchStudentNumber').value.toLowerCase();
+    const emailFilter = document.getElementById('searchEmail').value.toLowerCase();
+    const cityFilter = document.getElementById('searchCity').value.toLowerCase();
+    const globalSearch = document.getElementById('globalSearch').value.toLowerCase();
+    
+    const rows = document.querySelectorAll('#studentTableBody tr.student-row');
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        let showRow = true;
+        
+        // Name filter
+        if (nameFilter && !row.getAttribute('data-name').includes(nameFilter)) {
+            showRow = false;
+        }
+        
+        // Student number filter
+        if (studentNumberFilter && !row.getAttribute('data-student-number').includes(studentNumberFilter)) {
+            showRow = false;
+        }
+        
+        // Email filter
+        if (emailFilter && !row.getAttribute('data-email').includes(emailFilter)) {
+            showRow = false;
+        }
+        
+        // City filter
+        if (cityFilter && !row.getAttribute('data-city').includes(cityFilter)) {
+            showRow = false;
+        }
+        
+        // Global search (search across all data attributes)
+        if (globalSearch) {
+            const searchableData = [
+                row.getAttribute('data-name'),
+                row.getAttribute('data-student-number'),
+                row.getAttribute('data-email'),
+                row.getAttribute('data-contact'),
+                row.getAttribute('data-city'),
+                row.getAttribute('data-address'),
+                row.getAttribute('data-fullname')
+            ].join(' ');
+            
+            if (!searchableData.includes(globalSearch)) {
+                showRow = false;
+            }
+        }
+        
+        // Show/hide row
+        row.style.display = showRow ? '' : 'none';
+        if (showRow) visibleCount++;
+    });
+    
+    updateStudentsCount();
+}
+
+// Set quick filters
+function setQuickFilter(filterType) {
+    resetFilters();
+    
+    const rows = document.querySelectorAll('#studentTableBody tr.student-row');
+    
+    switch(filterType) {
+        case 'recent':
+            // Show only last 10 added students (assuming recent ones have higher IDs)
+            const sortedRows = Array.from(rows).sort((a, b) => {
+                return parseInt(b.getAttribute('data-id')) - parseInt(a.getAttribute('data-id'));
             });
-        });
-    }
-    
-    // Apply all filters
-    function applyFilters() {
-        const nameFilter = document.getElementById('searchName').value.toLowerCase();
-        const studentNumberFilter = document.getElementById('searchStudentNumber').value.toLowerCase();
-        const emailFilter = document.getElementById('searchEmail').value.toLowerCase();
-        const cityFilter = document.getElementById('searchCity').value.toLowerCase();
-        const globalSearch = document.getElementById('globalSearch').value.toLowerCase();
-        
-        const rows = document.querySelectorAll('#studentTableBody tr.student-row');
-        let visibleCount = 0;
-        
-        rows.forEach(row => {
-            let showRow = true;
             
-            // Name filter
-            if (nameFilter && !row.getAttribute('data-name').includes(nameFilter)) {
-                showRow = false;
-            }
+            rows.forEach(row => row.style.display = 'none');
+            sortedRows.slice(0, 10).forEach(row => row.style.display = '');
+            break;
             
-            // Student number filter
-            if (studentNumberFilter && !row.getAttribute('data-student-number').includes(studentNumberFilter)) {
-                showRow = false;
-            }
-            
-            // Email filter
-            if (emailFilter && !row.getAttribute('data-email').includes(emailFilter)) {
-                showRow = false;
-            }
-            
-            // City filter
-            if (cityFilter && !row.getAttribute('data-city').includes(cityFilter)) {
-                showRow = false;
-            }
-            
-            // Global search (search across all data attributes)
-            if (globalSearch) {
-                const searchableData = [
-                    row.getAttribute('data-name'),
-                    row.getAttribute('data-student-number'),
-                    row.getAttribute('data-email'),
-                    row.getAttribute('data-contact'),
-                    row.getAttribute('data-city'),
-                    row.getAttribute('data-address'),
-                    row.getAttribute('data-fullname')
-                ].join(' ');
-                
-                if (!searchableData.includes(globalSearch)) {
-                    showRow = false;
+        case 'missing-contact':
+            rows.forEach(row => {
+                const contact = row.getAttribute('data-contact');
+                if (contact && contact.length > 0 && !contact.includes('not provided')) {
+                    row.style.display = 'none';
                 }
-            }
+            });
+            break;
             
-            // Show/hide row
-            row.style.display = showRow ? '' : 'none';
-            if (showRow) visibleCount++;
-        });
-        
-        updateStudentsCount();
+        case 'missing-address':
+            rows.forEach(row => {
+                const city = row.getAttribute('data-city');
+                if (city && city.length > 0 && !city.includes('unknown')) {
+                    row.style.display = 'none';
+                }
+            });
+            break;
+            
+        case 'all':
+            // Already handled by resetFilters()
+            break;
     }
     
-    // Set quick filters
-    function setQuickFilter(filterType) {
-        resetFilters();
+    updateStudentsCount();
+}
+
+// Reset all filters
+function resetFilters() {
+    document.getElementById('searchName').value = '';
+    document.getElementById('searchStudentNumber').value = '';
+    document.getElementById('searchEmail').value = '';
+    document.getElementById('searchCity').value = '';
+    document.getElementById('globalSearch').value = '';
+    
+    // Reset quick filter buttons
+    document.querySelectorAll('.quick-filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show all rows
+    document.querySelectorAll('#studentTableBody tr.student-row').forEach(row => {
+        row.style.display = '';
+    });
+    
+    updateStudentsCount();
+}
+
+// Sort table by column
+function sortTable(columnIndex) {
+    const tbody = document.getElementById('studentTableBody');
+    const rows = Array.from(tbody.querySelectorAll('tr.student-row:not([style*="display: none"])'));
+    
+    // Update sort indicators
+    const headers = document.querySelectorAll('#studentTable thead th');
+    headers.forEach((header, index) => {
+        const indicator = header.querySelector('.sort-indicator');
+        indicator.innerHTML = '';
+        if (index === columnIndex) {
+            if (currentSortColumn === columnIndex) {
+                sortDirection *= -1;
+            } else {
+                sortDirection = 1;
+                currentSortColumn = columnIndex;
+            }
+            indicator.innerHTML = sortDirection === 1 ? '↓' : '↑';
+        }
+    });
+    
+    // Sort rows
+    rows.sort((a, b) => {
+        let aValue, bValue;
         
-        const rows = document.querySelectorAll('#studentTableBody tr.student-row');
-        
-        switch(filterType) {
-            case 'recent':
-                // Show only last 10 added students (assuming recent ones have higher IDs)
-                const sortedRows = Array.from(rows).sort((a, b) => {
-                    return parseInt(b.getAttribute('data-id')) - parseInt(a.getAttribute('data-id'));
-                });
-                
-                rows.forEach(row => row.style.display = 'none');
-                sortedRows.slice(0, 10).forEach(row => row.style.display = '');
+        switch(columnIndex) {
+            case 1: // Student Name
+                aValue = a.getAttribute('data-name');
+                bValue = b.getAttribute('data-name');
                 break;
-                
-            case 'missing-contact':
-                rows.forEach(row => {
-                    const contact = row.getAttribute('data-contact');
-                    if (contact && contact.length > 0 && !contact.includes('not provided')) {
-                        row.style.display = 'none';
-                    }
-                });
+            case 2: // Student Number
+                aValue = a.getAttribute('data-student-number');
+                bValue = b.getAttribute('data-student-number');
                 break;
-                
-            case 'missing-address':
-                rows.forEach(row => {
-                    const city = row.getAttribute('data-city');
-                    if (city && city.length > 0 && !city.includes('unknown')) {
-                        row.style.display = 'none';
-                    }
-                });
+            case 3: // Email
+                aValue = a.getAttribute('data-email');
+                bValue = b.getAttribute('data-email');
                 break;
-                
-            case 'all':
-                // Already handled by resetFilters()
+            case 4: // Contact
+                aValue = a.getAttribute('data-contact');
+                bValue = b.getAttribute('data-contact');
                 break;
+            case 5: // Location
+                const aLocation = a.getAttribute('data-city') + ' ' + a.getAttribute('data-address');
+                const bLocation = b.getAttribute('data-city') + ' ' + b.getAttribute('data-address');
+                aValue = aLocation.toLowerCase();
+                bValue = bLocation.toLowerCase();
+                break;
+            default:
+                aValue = a.cells[columnIndex].textContent.toLowerCase();
+                bValue = b.cells[columnIndex].textContent.toLowerCase();
         }
         
-        updateStudentsCount();
-    }
+        // Handle empty values
+        if (!aValue) aValue = '';
+        if (!bValue) bValue = '';
+        
+        // Compare values
+        if (aValue < bValue) return -1 * sortDirection;
+        if (aValue > bValue) return 1 * sortDirection;
+        return 0;
+    });
     
-    // Reset all filters
-    function resetFilters() {
-        document.getElementById('searchName').value = '';
-        document.getElementById('searchStudentNumber').value = '';
-        document.getElementById('searchEmail').value = '';
-        document.getElementById('searchCity').value = '';
-        document.getElementById('globalSearch').value = '';
-        
-        // Reset quick filter buttons
-        document.querySelectorAll('.quick-filter-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        
-        // Show all rows
-        document.querySelectorAll('#studentTableBody tr.student-row').forEach(row => {
-            row.style.display = '';
-        });
-        
-        updateStudentsCount();
-    }
-    
-    // Sort table by column
-    function sortTable(columnIndex) {
-        const tbody = document.getElementById('studentTableBody');
-        const rows = Array.from(tbody.querySelectorAll('tr.student-row:not([style*="display: none"])'));
-        
-        // Update sort indicators
-        const headers = document.querySelectorAll('#studentTable thead th');
-        headers.forEach((header, index) => {
-            const indicator = header.querySelector('.sort-indicator');
-            indicator.innerHTML = '';
-            if (index === columnIndex) {
-                if (currentSortColumn === columnIndex) {
-                    sortDirection *= -1;
-                } else {
-                    sortDirection = 1;
-                    currentSortColumn = columnIndex;
-                }
-                indicator.innerHTML = sortDirection === 1 ? '?' : '?';
-            }
-        });
-        
-        // Sort rows
-        rows.sort((a, b) => {
-            let aValue, bValue;
-            const aCell = a.cells[columnIndex];
-            const bCell = b.cells[columnIndex];
-            
-            switch(columnIndex) {
-                case 0: // Student Name
-                    aValue = a.getAttribute('data-name');
-                    bValue = b.getAttribute('data-name');
-                    break;
-                case 1: // Student Number
-                    aValue = a.getAttribute('data-student-number');
-                    bValue = b.getAttribute('data-student-number');
-                    break;
-                case 2: // Email
-                    aValue = a.getAttribute('data-email');
-                    bValue = b.getAttribute('data-email');
-                    break;
-                case 3: // Contact
-                    aValue = a.getAttribute('data-contact');
-                    bValue = b.getAttribute('data-contact');
-                    break;
-                case 4: // Location
-                    const aLocation = a.getAttribute('data-city') + ' ' + a.getAttribute('data-address');
-                    const bLocation = b.getAttribute('data-city') + ' ' + b.getAttribute('data-address');
-                    aValue = aLocation.toLowerCase();
-                    bValue = bLocation.toLowerCase();
-                    break;
-                default:
-                    aValue = aCell.textContent.toLowerCase();
-                    bValue = bCell.textContent.toLowerCase();
-            }
-            
-            // Handle empty values
-            if (!aValue) aValue = '';
-            if (!bValue) bValue = '';
-            
-            // Compare values
-            if (aValue < bValue) return -1 * sortDirection;
-            if (aValue > bValue) return 1 * sortDirection;
-            return 0;
-        });
-        
-        // Reorder rows in DOM
-        rows.forEach(row => tbody.appendChild(row));
-        updateStudentsCount();
-    }
-    
-    // Edit student function
-    function editStudent(userId) {
-        window.location.href = 'edit-user.jsp?uid=' + userId;
-    }
+    // Reorder rows in DOM
+    rows.forEach(row => tbody.appendChild(row));
+    updateStudentsCount();
+}
+
+// Edit student function
+function editStudent(userId) {
+    window.location.href = 'edit-user.jsp?uid=' + userId;
+}
 </script>
