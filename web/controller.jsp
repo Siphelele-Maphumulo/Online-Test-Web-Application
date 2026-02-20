@@ -2154,7 +2154,13 @@ try {
                 }
 
                 boolean cheatingTerminated = "true".equalsIgnoreCase(request.getParameter("cheating_terminated"));
-                String resultStatus = cheatingTerminated ? "Cheat" : null;
+                boolean windowLeaveTerminated = "true".equalsIgnoreCase(request.getParameter("left_window_terminated"));
+
+                String resultStatus = null;
+                if (cheatingTerminated || windowLeaveTerminated) {
+                    resultStatus = "Terminated";
+                }
+
                 pDAO.calculateResult(eId, tMarks, endTime, size, resultStatus);
                 
                 // REGISTER EXAM COMPLETION
