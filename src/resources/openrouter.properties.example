@@ -3,3 +3,6 @@
 # Note: Never commit your actual API key to version control!
 openrouter.api.key=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
 openrouter.model=openai/gpt-4o-mini
+
+# Model for Vision/Verification tasks
+openrouter.vision.model=openai/gpt-4o

@@ -8,6 +8,9 @@ openrouter.api.key=your_openrouter_api_key_here
 # Default AI Model
 openrouter.model=openai/gpt-4o-mini
 
+# Model for Vision/Verification tasks
+openrouter.vision.model=openai/gpt-4o
+
 # API Base URL (usually don't need to change)
 openrouter.api.url=https://openrouter.ai/api/v1
 
