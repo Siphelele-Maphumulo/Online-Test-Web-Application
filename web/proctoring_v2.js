@@ -861,6 +861,13 @@
 
             const form = document.getElementById('myform'); 
             if (form) { 
+                // 📦 Gather all answers before termination to ensure accurate scoring
+                if (typeof window.gatherAllAnswers === 'function') {
+                    window.gatherAllAnswers();
+                } else if (typeof gatherAllAnswers === 'function') {
+                    gatherAllAnswers();
+                }
+
                 // Add cheating flag 
                 const input = document.createElement('input'); 
                 input.type = 'hidden'; 

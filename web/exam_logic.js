@@ -390,42 +390,75 @@ document.addEventListener('change', function(e) {
                     }, 1000);
                 }
 
-                function autoSubmitExam() {
-                    // Save all answers before submitting
-                    document.querySelectorAll('.answers[data-max-select="2"]').forEach(function(box){
-                        var qindex = box.closest('.question-card').getAttribute('data-qindex');
-                        if(qindex) updateHiddenForMulti(qindex);
-                    });
-                    
-                    // Handle Drag and Drop answers - save before auto-submit
-                    const dragDropAnswers = getDragDropAnswers();
-                    Object.keys(dragDropAnswers).forEach(qindex => {
-                        const mappings = dragDropAnswers[qindex];
-                        const formattedMappings = {};
-                        for (let tId in mappings) {
-                            formattedMappings['target_' + tId] = 'item_' + mappings[tId];
-                        }
-                        const ansValue = JSON.stringify(formattedMappings);
-                        
-                        let hiddenAns = document.querySelector('input[name="question' + qindex + '"]');
-                        if (!hiddenAns) {
-                            hiddenAns = document.createElement('input');
-                            hiddenAns.type = 'hidden';
-                            hiddenAns.name = 'question' + qindex;
-                            document.getElementById('myform').appendChild(hiddenAns);
-                        }
-                        hiddenAns.value = ansValue;
-                    });
-                    
-                    // Show time up modal
-                    showTimeUpModal();
-                    
-                    // Clean up and submit
-                    cleanupExam();
-                    setTimeout(function() {
-                        document.getElementById('myform').submit();
-                    }, 3000);
-                }
+function autoSubmitExam() {
+    // Save all answers before submitting
+    gatherAllAnswers();
+
+    // Show time up modal
+    showTimeUpModal();
+
+    // Clean up and submit
+    cleanupExam();
+    setTimeout(function() {
+        document.getElementById('myform').submit();
+    }, 3000);
+}
+
+function gatherAllAnswers() {
+    console.log('📦 Gathering all answers for submission...');
+
+    // 1. Save all multi-select answers
+    document.querySelectorAll('.answers[data-max-select="2"]').forEach(function(box){
+        var card = box.closest('.question-card');
+        if (!card) return;
+        var qindex = card.getAttribute('data-qindex');
+        if (qindex) updateHiddenForMulti(qindex);
+    });
+
+    // 2. Handle Drag and Drop answers
+    if (typeof getDragDropAnswers === 'function') {
+        const dragDropAnswers = getDragDropAnswers();
+        Object.keys(dragDropAnswers).forEach(qindex => {
+            const mappings = dragDropAnswers[qindex];
+            const formattedMappings = {};
+            for (let tId in mappings) {
+                formattedMappings['target_' + tId] = 'item_' + mappings[tId];
+            }
+            const ansValue = JSON.stringify(formattedMappings);
+
+            let hiddenAns = document.querySelector('input[name="question' + qindex + '"]');
+            if (!hiddenAns) {
+                hiddenAns = document.createElement('input');
+                hiddenAns.type = 'hidden';
+                hiddenAns.name = 'question' + qindex;
+                var form = document.getElementById('myform');
+                if (form) form.appendChild(hiddenAns);
+            }
+            if (hiddenAns) hiddenAns.value = ansValue;
+            // console.log('🔍 Drag & Drop Gathered (Q' + qindex + '):', ansValue);
+        });
+    }
+
+    // 3. Handle Rearrange answers
+    if (typeof getRearrangeAnswers === 'function') {
+        const rearrangeAnswers = getRearrangeAnswers();
+        Object.keys(rearrangeAnswers).forEach(qindex => {
+            const orderedIds = rearrangeAnswers[qindex];
+            const ansValue = JSON.stringify(orderedIds);
+
+            let hiddenAns = document.querySelector('input[name="question' + qindex + '"]');
+            if (!hiddenAns) {
+                hiddenAns = document.createElement('input');
+                hiddenAns.type = 'hidden';
+                hiddenAns.name = 'question' + qindex;
+                var form = document.getElementById('myform');
+                if (form) form.appendChild(hiddenAns);
+            }
+            if (hiddenAns) hiddenAns.value = ansValue;
+            // console.log('🔍 Rearrange Gathered (Q' + qindex + '):', ansValue);
+        });
+    }
+}
 
                 /* --- CLEANUP FUNCTION --- */
                 function cleanupExam() {
@@ -1521,51 +1554,8 @@ function getRearrangeAnswers() {
 // Modify the submitExam function to handle rearrange answers
 function submitExam() {
     
-    // Save all multi-select answers
-    document.querySelectorAll('.answers[data-max-select="2"]').forEach(function(box){
-        var card = box.closest('.question-card');
-        if (!card) return;
-        var qindex = card.getAttribute('data-qindex');
-        if (qindex) updateHiddenForMulti(qindex);
-    });
-    
-    // Handle Drag and Drop answers
-    const dragDropAnswers = getDragDropAnswers();
-    Object.keys(dragDropAnswers).forEach(qindex => {
-        const mappings = dragDropAnswers[qindex];
-        const formattedMappings = {};
-        for (let tId in mappings) {
-            formattedMappings['target_' + tId] = 'item_' + mappings[tId];
-        }
-        const ansValue = JSON.stringify(formattedMappings);
-        
-        let hiddenAns = document.querySelector('input[name="question' + qindex + '"]');
-        if (!hiddenAns) {
-            hiddenAns = document.createElement('input');
-            hiddenAns.type = 'hidden';
-            hiddenAns.name = 'question' + qindex;
-            document.getElementById('myform').appendChild(hiddenAns);
-        }
-        hiddenAns.value = ansValue;
-        console.log('🔍 Drag & Drop Submit (Q' + qindex + '):', ansValue);
-    });
-    
-    // Handle Rearrange answers
-    const rearrangeAnswers = getRearrangeAnswers();
-    Object.keys(rearrangeAnswers).forEach(qindex => {
-        const orderedIds = rearrangeAnswers[qindex];
-        const ansValue = JSON.stringify(orderedIds);
-        
-        let hiddenAns = document.querySelector('input[name="question' + qindex + '"]');
-        if (!hiddenAns) {
-            hiddenAns = document.createElement('input');
-            hiddenAns.type = 'hidden';
-            hiddenAns.name = 'question' + qindex;
-            document.getElementById('myform').appendChild(hiddenAns);
-        }
-        hiddenAns.value = ansValue;
-        console.log('🔍 Rearrange Submit (Q' + qindex + '):', ansValue);
-    });
+    // Gather all answers into form
+    gatherAllAnswers();
     
     var answeredQuestions = 0;
     document.querySelectorAll('.question-card').forEach(function(card){
