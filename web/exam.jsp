@@ -437,18 +437,18 @@
                                         <input class="form-check-input answer-input <%= isMultiTwo?"multi":"single" %>" 
                                             type="<%= isMultiTwo?"checkbox":"radio" %>" 
                                             id="<%= inputId %>" 
-                                            name="<%= isMultiTwo ? ("ans"+i+"_"+oi) : ("ans"+i) %>" 
+                                            name="<%= isMultiTwo ? ("question"+i+"_"+oi) : ("question"+i) %>"
                                             value="<%= optVal %>" 
                                             data-qindex="<%= i %>">
                                         <label class="form-check-label" for="<%= inputId %>"><%= optVal %></label>
                                     </div>
                                 <% } %>
                                 <% if(isMultiTwo){ %>
-                                    <input type="hidden" id="ans<%= i %>-hidden" name="ans<%= i %>" value="">
+                                    <input type="hidden" id="question<%= i %>-hidden" name="question<%= i %>" value="">
                                 <% } %>
                             <% } %>
                         </div>
-                        <input type="hidden" name="question<%= i %>" value="<%= q.getQuestion() %>">
+                        <input type="hidden" name="qtext<%= i %>" value="<%= q.getQuestion() %>">
                         <input type="hidden" name="qid<%= i %>" value="<%= q.getQuestionId() %>">
                         <input type="hidden" name="qtype<%= i %>" value="<%= isDragDrop?"dragdrop":(isRearrange?"rearrange":(isMultiTwo?"multi2":"single")) %>">
                     </div>
@@ -2110,7 +2110,10 @@ var globalVideoStream = null;
         // For drag and drop questions
         const droppedItems = answersContainer.querySelectorAll('.dropped-item').length > 0;
         
-        return singleSelect || multiSelect || hasText || droppedItems;
+        // For rearrange questions
+        const rearrangeItems = answersContainer.querySelectorAll('.rearrange-item').length > 0;
+
+        return singleSelect || multiSelect || hasText || droppedItems || rearrangeItems;
     }
     
     // Test function to verify horizontal orientation layout

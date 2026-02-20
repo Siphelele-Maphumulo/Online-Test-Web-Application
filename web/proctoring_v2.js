@@ -1,9 +1,10 @@
     class ProctoringSystem { 
         constructor() { 
             this.examActive = true; 
+            this.terminated = false; // Flag to prevent multiple submissions
             this.violations = []; 
             this.warningCount = 0; 
-            this.MAX_WARNINGS = 10; 
+            this.MAX_WARNINGS = 3; // Ultra-strict mode
 
             // Anti-false-positive controls
             this.violationCooldownMs = 15000; // do not count the same violation repeatedly within this window
@@ -28,9 +29,14 @@
             this.MULTIPLE_VOICES_THRESHOLD = 400; // frequency variance (500 * 0.8 = 400, 20% more sensitive)
             this.EYE_OFF_SCREEN_THRESHOLD = 2700; // 2.7 seconds (3000 * 0.9 = 2700, 10% more sensitive)
             this.HEAD_MOVEMENT_THRESHOLD = 0.153; // 17% movement (0.17 * 0.9 = 0.153, 10% more sensitive)
-            this.FACE_LOST_THRESHOLD = 1800; // 1.8 seconds (2000 * 0.9 = 1800, 10% more sensitive)
+            this.FACE_LOST_THRESHOLD = 500; // 0.5 seconds - Immediate detection
             this.MOUTH_MOVEMENT_THRESHOLD = 1.8; // pixels of movement (2 * 0.9 = 1.8, 10% more sensitive)
             this.LOOKING_DOWN_ANGLE = -13.5; // degrees pitch (-15 * 0.9 = -13.5, 10% more sensitive)
+
+            // Countdown state for faster termination
+            this.countdownActive = false;
+            this.countdownValue = 3; // 3 seconds countdown
+            this.countdownOverlay = null;
 
             // Behavioral thresholds
             this.FAST_MOUSE_SPEED_PX_PER_S = 6000; // extremely fast movements (px/sec)
@@ -295,14 +301,16 @@
 
         processFaceDetections(detections) { 
             if (detections.length === 0) { 
+                const timeLost = Date.now() - this.lastFaceDetected;
                 // DETECTION 4: No face in frame 
-                if (Date.now() - this.lastFaceDetected > this.FACE_LOST_THRESHOLD) { 
-                    this.logViolation('VISUAL', 'No face detected in camera - you left the frame'); 
+                if (timeLost > this.FACE_LOST_THRESHOLD) {
+                    this.handleCountdown(timeLost, 'FACE NOT DETECTED');
                 } 
                 return; 
             } 
 
             this.lastFaceDetected = Date.now(); 
+            this.hideCountdown();
 
             // DETECTION 5: Multiple faces 
             if (detections.length > 1) { 
@@ -839,12 +847,15 @@
         } 
 
         autoSubmitForCheating() { 
+            if (this.terminated) return;
+            this.terminated = true;
             this.examActive = false; 
+            this.hideCountdown();
 
             // Show final message in modal to keep fullscreen, then auto-submit
             try {
                 if (typeof showSystemAlertModal === 'function') {
-                    showSystemAlertModal('EXAM TERMINATED: Maximum violations exceeded. Your exam will be submitted for review.');
+                    showSystemAlertModal('EXAM TERMINATED: Cheating detected or multiple violations. Your exam is being submitted.');
                 }
             } catch (e) {}
 
@@ -857,12 +868,66 @@
                 input.value = 'true'; 
                 form.appendChild(input); 
 
+                console.log('🔒 Proctoring: Submitting exam with cheating_terminated=true');
+
                 // Submit shortly to allow the modal to be seen
                 setTimeout(function() {
                     form.submit();
-                }, 1200);
+                }, 1500);
             } 
         } 
+
+        handleCountdown(timeLost, reason) {
+            if (this.terminated) return;
+
+            // 0.5s grace period
+            if (timeLost < 500) return;
+
+            const remaining = Math.max(0, 3 - Math.floor((timeLost - 500) / 1000));
+
+            if (remaining > 0) {
+                if (!this.countdownActive) {
+                    this.showCountdown(remaining, reason);
+                } else if (remaining !== this.countdownValue) {
+                    this.updateCountdown(remaining);
+                }
+            }
+
+            // Terminate after 3.5 seconds total
+            if (timeLost >= 3500) {
+                this.autoSubmitForCheating();
+            }
+        }
+
+        showCountdown(seconds, reason) {
+            this.countdownActive = true;
+            this.countdownValue = seconds;
+
+            this.countdownOverlay = document.createElement('div');
+            this.countdownOverlay.id = 'proctor-countdown';
+            this.countdownOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(239,68,68,0.9);color:white;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-family:sans-serif;';
+            this.countdownOverlay.innerHTML = '<h1 style="font-size:48px;">⚠️ VIOLATION DETECTED</h1>' +
+                '<p style="font-size:24px;">' + reason + '</p>' +
+                '<div style="font-size:120px;font-weight:bold;margin:20px 0;">' + seconds + '</div>' +
+                '<p>Return immediately or exam will be terminated!</p>';
+            document.body.appendChild(this.countdownOverlay);
+        }
+
+        updateCountdown(seconds) {
+            this.countdownValue = seconds;
+            if (this.countdownOverlay) {
+                const countDiv = this.countdownOverlay.querySelector('div');
+                if (countDiv) countDiv.textContent = seconds;
+            }
+        }
+
+        hideCountdown() {
+            this.countdownActive = false;
+            if (this.countdownOverlay) {
+                this.countdownOverlay.remove();
+                this.countdownOverlay = null;
+            }
+        }
 
         sendViolationToServer(violation) { 
             const formData = new FormData(); 
