@@ -7632,82 +7632,162 @@ public String generateDeviceIdentifier() {
 
 
 // Method to get all exams with results
-
 public ArrayList<Exams> getAllExamsWithResults() {
-
     try {
-
         ensureConnection();
-
     } catch (SQLException e) {
-
         LOGGER.log(Level.SEVERE, "Connection error in getAllExamsWithResults", e);
-
         return new ArrayList<>();
-
     }
-
     
+    ArrayList<Exams> exams = new ArrayList<>();
+    
+    String query = "SELECT u.first_name, u.last_name, u.user_name, u.email, " +
+                   "e.exam_id, e.std_id, e.course_name, e.total_marks, e.obt_marks, " +
+                   "e.date, e.start_time, e.end_time, e.exam_time, e.status, e.result_status " +
+                   "FROM exams e " +
+                   "INNER JOIN users u ON e.std_id = u.user_id " +
+                   "WHERE u.user_type = 'student' " +
+                   "ORDER BY e.exam_id DESC";
 
-ArrayList<Exams> exams = new ArrayList<>();
+    try (PreparedStatement ps = conn.prepareStatement(query);
+         ResultSet rs = ps.executeQuery()) {
 
-String query = "SELECT u.first_name, u.last_name, u.user_name, u.email, " +
-               "e.exam_id, e.std_id, e.course_name, e.total_marks, e.obt_marks, " +
-               "e.date, e.start_time, e.end_time, e.exam_time, e.status, e.result_status " +
-               "FROM exams e " +
-               "INNER JOIN users u ON e.std_id = u.user_id";
+        while (rs.next()) {
+            String formattedDate = rs.getDate("date") != null
+                    ? new SimpleDateFormat("yyyy-MM-dd").format(rs.getDate("date"))
+                    : null;
 
-try (PreparedStatement ps = conn.prepareStatement(query);
-     ResultSet rs = ps.executeQuery()) {
+            String resultStatus = rs.getString("result_status");
+            String examStatus = rs.getString("status");
 
-    while (rs.next()) {
+            if (resultStatus == null || resultStatus.trim().isEmpty()) {
+                int totalMarks = rs.getInt("total_marks");
+                int obtMarks = rs.getInt("obt_marks");
 
-        String formattedDate = rs.getDate("date") != null
-                ? new SimpleDateFormat("yyyy-MM-dd").format(rs.getDate("date"))
-                : null;
-
-        String resultStatus = rs.getString("result_status");
-
-        if (resultStatus == null) {
-            int totalMarks = rs.getInt("total_marks");
-            int obtMarks = rs.getInt("obt_marks");
-
-            if (totalMarks > 0) {
-                double percentage = (obtMarks * 100.0) / totalMarks;
-                resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
-            } else {
-                resultStatus = rs.getString("status");
+                if (totalMarks > 0) {
+                    double percentage = (obtMarks * 100.0) / totalMarks;
+                    resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
+                } else {
+                    // Map database status to display status
+                    if ("completed".equalsIgnoreCase(examStatus)) {
+                        resultStatus = "Completed";
+                    } else if ("incomplete".equalsIgnoreCase(examStatus)) {
+                        resultStatus = "In Progress";
+                    } else if ("cancelled".equalsIgnoreCase(examStatus)) {
+                        resultStatus = "Cancelled";
+                    } else {
+                        resultStatus = examStatus;
+                    }
+                }
             }
+
+            Exams exam = new Exams(
+                    rs.getString("first_name"),
+                    rs.getString("last_name"),
+                    rs.getString("user_name"),
+                    rs.getString("email"),
+                    rs.getInt("exam_id"),
+                    rs.getString("std_id"),
+                    rs.getString("course_name"),
+                    rs.getInt("total_marks"),
+                    rs.getInt("obt_marks"),
+                    formattedDate,
+                    rs.getString("start_time"),
+                    rs.getString("end_time"),
+                    rs.getString("exam_time"),
+                    resultStatus
+            );
+
+            exams.add(exam);
         }
 
-        Exams exam = new Exams(
-                rs.getString("first_name"),
-                rs.getString("last_name"),
-                rs.getString("user_name"),
-                rs.getString("email"),
-                rs.getInt("exam_id"),
-                rs.getString("std_id"),
-                rs.getString("course_name"),
-                rs.getInt("total_marks"),
-                rs.getInt("obt_marks"),
-                formattedDate,
-                rs.getString("start_time"),
-                rs.getString("end_time"),
-                rs.getString("exam_time"),
-                resultStatus
-        );
-
-        exams.add(exam);
+    } catch (SQLException e) {
+        Logger.getLogger(DatabaseClass.class.getName())
+              .log(Level.SEVERE, "Error fetching exams with results", e);
     }
-
-} catch (SQLException e) {
-    Logger.getLogger(DatabaseClass.class.getName())
-          .log(Level.SEVERE, "Error fetching exams with results", e);
+    
+    return exams;
 }
 
-return exams;
-}
+// Method to get ALL exams (including non-students) - for admin debugging
+public ArrayList<Exams> getAllExamsAdmin() {
+    try {
+        ensureConnection();
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Connection error in getAllExamsAdmin", e);
+        return new ArrayList<>();
+    }
+    
+    ArrayList<Exams> exams = new ArrayList<>();
+    
+    String query = "SELECT u.first_name, u.last_name, u.user_name, u.email, u.user_type, " +
+                   "e.exam_id, e.std_id, e.course_name, e.total_marks, e.obt_marks, " +
+                   "e.date, e.start_time, e.end_time, e.exam_time, e.status, e.result_status " +
+                   "FROM exams e " +
+                   "INNER JOIN users u ON e.std_id = u.user_id " +
+                   "ORDER BY e.exam_id DESC";
 
+    try (PreparedStatement ps = conn.prepareStatement(query);
+         ResultSet rs = ps.executeQuery()) {
+
+        LOGGER.info("Executing admin query: " + query);
+        int rowCount = 0;
+        
+        while (rs.next()) {
+            rowCount++;
+            String userType = rs.getString("user_type");
+            LOGGER.info("Found exam record #" + rowCount + " for user: " + rs.getString("user_name") + " (type: " + userType + ")");
+            
+            String formattedDate = rs.getDate("date") != null
+                    ? new SimpleDateFormat("yyyy-MM-dd").format(rs.getDate("date"))
+                    : null;
+
+            String resultStatus = rs.getString("result_status");
+
+            if (resultStatus == null || resultStatus.trim().isEmpty()) {
+                int totalMarks = rs.getInt("total_marks");
+                int obtMarks = rs.getInt("obt_marks");
+
+                if (totalMarks > 0) {
+                    double percentage = (obtMarks * 100.0) / totalMarks;
+                    resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
+                } else {
+                    resultStatus = rs.getString("status");
+                }
+            }
+            
+            // Add user type to display for admin
+            resultStatus = resultStatus + " (" + userType + ")";
+
+            Exams exam = new Exams(
+                    rs.getString("first_name"),
+                    rs.getString("last_name"),
+                    rs.getString("user_name"),
+                    rs.getString("email"),
+                    rs.getInt("exam_id"),
+                    rs.getString("std_id"),
+                    rs.getString("course_name"),
+                    rs.getInt("total_marks"),
+                    rs.getInt("obt_marks"),
+                    formattedDate,
+                    rs.getString("start_time"),
+                    rs.getString("end_time"),
+                    rs.getString("exam_time"),
+                    resultStatus
+            );
+
+            exams.add(exam);
+        }
+        
+        LOGGER.info("Total admin exam records found: " + rowCount);
+    } catch (SQLException e) {
+        Logger.getLogger(DatabaseClass.class.getName())
+              .log(Level.SEVERE, "Error fetching all exams admin", e);
+    }
+    
+    return exams;
+}
 
 
 public float[] getRawMarks(int examId) {
@@ -7805,149 +7885,128 @@ public void calculateResult(int eid, int tMarks, String endTime, int size) {
 public void calculateResult(int eid, int tMarks, String endTime, int size, String forcedStatus) {
 
     try {
-
         ensureConnection();
-
     } catch (SQLException e) {
-
         LOGGER.log(Level.SEVERE, "Connection error in calculateResult", e);
-
         return;
-
     }
 
-    
-
     try {
-
         // First, calculate raw obtained and total possible marks
-
         float[] marks = getRawMarks(eid);
-
         float obtRaw = marks[0];
-
         float totalRaw = marks[1];
 
-        
-
         // If totalRaw is 0 (should not happen in real exams), fallback to the passed tMarks
-
         if (totalRaw == 0) totalRaw = tMarks;
 
-        
-
         // Calculate percentage based on raw marks
-
         float percentage = 0;
-
         if (totalRaw > 0) {
-
             percentage = (obtRaw / totalRaw) * 100;
-
         }
 
+        // FIXED: Determine result_status - Now accepts 'Pass', 'Fail', or 'Terminated'
+        String resultStatusForDb;
         
-
-        // Determine result status based on percentage (45% passing threshold)
-        String resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
-        
+        // Check if exam was terminated due to cheating
         if (forcedStatus != null && !forcedStatus.isEmpty()) {
-            resultStatus = forcedStatus;
+            if (forcedStatus.equalsIgnoreCase("Terminated") || 
+                forcedStatus.toLowerCase().contains("cheat") || 
+                forcedStatus.toLowerCase().contains("copy")) {
+                // For terminated exams, store 'Terminated' in result_status
+                resultStatusForDb = "Terminated";
+            } else if (forcedStatus.equalsIgnoreCase("Pass") || forcedStatus.equalsIgnoreCase("Fail")) {
+                // If forced status is explicitly Pass or Fail
+                resultStatusForDb = forcedStatus;
+            } else {
+                // For any other forced status, calculate based on percentage
+                resultStatusForDb = (percentage >= 45.0) ? "Pass" : "Fail";
+            }
+        } else {
+            // Normal case: determine Pass/Fail based on percentage
+            resultStatusForDb = (percentage >= 45.0) ? "Pass" : "Fail";
         }
-
-        // Truncate result_status to fit database column (max 5 characters)
-        String truncatedStatus = resultStatus != null && resultStatus.length() > 5 
-            ? resultStatus.substring(0, 5) 
-            : resultStatus;
-
-        
 
         // Round for DB storage (since schema is INT)
-
         int obtRounded = Math.round(obtRaw);
-
         int totalRounded = Math.round(totalRaw);
 
-
-
         // CRITICAL: Log the actual values being saved
-
-        LOGGER.info("=== SAVING EXAM RESULTS (UNSCALED) ===");
-
+        LOGGER.info("=== SAVING EXAM RESULTS ===");
         LOGGER.log(Level.INFO, "Exam ID: {0}", eid);
-
         LOGGER.log(Level.INFO, "Raw Obtained: {0}", obtRaw);
-
         LOGGER.log(Level.INFO, "Raw Total: {0}", totalRaw);
-
         LOGGER.log(Level.INFO, "Saved Obtained: {0}", obtRounded);
-
         LOGGER.log(Level.INFO, "Saved Total: {0}", totalRounded);
-
         LOGGER.log(Level.INFO, "Percentage: {0}%", String.format("%.1f", percentage));
-
-        LOGGER.log(Level.INFO, "Result Status: {0} (truncated to: ''{1}'')", new Object[]{resultStatus, truncatedStatus});
-
+        LOGGER.log(Level.INFO, "Forced Status: {0}", forcedStatus);
+        LOGGER.log(Level.INFO, "Result Status (DB): {0}", resultStatusForDb);
         LOGGER.info("===========================");
 
+        // Determine exam status - MUST match ENUM values: 'incomplete', 'completed', 'cancelled'
+        String examStatus;
         
+        // Check if the exam was terminated due to cheating
+        if ("Terminated".equals(resultStatusForDb)) {
+            // Use 'cancelled' for terminated/cheating exams
+            examStatus = "cancelled";
+        } 
+        // Check if exam is still in progress (no end time)
+        else if (endTime == null || endTime.trim().isEmpty()) {
+            examStatus = "incomplete";
+        }
+        // Exam was completed normally (has end time)
+        else {
+            examStatus = "completed";
+        }
 
-        // Update exams table with unscaled obt_marks, total_marks, end_time, and status
-
-        String sql = "UPDATE exams SET obt_marks=?, total_marks=?, end_time=?, status='completed', result_status=? WHERE exam_id=?";
+        // Update exams table
+        String sql = "UPDATE exams SET obt_marks=?, total_marks=?, end_time=?, status=?, result_status=? WHERE exam_id=?";
 
         try (PreparedStatement pstm = conn.prepareStatement(sql)) {
             pstm.setInt(1, obtRounded);
-            
             pstm.setInt(2, totalRounded);
-            
             pstm.setString(3, endTime);
             
-            LOGGER.log(Level.INFO, "Truncated result_status: ''{0}'' (original: ''{1}'')", new Object[]{truncatedStatus, resultStatus});
-            pstm.setString(4, truncatedStatus);
+            // Use only allowed ENUM values: 'incomplete', 'completed', 'cancelled'
+            pstm.setString(4, examStatus);
             
-            pstm.setInt(5, eid);
+            // Use only allowed ENUM values: 'Pass', 'Fail', 'Terminated'
+            pstm.setString(5, resultStatusForDb);
             
-            
+            LOGGER.log(Level.INFO, "Final exam_status: ''{0}''", examStatus);
+            LOGGER.log(Level.INFO, "Final result_status: ''{0}''", resultStatusForDb);
+            pstm.setInt(6, eid);
             
             int rowsUpdated = pstm.executeUpdate();
-            
             LOGGER.log(Level.INFO, "Rows updated: {0}", rowsUpdated);
+        } catch (SQLException e) {
+            // If we still get an error, log the actual value that caused it
+            LOGGER.log(Level.SEVERE, "SQL Error when inserting result_status: '" + resultStatusForDb + "'", e);
+            throw e; // Re-throw to be caught by outer catch
         }
 
-        
-
         // Verify the update worked
-
-        String verifySql = "SELECT obt_marks, result_status FROM exams WHERE exam_id = ?";
-
+        String verifySql = "SELECT obt_marks, result_status, status FROM exams WHERE exam_id = ?";
         try (PreparedStatement verifyStmt = conn.prepareStatement(verifySql)) {
             verifyStmt.setInt(1, eid);
-            
             try (ResultSet verifyRs = verifyStmt.executeQuery()) {
                 if (verifyRs.next()) {
-                    
-                    LOGGER.log(Level.INFO, "VERIFIED - Exam {0}: obt_marks={1}, result_status={2}", new Object[]{eid, verifyRs.getInt("obt_marks"), verifyRs.getString("result_status")});
-                    
+                    LOGGER.log(Level.INFO, "VERIFIED - Exam {0}: obt_marks={1}, result_status={2}, status={3}", 
+                        new Object[]{eid, verifyRs.getInt("obt_marks"), verifyRs.getString("result_status"), verifyRs.getString("status")});
                 }
             }
         }
 
-
-
         logExamCompletion(eid);
 
-        
-
     } catch (SQLException ex) {
-
         LOGGER.log(Level.SEVERE, "ERROR in calculateResult: " + ex.getMessage(), ex);
-
+        // Log the full stack trace for debugging
+        LOGGER.log(Level.SEVERE, "Stack trace: ", ex);
     }
-
 }
-
-
 
 public void logExamCompletion(int examId) {
 

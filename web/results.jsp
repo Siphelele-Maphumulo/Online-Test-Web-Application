@@ -1506,7 +1506,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
     }
     
     .multi-select-toggle.checked::after {
-        content: '✓';
+        content: '?';
         border-color: red;
         font-size: 12px;
         font-weight: bold;
@@ -1754,7 +1754,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                 String statusClass = statusText.equalsIgnoreCase("Pass") ? "status-pass" : "status-fail";
                 String percentageColor = statusText.equalsIgnoreCase("Pass") ? "var(--success)" : "var(--error)";
 
-                if (statusText.equalsIgnoreCase("Cheating") || statusText.equalsIgnoreCase("Cheating Detected") || statusText.equalsIgnoreCase("Copying Detected") || 
+                if (statusText.equalsIgnoreCase("Terminated") || statusText.equalsIgnoreCase("Cheating") || statusText.equalsIgnoreCase("Cheating Detected") || statusText.equalsIgnoreCase("Copying Detected") || 
                     statusText.toLowerCase().contains("cheating") || statusText.toLowerCase().contains("copying")) {
                     statusClass = "status-terminated";
                     percentageColor = "var(--warning)";
@@ -1780,7 +1780,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                   </h3>
                   <div style="color: var(--dark-gray); font-size: 14px;">
                     <i class="fas fa-calendar"></i> <%= examDetails.getDate() %> 
-                    | <i class="fas fa-clock"></i> <%= examDetails.getStartTime() %> - <%= examDetails.getEndTime() %>
+                    | <i class="fas fa-clock"></i> <%= examDetails.getStartTime() %> - <%= (examDetails.getEndTime() != null ? examDetails.getEndTime() : "Incomplete") %>
                   </div>
                 </div>
                 <div class="exam-status-badge <%= statusClass %>">
@@ -2386,7 +2386,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                     <% } %>
                   </td>
                   <td class="exam-date"><%= e.getDate() %></td>
-                  <td class="exam-time"><%= e.getStartTime() + " - " + e.getEndTime() %></td>
+                  <td class="exam-time"><%= e.getStartTime() + " - " + (e.getEndTime() != null ? e.getEndTime() : "Incomplete") %></td>
                   <td class="exam-marks"><%= e.getObtMarks() %> / <%= e.gettMarks() %></td>
                   <td>
                     <span class="status-badge <%= statusClass %>">
