@@ -11,6 +11,13 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import javax.imageio.ImageIO;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONException;
@@ -271,13 +278,18 @@ public class OpenRouterClient {
         }
 
         try {
-            // Clean up base64 string - remove data:image prefix if present
-            if (base64Image.contains(",")) {
-                base64Image = base64Image.split(",")[1];
+            // Pre-process image: Resize and compress reasonably
+            LOGGER.info("Sending face photo for analysis...");
+            base64Image = resizeImage(base64Image);
+
+            // Clean up base64 string - remove data:image prefix if present for the API payload
+            String apiBase64 = base64Image;
+            if (apiBase64.contains(",")) {
+                apiBase64 = apiBase64.split(",")[1];
             }
 
             JSONObject payload = new JSONObject();
-            payload.put("model", "anthropic/claude-3.5-sonnet"); // Best for vision tasks
+            payload.put("model", OpenRouterConfig.getVisionModel());
             payload.put("temperature", 0.1); // Low temperature for consistent results
             payload.put("max_tokens", 500);
 
@@ -288,7 +300,7 @@ public class OpenRouterClient {
             
             JSONArray content = new JSONArray();
             
-            // Text prompt - FIXED to request proper JSON object
+            // Text prompt
             JSONObject textPart = new JSONObject();
             textPart.put("type", "text");
             textPart.put("text", 
@@ -299,15 +311,15 @@ public class OpenRouterClient {
                 "3. Is face free from obstructions (no masks, sunglasses, hats covering eyes)?\n" +
                 "4. Is lighting adequate (face clearly visible, not too dark or overexposed)?\n" +
                 "5. Is person looking directly at the camera?\n\n" +
-                "RESPOND WITH A VALID JSON OBJECT IN THIS EXACT FORMAT (NOT AN ARRAY):\n" +
+                "RESPOND WITH A VALID JSON OBJECT IN THIS EXACT FORMAT:\n" +
                 "{\n" +
-                "  \"passed\": false,\n" +
-                "  \"reason\": \"Subject is not looking directly at the camera\",\n" +
-                "  \"confidence\": 65,\n" +
-                "  \"faceCount\": 1,\n" +
+                "  \"passed\": boolean,\n" +
+                "  \"reason\": \"Detailed reason if failed, or 'Face verification passed'\",\n" +
+                "  \"confidence\": 0-100,\n" +
+                "  \"faceCount\": number,\n" +
                 "  \"obstructions\": []\n" +
                 "}\n\n" +
-                "IMPORTANT: Return ONLY the JSON object, no other text, no arrays, no markdown."
+                "IMPORTANT: Return ONLY the JSON object, no other text."
             );
             content.put(textPart);
             
@@ -315,7 +327,7 @@ public class OpenRouterClient {
             JSONObject imagePart = new JSONObject();
             imagePart.put("type", "image_url");
             JSONObject imageUrl = new JSONObject();
-            imageUrl.put("url", "data:image/jpeg;base64," + base64Image);
+            imageUrl.put("url", "data:image/jpeg;base64," + apiBase64);
             imagePart.put("image_url", imageUrl);
             content.put(imagePart);
             
@@ -430,13 +442,18 @@ public class OpenRouterClient {
         }
 
         try {
+            // Pre-process image
+            LOGGER.info("Sending ID photo for analysis...");
+            base64Image = resizeImage(base64Image);
+
             // Clean the base64 string
-            if (base64Image.contains(",")) {
-                base64Image = base64Image.split(",")[1];
+            String apiBase64 = base64Image;
+            if (apiBase64.contains(",")) {
+                apiBase64 = apiBase64.split(",")[1];
             }
 
             JSONObject payload = new JSONObject();
-            payload.put("model", "anthropic/claude-3.5-sonnet"); // Best for vision tasks
+            payload.put("model", OpenRouterConfig.getVisionModel());
             payload.put("temperature", 0.1);
             payload.put("max_tokens", 800);
 
@@ -460,8 +477,8 @@ public class OpenRouterClient {
                 "6. Is the ID held flat (not bent or folded)?\n\n" +
                 "RESPOND WITH A VALID JSON OBJECT IN THIS EXACT FORMAT:\n" +
                 "{\n" +
-                "  \"passed\": false,\n" +
-                "  \"reason\": \"Detailed reason if failed, or 'ID verification passed' if successful\",\n" +
+                "  \"passed\": boolean,\n" +
+                "  \"reason\": \"Detailed reason if failed, or 'ID verification passed'\",\n" +
                 "  \"confidence\": 0-100,\n" +
                 "  \"documentType\": \"passport/driversLicense/nationalId/unknown\",\n" +
                 "  \"issues\": [\"list\", \"of\", \"specific\", \"issues\"]\n" +
@@ -474,7 +491,7 @@ public class OpenRouterClient {
             JSONObject imagePart = new JSONObject();
             imagePart.put("type", "image_url");
             JSONObject imageUrl = new JSONObject();
-            imageUrl.put("url", "data:image/jpeg;base64," + base64Image);
+            imageUrl.put("url", "data:image/jpeg;base64," + apiBase64);
             imagePart.put("image_url", imageUrl);
             content.put(imagePart);
             
@@ -578,13 +595,17 @@ public class OpenRouterClient {
         }
 
         try {
+            // Pre-process image
+            base64Image = resizeImage(base64Image);
+
             // Clean up base64 string
-            if (base64Image.contains(",")) {
-                base64Image = base64Image.split(",")[1];
+            String apiBase64 = base64Image;
+            if (apiBase64.contains(",")) {
+                apiBase64 = apiBase64.split(",")[1];
             }
 
             JSONObject payload = new JSONObject();
-            payload.put("model", "anthropic/claude-3.5-sonnet");
+            payload.put("model", OpenRouterConfig.getVisionModel());
             payload.put("temperature", 0.1);
             payload.put("max_tokens", 300);
 
@@ -601,13 +622,10 @@ public class OpenRouterClient {
                 "Look at this image. Is the person holding some form of identification (ID card, passport, driver's license, or any paper/document) toward the camera?\n\n" +
                 "Respond with ONLY a JSON object in this exact format:\n" +
                 "{\n" +
-                "  \"holdingId\": true or false,\n" +
+                "  \"holdingId\": boolean,\n" +
                 "  \"reason\": \"Brief reason if false, or 'ID detected' if true\"\n" +
                 "}\n\n" +
-                "Examples:\n" +
-                "- If they're holding an ID card: {\"holdingId\": true, \"reason\": \"ID card detected\"}\n" +
-                "- If no ID visible: {\"holdingId\": false, \"reason\": \"No ID or document visible in frame\"}\n" +
-                "- If holding something else: {\"holdingId\": false, \"reason\": \"Holding object but not an ID\"}"
+                "IMPORTANT: Return ONLY the JSON object."
             );
             content.put(textPart);
             
@@ -615,7 +633,7 @@ public class OpenRouterClient {
             JSONObject imagePart = new JSONObject();
             imagePart.put("type", "image_url");
             JSONObject imageUrl = new JSONObject();
-            imageUrl.put("url", "data:image/jpeg;base64," + base64Image);
+            imageUrl.put("url", "data:image/jpeg;base64," + apiBase64);
             imagePart.put("image_url", imageUrl);
             content.put(imagePart);
             
@@ -680,5 +698,79 @@ public class OpenRouterClient {
         fallback.put("holdingId", holdingId);
         fallback.put("reason", reason);
         return fallback;
+    }
+
+    /**
+     * Resizes and compresses a base64 image to ensure it's suitable for AI analysis
+     * without losing too much detail.
+     */
+    public static String resizeImage(String base64Image) {
+        if (base64Image == null || base64Image.isEmpty()) return base64Image;
+
+        try {
+            // Clean base64 string
+            String pureBase64 = base64Image;
+            if (base64Image.contains(",")) {
+                pureBase64 = base64Image.split(",")[1];
+            }
+
+            byte[] imageBytes = Base64.getDecoder().decode(pureBase64);
+            int originalSize = imageBytes.length;
+
+            BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(imageBytes));
+            if (originalImage == null) return base64Image;
+
+            int width = originalImage.getWidth();
+            int height = originalImage.getHeight();
+
+            // Target dimensions (max 1024px while maintaining aspect ratio)
+            int targetWidth = width;
+            int targetHeight = height;
+            int maxSize = 1024;
+
+            if (width > maxSize || height > maxSize) {
+                if (width > height) {
+                    targetWidth = maxSize;
+                    targetHeight = (height * maxSize) / width;
+                } else {
+                    targetHeight = maxSize;
+                    targetWidth = (width * maxSize) / height;
+                }
+            } else if (originalSize < 150 * 1024) {
+                // If already small enough (under 150KB) and not too big dimensions, return original
+                return base64Image;
+            }
+
+            BufferedImage resizedImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+            Graphics2D g2d = resizedImage.createGraphics();
+
+            // Set rendering hints for better quality scaling
+            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            // Draw original image onto the resized canvas (synchronously)
+            g2d.drawImage(originalImage, 0, 0, targetWidth, targetHeight, null);
+            g2d.dispose();
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            // Write as JPG
+            ImageIO.write(resizedImage, "jpg", baos);
+            byte[] resizedBytes = baos.toByteArray();
+
+            double reduction = 100.0 * (1.0 - (double)resizedBytes.length / originalSize);
+            LOGGER.info("Image compression: " + originalSize + " -> " + resizedBytes.length + " bytes (" + String.format("%.0f", reduction) + "% reduction)");
+
+            // Return with original prefix if it had one
+            String prefix = "";
+            if (base64Image.contains(",")) {
+                prefix = base64Image.split(",")[0] + ",";
+            }
+
+            return prefix + Base64.getEncoder().encodeToString(resizedBytes);
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Image resize failed, using original", e);
+            return base64Image;
+        }
     }
 }
