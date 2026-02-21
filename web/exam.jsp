@@ -1,4 +1,13 @@
-
+<%@ page contentType="text/html; charset=UTF-8" %>
+<%@ page pageEncoding="UTF-8" %>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Examination System</title>
+    
+    <!-- Bootstrap & Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/gh/Bernardo-Castilho/dragdroptouch@master/DragDropTouch.js"></script>
 <%@page import="java.util.ArrayList"%>
@@ -953,9 +962,12 @@ var globalVideoStream = null;
                         if (courseName != null && !courseName.trim().isEmpty()) {
                             int duration = pDAO.getExamDuration(courseName);
             %>
-            <option value="<%= courseName %>" data-duration="<%= duration %>">
-                <%= courseName %> (<%= formatDuration(duration) %>)
-            </option>
+            <option value="<%= courseName %>" 
+        data-duration="<%= duration %>" 
+        data-requires-verification="<%= courseName.toLowerCase().contains("exam") ? "true" : "false" %>"
+        <%= courseName.toLowerCase().contains("exam") ? "style='color: #dc2626; font-weight: 600;'" : "" %>>
+    <%= courseName %> (<%= formatDuration(duration) %>)<%= courseName.toLowerCase().contains("exam") ? " 🔒" : "" %>
+</option>
             <% 
                         }
                     }
@@ -1193,6 +1205,11 @@ var globalVideoStream = null;
         var courseName = selectedOption.value;
         var duration = selectedOption.getAttribute('data-duration') || '60';
         
+        // ───────────────────────────── NEW CONDITION ─────────────────────────────
+        var requiresIdentityVerification = 
+            courseName.toLowerCase().includes("exam");
+        // ────────────────────────────────────────────────────────────────────────
+
         // Get modal elements
         var confirmationModal = document.getElementById('confirmationModal');
         var inactiveModal = document.getElementById('inactiveModal');
@@ -1209,17 +1226,29 @@ var globalVideoStream = null;
         }
         
         checkCourseStatus(courseName, function(isActive) {
-            if (isActive) {
-                modalCourseName.textContent = courseName;
-                modalDuration.textContent = duration + ' minutes';
-                // Show Diagnostics first
-                // Attempt fullscreen immediately from this user gesture (required by browsers).
-                requestFullscreenSafe();
-                document.getElementById('diagnosticsModal').style.display = 'flex';
-                runDiagnostics();
-            } else {
+            if (!isActive) {
+                // show inactive modal (your existing code)
                 inactiveCourseName.textContent = courseName;
                 inactiveModal.style.display = 'flex';
+                return;
+            }
+
+            // Course is active → decide path
+            modalCourseName.textContent = courseName;
+            modalDuration.textContent = duration + ' minutes';
+
+            requestFullscreenSafe();
+
+            if (requiresIdentityVerification) {
+                // ─────── Normal secure flow ───────
+                document.getElementById('diagnosticsModal').style.display = 'flex';
+                runDiagnostics();           // → then → startIdentityVerification()
+            } else {
+                // ─────── Skip identity check ───────
+                // You can still run very basic diagnostics if you want
+                // (optional – many systems skip it completely for non-exam courses)
+                document.getElementById('confirmationModal').style.display = 'flex';
+                // or → directly submit form after short delay / user confirmation
             }
         });
     });
@@ -1291,6 +1320,7 @@ var globalVideoStream = null;
     <div class="modal-container" style="max-width: 800px; width: 95%;">
         <div class="modal-header">
             <h3 class="modal-title"><i class="fas fa-user-shield"></i> Exam Policy and Candidate Identity Verification</h3>
+            <button type="button" class="close-modal" onclick="closeIdentityVerificationModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b; padding: 4px; border-radius: 4px; transition: all 0.2s;">&times;</button>
         </div>
         <div class="modal-body">
             <!-- Step Navigation -->
@@ -2855,6 +2885,40 @@ function showSimpleIdError(message) {
 
     </script>
     <style>
+    /* Course Selection Lock Icon Styles */
+    #courseSelect option[data-requires-verification="true"] {
+        color: #dc2626;
+        font-weight: 600;
+        background: linear-gradient(90deg, #fef2f2 0%, #ffffff 100%);
+    }
+    
+    #courseSelect option[data-requires-verification="true"]:hover {
+        background: linear-gradient(90deg, #fee2e2 0%, #fef2f2 100%);
+    }
+    
+    #courseSelect option[data-requires-verification="false"] {
+        color: #059669;
+        font-weight: 500;
+    }
+    
+    #courseSelect option[data-requires-verification="false"]:hover {
+        background: #ecfdf5;
+    }
+    
+    /* Lock icon styling */
+    .lock-indicator {
+        color: #dc2626;
+        font-weight: bold;
+        margin-left: 8px;
+        font-size: 14px;
+    }
+    
+    /* Course selection enhanced styling */
+    .form-select {
+        position: relative;
+        padding-right: 40px;
+    }
+    
     /* Step Header Styles */
     .step-header {
         margin-bottom: 24px;
