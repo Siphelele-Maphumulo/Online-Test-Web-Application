@@ -56,4 +56,8 @@ public class OpenRouterConfig {
     public static String getModel() {
         return props.getProperty("openrouter.model", "openai/gpt-4o-mini");
     }
+
+    public static String getVisionModel() {
+        return props.getProperty("openrouter.vision.model", "openai/gpt-4o");
+    }
 }
