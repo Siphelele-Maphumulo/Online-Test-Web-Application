@@ -1,4 +1,13 @@
-
+<%@ page contentType="text/html; charset=UTF-8" %>
+<%@ page pageEncoding="UTF-8" %>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Examination System</title>
+    
+    <!-- Bootstrap & Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/gh/Bernardo-Castilho/dragdroptouch@master/DragDropTouch.js"></script>
 <%@page import="java.util.ArrayList"%>
@@ -942,32 +951,43 @@ var globalVideoStream = null;
                 <input type="hidden" name="operation" value="startexam">
                 <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") != null ? session.getAttribute("csrf_token") : "" %>">
 <!--                <label class="form-label"><i class="fas fa-book"></i> Select Course</label>-->
-                <select name="coursename" class="form-select" required id="courseSelect">
-                    <option value="">Choose a course...</option>
-        
-            <% 
-                // Get only ACTIVE courses - using the new method
-                ArrayList<String> activeCourseNames = pDAO.getActiveCourseNames();
-                if (activeCourseNames != null && !activeCourseNames.isEmpty()) {
-                    for(String courseName : activeCourseNames){ 
-                        if (courseName != null && !courseName.trim().isEmpty()) {
-                            int duration = pDAO.getExamDuration(courseName);
-            %>
-            <option value="<%= courseName %>" data-duration="<%= duration %>">
-                <%= courseName %> (<%= formatDuration(duration) %>)
-            </option>
-            <% 
-                        }
-                    }
-                } else {
-            %>
-            <option value="" disabled>No exams available</option>
-            <% } %>
-                </select>
+                <!-- Update the course selection dropdown -->
+<select name="coursename" class="form-select" required id="courseSelect">
+    <option value="">Choose a course...</option>
+
+<% 
+    // Get only ACTIVE courses - using new method
+    ArrayList<String> activeCourseNames = pDAO.getActiveCourseNames();
+    if (activeCourseNames != null && !activeCourseNames.isEmpty()) {
+        for(String courseName : activeCourseNames){ 
+            if (courseName != null && !courseName.trim().isEmpty()) {
+                int duration = pDAO.getExamDuration(courseName);
+                boolean isExamCourse = courseName.toLowerCase().contains("exam");
+%>
+    <option value="<%= courseName %>" 
+            data-duration="<%= duration %>"
+            data-is-exam="<%= isExamCourse %>"
+            data-requires-verification="<%= isExamCourse %>"
+<% if(isExamCourse) { %>style="background-color: #e6f0ff; border-left: 3px solid #0047ab; font-weight: 500;"<% } %>>
+        <%= courseName %> (<%= formatDuration(duration) %>) <%= isExamCourse ? "🔒" : "" %>
+    </option>
+<% 
+            }
+        }
+    } else {
+%>
+    <option value="" disabled>No exams available</option>
+<% } %>
+</select>
+
+<!-- Custom styled dropdown indicator (alternative to option styling) -->
+<div id="courseSelectionIndicator" style="margin-top: 5px; font-size: 12px; display: none;">
+    <span class="verification-badge"><i class="fas fa-lock"></i> ID Verification Required</span>
+</div>
 
                 <!-- Course Info Display -->
                 <div id="courseInfo" style="margin-top: 10px; padding: 10px; background: #f0f9ff; border-radius: 6px; display: none;">
-                    <i class="fas fa-info-circle" style="color: #3b82f6;"></i>
+                    <i class="fas fa-info-circle" style="color: #636363;"></i>
                     <span id="courseInfoText"></span>
                 </div>
 
@@ -1078,6 +1098,61 @@ var globalVideoStream = null;
     // Clear all session storage to ensure clean state
     sessionStorage.clear();
     
+    // Enhance course dropdown with visual indicators
+function enhanceCourseDropdown() {
+    const courseSelect = document.getElementById('courseSelect');
+    if (!courseSelect) return;
+    
+    // Create a custom dropdown enhancement
+    const indicator = document.getElementById('courseSelectionIndicator');
+    
+    // Add change event to show indicator when exam course is selected
+    courseSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const isExamCourse = selectedOption.getAttribute('data-is-exam') === 'true';
+        
+        if (indicator) {
+            if (isExamCourse && selectedOption.value) {
+                indicator.style.display = 'block';
+                indicator.innerHTML = '<span class="verification-badge"><i class="fas fa-lock"></i> This course requires identity verification</span>';
+            } else {
+                indicator.style.display = 'none';
+            }
+        }
+        
+        // Add visual highlight to selected option if it's an exam course
+        if (isExamCourse) {
+            courseSelect.style.borderColor = '#0047ab';
+            courseSelect.style.backgroundColor = '#f0f9ff';
+        } else {
+            courseSelect.style.borderColor = '';
+            courseSelect.style.backgroundColor = '';
+        }
+    });
+    
+    // Style the dropdown when opened (for supported browsers)
+    courseSelect.addEventListener('focus', function() {
+        this.size = Math.min(10, this.options.length);
+    });
+    
+    courseSelect.addEventListener('blur', function() {
+        this.size = 1;
+    });
+    
+    courseSelect.addEventListener('mouseover', function() {
+        this.title = Array.from(this.options).map(opt => {
+            if (opt.value) {
+                const isExam = opt.getAttribute('data-is-exam') === 'true';
+                return opt.text + (isExam ? ' (Requires ID verification)' : '');
+            }
+            return '';
+        }).join('\n');
+    });
+}
+    
+    // Call enhancement function
+    enhanceCourseDropdown();
+    
     // Show course info when selected
     document.getElementById('courseSelect').addEventListener('change', function() {
         var selectedOption = this.options[this.selectedIndex];
@@ -1086,7 +1161,17 @@ var globalVideoStream = null;
         
         if(selectedOption.value) {
             var duration = selectedOption.getAttribute('data-duration') || '60';
-            courseInfoText.textContent = 'This exam has a duration of ' + duration + ' minutes.';
+            var isExamCourse = selectedOption.getAttribute('data-is-exam') === 'true';
+            
+            if (isExamCourse) {
+                courseInfoText.innerHTML = '<i class="fas fa-lock" style="color: #0047ab;"></i> <strong>ID Verification Required:</strong> This exam requires identity verification before starting. Duration: ' + duration + ' minutes.';
+                courseInfo.style.background = '#e6f0ff';
+                courseInfo.style.border = '1px solid #0047ab';
+            } else {
+                courseInfoText.innerHTML = '<i class="fas fa-info-circle" style="color: #3b82f6;"></i> Regular course - no identity verification required. Duration: ' + duration + ' minutes.';
+                courseInfo.style.background = '#f0f9ff';
+                courseInfo.style.border = '1px solid #3b82f6';
+            }
             courseInfo.style.display = 'block';
         } else {
             courseInfo.style.display = 'none';
@@ -1177,52 +1262,258 @@ var globalVideoStream = null;
         });
     }
     
-    // Confirm before starting exam (using modal instead of alert)
-    document.getElementById('examStartForm').addEventListener('submit', function(e) {
+    // ==================== DYNAMIC CONDITIONAL IDENTITY VERIFICATION ====================
+
+// Update the exam start confirmation logic with database-driven course checking
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('examStartForm');
+    const courseSelect = document.getElementById('courseSelect');
+    const confirmationModal = document.getElementById('confirmationModal');
+    const identityModal = document.getElementById('identityVerificationModal');
+    const modalCourseName = document.getElementById('modalCourseName');
+    const modalDuration = document.getElementById('modalDuration');
+    const beginButton = document.getElementById('beginButton');
+    const cancelButton = document.getElementById('cancelButton');
+    
+    if (!form) return;
+    
+    // Override form submission
+    form.addEventListener('submit', function(e) {
         e.preventDefault();
         
-        var courseSelect = document.getElementById('courseSelect');
-        if(!courseSelect || !courseSelect.value) {
-            if (typeof showSystemAlertModal === 'function') {
-                showSystemAlertModal('Please select a course.');
-            }
+        const selectedOption = courseSelect.options[courseSelect.selectedIndex];
+        if (!selectedOption || !selectedOption.value) {
+            showSystemAlertModal('Please select a course.');
             return;
         }
         
-        var selectedOption = courseSelect.options[courseSelect.selectedIndex];
-        var courseName = selectedOption.value;
-        var duration = selectedOption.getAttribute('data-duration') || '60';
+        const courseName = selectedOption.value;
+        const duration = selectedOption.getAttribute('data-duration') || '60';
         
-        // Get modal elements
-        var confirmationModal = document.getElementById('confirmationModal');
-        var inactiveModal = document.getElementById('inactiveModal');
-        var modalCourseName = document.getElementById('modalCourseName');
-        var modalDuration = document.getElementById('modalDuration');
-        var inactiveCourseName = document.getElementById('inactiveCourseName');
-        
-        if (!confirmationModal || !inactiveModal || !modalCourseName || !modalDuration || !inactiveCourseName) {
-            console.error('Modal elements not found');
-            if (typeof showSystemAlertModal === 'function') {
-                showSystemAlertModal('System error: Modal elements not found. Please refresh the page.');
-            }
-            return;
-        }
-        
+        // Check if course is active first
         checkCourseStatus(courseName, function(isActive) {
-            if (isActive) {
-                modalCourseName.textContent = courseName;
-                modalDuration.textContent = duration + ' minutes';
-                // Show Diagnostics first
-                // Attempt fullscreen immediately from this user gesture (required by browsers).
-                requestFullscreenSafe();
-                document.getElementById('diagnosticsModal').style.display = 'flex';
-                runDiagnostics();
+            if (!isActive) {
+                document.getElementById('inactiveCourseName').textContent = courseName;
+                document.getElementById('inactiveModal').style.display = 'flex';
+                return;
+            }
+            
+            // Store course info for later use
+            sessionStorage.setItem('selectedCourse', courseName);
+            sessionStorage.setItem('selectedDuration', duration);
+            
+            // Check if this course requires identity verification
+            const requiresVerification = checkIfExamCourse(courseName);
+            
+            // Update confirmation modal
+            modalCourseName.textContent = courseName;
+            modalDuration.textContent = duration + ' minutes';
+            
+            if (requiresVerification) {
+                // For exam courses, show identity verification first
+                console.log('Course requires identity verification:', courseName);
+                startIdentityVerificationProcess(courseName, duration);
             } else {
-                inactiveCourseName.textContent = courseName;
-                inactiveModal.style.display = 'flex';
+                // For regular courses, show confirmation modal directly
+                console.log('Regular course - no verification needed:', courseName);
+                requestFullscreenSafe();
+                showConfirmationModal();
             }
         });
     });
+    
+    // Begin button handler - now handles both cases
+    beginButton.addEventListener('click', async function() {
+        try {
+            const courseName = sessionStorage.getItem('selectedCourse');
+            
+            // Check if this course requires verification
+            const requiresVerification = checkIfExamCourse(courseName);
+            
+            if (requiresVerification) {
+                // Verify that identity verification was completed
+                const faceCaptured = sessionStorage.getItem('faceCaptured') === 'true';
+                const idCaptured = sessionStorage.getItem('idCaptured') === 'true';
+                const honorAccepted = sessionStorage.getItem('honorAccepted') === 'true';
+                
+                if (!faceCaptured || !idCaptured || !honorAccepted) {
+                    showSystemAlertModal('Please complete identity verification first.');
+                    return;
+                }
+            }
+            
+            // Proceed with exam start
+            await startExam();
+            
+        } catch (error) {
+            console.error('Error starting exam:', error);
+            showSystemAlertModal('Failed to start exam. Please try again.');
+        }
+    });
+    
+    // Cancel button handler
+    if (cancelButton) {
+        cancelButton.addEventListener('click', function() {
+            confirmationModal.style.display = 'none';
+            // Clear stored data
+            sessionStorage.removeItem('selectedCourse');
+            sessionStorage.removeItem('selectedDuration');
+            sessionStorage.removeItem('faceCaptured');
+            sessionStorage.removeItem('idCaptured');
+            sessionStorage.removeItem('honorAccepted');
+            sessionStorage.removeItem('pendingExamStart');
+        });
+    }
+});
+
+// Function to check if a course requires identity verification
+function checkIfExamCourse(courseName) {
+    if (!courseName) return false;
+    
+    // Convert to lowercase for case-insensitive comparison
+    const lowerCaseName = courseName.toLowerCase();
+    
+    // Check if the course name contains "exam"
+    return lowerCaseName.includes('exam');
+}
+
+// Enhanced identity verification starter
+function startIdentityVerificationProcess(courseName, duration) {
+    console.log('Starting identity verification for exam course:', courseName);
+    
+    const identityModal = document.getElementById('identityVerificationModal');
+    const confirmationModal = document.getElementById('confirmationModal');
+    
+    // Reset verification state for new exam
+    sessionStorage.removeItem('faceCaptured');
+    sessionStorage.removeItem('idCaptured');
+    sessionStorage.removeItem('honorAccepted');
+    sessionStorage.removeItem('faceCaptureTime');
+    sessionStorage.removeItem('idVerified');
+    
+    // Reset UI
+    resetVerificationUI();
+    
+    // Show identity modal
+    identityModal.style.display = 'flex';
+    showVerifyStep(1);
+    
+    // Store course info for after verification
+    sessionStorage.setItem('pendingExamStart', 'true');
+}
+
+// Reset verification UI
+function resetVerificationUI() {
+    // Reset step navigation
+    for (let i = 1; i <= 4; i++) {
+        const nav = document.getElementById('step-nav-' + i);
+        if (nav) {
+            const circle = nav.querySelector('div');
+            if (circle) {
+                circle.style.background = i === 1 ? '#0047ab' : '#cbd5e1';
+                circle.textContent = i;
+            }
+            nav.style.color = i === 1 ? '#0047ab' : '#cbd5e1';
+        }
+    }
+    
+    // Reset step displays
+    document.querySelectorAll('.verification-step').forEach(el => {
+        el.style.display = 'none';
+    });
+    document.getElementById('verification-step-1').style.display = 'block';
+    
+    // Reset form inputs
+    const nameInput = document.getElementById('studentNameInput');
+    if (nameInput) {
+        nameInput.value = '';
+        nameInput.disabled = false;
+    }
+    
+    const verifyBtn = document.getElementById('verifyNameBtn');
+    if (verifyBtn) {
+        verifyBtn.style.display = 'inline-block';
+        verifyBtn.disabled = false;
+        verifyBtn.innerHTML = 'Verify';
+    }
+    
+    const honorCheckbox = document.getElementById('honorCodeCheckbox');
+    if (honorCheckbox) {
+        honorCheckbox.checked = false;
+        honorCheckbox.disabled = true;
+    }
+    
+    const signatureInput = document.getElementById('digitalSignature');
+    if (signatureInput) {
+        signatureInput.value = '';
+        signatureInput.disabled = false;
+    }
+    
+    document.getElementById('signatureSection').style.display = 'none';
+    document.getElementById('honorCodeSection').style.display = 'none';
+    document.getElementById('nameVerificationMessage').style.display = 'none';
+    
+    // Reset camera previews
+    document.getElementById('faceCapturedPreview').style.display = 'none';
+    document.getElementById('liveInstructions').style.display = 'block';
+    document.getElementById('retakeSection').style.display = 'none';
+    document.getElementById('idCapturedPreview').style.display = 'none';
+    
+    // Reset captured data
+    capturedFaceData = null;
+    capturedIdData = null;
+    
+    // Reset buttons
+    const captureFaceBtn = document.getElementById('captureFaceBtn');
+    if (captureFaceBtn) {
+        captureFaceBtn.innerHTML = '<i class="fas fa-camera"></i> Capture Photo';
+        captureFaceBtn.disabled = false;
+    }
+    
+    const captureIdBtn = document.getElementById('captureIdBtn');
+    if (captureIdBtn) {
+        captureIdBtn.innerHTML = '<i class="fas fa-id-card"></i> Capture ID Photo';
+        captureIdBtn.disabled = false;
+    }
+}
+
+// Show confirmation modal with stored course info
+function showConfirmationModal() {
+    const modal = document.getElementById('confirmationModal');
+    const courseName = sessionStorage.getItem('selectedCourse');
+    const duration = sessionStorage.getItem('selectedDuration');
+    
+    if (courseName && duration) {
+        document.getElementById('modalCourseName').textContent = courseName;
+        document.getElementById('modalDuration').textContent = duration + ' minutes';
+    }
+    
+    modal.style.display = 'flex';
+}
+
+// Enhanced exam starter
+async function startExam() {
+    const courseName = sessionStorage.getItem('selectedCourse');
+    
+    // Clear verification flags (they've served their purpose)
+    sessionStorage.removeItem('pendingExamStart');
+    
+    // Submit form
+    const form = document.getElementById('examStartForm');
+    if (form) {
+        // Add hidden input to indicate verification passed if needed
+        const requiresVerification = checkIfExamCourse(courseName);
+        if (requiresVerification) {
+            const verifiedInput = document.createElement('input');
+            verifiedInput.type = 'hidden';
+            verifiedInput.name = 'identityVerified';
+            verifiedInput.value = 'true';
+            form.appendChild(verifiedInput);
+        }
+        
+        form.submit();
+    }
+}
 </script>
         <% } %>
 
@@ -2447,53 +2738,52 @@ var globalVideoStream = null;
         currentVerifyStep = step;
     }
 
-    document.getElementById('verifyNextBtn').onclick = async () => {
-        if (currentVerifyStep === 1) {
-            if (!window.verifiedFullName) {
-                if (typeof showSystemAlertModal === 'function') {
-                    showSystemAlertModal('Please verify your name first.');
-                }
-                return;
-            }
-            const agreed = document.getElementById('honorCodeCheckbox').checked;
-            const sigInput = document.getElementById('digitalSignature');
-            const sig = sigInput ? sigInput.value.trim() : "";
-            const expectedSig = sigInput ? sigInput.dataset.expected : "";
-            
-            if (!agreed) {
-                if (typeof showSystemAlertModal === 'function') {
-                    showSystemAlertModal('Please agree to the Code of Honor to proceed.');
-                }
-                return;
-            }
-            
-            if (!sig || sig !== expectedSig) {
-                if (typeof showSystemAlertModal === 'function') {
-                    showSystemAlertModal('Digital signature does not match. Please type your full name exactly as: ' + expectedSig);
-                }
-                return;
-            }
-            showVerifyStep(2);
-        } else if (currentVerifyStep === 2) {
-            if (!capturedFaceData) {
-                if (typeof showSystemAlertModal === 'function') {
-                    showSystemAlertModal('Please capture your face photo first.');
-                }
-                return;
-            }
-            showVerifyStep(3);
-        } else if (currentVerifyStep === 3) {
-            if (!capturedIdData) {
-                if (typeof showSystemAlertModal === 'function') {
-                    showSystemAlertModal('Please capture your ID photo first.');
-                }
-                return;
-            }
-            // Save everything to backend
-            await saveVerificationToBackend();
-            showVerifyStep(4);
+    // Update the verification next button handler
+document.getElementById('verifyNextBtn').onclick = async () => {
+    if (currentVerifyStep === 1) {
+        if (!window.verifiedFullName) {
+            showSystemAlertModal('Please verify your name first.');
+            return;
         }
-    };
+        const agreed = document.getElementById('honorCodeCheckbox').checked;
+        const sigInput = document.getElementById('digitalSignature');
+        const sig = sigInput ? sigInput.value.trim() : "";
+        const expectedSig = sigInput ? sigInput.dataset.expected : "";
+        
+        if (!agreed) {
+            showSystemAlertModal('Please agree to the Code of Honor to proceed.');
+            return;
+        }
+        
+        if (!sig || sig !== expectedSig) {
+            showSystemAlertModal('Digital signature does not match. Please type your full name exactly as: ' + expectedSig);
+            return;
+        }
+        
+        // Mark honor code as accepted
+        sessionStorage.setItem('honorAccepted', 'true');
+        showVerifyStep(2);
+        
+    } else if (currentVerifyStep === 2) {
+        if (!capturedFaceData) {
+            showSystemAlertModal('Please capture your face photo first.');
+            return;
+        }
+        sessionStorage.setItem('faceCaptured', 'true');
+        showVerifyStep(3);
+        
+    } else if (currentVerifyStep === 3) {
+        if (!capturedIdData) {
+            showSystemAlertModal('Please capture your ID photo first.');
+            return;
+        }
+        
+        // Save verification to backend
+        await saveVerificationToBackend();
+        sessionStorage.setItem('idCaptured', 'true');
+        showVerifyStep(4);
+    }
+};
 
     document.getElementById('verifyPrevBtn').onclick = () => {
         showVerifyStep(currentVerifyStep - 1);
@@ -3275,6 +3565,142 @@ function showSimpleIdError(message) {
             max-width: 500px;
             margin: 0 auto;
         }
+    }
+
+    /* Visual Indicators for Course Selection */
+    .verification-badge {
+        display: inline-block;
+        background: #476287;
+        color: white;
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        margin-left: 8px;
+        vertical-align: middle;
+        font-weight: normal;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.8;
+        }
+    }
+
+    /* Style for options that require verification */
+    #courseSelect option[data-requires-verification="true"] {
+        background-color: #f0f9ff;
+        border-left: 3px solid #476287;
+        font-weight: 500;
+    }
+
+    /* Enhanced modal transitions */
+    .modal-overlay {
+        transition: opacity 0.3s ease;
+    }
+
+    .modal-container {
+        transform: scale(0.95);
+        transition: transform 0.3s ease;
+    }
+
+    .modal-overlay[style*="flex"] .modal-container {
+        transform: scale(1);
+    }
+
+    /* Enhanced course dropdown styling */
+    #courseSelect {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        background-image: url("data:image/svg+xml;utf8,<svg fill='%23333' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        padding-right: 30px;
+    }
+
+    /* Style for options that require verification */
+    #courseSelect option[data-requires-verification="true"] {
+        background-color: #e6f0ff;
+        color: #476287;
+        font-weight: 500;
+        position: relative;
+    }
+
+    /* Custom badge for verification required */
+    .verification-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #476287, #2563eb);
+        color: white;
+        font-size: 11px;
+        padding: 3px 10px;
+        border-radius: 20px;
+        margin-left: 8px;
+        font-weight: 500;
+        box-shadow: 0 2px 4px rgba(0,71,171,0.2);
+        animation: subtlePulse 2s infinite;
+    }
+
+    .verification-badge i {
+        margin-right: 4px;
+        font-size: 10px;
+    }
+
+    @keyframes subtlePulse {
+        0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+        50% {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+    }
+
+    /* Course info panel enhancement */
+    #courseInfo {
+        transition: all 0.3s ease;
+        border-left: 4px solid transparent;
+    }
+
+    #courseInfo.verification-required {
+        border-left-color: #476287;
+        background: linear-gradient(to right, #f0f9ff, #ffffff);
+    }
+
+    #courseInfo.verification-required i {
+        color: #476287;
+    }
+
+    /* Selected course highlight */
+    #courseSelect option:checked {
+        background: linear-gradient(135deg, #476287, #476287);
+        color: white;
+    }
+
+    /* Tooltip for additional info */
+    .course-tooltip {
+        position: relative;
+        display: inline-block;
+        cursor: help;
+    }
+
+    .course-tooltip:hover:after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1e293b;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        white-space: nowrap;
+        z-index: 1000;
     }
     </style>
 <script src="proctoring_v2.js"></script>
