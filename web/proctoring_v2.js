@@ -4,7 +4,7 @@
             this.terminated = false; // Flag to prevent multiple submissions
             this.violations = []; 
             this.warningCount = 0; 
-            this.MAX_WARNINGS = 5; // Increased from 3 - more attempts before termination
+            this.MAX_WARNINGS = 1; // Immediate termination on first major violation
 
             // Anti-false-positive controls
             this.violationCooldownMs = 15000; // do not count the same violation repeatedly within this window
@@ -309,8 +309,12 @@
                 return; 
             } 
 
+            // Face detected
             this.lastFaceDetected = Date.now(); 
-            this.hideCountdown();
+            if (this.countdownActive) {
+                console.log('✅ Face re-detected, hiding countdown');
+                this.hideCountdown();
+            }
 
             // DETECTION 5: Multiple faces 
             if (detections.length > 1) { 
@@ -890,7 +894,7 @@
             // 0.5s grace period
             if (timeLost < 500) return;
 
-            const remaining = Math.max(0, 5 - Math.floor((timeLost - 500) / 1000));
+            const remaining = Math.max(0, 3 - Math.floor((timeLost - 500) / 1000));
             
             if (remaining > 0) {
                 if (!this.countdownActive) {
@@ -900,8 +904,8 @@
                 }
             }
 
-            // Terminate after 5 seconds total
-            if (timeLost >= 5000) {
+            // Terminate after 3 seconds total
+            if (timeLost >= 3000) {
                 this.autoSubmitForCheating();
             }
         }
@@ -910,30 +914,55 @@
             this.countdownActive = true;
             this.countdownValue = seconds;
             
+            // Remove existing if any
+            const existing = document.getElementById('proctor-countdown');
+            if (existing) existing.remove();
+
             this.countdownOverlay = document.createElement('div');
             this.countdownOverlay.id = 'proctor-countdown';
-            this.countdownOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(239,68,68,0.9);color:white;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-family:sans-serif;';
-            this.countdownOverlay.innerHTML = '<h1 style="font-size:48px;">⚠️ VIOLATION DETECTED</h1>' +
-                '<p style="font-size:24px;">' + reason + '</p>' +
-                '<div style="font-size:120px;font-weight:bold;margin:20px 0;">' + seconds + '</div>' +
-                '<p>Return immediately or exam will be terminated!</p>';
+            this.countdownOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);color:white;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-family:sans-serif;';
+
+            let guideHtml = '';
+            if (reason.indexOf('FACE') !== -1) {
+                guideHtml = '<div style="position:relative; width:320px; height:240px; margin-bottom:20px; border:2px solid rgba(255,255,255,0.2); border-radius:12px; overflow:hidden;">' +
+                    '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:160px; height:210px; border:3px dashed #ef4444; border-radius:50% 50% 40% 40%; box-shadow: 0 0 0 1000px rgba(0,0,0,0.4); animation: proctorPulse 2s infinite;"></div>' +
+                    '<div style="position:absolute; bottom:10px; width:100%; text-align:center; font-size:12px; color:#ef4444; font-weight:bold;">ALIGN FACE IN OVAL</div>' +
+                '</div>';
+            }
+
+            this.countdownOverlay.innerHTML =
+                '<div style="background:rgba(239,68,68,0.9); padding:40px; border-radius:24px; box-shadow:0 20px 50px rgba(0,0,0,0.5); max-width:500px; width:90%; display:flex; flex-direction:column; align-items:center;">' +
+                    '<h1 style="font-size:32px; margin:0 0 10px 0; color:white; display:flex; align-items:center; gap:15px;"><i class="fas fa-exclamation-triangle"></i> VIOLATION DETECTED</h1>' +
+                    '<p style="font-size:18px; margin:0 0 20px 0; opacity:0.9;">' + reason + '</p>' +
+                    guideHtml +
+                    '<div id="proctor-countdown-value" style="font-size:80px; font-weight:bold; margin:10px 0; line-height:1;">' + seconds + '</div>' +
+                    '<p style="font-size:16px; margin:20px 0 0 0; font-weight:500;">Please reposition yourself immediately.</p>' +
+                    '<p style="font-size:14px; margin:10px 0 0 0; opacity:0.8;">The exam will be terminated in some seconds if you don\'t return</p>' +
+                '</div>';
             document.body.appendChild(this.countdownOverlay);
+
+            // Add pulse animation if not exists
+            if (!document.getElementById('proctor-pulse-style')) {
+                const style = document.createElement('style');
+                style.id = 'proctor-pulse-style';
+                style.textContent = '@keyframes proctorPulse { 0%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 50% { opacity: 0.5; transform: translate(-50%, -50%) scale(1.05); } }';
+                document.head.appendChild(style);
+            }
         }
 
         updateCountdown(seconds) {
             this.countdownValue = seconds;
-            if (this.countdownOverlay) {
-                const countDiv = this.countdownOverlay.querySelector('div');
-                if (countDiv) countDiv.textContent = seconds;
-            }
+            const countDiv = document.getElementById('proctor-countdown-value');
+            if (countDiv) countDiv.textContent = seconds;
         }
 
         hideCountdown() {
             this.countdownActive = false;
-            if (this.countdownOverlay) {
-                this.countdownOverlay.remove();
-                this.countdownOverlay = null;
+            const overlay = document.getElementById('proctor-countdown');
+            if (overlay) {
+                overlay.remove();
             }
+            this.countdownOverlay = null;
         }
 
         sendViolationToServer(violation) { 

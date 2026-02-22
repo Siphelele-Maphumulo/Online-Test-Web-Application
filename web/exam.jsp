@@ -1236,6 +1236,7 @@ var globalVideoStream = null;
             // Course is active → decide path
             modalCourseName.textContent = courseName;
             modalDuration.textContent = duration + ' minutes';
+            window.currentCourseName = courseName; // Store globally for waiting room
 
             requestFullscreenSafe();
 
@@ -1535,6 +1536,136 @@ var globalVideoStream = null;
     </div>
 </div>
 
+<!-- WAITING ROOM: Proctor Assignment in Progress -->
+<div id="waitingRoomModal" class="modal-overlay" style="display: none;">
+    <div class="modal-container" style="max-width: 550px;">
+        <div class="modal-header" style="background: #09294d;">
+            <h3 class="modal-title" style="color: white;"><i class="fas fa-user-clock"></i> Proctor Assignment in Progress</h3>
+        </div>
+        <div class="modal-body" style="text-align: center; padding: 30px 25px;">
+            <!-- Animated waiting indicator -->
+            <div style="position: relative; width: 100px; height: 100px; margin: 0 auto 25px;">
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 4px solid #e2e8f0; border-radius: 50%;"></div>
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 4px solid transparent; border-top-color: #09294d; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 32px; color: #09294d;">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+            </div>
+
+            <!-- Exam Info -->
+            <div style="margin-bottom: 20px;">
+                <span style="background: #09294d20; color: #09294d; padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: 500; display: inline-block; margin-bottom: 15px;">
+                    <i class="fas fa-certificate"></i> <span id="waitingRoomCourseName">PCEP™ – Certified Entry-Level Python Programmer</span>
+                </span>
+
+                <div style="font-size: 14px; color: #718096; margin: 5px 0;">
+                    <i class="fas fa-code"></i> Exam Version: <strong>PCEP 30-02</strong>
+                </div>
+
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 15px 0;">
+                    <span style="background: #f7fafc; padding: 4px 12px; border-radius: 15px; font-size: 13px; color: #4a5568;"><i class="fas fa-language"></i> English</span>
+                    <span style="background: #f7fafc; padding: 4px 12px; border-radius: 15px; font-size: 13px; color: #4a5568;">Español</span>
+                    <span style="background: #f7fafc; padding: 4px 12px; border-radius: 15px; font-size: 13px; color: #4a5568;">Polski</span>
+                    <span style="background: #f7fafc; padding: 4px 12px; border-radius: 15px; font-size: 13px; color: #4a5568;">Português</span>
+                    <span style="background: #f7fafc; padding: 4px 12px; border-radius: 15px; font-size: 13px; color: #4a5568;">日本語</span>
+                    <span style="background: #f7fafc; padding: 4px 12px; border-radius: 15px; font-size: 13px; color: #4a5568;">Українська</span>
+                </div>
+            </div>
+
+            <p style="color: #4a5568; margin: 20px 0 15px; font-size: 16px; line-height: 1.5;">
+                We're currently verifying your personal information and exam details.<br>
+                You're in line, awaiting assignment of an OpenEDG Proctor and their approval.<br>
+                Please stay in the Waiting Room to secure your exam slot and receive additional instructions.
+            </p>
+
+            <!-- Queue Position -->
+            <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                <div style="font-size: 14px; color: #0369a1; margin-bottom: 8px;">
+                    <i class="fas fa-users"></i> Your Position in Queue
+                </div>
+                <div style="font-size: 48px; font-weight: 700; color: #0284c7; line-height: 1; margin: 10px 0;">
+                    1<sup style="font-size: 24px;">st</sup>
+                </div>
+                <div style="font-size: 18px; color: #0369a1; margin: 10px 0;">
+                    <i class="fas fa-hourglass-half"></i> <span id="waitingTimeDisplay">Less than 1 minute</span>
+                </div>
+                <div style="font-size: 13px; color: #64748b; margin-top: 15px;">
+                    <i class="fas fa-shield-alt"></i> Secure connection established
+                </div>
+            </div>
+
+            <!-- Important Instructions -->
+            <div style="background: #fef9c3; border-left: 4px solid #eab308; padding: 12px 15px; text-align: left; border-radius: 8px; margin-top: 20px;">
+                <div style="display: flex; align-items: center; gap: 8px; color: #854d0e; margin-bottom: 8px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong style="font-size: 14px;">Important Instructions</strong>
+                </div>
+                <ul style="margin: 0; padding-left: 25px; color: #854d0e; font-size: 13px; line-height: 1.6;">
+                    <li>Do not close or refresh this window</li>
+                    <li>Ensure your camera and microphone are working</li>
+                    <li>You will be automatically connected when a proctor is available</li>
+                    <li>The proctor may ask you to show your ID and surroundings</li>
+                </ul>
+            </div>
+
+            <!-- Loading Animation -->
+            <div style="margin-top: 25px; display: flex; justify-content: center; gap: 20px;">
+                <div style="text-align: center;">
+                    <div style="width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #09294d; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 8px;"></div>
+                    <span style="font-size: 12px; color: #64748b;">Checking System</span>
+                </div>
+                <div style="text-align: center;">
+                    <div style="width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #48bb78; border-radius: 50%; animation: spin 1.2s linear infinite; margin: 0 auto 8px;"></div>
+                    <span style="font-size: 12px; color: #64748b;">Verifying Identity</span>
+                </div>
+                <div style="text-align: center;">
+                    <div style="width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #f6ad55; border-radius: 50%; animation: spin 1.5s linear infinite; margin: 0 auto 8px;"></div>
+                    <span style="font-size: 12px; color: #64748b;">Assigning Proctor</span>
+                </div>
+            </div>
+
+            <!-- Cancel Button -->
+            <div style="margin-top: 25px;">
+                <button type="button" class="btn-secondary" onclick="cancelWaitingRoom()" style="padding: 10px 25px;">
+                    <i class="fas fa-times"></i> Cancel Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+#waitingRoomModal .modal-container {
+    animation: fadeInUp 0.4s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Pulse animation for queue position */
+@keyframes queuePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+#waitingRoomModal .modal-body div[style*="font-size: 48px"] {
+    animation: queuePulse 2s infinite;
+}
+</style>
+
             <!-- Step 3: ID Verification -->
             <div id="verification-step-3" class="verification-step" style="display: none;">
                 <h4 style="margin-bottom: 15px; color: var(--primary-blue);">Candidate Identity Verification Step 3: ID Verification</h4>
@@ -1763,6 +1894,9 @@ var globalVideoStream = null;
 
         if (beginButton) {
             beginButton.addEventListener('click', async function (e) {
+                // Ensure waiting room is hidden
+                if (typeof hideWaitingRoom === 'function') hideWaitingRoom();
+
                 // Ensure proctoring starts before the exam begins.
                 e.preventDefault();
 
@@ -3115,9 +3249,103 @@ function showSimpleIdError(message) {
         }
     }
 
+    // Waiting Room Management
+    let waitingRoomTimer = null;
+    let waitingRoomStartTime = null;
+
+    function showWaitingRoom(courseName) {
+        const modal = document.getElementById('waitingRoomModal');
+        if (!modal) return;
+
+        // Show the modal
+        modal.style.display = 'flex';
+
+        // Update course name in modal
+        const courseNameEl = document.getElementById('waitingRoomCourseName');
+        if (courseNameEl) courseNameEl.textContent = courseName;
+
+        // Record start time
+        waitingRoomStartTime = Date.now();
+
+        // Start waiting time simulation
+        startWaitingTimer();
+
+        // Auto-proceed after waiting period (for simulation)
+        setTimeout(function() {
+            // Check if modal is still visible
+            if (modal.style.display === 'flex') {
+                // Proctor assigned - proceed to confirmation
+                hideWaitingRoom();
+                const confirmModal = document.getElementById('confirmationModal');
+                if (confirmModal) confirmModal.style.display = 'flex';
+            }
+        }, 8000); // 8 seconds simulation for better UX during testing
+
+        // Simulate queue position updates
+        simulateQueueProgress();
+    }
+
+    function hideWaitingRoom() {
+        const modal = document.getElementById('waitingRoomModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        if (waitingRoomTimer) {
+            clearInterval(waitingRoomTimer);
+            waitingRoomTimer = null;
+        }
+    }
+
+    function cancelWaitingRoom() {
+        showSystemConfirmModal('Are you sure you want to cancel the exam request?', function(confirmed) {
+            if (confirmed) {
+                hideWaitingRoom();
+
+                // Clear any pending exam session data
+                sessionStorage.removeItem('examRequested');
+                sessionStorage.removeItem('proctorWaiting');
+
+                showSystemAlertModal('Exam request cancelled. You can select another course when ready.');
+            }
+        });
+    }
+
+    function startWaitingTimer() {
+        const display = document.getElementById('waitingTimeDisplay');
+        if (!display) return;
+
+        waitingRoomTimer = setInterval(function() {
+            if (!waitingRoomStartTime) return;
+
+            const elapsed = Math.floor((Date.now() - waitingRoomStartTime) / 1000);
+
+            if (elapsed < 60) {
+                display.textContent = 'Less than 1 minute';
+            } else if (elapsed < 120) {
+                display.textContent = 'About 1 minute';
+            } else {
+                const minutes = Math.floor(elapsed / 60);
+                display.textContent = minutes + ' minute' + (minutes > 1 ? 's' : '');
+            }
+        }, 1000);
+    }
+
+    function simulateQueueProgress() {
+        const queueElement = document.querySelector('#waitingRoomModal .modal-body div[style*="font-size: 48px"]');
+        if (!queueElement) return;
+
+        // Simulate moving up in queue
+        setTimeout(function() {
+            queueElement.innerHTML = '1<sup>st</sup>';
+        }, 4000);
+    }
+
     document.getElementById('verifyFinalBtn').onclick = () => {
         document.getElementById('identityVerificationModal').style.display = 'none';
-        document.getElementById('confirmationModal').style.display = 'flex';
+
+        // Use the current course name from the global variable or JSP
+        const courseName = typeof currentCourseName !== 'undefined' ? currentCourseName : '';
+        showWaitingRoom(courseName);
     };
 
     </script>
