@@ -9,7 +9,7 @@ class ProctoringSystem {
         this.examActive = true;
         this.violations = [];
         this.warningCount = 0;
-        this.MAX_WARNINGS = 5; // Increased from 3 - more attempts before termination
+        this.MAX_WARNINGS = 8; // Increased from 3 - more attempts before termination
         this.cameraActive = false;
         this.lastFrameProcessed = Date.now();
         this.frameCheckInterval = null;
@@ -51,7 +51,7 @@ class ProctoringSystem {
         
         // Violation logging - NO COOLDOWN for critical violations
         this.lastViolationLog = {};
-        this.VIOLATION_COOLDOWN = 2000; // Reduced from 5000ms
+        this.VIOLATION_COOLDOWN = 1000; // Reduced from 5000ms
         this.CRITICAL_VIOLATION_TYPES = ['CRITICAL', 'SECURITY', 'MULTIPLE_FACES'];
         
         // Media streams
@@ -70,15 +70,15 @@ class ProctoringSystem {
         
         // Countdown state - FASTER termination
         this.countdownActive = false;
-        this.countdownValue = 5; // Reduced from 5 seconds
+        this.countdownValue = 10; // Reduced from 5 seconds
         this.GRACE_PERIOD = 500; // 0.5 seconds grace (was 1500)
-        this.COUNTDOWN_DURATION = 5000; // 3 seconds total countdown (was 5000)
+        this.COUNTDOWN_DURATION = 7000; // 3 seconds total countdown (was 5000)
         this.TOTAL_TERMINATION_TIME = this.GRACE_PERIOD + this.COUNTDOWN_DURATION; // 3.5 seconds total
         this.terminationReason = null;
         
         // Camera reconnection attempts
         this.cameraReconnectAttempts = 0;
-        this.MAX_RECONNECT_ATTEMPTS = 5; // Reduced from 3
+        this.MAX_RECONNECT_ATTEMPTS = 10; // Reduced from 3
     }
 
     generateSessionId() {
@@ -459,7 +459,7 @@ class ProctoringSystem {
         
         // Calculate remaining seconds (3 second countdown)
         const elapsedCountdown = Math.floor((timeLost - 500) / 1000);
-        const remaining = Math.max(0, 3 - elapsedCountdown);
+        const remaining = Math.max(0, 5 - elapsedCountdown);
         
         if (remaining > 0 && !this.countdownActive) {
             this.countdownActive = true;
