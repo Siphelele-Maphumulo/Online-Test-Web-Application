@@ -1540,8 +1540,9 @@ var globalVideoStream = null;
                 <h4 style="margin-bottom: 15px; color: var(--primary-blue);">Candidate Identity Verification Step 3: ID Verification</h4>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                     <div style="text-align: center;">
-                        <div style="background: #000; border-radius: 8px; overflow: hidden; aspect-ratio: 4/3;">
+                        <div style="background: #000; border-radius: 8px; overflow: hidden; aspect-ratio: 4/3; position: relative;">
                             <video id="idVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+                            <canvas id="idOverlay" class="camera-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
                         </div>
                         <button type="button" id="captureIdBtn" class="btn-primary" style="margin-top: 15px; width: 100%;">
                             <i class="fas fa-id-card"></i> Capture ID Photo
@@ -2062,6 +2063,35 @@ var globalVideoStream = null;
         }
     }
     
+    function closeIdentityVerificationModal() {
+        const modal = document.getElementById('identityVerificationModal');
+        if (modal) {
+            modal.style.display = 'none';
+            
+            // Stop camera streams if active
+            if (window.verificationStream) {
+                const tracks = window.verificationStream.getTracks();
+                tracks.forEach(track => track.stop());
+                window.verificationStream = null;
+            }
+            
+            // Clear overlays
+            const faceOverlay = document.getElementById('faceOverlay');
+            const idOverlay = document.getElementById('idOverlay');
+            if (faceOverlay) {
+                const ctx = faceOverlay.getContext('2d');
+                ctx.clearRect(0, 0, faceOverlay.width, faceOverlay.height);
+            }
+            if (idOverlay) {
+                const ctx = idOverlay.getContext('2d');
+                ctx.clearRect(0, 0, idOverlay.width, idOverlay.height);
+            }
+            
+            // Reset verification state
+            resetVerificationState();
+        }
+    }
+    
     function goToFirstQuestion() {
         const firstQuestionIndex = 0;
         scrollToQuestion(firstQuestionIndex.toString());
@@ -2408,6 +2438,187 @@ var globalVideoStream = null;
         }
     }
 
+    // Initialize face overlay with head contour using facial landmarks
+    function initializeFaceOverlay() {
+        const video = document.getElementById('faceVideo');
+        const canvas = document.getElementById('faceOverlay');
+        const ctx = canvas.getContext('2d');
+        
+        // Set canvas size to match video
+        video.addEventListener('loadedmetadata', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+        });
+        
+        // Start drawing head contour
+        drawHeadContour();
+    }
+    
+    // Initialize ID overlay with ID card guide overlay
+    function initializeIdOverlay() {
+        const video = document.getElementById('idVideo');
+        const canvas = document.getElementById('idOverlay');
+        const ctx = canvas.getContext('2d');
+        
+        // Set canvas size to match video
+        video.addEventListener('loadedmetadata', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+        });
+        
+        // Start drawing ID guide
+        drawIdGuide();
+    }
+    
+    // Draw head contour using simulated facial landmarks
+    function drawHeadContour() {
+        const video = document.getElementById('faceVideo');
+        const canvas = document.getElementById('faceOverlay');
+        const ctx = canvas.getContext('2d');
+        
+        if (!video || !canvas) return;
+        
+        // Clear previous frame
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Simulated facial landmarks for head contour
+        // In a real implementation, you would use face detection API like face-api.js or MediaPipe
+        const landmarks = getSimulatedFacialLandmarks(canvas.width, canvas.height);
+        
+        if (landmarks) {
+            // Draw head contour path
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            
+            // Draw jawline
+            ctx.moveTo(landmarks.jawLeft.x, landmarks.jawLeft.y);
+            ctx.quadraticCurveTo(landmarks.chin.x, landmarks.chin.y, landmarks.jawRight.x, landmarks.jawRight.y);
+            
+            // Draw right side of face
+            ctx.quadraticCurveTo(landmarks.cheekRight.x, landmarks.cheekRight.y, landmarks.templeRight.x, landmarks.templeRight.y);
+            
+            // Draw forehead
+            ctx.quadraticCurveTo(landmarks.forehead.x, landmarks.forehead.y, landmarks.templeLeft.x, landmarks.templeLeft.y);
+            
+            // Draw left side of face
+            ctx.quadraticCurveTo(landmarks.cheekLeft.x, landmarks.cheekLeft.y, landmarks.jawLeft.x, landmarks.jawLeft.y);
+            
+            ctx.closePath();
+            ctx.stroke();
+            
+            // Draw landmark points
+            ctx.fillStyle = '#ff0000';
+            Object.values(landmarks).forEach(point => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 3, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+            
+            // Draw oval guide text
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '14px Arial';
+            ctx.fillText('Align face within contour', 10, 30);
+        }
+        
+        // Continue animation
+        requestAnimationFrame(drawHeadContour);
+    }
+    
+    // Simulate facial landmarks (replace with real face detection)
+    function getSimulatedFacialLandmarks(width, height) {
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const faceWidth = width * 0.6;
+        const faceHeight = height * 0.8;
+        
+        return {
+            // Jawline points
+            jawLeft: { x: centerX - faceWidth/2, y: centerY + faceHeight/3 },
+            chin: { x: centerX, y: centerY + faceHeight/2.5 },
+            jawRight: { x: centerX + faceWidth/2, y: centerY + faceHeight/3 },
+            
+            // Cheek points
+            cheekLeft: { x: centerX - faceWidth/2.5, y: centerY },
+            cheekRight: { x: centerX + faceWidth/2.5, y: centerY },
+            
+            // Temple points
+            templeLeft: { x: centerX - faceWidth/2.2, y: centerY - faceHeight/3 },
+            templeRight: { x: centerX + faceWidth/2.2, y: centerY - faceHeight/3 },
+            
+            // Forehead point
+            forehead: { x: centerX, y: centerY - faceHeight/2.5 }
+        };
+    }
+    
+    // Draw ID card guide overlay
+    function drawIdGuide() {
+        const video = document.getElementById('idVideo');
+        const canvas = document.getElementById('idOverlay');
+        const ctx = canvas.getContext('2d');
+        
+        if (!video || !canvas) return;
+        
+        // Clear previous frame
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Calculate ID card guide dimensions (standard ID card ratio)
+        const cardWidth = canvas.width * 0.7;
+        const cardHeight = cardWidth * 0.63; // Standard ID card ratio
+        const cardX = (canvas.width - cardWidth) / 2;
+        const cardY = (canvas.height - cardHeight) / 2;
+        
+        // Draw ID card guide rectangle
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([10, 5]);
+        ctx.strokeRect(cardX, cardY, cardWidth, cardHeight);
+        
+        // Draw corner markers for better alignment
+        ctx.fillStyle = '#ff0000';
+        const markerSize = 10;
+        const corners = [
+            { x: cardX, y: cardY },
+            { x: cardX + cardWidth, y: cardY },
+            { x: cardX, y: cardY + cardHeight },
+            { x: cardX + cardWidth, y: cardY + cardHeight }
+        ];
+        
+        corners.forEach(corner => {
+            ctx.beginPath();
+            ctx.arc(corner.x, corner.y, 5, 0, 2 * Math.PI);
+            ctx.fill();
+        });
+        
+        // Draw center guide lines
+        ctx.strokeStyle = '#ffff00';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+        
+        // Vertical center line
+        ctx.beginPath();
+        ctx.moveTo(canvas.width / 2, cardY);
+        ctx.lineTo(canvas.width / 2, cardY + cardHeight);
+        ctx.stroke();
+        
+        // Horizontal center line
+        ctx.beginPath();
+        ctx.moveTo(cardX, canvas.height / 2);
+        ctx.lineTo(cardX + cardWidth, canvas.height / 2);
+        ctx.stroke();
+        
+        // Draw guide text
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '14px Arial';
+        ctx.fillText('Position ID within guide', 10, 30);
+        ctx.font = '12px Arial';
+        ctx.fillText('Align card corners with markers', 10, canvas.height - 10);
+        
+        // Continue animation
+        requestAnimationFrame(drawIdGuide);
+    }
+
     async function showVerifyStep(step) {
         // Keep the same stream running across steps (face -> ID -> summary)
 
@@ -2451,6 +2662,9 @@ var globalVideoStream = null;
                 }
                 document.getElementById('faceVideo').srcObject = verificationStream;
                 document.getElementById('faceVideo').play();
+                
+                // Initialize face overlay and head contour
+                initializeFaceOverlay();
             } catch (err) {
                 if (typeof showSystemAlertModal === 'function') {
                     showSystemAlertModal('Could not access camera for face verification.');
@@ -2464,6 +2678,9 @@ var globalVideoStream = null;
                 }
                 document.getElementById('idVideo').srcObject = verificationStream;
                 document.getElementById('idVideo').play();
+                
+                // Initialize ID overlay and head contour
+                initializeIdOverlay();
             } catch (err) {
                 if (typeof showSystemAlertModal === 'function') {
                     showSystemAlertModal('Could not access camera for ID verification.');
@@ -2493,6 +2710,16 @@ var globalVideoStream = null;
             if (!agreed) {
                 if (typeof showSystemAlertModal === 'function') {
                     showSystemAlertModal('Please agree to the Code of Honor to proceed.');
+                    
+                    // Scroll to bottom of modal to show the honor code checkbox
+                    const modal = document.getElementById('identityVerificationModal');
+                    const modalBody = modal.querySelector('.modal-body');
+                    if (modalBody) {
+                        // Scroll to the bottom of the modal body
+                        setTimeout(() => {
+                            modalBody.scrollTop = modalBody.scrollHeight;
+                        }, 100);
+                    }
                 }
                 return;
             }
@@ -2500,6 +2727,16 @@ var globalVideoStream = null;
             if (!sig || sig !== expectedSig) {
                 if (typeof showSystemAlertModal === 'function') {
                     showSystemAlertModal('Digital signature does not match. Please type your full name exactly as: ' + expectedSig);
+                    
+                    // Scroll to bottom of modal to show the honor code checkbox
+                    const modal = document.getElementById('identityVerificationModal');
+                    const modalBody = modal.querySelector('.modal-body');
+                    if (modalBody) {
+                        // Scroll to the bottom of the modal body
+                        setTimeout(() => {
+                            modalBody.scrollTop = modalBody.scrollHeight;
+                        }, 100);
+                    }
                 }
                 return;
             }
@@ -4115,7 +4352,7 @@ async function detectIDCard(ctx, width, height) {
 // Improved error display
 function showSimpleIdError(message) {
     let errorDiv = document.getElementById('simpleIdError');
-    if (!errorDiv) {
+    if (!errorDiv) {a
         errorDiv = document.createElement('div');
         errorDiv.id = 'simpleIdError';
         
