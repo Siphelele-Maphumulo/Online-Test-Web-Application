@@ -2484,7 +2484,7 @@
                                         if (totalMarks > 0) {
                                             percentage = (double) obtainedMarks / totalMarks * 100;
                                         }
-                                        resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
+                                        resultStatus = (percentage >= 75.0) ? "Pass" : "Fail";
                                     }
                                 } catch (Exception e) {
                                     // Calculate status based on marks
@@ -2492,7 +2492,7 @@
                                     if (totalMarks > 0) {
                                         percentage = (double) obtainedMarks / totalMarks * 100;
                                     }
-                                    resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
+                                    resultStatus = (percentage >= 75.0) ? "Pass" : "Fail";
                                 }
                                 
                             } catch (Exception e) {

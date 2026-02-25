@@ -11,6 +11,14 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.util.Iterator;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriter;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.stream.ImageOutputStream;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONException;
@@ -258,6 +266,75 @@ public class OpenRouterClient {
     }
 
     /**
+     * Compresses a base64 image to reduce API costs while maintaining quality
+     * @param base64Image The original base64 image string
+     * @param maxWidth Maximum width for compression (default 800)
+     * @param quality JPEG quality 0.0-1.0 (default 0.7)
+     * @return Compressed base64 image string
+     */
+    private static String compressImage(String base64Image, int maxWidth, float quality) throws Exception {
+        // Clean base64 string
+        if (base64Image.contains(",")) {
+            base64Image = base64Image.split(",")[1];
+        }
+        
+        // Decode base64 to bytes
+        byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+        BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(imageBytes));
+        
+        if (originalImage == null) {
+            LOGGER.warning("Could not decode image, returning original");
+            return base64Image;
+        }
+        
+        // Calculate new dimensions maintaining aspect ratio
+        int originalWidth = originalImage.getWidth();
+        int originalHeight = originalImage.getHeight();
+        
+        if (originalWidth <= maxWidth) {
+            LOGGER.info("Image already small enough (" + originalWidth + "px), returning compressed with quality only");
+        }
+        
+        int newWidth = Math.min(originalWidth, maxWidth);
+        int newHeight = (int) ((double) originalHeight * newWidth / originalWidth);
+        
+        // Resize image
+        BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+        resizedImage.getGraphics().drawImage(originalImage.getScaledInstance(newWidth, newHeight, java.awt.Image.SCALE_SMOOTH), 0, 0, null);
+        
+        // Compress as JPEG with specified quality
+        ByteArrayOutputStream compressed = new ByteArrayOutputStream();
+        
+        // Get JPEG writer and set compression
+        Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
+        if (!writers.hasNext()) {
+            throw new IllegalStateException("No JPEG writers found");
+        }
+        
+        ImageWriter writer = writers.next();
+        ImageWriteParam param = writer.getDefaultWriteParam();
+        param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+        param.setCompressionQuality(quality);
+        
+        try (ImageOutputStream ios = ImageIO.createImageOutputStream(compressed)) {
+            writer.setOutput(ios);
+            writer.write(null, new javax.imageio.IIOImage(resizedImage, null, null), param);
+        } finally {
+            writer.dispose();
+        }
+        
+        byte[] compressedBytes = compressed.toByteArray();
+        String compressedBase64 = Base64.getEncoder().encodeToString(compressedBytes);
+        
+        double compressionRatio = (double) compressedBytes.length / imageBytes.length;
+        LOGGER.info("Image compressed: " + originalWidth + "x" + originalHeight + " → " + newWidth + "x" + newHeight + 
+                   ", Size: " + (imageBytes.length / 1024) + "KB → " + (compressedBytes.length / 1024) + "KB " +
+                   "(" + String.format("%.1f", compressionRatio * 100) + "% of original)");
+        
+        return compressedBase64;
+    }
+    
+    /**
      * Analyzes a face photo for identity verification quality
      * @param base64Image The captured face photo as base64 string (with or without data:image prefix)
      * @return JSONObject with analysis results: {"passed": boolean, "reason": string, "confidence": number}
@@ -274,6 +351,14 @@ public class OpenRouterClient {
             // Clean up base64 string - remove data:image prefix if present
             if (base64Image.contains(",")) {
                 base64Image = base64Image.split(",")[1];
+            }
+            
+            // Compress image to save API credits
+            try {
+                base64Image = compressImage(base64Image, 600, 0.75f); // Max 600px width, 75% quality
+            } catch (Exception compressErr) {
+                LOGGER.warning("Image compression failed, using original: " + compressErr.getMessage());
+                // Continue with original image
             }
 
             JSONObject payload = new JSONObject();
@@ -293,21 +378,24 @@ public class OpenRouterClient {
             textPart.put("type", "text");
             textPart.put("text", 
                 "You are an identity verification system. Analyze this face photo and respond with a JSON object only.\n\n" +
-                "Check these criteria strictly:\n" +
-                "1. Is there exactly ONE clearly visible face?\n" +
-                "2. Is face properly positioned (centered, not too close/far)?\n" +
-                "3. Is face free from obstructions (no masks, sunglasses, hats covering eyes)?\n" +
-                "4. Is lighting adequate (face clearly visible, not too dark or overexposed)?\n" +
-                "5. Is person looking directly at the camera?\n\n" +
+                "Check these criteria reasonably (not strictly):\n" +
+                "1. Is there at least ONE clearly visible face?\n" +
+                "2. Is face reasonably positioned (mostly centered, not extremely close/far)?\n" +
+                "3. Are eyes clearly visible (minor obstructions like headphones, glasses, or hair are OK)?\n" +
+                "4. Is lighting adequate to see the face clearly?\n" +
+                "5. Is person generally facing the camera (slight angle is acceptable)?\n\n" +
+                "BE LENIENT - Allow headphones, glasses, slight head turns, minor obstructions.\n" +
+                "Only FAIL if: no face visible, face completely covered, or person not facing camera at all.\n\n" +
                 "RESPOND WITH A VALID JSON OBJECT IN THIS EXACT FORMAT (NOT AN ARRAY):\n" +
                 "{\n" +
-                "  \"passed\": false,\n" +
-                "  \"reason\": \"Subject is not looking directly at the camera\",\n" +
-                "  \"confidence\": 65,\n" +
+                "  \"passed\": true,\n" +
+                "  \"reason\": \"Face verification passed\",\n" +
+                "  \"confidence\": 85,\n" +
                 "  \"faceCount\": 1,\n" +
                 "  \"obstructions\": []\n" +
                 "}\n\n" +
-                "IMPORTANT: Return ONLY the JSON object, no other text, no arrays, no markdown."
+                "IMPORTANT: Return ONLY the JSON object, no other text, no arrays, no markdown. " +
+                "Default to PASS unless there's a clear reason to fail."
             );
             content.put(textPart);
             
@@ -433,6 +521,14 @@ public class OpenRouterClient {
             // Clean the base64 string
             if (base64Image.contains(",")) {
                 base64Image = base64Image.split(",")[1];
+            }
+            
+            // Compress image to save API credits
+            try {
+                base64Image = compressImage(base64Image, 800, 0.8f); // Max 800px width, 80% quality for ID docs
+            } catch (Exception compressErr) {
+                LOGGER.warning("ID image compression failed, using original: " + compressErr.getMessage());
+                // Continue with original image
             }
 
             JSONObject payload = new JSONObject();
@@ -581,6 +677,14 @@ public class OpenRouterClient {
             // Clean up base64 string
             if (base64Image.contains(",")) {
                 base64Image = base64Image.split(",")[1];
+            }
+            
+            // Compress image to save API credits
+            try {
+                base64Image = compressImage(base64Image, 600, 0.75f); // Max 600px width, 75% quality
+            } catch (Exception compressErr) {
+                LOGGER.warning("ID verification image compression failed, using original: " + compressErr.getMessage());
+                // Continue with original image
             }
 
             JSONObject payload = new JSONObject();

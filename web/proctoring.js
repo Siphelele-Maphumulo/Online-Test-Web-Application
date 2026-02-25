@@ -9,7 +9,7 @@ class ProctoringSystem {
         this.examActive = true;
         this.violations = [];
         this.warningCount = 0;
-        this.MAX_WARNINGS = 5; // Increased from 3 - more attempts before termination
+        this.MAX_WARNINGS = 8; // Increased from 3 - more attempts before termination
         this.cameraActive = false;
         this.lastFrameProcessed = Date.now();
         this.frameCheckInterval = null;
@@ -51,7 +51,7 @@ class ProctoringSystem {
         
         // Violation logging - NO COOLDOWN for critical violations
         this.lastViolationLog = {};
-        this.VIOLATION_COOLDOWN = 2000; // Reduced from 5000ms
+        this.VIOLATION_COOLDOWN = 1000; // Reduced from 5000ms
         this.CRITICAL_VIOLATION_TYPES = ['CRITICAL', 'SECURITY', 'MULTIPLE_FACES'];
         
         // Media streams
@@ -70,15 +70,15 @@ class ProctoringSystem {
         
         // Countdown state - FASTER termination
         this.countdownActive = false;
-        this.countdownValue = 5; // Reduced from 5 seconds
+        this.countdownValue = 10; // Reduced from 5 seconds
         this.GRACE_PERIOD = 500; // 0.5 seconds grace (was 1500)
-        this.COUNTDOWN_DURATION = 5000; // 3 seconds total countdown (was 5000)
+        this.COUNTDOWN_DURATION = 7000; // 3 seconds total countdown (was 5000)
         this.TOTAL_TERMINATION_TIME = this.GRACE_PERIOD + this.COUNTDOWN_DURATION; // 3.5 seconds total
         this.terminationReason = null;
         
         // Camera reconnection attempts
         this.cameraReconnectAttempts = 0;
-        this.MAX_RECONNECT_ATTEMPTS = 5; // Reduced from 3
+        this.MAX_RECONNECT_ATTEMPTS = 10; // Reduced from 3
     }
 
     generateSessionId() {
@@ -235,6 +235,16 @@ class ProctoringSystem {
             @keyframes proctorFlash {
                 0% { background-color: #ef4444; }
                 100% { background-color: transparent; }
+            }
+            @keyframes warningFlash {
+                0% { opacity: 1; background: #ef4444; }
+                50% { opacity: 0.8; background: #dc2626; }
+                100% { opacity: 1; background: #ef4444; }
+            }
+            @keyframes countdownPulse {
+                0% { opacity: 1; }
+                50% { opacity: 0.9; background: rgba(220, 38, 38, 0.98); }
+                100% { opacity: 1; }
             }
         `;
         document.head.appendChild(style);
@@ -449,7 +459,7 @@ class ProctoringSystem {
         
         // Calculate remaining seconds (3 second countdown)
         const elapsedCountdown = Math.floor((timeLost - 500) / 1000);
-        const remaining = Math.max(0, 3 - elapsedCountdown);
+        const remaining = Math.max(0, 5 - elapsedCountdown);
         
         if (remaining > 0 && !this.countdownActive) {
             this.countdownActive = true;
@@ -490,18 +500,6 @@ class ProctoringSystem {
         `;
         
         document.body.appendChild(this.countdownOverlay);
-        
-        // Add pulse animation
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes countdownPulse {
-                0% { opacity: 1; }
-                50% { opacity: 0.9; background: rgba(220, 38, 38, 0.98); }
-                100% { opacity: 1; }
-            }
-        `;
-        document.head.appendChild(style);
-        
         this.playCountdownBeep();
     }
 
@@ -849,16 +847,6 @@ class ProctoringSystem {
         setTimeout(() => {
             if (toast.parentNode) toast.remove();
         }, 2000);
-        
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes warningFlash {
-                0% { opacity: 1; background: #ef4444; }
-                50% { opacity: 0.8; background: #dc2626; }
-                100% { opacity: 1; background: #ef4444; }
-            }
-        `;
-        document.head.appendChild(style);
     }
 
     async captureEvidence(violation) {
@@ -880,38 +868,6 @@ class ProctoringSystem {
             
             violation.screenshot = canvas.toDataURL('image/jpeg', 0.7);
         } catch (err) {}
-    }
-
-    autoSubmitForCheating(reason) {
-        if (!this.examActive) return;
-        this.examActive = false;
-        
-        this.hideProfessionalCountdown();
-        
-        const form = document.getElementById('myform');
-        if (form) {
-            // Add termination data
-            const inputs = [
-                { name: 'cheating_terminated', value: 'true' },
-                { name: 'termination_reason', value: reason },
-                { name: 'violation_log', value: JSON.stringify(this.violations) },
-                { name: 'warning_count', value: this.warningCount }
-            ];
-            
-            inputs.forEach(inputData => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = inputData.name;
-                input.value = inputData.value;
-                form.appendChild(input);
-            });
-            
-            // Show termination message
-            alert(`EXAM TERMINATED: ${reason}`);
-            
-            // Submit immediately
-            form.submit();
-        }
     }
 
     sendViolationToServer(violation) {
@@ -939,6 +895,39 @@ class ProctoringSystem {
 
     showProfessionalError(message) {
         alert(`Proctoring Error: ${message}`);
+    }
+
+    autoSubmitForCheating(reason) {
+        if (this.terminated) return;
+        this.terminated = true;
+        this.examActive = false;
+        this.hideProfessionalCountdown();
+        
+        // Show termination message
+        alert(`EXAM TERMINATED: ${reason}`);
+        
+        // Submit the form with cheating flag
+        const form = document.getElementById('myform');
+        if (form) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'cheating_terminated';
+            input.value = 'true';
+            form.appendChild(input);
+            
+            // Add reason
+            const reasonInput = document.createElement('input');
+            reasonInput.type = 'hidden';
+            reasonInput.name = 'termination_reason';
+            reasonInput.value = reason;
+            form.appendChild(reasonInput);
+            
+            console.log('🔒 Proctoring: Submitting exam with cheating_terminated=true');
+            
+            setTimeout(() => {
+                form.submit();
+            }, 1500);
+        }
     }
 
     stop() {
@@ -971,3 +960,84 @@ class ProctoringSystem {
         document.body.style.marginTop = '0';
     }
 }
+
+// Auto-initialization when exam starts
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if we're on an exam page
+    const examForm = document.getElementById('myform');
+    if (!examForm) return;
+    
+    // Check if proctor should auto-start
+    try {
+        const shouldAutoStart = sessionStorage.getItem('proctorAutoStart') === '1';
+        if (!shouldAutoStart) return;
+        
+        // Clear flag
+        sessionStorage.removeItem('proctorAutoStart');
+        
+        // Get exam and student IDs
+        const examId = document.querySelector('input[name="examId"]')?.value || '0';
+        const studentId = document.querySelector('input[name="studentId"]')?.value || 
+                         window.studentId || 
+                         document.querySelector('[data-student-id]')?.getAttribute('data-student-id') || 
+                         '0';
+        
+        // Initialize proctoring
+        (async function() {
+            try {
+                // Request camera access
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: {
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        frameRate: { ideal: 30 }
+                    }, 
+                    audio: true 
+                });
+                
+                // Create and initialize proctor
+                const proctor = new ProctoringSystem(examId, studentId);
+                window.proctor = proctor;
+                await proctor.initialize(stream);
+                
+                console.log('✅ Proctoring auto-started successfully');
+                
+            } catch (err) {
+                console.error('❌ Proctoring auto-start failed:', err);
+                
+                // Show manual start option
+                const startBtn = document.createElement('button');
+                startBtn.innerHTML = '🔒 START PROCTORING (Required)';
+                startBtn.style.cssText = 
+                    'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); ' +
+                    'background: #ef4444; color: white; padding: 20px 40px; border: none; ' +
+                    'border-radius: 8px; cursor: pointer; font-size: 20px; font-weight: bold; ' +
+                    'z-index: 100000; box-shadow: 0 10px 25px rgba(0,0,0,0.5);';
+                
+                startBtn.onclick = async () => {
+                    try {
+                        startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+                        startBtn.disabled = true;
+                        
+                        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                        const proctor = new ProctoringSystem(examId, studentId);
+                        window.proctor = proctor;
+                        await proctor.initialize(stream);
+                        
+                        startBtn.remove();
+                        
+                    } catch (manualErr) {
+                        console.error('Manual proctoring start failed:', manualErr);
+                        startBtn.innerHTML = '❌ Failed - Click to Retry';
+                        startBtn.disabled = false;
+                    }
+                };
+                
+                document.body.appendChild(startBtn);
+            }
+        })();
+        
+    } catch (err) {
+        console.warn('Proctor auto-start check failed:', err);
+    }
+});

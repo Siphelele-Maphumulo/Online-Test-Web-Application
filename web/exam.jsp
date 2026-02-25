@@ -1,4 +1,13 @@
-
+<%@ page contentType="text/html; charset=UTF-8" %>
+<%@ page pageEncoding="UTF-8" %>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Examination System</title>
+    
+    <!-- Bootstrap & Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/gh/Bernardo-Castilho/dragdroptouch@master/DragDropTouch.js"></script>
 <%@page import="java.util.ArrayList"%>
@@ -486,6 +495,14 @@
                                 <div class="progress-info"><span>Question Progress</span><span id="modalProgressText">0 / <%= totalQ %></span></div>
                                 <div class="progress"><div class="progress-bar" id="modalProgressBar" style="width:0%"></div></div>
                             </div>
+
+                            <div id="modalUnansweredSection" style="margin-top: 18px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                    <strong style="color:#334155;"><i class="fas fa-circle-notch"></i> Unanswered Questions</strong>
+                                    <button type="button" class="btn-outline" id="modalUnansweredNavBtn" style="padding: 8px 12px; font-size: 12px;">Open Navigator</button>
+                                </div>
+                                <div id="modalUnansweredList" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
+                            </div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn-secondary close-modal">Continue Exam</button>
@@ -658,7 +675,7 @@ var globalVideoStream = null;
                             resultStatus = result.getStatus();
                             if (resultStatus == null || resultStatus.isEmpty() || resultStatus.equalsIgnoreCase("completed")) {
                                 double percentage = (totalMarks > 0) ? (double) obtainedMarks / totalMarks * 100 : 0;
-                                resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
+                                resultStatus = (percentage >= 75.0) ? "Pass" : "Fail";
                             }
                         }
                     %>
@@ -821,7 +838,7 @@ var globalVideoStream = null;
                         } else {
                             console.warn('?? Proctoring is not active');
                         }
-                    }, 10000); // Check every 10 seconds
+                    }, 5000); // Check every 10 seconds
                 }
             } catch (err) {
                 console.warn('Could not check proctor auto-start flag:', err);
@@ -953,8 +970,11 @@ var globalVideoStream = null;
                         if (courseName != null && !courseName.trim().isEmpty()) {
                             int duration = pDAO.getExamDuration(courseName);
             %>
-            <option value="<%= courseName %>" data-duration="<%= duration %>">
-                <%= courseName %> (<%= formatDuration(duration) %>)
+            <option value="<%= courseName %>" 
+                    data-duration="<%= duration %>" 
+                    data-requires-verification="<%= courseName.toLowerCase().contains("exam") ? "true" : "false" %>"
+                    <%= courseName.toLowerCase().contains("exam") ? "style='color: #dc2626; font-weight: 600;'" : "" %>>
+                <%= courseName %> (<%= formatDuration(duration) %>)<%= courseName.toLowerCase().contains("exam") ? " 🔒" : "" %>
             </option>
             <% 
                         }
@@ -1115,7 +1135,7 @@ var globalVideoStream = null;
         console.log('Sending AJAX request to check course status...');
 
         // Send AJAX request with timeout
-        const timeout = 5000; // 5 second timeout
+        const timeout = 10000; // 5 second timeout
 
         // Create abort controller for timeout
         const controller = new AbortController();
@@ -1193,6 +1213,11 @@ var globalVideoStream = null;
         var courseName = selectedOption.value;
         var duration = selectedOption.getAttribute('data-duration') || '60';
         
+        // ───────────────────────────── NEW CONDITION ─────────────────────────────
+        var requiresIdentityVerification = 
+            courseName.toLowerCase().includes("exam");
+        // ────────────────────────────────────────────────────────────────────────
+
         // Get modal elements
         var confirmationModal = document.getElementById('confirmationModal');
         var inactiveModal = document.getElementById('inactiveModal');
@@ -1209,17 +1234,30 @@ var globalVideoStream = null;
         }
         
         checkCourseStatus(courseName, function(isActive) {
-            if (isActive) {
-                modalCourseName.textContent = courseName;
-                modalDuration.textContent = duration + ' minutes';
-                // Show Diagnostics first
-                // Attempt fullscreen immediately from this user gesture (required by browsers).
-                requestFullscreenSafe();
-                document.getElementById('diagnosticsModal').style.display = 'flex';
-                runDiagnostics();
-            } else {
+            if (!isActive) {
+                // show inactive modal (your existing code)
                 inactiveCourseName.textContent = courseName;
                 inactiveModal.style.display = 'flex';
+                return;
+            }
+
+            // Course is active → decide path
+            modalCourseName.textContent = courseName;
+            modalDuration.textContent = duration + ' minutes';
+            window.currentCourseName = courseName; // Store globally for waiting room
+
+            requestFullscreenSafe();
+
+            if (requiresIdentityVerification) {
+                // ─────── Normal secure flow ───────
+                document.getElementById('diagnosticsModal').style.display = 'flex';
+                runDiagnostics();           // → then → startIdentityVerification()
+            } else {
+                // ─────── Skip identity check ───────
+                // You can still run very basic diagnostics if you want
+                // (optional – many systems skip it completely for non-exam courses)
+                document.getElementById('confirmationModal').style.display = 'flex';
+                // or → directly submit form after short delay / user confirmation
             }
         });
     });
@@ -1291,6 +1329,7 @@ var globalVideoStream = null;
     <div class="modal-container" style="max-width: 800px; width: 95%;">
         <div class="modal-header">
             <h3 class="modal-title"><i class="fas fa-user-shield"></i> Exam Policy and Candidate Identity Verification</h3>
+            <button type="button" class="close-modal" onclick="closeIdentityVerificationModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b; padding: 4px; border-radius: 4px; transition: all 0.2s;">&times;</button>
         </div>
         <div class="modal-body">
             <!-- Step Navigation -->
@@ -1505,13 +1544,144 @@ var globalVideoStream = null;
     </div>
 </div>
 
+<!-- WAITING ROOM: Proctor Assignment in Progress --> 
+<div id="waitingRoomModal" class="modal-overlay" style="display: none;"> 
+    <div class="modal-container" style="max-width: 550px;"> 
+        <div class="modal-header" style="background: #09294d;"> 
+            <h3 class="modal-title" style="color: white;"><i class="fas fa-user-clock"></i> Proctor Assignment in Progress</h3> 
+        </div> 
+        <div class="modal-body" style="text-align: center; padding: 30px 25px;"> 
+            <!-- Animated waiting indicator --> 
+            <div style="position: relative; width: 100px; height: 100px; margin: 0 auto 25px;"> 
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 4px solid #e2e8f0; border-radius: 50%;"></div> 
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 4px solid transparent; border-top-color: #09294d; border-radius: 50%; animation: spin 1s linear infinite;"></div> 
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 32px; color: #09294d;"> 
+                    <i class="fas fa-user-shield"></i> 
+                </div> 
+            </div> 
+ 
+            <!-- Exam Info --> 
+            <div style="margin-bottom: 20px;"> 
+                <span style="background: #09294d20; color: #09294d; padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: 500; display: inline-block; margin-bottom: 15px;"> 
+                    <i class="fas fa-certificate"></i> <span id="waitingRoomCourseName">PCEP™ – Certified Entry-Level Python Programmer</span> 
+                </span> 
+                 
+                <div style="font-size: 14px; color: #718096; margin: 5px 0;"> 
+                    <i class="fas fa-code"></i> Exam Version: <strong>PCEP 30-02</strong> 
+                </div> 
+                 
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 15px 0;"> 
+                    <span style="background: #f7fafc; padding: 4px 12px; border-radius: 15px; font-size: 13px; color: #4a5568;"><i class="fas fa-language"></i> English</span> 
+                    <span style="background: #f7fafc; padding: 4px 12px; border-radius: 15px; font-size: 13px; color: #4a5568;">Español</span> 
+                    <span style="background: #f7fafc; padding: 4px 12px; border-radius: 15px; font-size: 13px; color: #4a5568;">Polski</span> 
+                    <span style="background: #f7fafc; padding: 4px 12px; border-radius: 15px; font-size: 13px; color: #4a5568;">Português</span> 
+                    <span style="background: #f7fafc; padding: 4px 12px; border-radius: 15px; font-size: 13px; color: #4a5568;">日本語</span> 
+                    <span style="background: #f7fafc; padding: 4px 12px; border-radius: 15px; font-size: 13px; color: #4a5568;">Українська</span> 
+                </div> 
+            </div> 
+ 
+            <p style="color: #4a5568; margin: 20px 0 15px; font-size: 16px; line-height: 1.5;"> 
+                We're currently verifying your personal information and exam details.<br> 
+                You're in line, awaiting assignment of an OpenEDG Proctor and their approval.<br> 
+                Please stay in the Waiting Room to secure your exam slot and receive additional instructions. 
+            </p> 
+ 
+            <!-- Queue Position --> 
+            <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 20px; margin: 20px 0;"> 
+                <div style="font-size: 14px; color: #0369a1; margin-bottom: 8px;"> 
+                    <i class="fas fa-users"></i> Your Position in Queue 
+                </div> 
+                <div style="font-size: 48px; font-weight: 700; color: #0284c7; line-height: 1; margin: 10px 0;"> 
+                    1<sup style="font-size: 24px;">st</sup> 
+                </div> 
+                <div style="font-size: 18px; color: #0369a1; margin: 10px 0;"> 
+                    <i class="fas fa-hourglass-half"></i> <span id="waitingTimeDisplay">Less than 1 minute</span> 
+                </div> 
+                <div style="font-size: 13px; color: #64748b; margin-top: 15px;"> 
+                    <i class="fas fa-shield-alt"></i> Secure connection established 
+                </div> 
+            </div> 
+ 
+            <!-- Important Instructions --> 
+            <div style="background: #fef9c3; border-left: 4px solid #eab308; padding: 12px 15px; text-align: left; border-radius: 8px; margin-top: 20px;"> 
+                <div style="display: flex; align-items: center; gap: 8px; color: #854d0e; margin-bottom: 8px;"> 
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    <strong style="font-size: 14px;">Important Instructions</strong> 
+                </div> 
+                <ul style="margin: 0; padding-left: 25px; color: #854d0e; font-size: 13px; line-height: 1.6;"> 
+                    <li>Do not close or refresh this window</li> 
+                    <li>Ensure your camera and microphone are working</li> 
+                    <li>You will be automatically connected when a proctor is available</li> 
+                    <li>The proctor may ask you to show your ID and surroundings</li> 
+                </ul> 
+            </div> 
+ 
+            <!-- Loading Animation --> 
+            <div style="margin-top: 25px; display: flex; justify-content: center; gap: 20px;"> 
+                <div style="text-align: center;"> 
+                    <div style="width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #09294d; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 8px;"></div> 
+                    <span style="font-size: 12px; color: #64748b;">Checking System</span> 
+                </div> 
+                <div style="text-align: center;"> 
+                    <div style="width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #48bb78; border-radius: 50%; animation: spin 1.2s linear infinite; margin: 0 auto 8px;"></div> 
+                    <span style="font-size: 12px; color: #64748b;">Verifying Identity</span> 
+                </div> 
+                <div style="text-align: center;"> 
+                    <div style="width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #f6ad55; border-radius: 50%; animation: spin 1.5s linear infinite; margin: 0 auto 8px;"></div> 
+                    <span style="font-size: 12px; color: #64748b;">Assigning Proctor</span> 
+                </div> 
+            </div> 
+ 
+            <!-- Cancel Button --> 
+            <div style="margin-top: 25px;"> 
+                <button type="button" class="btn-secondary" onclick="cancelWaitingRoom()" style="padding: 10px 25px;"> 
+                    <i class="fas fa-times"></i> Cancel Request 
+                </button> 
+            </div> 
+        </div> 
+    </div> 
+</div> 
+ 
+<style> 
+@keyframes spin { 
+    0% { transform: rotate(0deg); } 
+    100% { transform: rotate(360deg); } 
+} 
+ 
+#waitingRoomModal .modal-container { 
+    animation: fadeInUp 0.4s ease-out; 
+} 
+ 
+@keyframes fadeInUp { 
+    from { 
+        opacity: 0; 
+        transform: translateY(20px); 
+    } 
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    } 
+} 
+ 
+/* Pulse animation for queue position */ 
+@keyframes queuePulse { 
+    0%, 100% { transform: scale(1); } 
+    50% { transform: scale(1.05); } 
+} 
+ 
+#waitingRoomModal .modal-body div[style*="font-size: 48px"] { 
+    animation: queuePulse 2s infinite; 
+} 
+</style> 
+
             <!-- Step 3: ID Verification -->
             <div id="verification-step-3" class="verification-step" style="display: none;">
                 <h4 style="margin-bottom: 15px; color: var(--primary-blue);">Candidate Identity Verification Step 3: ID Verification</h4>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                     <div style="text-align: center;">
-                        <div style="background: #000; border-radius: 8px; overflow: hidden; aspect-ratio: 4/3;">
+                        <div style="background: #000; border-radius: 8px; overflow: hidden; aspect-ratio: 4/3; position: relative;">
                             <video id="idVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+                            <canvas id="idOverlay" class="camera-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
                         </div>
                         <button type="button" id="captureIdBtn" class="btn-primary" style="margin-top: 15px; width: 100%;">
                             <i class="fas fa-id-card"></i> Capture ID Photo
@@ -1732,6 +1902,9 @@ var globalVideoStream = null;
 
         if (beginButton) {
             beginButton.addEventListener('click', async function (e) {
+                // Ensure waiting room is hidden
+                if (typeof hideWaitingRoom === 'function') hideWaitingRoom();
+
                 // Ensure proctoring starts before the exam begins.
                 e.preventDefault();
 
@@ -2032,6 +2205,35 @@ var globalVideoStream = null;
         }
     }
     
+    function closeIdentityVerificationModal() {
+        const modal = document.getElementById('identityVerificationModal');
+        if (modal) {
+            modal.style.display = 'none';
+            
+            // Stop camera streams if active
+            if (window.verificationStream) {
+                const tracks = window.verificationStream.getTracks();
+                tracks.forEach(track => track.stop());
+                window.verificationStream = null;
+            }
+            
+            // Clear overlays
+            const faceOverlay = document.getElementById('faceOverlay');
+            const idOverlay = document.getElementById('idOverlay');
+            if (faceOverlay) {
+                const ctx = faceOverlay.getContext('2d');
+                ctx.clearRect(0, 0, faceOverlay.width, faceOverlay.height);
+            }
+            if (idOverlay) {
+                const ctx = idOverlay.getContext('2d');
+                ctx.clearRect(0, 0, idOverlay.width, idOverlay.height);
+            }
+            
+            // Reset verification state
+            resetVerificationState();
+        }
+    }
+    
     function goToFirstQuestion() {
         const firstQuestionIndex = 0;
         scrollToQuestion(firstQuestionIndex.toString());
@@ -2115,6 +2317,191 @@ var globalVideoStream = null;
         
         return singleSelect || multiSelect || hasText || droppedItems || rearrangeItems;
     }
+
+    function openConfirmSubmitModal() {
+        const modal = document.getElementById('confirmSubmitModal');
+        if (modal) modal.style.display = 'flex';
+    }
+
+    function closeConfirmSubmitModal() {
+        const modal = document.getElementById('confirmSubmitModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function openProgressModal() {
+        const modal = document.getElementById('progressModal');
+        if (modal) modal.style.display = 'flex';
+        updateProgressModalUI();
+    }
+
+    function closeProgressModal() {
+        const modal = document.getElementById('progressModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function getQuestionProgressStats() {
+        const questionCards = document.querySelectorAll('.question-card');
+        let answered = 0;
+        const unansweredIndexes = [];
+
+        questionCards.forEach((card) => {
+            const qindex = card.getAttribute('data-qindex');
+            const answersContainer = card.querySelector('.answers');
+            const isAnswered = answersContainer && isQuestionAnswered(answersContainer);
+            if (isAnswered) {
+                answered++;
+            } else {
+                unansweredIndexes.push(qindex);
+            }
+        });
+
+        return {
+            total: questionCards.length,
+            answered,
+            unanswered: questionCards.length - answered,
+            unansweredIndexes
+        };
+    }
+
+    function renderUnansweredList(unansweredIndexes) {
+        const list = document.getElementById('modalUnansweredList');
+        const section = document.getElementById('modalUnansweredSection');
+        if (!list || !section) return;
+
+        list.innerHTML = '';
+
+        if (!unansweredIndexes || unansweredIndexes.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+
+        section.style.display = 'block';
+
+        unansweredIndexes.forEach((qindex) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn-outline';
+            btn.style.padding = '8px 12px';
+            btn.style.fontSize = '12px';
+            btn.style.borderRadius = '10px';
+            btn.textContent = 'Q' + (parseInt(qindex, 10) + 1);
+            btn.addEventListener('click', function() {
+                closeProgressModal();
+                scrollToQuestion(qindex);
+            });
+            list.appendChild(btn);
+        });
+    }
+
+    function updateProgressModalUI() {
+        const stats = getQuestionProgressStats();
+
+        const answeredEl = document.getElementById('modalAnswered');
+        const unansweredEl = document.getElementById('modalUnanswered');
+        const textEl = document.getElementById('modalProgressText');
+        const barEl = document.getElementById('modalProgressBar');
+
+        if (answeredEl) answeredEl.textContent = String(stats.answered);
+        if (unansweredEl) unansweredEl.textContent = String(stats.unanswered);
+        if (textEl) textEl.textContent = stats.answered + ' / ' + stats.total;
+
+        const percent = stats.total > 0 ? Math.round((stats.answered / stats.total) * 100) : 0;
+        if (barEl) barEl.style.width = percent + '%';
+
+        const percentText = document.querySelector('#progressModal .progress-percent');
+        if (percentText) percentText.textContent = percent + '%';
+
+        const circle = document.querySelector('#progressModal .progress-circle');
+        if (circle) circle.setAttribute('data-progress', String(percent));
+
+        const ring = document.querySelector('#progressModal .progress-ring-progress');
+        if (ring) {
+            const circumference = 213.628;
+            const offset = circumference - (percent / 100) * circumference;
+            ring.style.strokeDashoffset = String(offset);
+        }
+
+        const floatCounter = document.getElementById('floatCounter');
+        if (floatCounter) floatCounter.textContent = stats.answered + '/' + stats.total;
+
+        const submitAnswered = document.getElementById('submitAnswered');
+        const submitUnanswered = document.getElementById('submitUnanswered');
+        if (submitAnswered) submitAnswered.textContent = String(stats.answered);
+        if (submitUnanswered) submitUnanswered.textContent = String(stats.unanswered);
+
+        renderUnansweredList(stats.unansweredIndexes);
+    }
+
+    (function initProgressModal() {
+        document.addEventListener('DOMContentLoaded', function() {
+            const progressBtn = document.getElementById('progressFloatBtn');
+            const progressModal = document.getElementById('progressModal');
+            const closeBtns = document.querySelectorAll('#progressModal .close-modal');
+            const modalSubmitBtn = document.getElementById('modalSubmitBtn');
+            const mainSubmitBtn = document.getElementById('submitBtn');
+            const confirmBtn = document.getElementById('confirmSubmitBtn');
+            const modalUnansweredNavBtn = document.getElementById('modalUnansweredNavBtn');
+
+            if (progressBtn) {
+                progressBtn.addEventListener('click', function() {
+                    openProgressModal();
+                });
+            }
+
+            closeBtns.forEach(function(btn) {
+                btn.addEventListener('click', closeProgressModal);
+            });
+
+            if (progressModal) {
+                progressModal.addEventListener('click', function(e) {
+                    if (e.target === progressModal) closeProgressModal();
+                });
+            }
+
+            if (modalUnansweredNavBtn) {
+                modalUnansweredNavBtn.addEventListener('click', function() {
+                    closeProgressModal();
+                    showQuestionNavigationModal();
+                });
+            }
+
+            if (modalSubmitBtn) {
+                modalSubmitBtn.addEventListener('click', function() {
+                    closeProgressModal();
+                    openConfirmSubmitModal();
+                });
+            }
+
+            if (mainSubmitBtn) {
+                mainSubmitBtn.addEventListener('click', function() {
+                    openConfirmSubmitModal();
+                });
+            }
+
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', function() {
+                    const form = document.getElementById('myform');
+                    if (form) {
+                        form.submit();
+                    }
+                });
+            }
+
+            document.addEventListener('change', function(e) {
+                if (e.target && (e.target.classList.contains('answer-input') || e.target.matches('textarea'))) {
+                    updateProgressModalUI();
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                if (e.target && (e.target.classList.contains('drop-target') || e.target.classList.contains('drag-item') || e.target.classList.contains('rearrange-item'))) {
+                    setTimeout(updateProgressModalUI, 50);
+                }
+            });
+
+            updateProgressModalUI();
+        });
+    })();
     
     // Test function to verify horizontal orientation layout
     function testHorizontalOrientation() {
@@ -2378,6 +2765,187 @@ var globalVideoStream = null;
         }
     }
 
+    // Initialize face overlay with head contour using facial landmarks
+    function initializeFaceOverlay() {
+        const video = document.getElementById('faceVideo');
+        const canvas = document.getElementById('faceOverlay');
+        const ctx = canvas.getContext('2d');
+        
+        // Set canvas size to match video
+        video.addEventListener('loadedmetadata', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+        });
+        
+        // Start drawing head contour
+        drawHeadContour();
+    }
+    
+    // Initialize ID overlay with ID card guide overlay
+    function initializeIdOverlay() {
+        const video = document.getElementById('idVideo');
+        const canvas = document.getElementById('idOverlay');
+        const ctx = canvas.getContext('2d');
+        
+        // Set canvas size to match video
+        video.addEventListener('loadedmetadata', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+        });
+        
+        // Start drawing ID guide
+        drawIdGuide();
+    }
+    
+    // Draw head contour using simulated facial landmarks
+    function drawHeadContour() {
+        const video = document.getElementById('faceVideo');
+        const canvas = document.getElementById('faceOverlay');
+        const ctx = canvas.getContext('2d');
+        
+        if (!video || !canvas) return;
+        
+        // Clear previous frame
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Simulated facial landmarks for head contour
+        // In a real implementation, you would use face detection API like face-api.js or MediaPipe
+        const landmarks = getSimulatedFacialLandmarks(canvas.width, canvas.height);
+        
+        if (landmarks) {
+            // Draw head contour path
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            
+            // Draw jawline
+            ctx.moveTo(landmarks.jawLeft.x, landmarks.jawLeft.y);
+            ctx.quadraticCurveTo(landmarks.chin.x, landmarks.chin.y, landmarks.jawRight.x, landmarks.jawRight.y);
+            
+            // Draw right side of face
+            ctx.quadraticCurveTo(landmarks.cheekRight.x, landmarks.cheekRight.y, landmarks.templeRight.x, landmarks.templeRight.y);
+            
+            // Draw forehead
+            ctx.quadraticCurveTo(landmarks.forehead.x, landmarks.forehead.y, landmarks.templeLeft.x, landmarks.templeLeft.y);
+            
+            // Draw left side of face
+            ctx.quadraticCurveTo(landmarks.cheekLeft.x, landmarks.cheekLeft.y, landmarks.jawLeft.x, landmarks.jawLeft.y);
+            
+            ctx.closePath();
+            ctx.stroke();
+            
+            // Draw landmark points
+            ctx.fillStyle = '#ff0000';
+            Object.values(landmarks).forEach(point => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 3, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+            
+            // Draw oval guide text
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '14px Arial';
+            ctx.fillText('Align face within contour', 10, 30);
+        }
+        
+        // Continue animation
+        requestAnimationFrame(drawHeadContour);
+    }
+    
+    // Simulate facial landmarks (replace with real face detection)
+    function getSimulatedFacialLandmarks(width, height) {
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const faceWidth = width * 0.6;
+        const faceHeight = height * 0.8;
+        
+        return {
+            // Jawline points
+            jawLeft: { x: centerX - faceWidth/2, y: centerY + faceHeight/3 },
+            chin: { x: centerX, y: centerY + faceHeight/2.5 },
+            jawRight: { x: centerX + faceWidth/2, y: centerY + faceHeight/3 },
+            
+            // Cheek points
+            cheekLeft: { x: centerX - faceWidth/2.5, y: centerY },
+            cheekRight: { x: centerX + faceWidth/2.5, y: centerY },
+            
+            // Temple points
+            templeLeft: { x: centerX - faceWidth/2.2, y: centerY - faceHeight/3 },
+            templeRight: { x: centerX + faceWidth/2.2, y: centerY - faceHeight/3 },
+            
+            // Forehead point
+            forehead: { x: centerX, y: centerY - faceHeight/2.5 }
+        };
+    }
+    
+    // Draw ID card guide overlay
+    function drawIdGuide() {
+        const video = document.getElementById('idVideo');
+        const canvas = document.getElementById('idOverlay');
+        const ctx = canvas.getContext('2d');
+        
+        if (!video || !canvas) return;
+        
+        // Clear previous frame
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Calculate ID card guide dimensions (standard ID card ratio)
+        const cardWidth = canvas.width * 0.7;
+        const cardHeight = cardWidth * 0.63; // Standard ID card ratio
+        const cardX = (canvas.width - cardWidth) / 2;
+        const cardY = (canvas.height - cardHeight) / 2;
+        
+        // Draw ID card guide rectangle
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([10, 5]);
+        ctx.strokeRect(cardX, cardY, cardWidth, cardHeight);
+        
+        // Draw corner markers for better alignment
+        ctx.fillStyle = '#ff0000';
+        const markerSize = 10;
+        const corners = [
+            { x: cardX, y: cardY },
+            { x: cardX + cardWidth, y: cardY },
+            { x: cardX, y: cardY + cardHeight },
+            { x: cardX + cardWidth, y: cardY + cardHeight }
+        ];
+        
+        corners.forEach(corner => {
+            ctx.beginPath();
+            ctx.arc(corner.x, corner.y, 5, 0, 2 * Math.PI);
+            ctx.fill();
+        });
+        
+        // Draw center guide lines
+        ctx.strokeStyle = '#ffff00';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+        
+        // Vertical center line
+        ctx.beginPath();
+        ctx.moveTo(canvas.width / 2, cardY);
+        ctx.lineTo(canvas.width / 2, cardY + cardHeight);
+        ctx.stroke();
+        
+        // Horizontal center line
+        ctx.beginPath();
+        ctx.moveTo(cardX, canvas.height / 2);
+        ctx.lineTo(cardX + cardWidth, canvas.height / 2);
+        ctx.stroke();
+        
+        // Draw guide text
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '14px Arial';
+        ctx.fillText('Position ID within guide', 10, 30);
+        ctx.font = '12px Arial';
+        ctx.fillText('Align card corners with markers', 10, canvas.height - 10);
+        
+        // Continue animation
+        requestAnimationFrame(drawIdGuide);
+    }
+
     async function showVerifyStep(step) {
         // Keep the same stream running across steps (face -> ID -> summary)
 
@@ -2421,6 +2989,9 @@ var globalVideoStream = null;
                 }
                 document.getElementById('faceVideo').srcObject = verificationStream;
                 document.getElementById('faceVideo').play();
+                
+                // Initialize face overlay and head contour
+                initializeFaceOverlay();
             } catch (err) {
                 if (typeof showSystemAlertModal === 'function') {
                     showSystemAlertModal('Could not access camera for face verification.');
@@ -2434,6 +3005,9 @@ var globalVideoStream = null;
                 }
                 document.getElementById('idVideo').srcObject = verificationStream;
                 document.getElementById('idVideo').play();
+                
+                // Initialize ID overlay and head contour
+                initializeIdOverlay();
             } catch (err) {
                 if (typeof showSystemAlertModal === 'function') {
                     showSystemAlertModal('Could not access camera for ID verification.');
@@ -2463,6 +3037,16 @@ var globalVideoStream = null;
             if (!agreed) {
                 if (typeof showSystemAlertModal === 'function') {
                     showSystemAlertModal('Please agree to the Code of Honor to proceed.');
+                    
+                    // Scroll to bottom of modal to show the honor code checkbox
+                    const modal = document.getElementById('identityVerificationModal');
+                    const modalBody = modal.querySelector('.modal-body');
+                    if (modalBody) {
+                        // Scroll to the bottom of the modal body
+                        setTimeout(() => {
+                            modalBody.scrollTop = modalBody.scrollHeight;
+                        }, 100);
+                    }
                 }
                 return;
             }
@@ -2470,6 +3054,16 @@ var globalVideoStream = null;
             if (!sig || sig !== expectedSig) {
                 if (typeof showSystemAlertModal === 'function') {
                     showSystemAlertModal('Digital signature does not match. Please type your full name exactly as: ' + expectedSig);
+                    
+                    // Scroll to bottom of modal to show the honor code checkbox
+                    const modal = document.getElementById('identityVerificationModal');
+                    const modalBody = modal.querySelector('.modal-body');
+                    if (modalBody) {
+                        // Scroll to the bottom of the modal body
+                        setTimeout(() => {
+                            modalBody.scrollTop = modalBody.scrollHeight;
+                        }, 100);
+                    }
                 }
                 return;
             }
@@ -2588,6 +3182,7 @@ var globalVideoStream = null;
             
             if (!result.success) {
                 showQualityError(result.reason);
+                // Reset button on failure
                 document.getElementById('captureFaceBtn').innerHTML = originalText;
                 document.getElementById('captureFaceBtn').disabled = false;
                 return;
@@ -2612,9 +3207,14 @@ var globalVideoStream = null;
             const errorDiv = document.getElementById('faceQualityError');
             if (errorDiv) errorDiv.remove();
             
+            // Reset button on success - change to "Retake" or keep original
+            document.getElementById('captureFaceBtn').innerHTML = '<i class="fas fa-camera"></i> Retake Photo';
+            document.getElementById('captureFaceBtn').disabled = false;
+            
         } catch (err) {
             console.error('Error:', err);
             showQualityError('Could not analyze photo. Please try again.');
+            // Reset button on error
             document.getElementById('captureFaceBtn').innerHTML = originalText;
             document.getElementById('captureFaceBtn').disabled = false;
         }
@@ -2747,6 +3347,7 @@ var globalVideoStream = null;
             
             if (!result.success) {
                 showSimpleIdError(result.reason);
+                // Reset button on failure
                 document.getElementById('captureIdBtn').innerHTML = originalText;
                 document.getElementById('captureIdBtn').disabled = false;
                 return;
@@ -2760,9 +3361,14 @@ var globalVideoStream = null;
             const errorDiv = document.getElementById('simpleIdError');
             if (errorDiv) errorDiv.remove();
             
+            // Reset button on success - change to "Retake" or keep original
+            document.getElementById('captureIdBtn').innerHTML = '<i class="fas fa-id-card"></i> Retake ID';
+            document.getElementById('captureIdBtn').disabled = false;
+            
         } catch (err) {
             console.error('Error:', err);
             showSimpleIdError('Could not verify ID. Please try again.');
+            // Reset button on error
             document.getElementById('captureIdBtn').innerHTML = originalText;
             document.getElementById('captureIdBtn').disabled = false;
         }
@@ -2836,13 +3442,121 @@ function showSimpleIdError(message) {
         }
     }
 
+    // Waiting Room Management 
+    let waitingRoomTimer = null; 
+    let waitingRoomStartTime = null; 
+    
+    function hideWaitingRoom() { 
+        const modal = document.getElementById('waitingRoomModal'); 
+        if (modal) { 
+            modal.style.display = 'none'; 
+        } 
+        if (waitingRoomTimer) { 
+            clearInterval(waitingRoomTimer); 
+            waitingRoomTimer = null; 
+        } 
+    } 
+    
+    function cancelWaitingRoom() { 
+        showSystemConfirmModal('Are you sure you want to cancel the exam request?', function(confirmed) {
+            if (confirmed) {
+                hideWaitingRoom(); 
+                
+                // Clear any pending exam session data 
+                sessionStorage.removeItem('examRequested'); 
+                sessionStorage.removeItem('proctorWaiting'); 
+                
+                showSystemAlertModal('Exam request cancelled. You can select another course when ready.'); 
+            }
+        });
+    } 
+    
+    function startWaitingTimer() { 
+        const display = document.getElementById('waitingTimeDisplay'); 
+        if (!display) return; 
+        
+        waitingRoomTimer = setInterval(function() { 
+            if (!waitingRoomStartTime) return; 
+            
+            const elapsed = Math.floor((Date.now() - waitingRoomStartTime) / 1000); 
+            
+            if (elapsed < 60) { 
+                display.textContent = 'Less than 1 minute'; 
+            } else if (elapsed < 120) { 
+                display.textContent = 'About 1 minute'; 
+            } else { 
+                const minutes = Math.floor(elapsed / 60); 
+                display.textContent = minutes + ' minute' + (minutes > 1 ? 's' : ''); 
+            } 
+        }, 1000); 
+    } 
+    
+    function simulateQueueProgress() { 
+        const queueElement = document.querySelector('#waitingRoomModal .modal-body div[style*="font-size: 48px"]'); 
+        if (!queueElement) return; 
+        
+        // Simulate moving up in queue 
+        setTimeout(function() { 
+            queueElement.innerHTML = '1<sup>st</sup>'; 
+        }, 4000); 
+    }
+
     document.getElementById('verifyFinalBtn').onclick = () => {
         document.getElementById('identityVerificationModal').style.display = 'none';
-        document.getElementById('confirmationModal').style.display = 'flex';
+        
+        // Use the current course name from the global variable or JSP
+        const courseName = typeof currentCourseName !== 'undefined' ? currentCourseName : '';
+        
+        // Skip waiting room for faster UX - go directly to confirmation
+        const confirmModal = document.getElementById('confirmationModal');
+        if (confirmModal) {
+            // Set course info in modal
+            const modalCourseName = document.getElementById('modalCourseName');
+            const modalDuration = document.getElementById('modalDuration');
+            
+            if (modalCourseName) modalCourseName.textContent = courseName;
+            if (modalDuration) modalDuration.textContent = '2 minutes'; // Or get from actual data
+            
+            confirmModal.style.display = 'flex';
+        }
     };
 
     </script>
     <style>
+    /* Course Selection Lock Icon Styles */
+    #courseSelect option[data-requires-verification="true"] {
+        color: #dc2626;
+        font-weight: 600;
+        background: linear-gradient(90deg, #fef2f2 0%, #ffffff 100%);
+    }
+    
+    #courseSelect option[data-requires-verification="true"]:hover {
+        background: linear-gradient(90deg, #fee2e2 0%, #fef2f2 100%);
+    }
+    
+    #courseSelect option[data-requires-verification="false"] {
+        color: #059669;
+        font-weight: 500;
+    }
+    
+    #courseSelect option[data-requires-verification="false"]:hover {
+        background: #ecfdf5;
+    }
+    
+    /* Lock icon styling */
+    .lock-indicator {
+        color: #dc2626;
+        font-weight: bold;
+        margin-left: 8px;
+        font-size: 14px;
+    }
+    
+    /* Course selection enhanced styling */
+    .form-select {
+        position: relative;
+        padding-right: 40px;
+    }
+    
     /* Step Header Styles */
     .step-header {
         margin-bottom: 24px;
@@ -2873,6 +3587,19 @@ function showSimpleIdError(message) {
         font-size: 14px;
         color: #5a6b7c;
         margin: 0;
+    }
+
+    .questions-container {
+        -webkit-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+
+    .questions-container input,
+    .questions-container textarea {
+        -webkit-user-select: text;
+        -ms-user-select: text;
+        user-select: text;
     }
 
     /* Verification Grid Layout */
@@ -3597,4 +4324,690 @@ function shuffleDraggableItems(questionIndex) {
 
 // Initialize the drag drop manager
 const dragDropManager = new DragDropManager();
+
+// ==================== FACE CAPTURE BUTTON FUNCTIONALITY ====================
+
+// Enhanced face capture with AI analysis simulation and quality checks
+document.addEventListener('DOMContentLoaded', function() {
+    const captureFaceBtn = document.getElementById('captureFaceBtn');
+    const retakeFaceBtn = document.getElementById('retakeFaceBtn');
+    const faceVideo = document.getElementById('faceVideo');
+    
+    if (!captureFaceBtn) return;
+    
+    // Store original button text
+    const originalFaceBtnText = captureFaceBtn.innerHTML;
+    
+    // Face capture click handler
+    captureFaceBtn.addEventListener('click', async function() {
+        const video = document.getElementById('faceVideo');
+        
+        if (!video || !video.srcObject) {
+            showSystemAlertModal('Camera not initialized. Please refresh and try again.');
+            return;
+        }
+        
+        // Show loading state
+        const originalText = this.innerHTML;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI Analyzing...';
+        this.disabled = true;
+        
+        try {
+            // Capture the photo
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            // Convert to blob for server upload
+            const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+            const imageBase64 = canvas.toDataURL('image/jpeg', 0.9);
+            
+            // Perform client-side quality checks first
+            const qualityChecks = await performFaceQualityChecks(ctx, canvas.width, canvas.height);
+            
+            if (!qualityChecks.passed) {
+                showQualityError(qualityChecks.reason);
+                this.innerHTML = originalText;
+                this.disabled = false;
+                return;
+            }
+            
+            // Send to server for AI analysis
+            const formData = new FormData();
+            formData.append('page', 'verify_face');
+            formData.append('operation', 'analyze');
+            formData.append('faceImage', imageBlob, 'face.jpg');
+            formData.append('userId', window.studentId || '');
+            
+            const response = await fetch('controller.jsp', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                showQualityError(result.reason || 'Face analysis failed. Please try again.');
+                this.innerHTML = originalText;
+                this.disabled = false;
+                return;
+            }
+            
+            // Success - update UI
+            capturedFaceData = imageBase64;
+            
+            // Show preview
+            document.getElementById('faceImgPreview').src = imageBase64;
+            document.getElementById('faceCapturedPreview').style.display = 'block';
+            document.getElementById('liveInstructions').style.display = 'none';
+            document.getElementById('retakeSection').style.display = 'block';
+            
+            // Update quality indicators
+            updateFaceQualityIndicators(true);
+            
+            // Change button to "Retake" state
+            this.innerHTML = '<i class="fas fa-camera"></i> Retake Photo';
+            this.disabled = false;
+            
+            // Store in session for later verification
+            sessionStorage.setItem('faceCaptured', 'true');
+            sessionStorage.setItem('faceCaptureTime', Date.now().toString());
+            
+        } catch (error) {
+            console.error('Face capture error:', error);
+            showQualityError('Network error during analysis. Please try again.');
+            this.innerHTML = originalText;
+            this.disabled = false;
+        }
+    });
+    
+    // Retake button handler
+    if (retakeFaceBtn) {
+        retakeFaceBtn.addEventListener('click', function() {
+            document.getElementById('faceCapturedPreview').style.display = 'none';
+            document.getElementById('liveInstructions').style.display = 'block';
+            document.getElementById('retakeSection').style.display = 'none';
+            captureFaceBtn.innerHTML = '<i class="fas fa-camera"></i> Capture Photo';
+            capturedFaceData = null;
+            sessionStorage.removeItem('faceCaptured');
+        });
+    }
+    
+    // Real-time face quality monitoring
+    if (faceVideo) {
+        faceVideo.addEventListener('play', function() {
+            startFaceQualityMonitoring(this);
+        });
+    }
+});
+
+// Client-side face quality checks
+async function performFaceQualityChecks(ctx, width, height) {
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    
+    // 1. Check brightness
+    let totalBrightness = 0;
+    for (let i = 0; i < data.length; i += 4) {
+        totalBrightness += (data[i] + data[i + 1] + data[i + 2]) / 3;
+    }
+    const avgBrightness = totalBrightness / (data.length / 4);
+    
+    if (avgBrightness < 50) {
+        return { passed: false, reason: 'Image too dark. Please ensure proper lighting.' };
+    }
+    if (avgBrightness > 230) {
+        return { passed: false, reason: 'Image too bright. Please reduce glare.' };
+    }
+    
+    // 2. Check contrast
+    let min = 255, max = 0;
+    for (let i = 0; i < data.length; i += 4) {
+        const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        min = Math.min(min, brightness);
+        max = Math.max(max, brightness);
+    }
+    const contrast = max - min;
+    
+    if (contrast < 30) {
+        return { passed: false, reason: 'Low contrast image. Please improve lighting.' };
+    }
+    
+    // 3. Check for face in frame (simple skin tone detection in center region)
+    const centerX = Math.floor(width / 2);
+    const centerY = Math.floor(height / 2);
+    const sampleSize = 50;
+    
+    let skinPixels = 0;
+    let totalPixels = 0;
+    
+    for (let y = centerY - sampleSize; y < centerY + sampleSize; y++) {
+        for (let x = centerX - sampleSize; x < centerX + sampleSize; x++) {
+            if (x >= 0 && x < width && y >= 0 && y < height) {
+                const idx = (y * width + x) * 4;
+                const r = data[idx];
+                const g = data[idx + 1];
+                const b = data[idx + 2];
+                
+                // Simple skin tone detection
+                if (r > 60 && g > 40 && b > 20 && 
+                    r > g && r > b && 
+                    Math.abs(r - g) > 15) {
+                    skinPixels++;
+                }
+                totalPixels++;
+            }
+        }
+    }
+    
+    const skinRatio = skinPixels / totalPixels;
+    
+    if (skinRatio < 0.3) {
+        return { passed: false, reason: 'No face detected in center. Please position your face in the guide.' };
+    }
+    
+    return { passed: true };
+}
+
+// Real-time quality monitoring
+function startFaceQualityMonitoring(video) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const indicator = document.getElementById('lightingIndicator');
+    const scoreEl = document.getElementById('lightingScore');
+    const progressEl = document.getElementById('lightingProgress');
+    
+    let lastCheck = 0;
+    
+    function checkQuality() {
+        if (!video.videoWidth) return;
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        
+        // Calculate average brightness
+        let brightness = 0;
+        for (let i = 0; i < data.length; i += 40) {
+            brightness += (data[i] + data[i + 1] + data[i + 2]) / 3;
+        }
+        brightness = brightness / (data.length / 40);
+        
+        // Update indicator
+        if (indicator && scoreEl && progressEl) {
+            indicator.style.display = 'block';
+            
+            if (brightness < 60) {
+                scoreEl.textContent = 'Too Dark';
+                progressEl.className = 'progress-fill poor';
+                progressEl.style.width = '30%';
+                scoreEl.style.color = '#ef4444';
+            } else if (brightness > 200) {
+                scoreEl.textContent = 'Too Bright';
+                progressEl.className = 'progress-fill warning';
+                progressEl.style.width = '90%';
+                scoreEl.style.color = '#f59e0b';
+            } else {
+                scoreEl.textContent = 'Good';
+                progressEl.className = 'progress-fill good';
+                progressEl.style.width = '75%';
+                scoreEl.style.color = '#10b981';
+            }
+        }
+        
+        requestAnimationFrame(checkQuality);
+    }
+    
+    requestAnimationFrame(checkQuality);
+}
+
+function updateFaceQualityIndicators(passed) {
+    const checks = document.querySelectorAll('.check-item');
+    if (checks.length >= 4) {
+        const statuses = [
+            'Face properly positioned',
+            'No face coverings detected',
+            'Lighting adequate',
+            'Single person in frame'
+        ];
+        
+        checks.forEach((check, index) => {
+            check.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981"></i><span>${statuses[index]}</span>`;
+        });
+    }
+}
+
+// ==================== ID CAPTURE BUTTON FUNCTIONALITY ====================
+
+document.addEventListener('DOMContentLoaded', function() {
+    const captureIdBtn = document.getElementById('captureIdBtn');
+    const idVideo = document.getElementById('idVideo');
+    
+    if (!captureIdBtn) return;
+    
+    const originalIdBtnText = captureIdBtn.innerHTML;
+    
+    captureIdBtn.addEventListener('click', async function() {
+        const video = document.getElementById('idVideo');
+        
+        if (!video || !video.srcObject) {
+            showSystemAlertModal('Camera not initialized. Please refresh and try again.');
+            return;
+        }
+        
+        // Show loading state
+        const originalText = this.innerHTML;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking ID...';
+        this.disabled = true;
+        
+        try {
+            // Capture the photo
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            // Convert to blob
+            const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+            const imageBase64 = canvas.toDataURL('image/jpeg', 0.95);
+            
+            // Client-side ID detection
+            const idDetection = await detectIDCard(ctx, canvas.width, canvas.height);
+            
+            if (!idDetection.detected) {
+                showSimpleIdError(idDetection.reason || 'No ID card detected. Please hold your ID clearly.');
+                this.innerHTML = originalText;
+                this.disabled = false;
+                return;
+            }
+            
+            // Send to server for OCR and verification
+            const formData = new FormData();
+            formData.append('page', 'verify_id');
+            formData.append('operation', 'verify');
+            formData.append('idImage', imageBlob, 'id.jpg');
+            formData.append('userId', window.studentId || '');
+            formData.append('userName', window.verifiedFullName || '');
+            
+            const response = await fetch('controller.jsp', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                showSimpleIdError(result.reason || 'ID verification failed. Please ensure ID is clearly visible.');
+                this.innerHTML = originalText;
+                this.disabled = false;
+                return;
+            }
+            
+            // Success
+            capturedIdData = imageBase64;
+            
+            // Show preview
+            document.getElementById('idImgPreview').src = imageBase64;
+            document.getElementById('idCapturedPreview').style.display = 'block';
+            
+            // Hide any error messages
+            const errorDiv = document.getElementById('simpleIdError');
+            if (errorDiv) errorDiv.remove();
+            
+            // Change button text
+            this.innerHTML = '<i class="fas fa-id-card"></i> Retake ID';
+            this.disabled = false;
+            
+            // Store verification status
+            sessionStorage.setItem('idCaptured', 'true');
+            sessionStorage.setItem('idVerified', 'true');
+            
+            // Show success message
+            showTemporaryMessage('ID verified successfully!', 'success');
+            
+        } catch (error) {
+            console.error('ID capture error:', error);
+            showSimpleIdError('Network error during verification. Please try again.');
+            this.innerHTML = originalText;
+            this.disabled = false;
+        }
+    });
+});
+
+// Client-side ID detection
+async function detectIDCard(ctx, width, height) {
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    
+    // 1. Check for rectangular shape (edges)
+    let edgePixels = 0;
+    let totalEdgePixels = 0;
+    
+    // Simple edge detection (check for high contrast areas)
+    for (let y = 10; y < height - 10; y += 5) {
+        for (let x = 10; x < width - 10; x += 5) {
+            const idx = (y * width + x) * 4;
+            const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+            
+            // Check surrounding pixels for contrast
+            let contrast = 0;
+            for (let dy = -5; dy <= 5; dy += 5) {
+                for (let dx = -5; dx <= 5; dx += 5) {
+                    if (dx === 0 && dy === 0) continue;
+                    const checkIdx = ((y + dy) * width + (x + dx)) * 4;
+                    const checkBrightness = (data[checkIdx] + data[checkIdx + 1] + data[checkIdx + 2]) / 3;
+                    contrast += Math.abs(brightness - checkBrightness);
+                }
+            }
+            contrast /= 24; // Average contrast
+            
+            if (contrast > 30) {
+                edgePixels++;
+            }
+            totalEdgePixels++;
+        }
+    }
+    
+    const edgeRatio = edgePixels / totalEdgePixels;
+    
+    if (edgeRatio < 0.15) {
+        return { detected: false, reason: 'No clear edges detected. Please ensure ID is in focus.' };
+    }
+    
+    // 2. Check for text-like patterns (high frequency changes)
+    let textRegions = 0;
+    for (let y = height / 3; y < 2 * height / 3; y += 10) {
+        let prevBrightness = null;
+        let changes = 0;
+        
+        for (let x = width / 4; x < 3 * width / 4; x += 5) {
+            const idx = (Math.floor(y) * width + Math.floor(x)) * 4;
+            const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+            
+            if (prevBrightness !== null && Math.abs(brightness - prevBrightness) > 20) {
+                changes++;
+            }
+            prevBrightness = brightness;
+        }
+        
+        if (changes > 5) {
+            textRegions++;
+        }
+    }
+    
+    if (textRegions < 3) {
+        return { detected: false, reason: 'No text detected. Please ensure ID card is readable.' };
+    }
+    
+    // 3. Check for glare
+    let glarePixels = 0;
+    for (let i = 0; i < data.length; i += 40) {
+        const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        if (brightness > 240) {
+            glarePixels++;
+        }
+    }
+    
+    const glareRatio = glarePixels / (data.length / 40);
+    
+    if (glareRatio > 0.3) {
+        return { detected: false, reason: 'Too much glare on ID. Please adjust angle.' };
+    }
+    
+    return { detected: true };
+}
+
+// Improved error display
+function showSimpleIdError(message) {
+    let errorDiv = document.getElementById('simpleIdError');
+    if (!errorDiv) {a
+        errorDiv = document.createElement('div');
+        errorDiv.id = 'simpleIdError';
+        
+        // Insert after capture button
+        const idSection = document.querySelector('#verification-step-3 .info-section') || 
+                         document.querySelector('#verification-step-3 > div:last-child');
+        if (idSection) {
+            idSection.appendChild(errorDiv);
+        }
+    }
+    
+    errorDiv.innerHTML = `
+        <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; color: #856404; animation: slideIn 0.3s ease;">
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                <i class="fas fa-id-card" style="font-size: 20px; color: #856404;"></i>
+                <div style="flex: 1;">
+                    <strong style="display: block; margin-bottom: 5px;">ID Not Detected</strong>
+                    <span style="font-size: 13px;">${message}</span>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: #856404; cursor: pointer; font-size: 16px;">&times;</button>
+            </div>
+            <div style="margin-top: 10px; font-size: 12px; padding: 8px; background: #fff9e6; border-radius: 4px;">
+                <strong>Tips:</strong>
+                <ul style="margin-top: 5px; padding-left: 20px; margin-bottom: 0;">
+                    <li>Hold your ID card steady toward the camera</li>
+                    <li>Make sure all text is clearly visible</li>
+                    <li>Avoid glare by adjusting angle</li>
+                    <li>Ensure good lighting on the ID</li>
+                    <li>Keep ID flat - avoid bending</li>
+                </ul>
+            </div>
+        </div>
+    `;
+    
+    // Auto-remove after 10 seconds
+    setTimeout(() => {
+        if (errorDiv.parentNode) {
+            errorDiv.remove();
+        }
+    }, 10000);
+}
+
+// Temporary success/error message
+function showTemporaryMessage(message, type = 'info') {
+    const msgDiv = document.createElement('div');
+    msgDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        background: ${type === 'success' ? '#10b981' : '#3b82f6'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        animation: slideInRight 0.3s ease;
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    `;
+    
+    msgDiv.innerHTML = `
+        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+        ${message}
+    `;
+    
+    document.body.appendChild(msgDiv);
+    
+    setTimeout(() => {
+        msgDiv.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => msgDiv.remove(), 300);
+    }, 3000);
+}
+
+// Add animation styles
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOutRight {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
+
+// ==================== SESSION MANAGEMENT FIXES ====================
+
+// Enhanced session cleanup
+function cleanupExamSession() {
+    // Clear session storage
+    const keysToKeep = ['userTheme', 'userPrefs']; // Keep non-exam related items
+    const sessionKeys = Object.keys(sessionStorage);
+    
+    sessionKeys.forEach(key => {
+        if (!keysToKeep.includes(key) && 
+            (key.startsWith('exam') || 
+             key.includes('timer') || 
+             key.includes('answer') ||
+             key.includes('question'))) {
+            sessionStorage.removeItem(key);
+        }
+    });
+    
+    // Clear exam-specific cookies if any
+    document.cookie.split(';').forEach(cookie => {
+        const [name] = cookie.split('=');
+        if (name.trim().startsWith('exam_')) {
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        }
+    });
+}
+
+// Enhanced timer synchronization
+class ExamTimerManager {
+    constructor(duration, examId, studentId) {
+        this.duration = duration * 60; // Convert to seconds
+        this.examId = examId;
+        this.studentId = studentId;
+        this.remainingTime = this.duration;
+        this.timerInterval = null;
+        this.lastSyncTime = Date.now();
+        this.syncInterval = 30000; // Sync every 30 seconds
+    }
+
+    start() {
+        this.loadSavedTime();
+        this.startTimer();
+        this.startSyncTimer();
+    }
+
+    loadSavedTime() {
+        const saved = localStorage.getItem(`exam_timer_${this.examId}_${this.studentId}`);
+        if (saved) {
+            const { remaining, timestamp } = JSON.parse(saved);
+            const elapsed = Math.floor((Date.now() - timestamp) / 1000);
+            this.remainingTime = Math.max(0, remaining - elapsed);
+        }
+    }
+
+    saveTime() {
+        localStorage.setItem(`exam_timer_${this.examId}_${this.studentId}`, 
+            JSON.stringify({
+                remaining: this.remainingTime,
+                timestamp: Date.now()
+            })
+        );
+    }
+
+    startTimer() {
+        this.timerInterval = setInterval(() => {
+            this.remainingTime--;
+            this.saveTime();
+            this.updateDisplay();
+            
+            if (this.remainingTime <= 0) {
+                this.timeUp();
+            }
+        }, 1000);
+    }
+
+    startSyncTimer() {
+        setInterval(() => {
+            this.syncWithServer();
+        }, this.syncInterval);
+    }
+
+    async syncWithServer() {
+        try {
+            const response = await fetch('controller.jsp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `page=exams&operation=syncTimer&examId=${this.examId}&remaining=${this.remainingTime}` 
+            });
+            
+            const data = await response.json();
+            if (data.serverTime && Math.abs(data.serverTime - this.remainingTime) > 5) {
+                this.remainingTime = data.serverTime;
+            }
+        } catch (error) {
+            console.warn('Timer sync failed:', error);
+        }
+    }
+
+    updateDisplay() {
+        const minutes = Math.floor(this.remainingTime / 60);
+        const seconds = this.remainingTime % 60;
+        const display = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        const headerTimer = document.getElementById('remainingTimeHeader');
+        if (headerTimer) headerTimer.textContent = display;
+        
+        // Update document title
+        document.title = `(${display}) Exam in Progress`;
+    }
+
+    timeUp() {
+        clearInterval(this.timerInterval);
+        document.getElementById('timeUpModal').style.display = 'flex';
+        
+        let countdown = 3;
+        const countdownEl = document.getElementById('timeUpCountdown');
+        
+        const submitInterval = setInterval(() => {
+            countdown--;
+            if (countdownEl) countdownEl.textContent = countdown;
+            
+            if (countdown <= 0) {
+                clearInterval(submitInterval);
+                document.getElementById('myform').submit();
+            }
+        }, 1000);
+    }
+}
+
+// Initialize timer on exam page
+if (document.querySelector('.exam-header-container')) {
+    const duration = parseInt('<%= request.getParameter("duration") != null ? request.getParameter("duration") : "60" %>');
+    const examId = '<%= session.getAttribute("examId") != null ? session.getAttribute("examId") : "0" %>';
+    const studentId = '<%= session.getAttribute("userId") != null ? session.getAttribute("userId") : "0" %>';
+    
+    window.timerManager = new ExamTimerManager(duration, examId, studentId);
+    window.timerManager.start();
+}
 </script>

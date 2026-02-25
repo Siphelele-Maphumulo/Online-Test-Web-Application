@@ -1908,7 +1908,7 @@ try {
             
             // Update result status based on percentage if not manually set
             if (status.isEmpty()) {
-                status = (percentage >= 45.0) ? "Pass" : "Fail";
+                status = (percentage >= 75.0) ? "Pass" : "Fail";
             }
             
             // Update the exam in database
@@ -2154,7 +2154,13 @@ try {
                 }
 
                 boolean cheatingTerminated = "true".equalsIgnoreCase(request.getParameter("cheating_terminated"));
-                String resultStatus = cheatingTerminated ? "Cheat" : null;
+                boolean windowLeaveTerminated = "true".equalsIgnoreCase(request.getParameter("left_window_terminated"));
+                
+                String resultStatus = null;
+                if (cheatingTerminated || windowLeaveTerminated) {
+                    resultStatus = "Terminated";
+                }
+                
                 pDAO.calculateResult(eId, tMarks, endTime, size, resultStatus);
                 
                 // REGISTER EXAM COMPLETION
