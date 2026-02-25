@@ -7667,7 +7667,7 @@ public ArrayList<Exams> getAllExamsWithResults() {
 
                 if (totalMarks > 0) {
                     double percentage = (obtMarks * 100.0) / totalMarks;
-                    resultStatus = (percentage >= 75.0) ? "Pass" : "Fail";
+                    resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
                 } else {
                     // Map database status to display status
                     if ("completed".equalsIgnoreCase(examStatus)) {
@@ -7751,7 +7751,7 @@ public ArrayList<Exams> getAllExamsAdmin() {
 
                 if (totalMarks > 0) {
                     double percentage = (obtMarks * 100.0) / totalMarks;
-                    resultStatus = (percentage >= 75.0) ? "Pass" : "Fail";
+                    resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
                 } else {
                     resultStatus = rs.getString("status");
                 }
@@ -7915,7 +7915,7 @@ public void calculateResult(int eid, int tMarks, String endTime, int size, Strin
             resultStatus = forcedStatus;
         } else {
             // Normal result calculation based on percentage
-            resultStatus = (percentage >= 75.0) ? "Pass" : "Fail";
+            resultStatus = (percentage >= 45.0) ? "Pass" : "Fail";
         }
 
         // Truncate result_status to fit database column (max 15 characters to allow 'Terminated')

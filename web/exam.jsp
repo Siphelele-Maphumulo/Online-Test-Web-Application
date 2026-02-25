@@ -3446,6 +3446,38 @@ function showSimpleIdError(message) {
     let waitingRoomTimer = null; 
     let waitingRoomStartTime = null; 
     
+    function showWaitingRoom(courseName) { 
+        const modal = document.getElementById('waitingRoomModal'); 
+        if (!modal) return; 
+        
+        // Show the modal 
+        modal.style.display = 'flex'; 
+        
+        // Update course name in modal
+        const courseNameEl = document.getElementById('waitingRoomCourseName');
+        if (courseNameEl) courseNameEl.textContent = courseName;
+        
+        // Record start time 
+        waitingRoomStartTime = Date.now(); 
+        
+        // Start waiting time simulation 
+        startWaitingTimer(); 
+        
+        // Auto-proceed after waiting period (for simulation) 
+        setTimeout(function() { 
+            // Check if modal is still visible 
+            if (modal.style.display === 'flex') { 
+                // Proctor assigned - proceed to confirmation 
+                hideWaitingRoom(); 
+                const confirmModal = document.getElementById('confirmationModal');
+                if (confirmModal) confirmModal.style.display = 'flex'; 
+            } 
+        }, 8000); // 8 seconds simulation for better UX during testing
+        
+        // Simulate queue position updates 
+        simulateQueueProgress(); 
+    } 
+    
     function hideWaitingRoom() { 
         const modal = document.getElementById('waitingRoomModal'); 
         if (modal) { 
@@ -3506,19 +3538,7 @@ function showSimpleIdError(message) {
         
         // Use the current course name from the global variable or JSP
         const courseName = typeof currentCourseName !== 'undefined' ? currentCourseName : '';
-        
-        // Skip waiting room for faster UX - go directly to confirmation
-        const confirmModal = document.getElementById('confirmationModal');
-        if (confirmModal) {
-            // Set course info in modal
-            const modalCourseName = document.getElementById('modalCourseName');
-            const modalDuration = document.getElementById('modalDuration');
-            
-            if (modalCourseName) modalCourseName.textContent = courseName;
-            if (modalDuration) modalDuration.textContent = '2 minutes'; // Or get from actual data
-            
-            confirmModal.style.display = 'flex';
-        }
+        showWaitingRoom(courseName);
     };
 
     </script>
