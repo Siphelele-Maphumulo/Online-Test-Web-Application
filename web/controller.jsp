@@ -1751,86 +1751,85 @@ try {
                 numQuestions = Integer.parseInt(numQsParam.trim());
             } catch (NumberFormatException e) {}
         }
+
+        if (numQuestions < 1) numQuestions = 1;
+        if (numQuestions > 100) numQuestions = 100;
         
         try {
-            String aiResponse = OpenRouterClient.generateQuestions(text, questionType, numQuestions, isMarkingGuideline);
-            if (aiResponse == null || aiResponse.trim().isEmpty()) {
-                outJSON.print("{\"success\": false, \"message\": \"AI generation failed or returned empty response.\"}");
+            JSONArray collected = new JSONArray();
+            int remaining = numQuestions;
+            int attempts = 0;
+            while (remaining > 0 && attempts < 3) {
+                attempts++;
+                String promptText = text;
+                if (collected.length() > 0) {
+                    promptText = "IMPORTANT: Do not repeat any of the following questions. Generate ONLY new questions.\n" +
+                                 "ALREADY GENERATED (do not repeat):\n" + collected.toString() + "\n\n" +
+                                 "NOW GENERATE EXACTLY " + remaining + " MORE QUESTIONS.\n\n" +
+                                 text;
+                }
+
+                String aiResponse = OpenRouterClient.generateQuestions(promptText, questionType, remaining, isMarkingGuideline);
+                if (aiResponse == null || aiResponse.trim().isEmpty()) {
+                    break;
+                }
+
+                // Clean AI response if it contains markdown
+                if (aiResponse.contains("```json")) {
+                    aiResponse = aiResponse.substring(aiResponse.indexOf("```json") + 7);
+                    if (aiResponse.contains("```")) {
+                        aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
+                    }
+                } else if (aiResponse.contains("```")) {
+                    aiResponse = aiResponse.substring(aiResponse.indexOf("```") + 3);
+                    if (aiResponse.contains("```")) {
+                        aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
+                    }
+                }
+                aiResponse = aiResponse.trim();
+
+                JSONArray batch = null;
+                try {
+                    if (aiResponse.startsWith("[")) {
+                        batch = new JSONArray(aiResponse);
+                    } else if (aiResponse.startsWith("{")) {
+                        JSONObject resObj = new JSONObject(aiResponse);
+                        if (resObj.has("questions")) {
+                            batch = resObj.getJSONArray("questions");
+                        } else if (resObj.has("question")) {
+                            batch = new JSONArray();
+                            batch.put(resObj);
+                        }
+                    } else {
+                        int firstBracket = aiResponse.indexOf("[");
+                        if (firstBracket != -1) {
+                            batch = new JSONArray(aiResponse.substring(firstBracket));
+                        }
+                    }
+                } catch (JSONException je) {
+                    batch = null;
+                }
+
+                if (batch == null || batch.length() == 0) {
+                    break;
+                }
+
+                for (int i = 0; i < batch.length() && collected.length() < numQuestions; i++) {
+                    collected.put(batch.get(i));
+                }
+
+                remaining = numQuestions - collected.length();
+            }
+
+            if (collected.length() != numQuestions) {
+                outJSON.print("{\"success\": false, \"message\": \"AI returned " + collected.length() + " questions, but " + numQuestions + " were requested. Please try again (or reduce the requested count).\"}");
                 return;
             }
 
-            // Clean AI response if it contains markdown
-            if (aiResponse.contains("```json")) {
-                aiResponse = aiResponse.substring(aiResponse.indexOf("```json") + 7);
-                if (aiResponse.contains("```")) {
-                    aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
-                }
-            } else if (aiResponse.contains("```")) {
-                aiResponse = aiResponse.substring(aiResponse.indexOf("```") + 3);
-                if (aiResponse.contains("```")) {
-                    aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
-                }
-            }
-            
-            aiResponse = aiResponse.trim();
-            
-            try {
-                // Try to parse as JSONArray first (preferred)
-                if (aiResponse.startsWith("[")) {
-                    JSONArray questionsArr = new JSONArray(aiResponse);
-                    JSONObject result = new JSONObject();
-                    result.put("success", true);
-                    result.put("questions", questionsArr);
-                    outJSON.print(result.toString());
-                } else if (aiResponse.startsWith("{")) {
-                    JSONObject resObj = new JSONObject(aiResponse);
-                    if (resObj.has("questions")) {
-                        resObj.put("success", true);
-                        outJSON.print(resObj.toString());
-                    } else if (resObj.has("question")) {
-                        // Single question wrapped in object
-                        JSONArray arr = new JSONArray();
-                        arr.put(resObj);
-                        JSONObject result = new JSONObject();
-                        result.put("success", true);
-                        result.put("questions", arr);
-                        outJSON.print(result.toString());
-        } else {
-                        outJSON.print("{\"success\": false, \"message\": \"AI returned JSON but no questions were found.\"}");
-                    }
-        } else {
-                    // Try to find JSON within the text if it didn't start with [ or {
-                    int firstBracket = aiResponse.indexOf("[");
-                    int firstBrace = aiResponse.indexOf("{");
-                    int start = -1;
-                    if (firstBracket != -1 && (firstBrace == -1 || firstBracket < firstBrace)) start = firstBracket;
-                    else if (firstBrace != -1) start = firstBrace;
-                    
-                    if (start != -1) {
-                        String potentialJson = aiResponse.substring(start);
-                        try {
-                            if (potentialJson.startsWith("[")) {
-                                JSONArray arr = new JSONArray(potentialJson);
-                                JSONObject result = new JSONObject();
-                                result.put("success", true);
-                                result.put("questions", arr);
-                                outJSON.print(result.toString());
-        } else {
-                                JSONObject obj = new JSONObject(potentialJson);
-                                obj.put("success", true);
-                                outJSON.print(obj.toString());
-                            }
-                        } catch (JSONException je) {
-                            outJSON.print("{\"success\": false, \"message\": \"Found potential JSON but failed to parse: " + je.getMessage() + "\"}");
-                        }
-        } else {
-                        outJSON.print("{\"success\": false, \"message\": \"AI returned non-JSON response.\"}");
-                    }
-                }
-            } catch (JSONException e) {
-                LOGGER.log(Level.WARNING, "JSON Parsing Error. Response was: " + aiResponse, e);
-                outJSON.print("{\"success\": false, \"message\": \"Failed to parse AI JSON response: " + e.getMessage() + "\"}");
-            }
+            JSONObject result = new JSONObject();
+            result.put("success", true);
+            result.put("questions", collected);
+            outJSON.print(result.toString());
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Unexpected error in ai_generate", e);
             outJSON.print("{\"success\": false, \"message\": \"Internal Error: " + e.getMessage() + "\"}");

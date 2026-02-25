@@ -1988,6 +1988,10 @@ if (lastQuestionType == null || lastQuestionType.trim().isEmpty()) {
                             <i class="fas fa-redo"></i>
                             Reset
                         </button>
+                        <button type="button" class="btn btn-warning" id="skipBatchBtn" style="display:none;" onclick="skipCurrentBatchQuestion()">
+                            <i class="fas fa-forward"></i>
+                            Skip This Question
+                        </button>
                         <button type="submit" class="btn btn-success" id="submitBtn">
                             <i class="fas fa-plus"></i>
                             Add Question
@@ -2242,60 +2246,104 @@ function generateQuestionsWithAI(text, courseName) {
     const statusDiv = document.getElementById('fileUploadStatus');
     const progressBar = document.querySelector('#fileUploadProgress .progress-bar');
     const processBtn = document.getElementById('processFileBtn');
-    
-    statusDiv.innerHTML = '<div class="alert"><i class="fas fa-robot fa-spin"></i> AI is intelligently parsing marking guidelines and generating options...</div>';
-    progressBar.style.width = '70%';
-    progressBar.textContent = '70%';
 
-    const formData = new URLSearchParams();
-    formData.append('page', 'questions');
-    formData.append('operation', 'ai_generate');
-    formData.append('text', text);
-    formData.append('questionType', 'MCQ');
-    formData.append('isMarkingGuideline', 'true');
-    formData.append('numQuestions', '30');
+    // Render professional modal for question count
+    document.body.insertAdjacentHTML('beforeend', `
+        <div id="aiQuestionCountModal" class="modal" style="display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center;">
+            <div class="modal-content" style="background:#fff; border-radius:8px; max-width:420px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.2); position:relative;">
+                <div class="modal-header" style="padding:20px 24px 16px; border-bottom:1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between;">
+                    <h3 style="margin:0; font-size:18px; font-weight:600; color:#111827; display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-brain" style="color:#059669;"></i> AI Question Generation
+                    </h3>
+                    <button type="button" onclick="closeAiQuestionCountModal()" style="background:none; border:none; font-size:24px; color:#6b7280; cursor:pointer; line-height:1; padding:0;">&times;</button>
+                </div>
+                <div class="modal-body" style="padding:20px 24px;">
+                    <label for="aiQuestionCountInput" style="display:block; font-weight:500; margin-bottom:8px; color:#374151;">How many questions should the AI generate from this file?</label>
+                    <input type="number" id="aiQuestionCountInput" min="1" max="100" value="10" style="width:100%; padding:10px 12px; border:1px solid #d1d5db; border-radius:6px; font-size:16px; margin-bottom:12px;">
+                    <small style="color:#6b7280;">Enter a number between 1 and 100.</small>
+                </div>
+                <div class="modal-footer" style="padding:16px 24px 20px; border-top:1px solid #e5e7eb; display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" onclick="closeAiQuestionCountModal()" style="padding:8px 16px; background:#f3f4f6; color:#374151; border:1px solid #d1d5db; border-radius:6px; cursor:pointer; font-size:14px;">Cancel</button>
+                    <button type="button" id="aiQuestionCountConfirm" style="padding:8px 16px; background:#059669; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:14px; font-weight:500;">Generate</button>
+                </div>
+            </div>
+        </div>
+    `);
 
-    fetch('controller.jsp', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData.toString()
-    })
-    .then(async response => {
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Server Error (${response.status}): ${errorText.substring(0, 100)}`);
-        }
-        const data = await response.json();
-        if (data.success && data.questions) {
-            progressBar.style.width = '100%';
-            progressBar.textContent = '100%';
-            statusDiv.innerHTML = `<div class="alert" style="background: #d4edda; color: #155724;"><i class="fas fa-check-circle"></i> AI successfully generated ${data.questions.length} questions.</div>`;
-            
-            // Map AI format to our internal format if needed
-            const formattedQuestions = data.questions.map(q => ({
-                question: q.question,
-                options: q.options || ['', '', '', ''],
-                correct: q.correct,
-                type: q.type || (q.options && q.options.length === 2 ? 'TrueFalse' : 'MCQ')
-            }));
-
-            setTimeout(() => {
-                showMultipleQuestionsModal(formattedQuestions);
-                resetFileUploadProgress();
-            }, 1000);
-        } else {
-            throw new Error(data.message || 'AI failed to generate questions. The response was not in the expected format.');
-        }
-    })
-    .catch(error => {
-        console.error('AI Generation Error:', error);
-        statusDiv.innerHTML = `<div class="alert" style="background: #f8d7da; color: #721c24;"><i class="fas fa-exclamation-triangle"></i> AI Error: ${error.message}</div>`;
-        progressBar.style.backgroundColor = '#dc3545';
-        processBtn.disabled = false;
-        processBtn.innerHTML = '<i class="fas fa-magic"></i> Extract & Parse Questions';
+    // Wire up confirm and close handlers
+    let numQuestions = 10;
+    window.closeAiQuestionCountModal = () => {
+        const modal = document.getElementById('aiQuestionCountModal');
+        if (modal) modal.remove();
+        resetFileUploadProgress();
+    };
+    document.getElementById('aiQuestionCountConfirm').onclick = () => {
+        const input = document.getElementById('aiQuestionCountInput');
+        const raw = input.value;
+        numQuestions = parseInt(String(raw).trim(), 10);
+        if (isNaN(numQuestions) || numQuestions < 1) numQuestions = 1;
+        if (numQuestions > 100) numQuestions = 100;
+        const modal = document.getElementById('aiQuestionCountModal');
+        if (modal) modal.remove();
+        proceedWithAiGeneration(numQuestions);
+    };
+    // Allow Enter to confirm
+    document.getElementById('aiQuestionCountInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') document.getElementById('aiQuestionCountConfirm').click();
     });
+    // Focus input
+    document.getElementById('aiQuestionCountInput').focus();
+
+    function proceedWithAiGeneration(numQuestions) {
+        statusDiv.innerHTML = '<div class="alert"><i class="fas fa-robot fa-spin"></i> AI is intelligently parsing marking guidelines and generating options...</div>';
+        progressBar.style.width = '70%';
+        progressBar.textContent = '70%';
+
+        const formData = new URLSearchParams();
+        formData.append('page', 'questions');
+        formData.append('operation', 'ai_generate');
+        formData.append('text', text);
+        formData.append('questionType', 'MCQ');
+        formData.append('courseName', courseName);
+        formData.append('isMarkingGuideline', 'true');
+        formData.append('numQuestions', String(numQuestions));
+
+        fetch('controller.jsp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString()
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.questions) {
+                progressBar.style.width = '100%';
+                progressBar.textContent = '100%';
+                statusDiv.innerHTML = `<div class="alert" style="background: #d4edda; color: #155724;"><i class="fas fa-check-circle"></i> AI successfully generated ${data.questions.length} questions.</div>`;
+                
+                // Map AI format to our internal format if needed
+                const formattedQuestions = data.questions.map(q => ({
+                    question: q.question,
+                    options: q.options || ['', '', '', ''],
+                    correct: q.correct,
+                    type: q.type || (q.options && q.options.length === 2 ? 'TrueFalse' : 'MCQ')
+                }));
+
+                setTimeout(() => {
+                    showMultipleQuestionsModal(formattedQuestions);
+                    resetFileUploadProgress();
+                }, 1000);
+            } else {
+                throw new Error(data.message || 'AI failed to generate questions. The response was not in the expected format.');
+            }
+        })
+        .catch(error => {
+            console.error('AI Generation Error:', error);
+            statusDiv.innerHTML = `<div class="alert" style="background: #f8d7da; color: #721c24;"><i class="fas fa-exclamation-triangle"></i> AI Error: ${error.message}</div>`;
+            progressBar.style.backgroundColor = '#dc3545';
+            processBtn.disabled = false;
+            processBtn.innerHTML = '<i class="fas fa-magic"></i> Extract & Parse Questions';
+        });
+    }
 }
 
 function processExtractedText(text, courseName) {
@@ -3386,6 +3434,10 @@ function startBatchProcessing() {
         // Load the question into the form
         loadQuestionIntoForm(questions[index]);
         
+        // Show Skip button during batch mode
+        const skipBtn = document.getElementById('skipBatchBtn');
+        if (skipBtn) skipBtn.style.display = 'inline-flex';
+        
         showToast('info', 'Batch Processing Started', `Loaded first question. ${questions.length} total questions queued.`);
         
         // Scroll to the add question panel
@@ -3541,6 +3593,8 @@ async function submitCurrentBatchQuestion() {
                 sessionStorage.removeItem('batchCurrentIndex');
                 
                 document.getElementById('batchProgressCard').style.display = 'none';
+                const skipBtn = document.getElementById('skipBatchBtn');
+                if (skipBtn) skipBtn.style.display = 'none';
                 showToast('success', 'Batch Complete', `All ${total} questions added successfully!`);
                 resetForm();
                 
@@ -4379,8 +4433,37 @@ function confirmBatchCancel() {
     sessionStorage.removeItem('batchTotal');
     sessionStorage.removeItem('batchCurrentIndex');
     document.getElementById('batchProgressCard').style.display = 'none';
+    const skipBtn = document.getElementById('skipBatchBtn');
+    if (skipBtn) skipBtn.style.display = 'none';
     showToast('info', 'Batch Cancelled', 'The batch process has been stopped.');
     resetForm();
+}
+
+function skipCurrentBatchQuestion() {
+    const questions = JSON.parse(sessionStorage.getItem('batchQuestions') || '[]');
+    let index = parseInt(sessionStorage.getItem('batchCurrentIndex') || '0');
+    
+    if (index < questions.length - 1) {
+        // Move to next question
+        index += 1;
+        sessionStorage.setItem('batchCurrentIndex', String(index));
+        
+        // Update UI
+        updateBatchProgressUI(index, questions.length);
+        loadQuestionIntoForm(questions[index]);
+        
+        showToast('info', 'Question Skipped', `Moved to question ${index + 1} of ${questions.length}.`);
+    } else {
+        // No more questions; finish batch
+        sessionStorage.removeItem('batchQuestions');
+        sessionStorage.removeItem('batchTotal');
+        sessionStorage.removeItem('batchCurrentIndex');
+        document.getElementById('batchProgressCard').style.display = 'none';
+        const skipBtn = document.getElementById('skipBatchBtn');
+        if (skipBtn) skipBtn.style.display = 'none';
+        showToast('success', 'Batch Complete', 'All remaining questions have been skipped.');
+        resetForm();
+    }
 }
 
 // Test function to verify course dropdown synchronization

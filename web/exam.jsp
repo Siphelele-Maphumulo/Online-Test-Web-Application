@@ -297,7 +297,7 @@
                                     }
                                 %>
                                     <div class="question-image-container">
-                                        <img src="<%= imagePath %>" alt="Question Image" class="question-image" loading="lazy" onerror="this.onerror=null; this.style.display='none'; var msg=this.parentNode.querySelector('.question-image-error'); if(msg) msg.style.display='block';">
+                                        <img src="<%= imagePath %>" alt="Question Image" class="question-image" loading="eager" decoding="async" onerror="if(!this.dataset.retry){this.dataset.retry='1'; try{this.src=this.src.split('?')[0]+'?t='+Date.now();}catch(e){} return;} this.onerror=null; this.style.display='none'; var msg=this.parentNode.querySelector('.question-image-error'); if(msg) msg.style.display='block';">
                                         <div class="question-image-error" style="display:none; font-size: 12px; color: #ef4444; margin-top: 8px;">Image could not be loaded.</div>
                                     </div>
                                 <% } %>
@@ -482,7 +482,7 @@
                                     <svg class="progress-ring" width="80" height="80">
                                         <circle class="progress-ring-circle" stroke="#e2e8f0" stroke-width="6" fill="transparent" r="34" cx="40" cy="40"/>
                                         <circle class="progress-ring-progress" stroke="#059669" stroke-width="6" fill="transparent" r="34" cx="40" cy="40" stroke-dasharray="213.628" stroke-dashoffset="213.628"/>
-                                    </svg>
+                                    </svg>hOW MA
                                     <div class="progress-text"><span class="progress-percent">0%</span><small>Complete</small></div>
                                 </div>
                                 <div class="stats-grid">
@@ -1909,25 +1909,6 @@ var globalVideoStream = null;
                 e.preventDefault();
 
                 try {
-                    // Reuse the verification camera stream if available; otherwise request permissions once.
-                    if (window.verificationStream && window.verificationStream.getTracks && window.verificationStream.getTracks().length > 0) {
-                        // ok
-                    } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                        window.verificationStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                    }
-
-                    if (typeof ProctoringSystem === 'function') {
-                        try {
-                            var proctor = new ProctoringSystem();
-                            window.proctor = proctor;
-                            if (typeof proctor.initialize === 'function') {
-                                await proctor.initialize(window.verificationStream);
-                            }
-                        } catch (proctorErr) {
-                            console.warn('Proctoring failed to initialize, continuing with exam start.', proctorErr);
-                        }
-                    }
-
                     // Clear any stale session storage keys before leaving this page.
                     // Important: do this BEFORE setting the proctor auto-start flag.
                     try {

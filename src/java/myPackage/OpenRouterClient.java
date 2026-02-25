@@ -70,7 +70,10 @@ public class OpenRouterClient {
             }
             
             LOGGER.info("Received response from API, extracting content...");
-            return extractContent(response);
+            String rawContent = extractContent(response);
+            if (rawContent == null) return null;
+            // For question generation, we expect a JSON array; ensure array extraction
+            return extractJsonContent(rawContent);
             
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error calling OpenRouter API", e);
@@ -83,7 +86,7 @@ public class OpenRouterClient {
                "TASK:\n" +
                "1. Analyze the provided Accounting Marking Guideline text.\n" +
                "2. Extract examinable concepts (Calculations, Theory, Financial Indicators).\n" +
-               "3. Generate approximately " + count + " multiple-choice questions similar to national exam format.\n" +
+               "3. Generate exactly " + count + " multiple-choice questions similar to national exam format.\n" +
                "4. Extract the correct numerical answer from the 'ANSWER' or final results section.\n" +
                "5. Use the 'WORKINGS' section to identify common accounting errors and use those to generate plausible distractors.\n" +
                "6. Create 3 plausible distractors for each question.\n" +
@@ -98,6 +101,7 @@ public class OpenRouterClient {
                "  }\n" +
                "]\n\n" +
                "RULES:\n" +
+               "- The JSON array MUST contain exactly " + count + " objects.\n" +
                "- Exactly 4 options.\n" +
                "- Correct answer must match one option exactly.\n" +
                "- For multiple correct answers (MultipleSelect), separate them with | in the correct field: \"ans1|ans2\".\n" +
@@ -107,7 +111,7 @@ public class OpenRouterClient {
     }
 
     private static String createStandardPrompt(String text, String type, int count) {
-        return "Generate " + count + " " + type + " questions based on the following text.\n\n" +
+        return "Generate exactly " + count + " " + type + " questions based on the following text.\n\n" +
                "FORMAT STRICTLY AS JSON ARRAY:\n" +
                "[\n" +
                "  {\n" +
@@ -118,6 +122,7 @@ public class OpenRouterClient {
                "  }\n" +
                "]\n\n" +
                "RULES:\n" +
+               "- The JSON array MUST contain exactly " + count + " objects.\n" +
                "- Return ONLY valid JSON array.\n" +
                "- No extra text.\n\n" +
                "TEXT:\n" + text;
@@ -193,8 +198,9 @@ public class OpenRouterClient {
                             String content = message.getString("content");
                             LOGGER.info("Extracted content length: " + content.length());
                             
-                            // Use new extractJsonContent method
-                            return extractJsonContent(content);
+                            // For face analysis, expect an object; for question generation, expect an array.
+                            // Pass through as-is since face analysis will handle object/array detection.
+                            return content;
                         } else {
                             LOGGER.severe("Response JSON missing 'content' field in 'message'.");
                             LOGGER.severe("Parsed JSON structure (partial): " + root.toString(2));
@@ -224,35 +230,11 @@ public class OpenRouterClient {
         }
         return null;
     }
-    
-    private static String extractJsonArray(String text) {
-        // Find the first [ and last ]
-        int start = text.indexOf('[');
-        int end = text.lastIndexOf(']');
-        if (start != -1 && end != -1 && end > start) {
-            String json = text.substring(start, end + 1);
-            LOGGER.info("Extracted JSON array: " + json.substring(0, Math.min(100, json.length())) + "...");
-            return json;
-        }
-        LOGGER.warning("No JSON array found in content");
-        return text;
-    }
-    
-    /**
-     * Extracts JSON content from text, handling both objects and arrays
-     */
+
     private static String extractJsonContent(String text) {
-        // First try to find JSON object { ... }
-        int objectStart = text.indexOf('{');
-        int objectEnd = text.lastIndexOf('}');
-        
-        if (objectStart != -1 && objectEnd != -1 && objectEnd > objectStart) {
-            String json = text.substring(objectStart, objectEnd + 1);
-            LOGGER.info("Extracted JSON object: " + json.substring(0, Math.min(100, json.length())) + "...");
-            return json;
-        }
-        
-        // Fall back to array detection
+        if (text == null) return null;
+
+        // Prefer extracting JSON array first (question generation returns an array)
         int arrayStart = text.indexOf('[');
         int arrayEnd = text.lastIndexOf(']');
         if (arrayStart != -1 && arrayEnd != -1 && arrayEnd > arrayStart) {
@@ -260,80 +242,82 @@ public class OpenRouterClient {
             LOGGER.info("Extracted JSON array: " + json.substring(0, Math.min(100, json.length())) + "...");
             return json;
         }
-        
+
+        // Fall back to object extraction
+        int objectStart = text.indexOf('{');
+        int objectEnd = text.lastIndexOf('}');
+        if (objectStart != -1 && objectEnd != -1 && objectEnd > objectStart) {
+            String json = text.substring(objectStart, objectEnd + 1);
+            LOGGER.info("Extracted JSON object: " + json.substring(0, Math.min(100, json.length())) + "...");
+            return json;
+        }
+
         LOGGER.warning("No JSON object or array found in content");
         return text;
     }
 
-    /**
-     * Compresses a base64 image to reduce API costs while maintaining quality
-     * @param base64Image The original base64 image string
-     * @param maxWidth Maximum width for compression (default 800)
-     * @param quality JPEG quality 0.0-1.0 (default 0.7)
-     * @return Compressed base64 image string
-     */
-    private static String compressImage(String base64Image, int maxWidth, float quality) throws Exception {
-        // Clean base64 string
-        if (base64Image.contains(",")) {
-            base64Image = base64Image.split(",")[1];
-        }
-        
-        // Decode base64 to bytes
-        byte[] imageBytes = Base64.getDecoder().decode(base64Image);
-        BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(imageBytes));
-        
-        if (originalImage == null) {
-            LOGGER.warning("Could not decode image, returning original");
-            return base64Image;
-        }
-        
-        // Calculate new dimensions maintaining aspect ratio
-        int originalWidth = originalImage.getWidth();
-        int originalHeight = originalImage.getHeight();
-        
-        if (originalWidth <= maxWidth) {
-            LOGGER.info("Image already small enough (" + originalWidth + "px), returning compressed with quality only");
-        }
-        
-        int newWidth = Math.min(originalWidth, maxWidth);
-        int newHeight = (int) ((double) originalHeight * newWidth / originalWidth);
-        
-        // Resize image
-        BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
-        resizedImage.getGraphics().drawImage(originalImage.getScaledInstance(newWidth, newHeight, java.awt.Image.SCALE_SMOOTH), 0, 0, null);
-        
-        // Compress as JPEG with specified quality
-        ByteArrayOutputStream compressed = new ByteArrayOutputStream();
-        
-        // Get JPEG writer and set compression
-        Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
-        if (!writers.hasNext()) {
-            throw new IllegalStateException("No JPEG writers found");
-        }
-        
-        ImageWriter writer = writers.next();
-        ImageWriteParam param = writer.getDefaultWriteParam();
-        param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-        param.setCompressionQuality(quality);
-        
-        try (ImageOutputStream ios = ImageIO.createImageOutputStream(compressed)) {
-            writer.setOutput(ios);
-            writer.write(null, new javax.imageio.IIOImage(resizedImage, null, null), param);
-        } finally {
-            writer.dispose();
-        }
-        
-        byte[] compressedBytes = compressed.toByteArray();
-        String compressedBase64 = Base64.getEncoder().encodeToString(compressedBytes);
-        
-        double compressionRatio = (double) compressedBytes.length / imageBytes.length;
-        LOGGER.info("Image compressed: " + originalWidth + "x" + originalHeight + " → " + newWidth + "x" + newHeight + 
-                   ", Size: " + (imageBytes.length / 1024) + "KB → " + (compressedBytes.length / 1024) + "KB " +
-                   "(" + String.format("%.1f", compressionRatio * 100) + "% of original)");
-        
-        return compressedBase64;
+private static String compressImage(String base64Image, int maxWidth, float quality) throws Exception {
+    // Clean base64 string
+    if (base64Image.contains(",")) {
+        base64Image = base64Image.split(",")[1];
     }
     
+    // Decode base64 to bytes
+    byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+    BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(imageBytes));
+    
+    if (originalImage == null) {
+        LOGGER.warning("Could not decode image, returning original");
+        return base64Image;
+    }
+    
+    // Calculate new dimensions maintaining aspect ratio
+    int originalWidth = originalImage.getWidth();
+    int originalHeight = originalImage.getHeight();
+    
+    if (originalWidth <= maxWidth) {
+        LOGGER.info("Image already small enough (" + originalWidth + "px), returning compressed with quality only");
+    }
+    
+    int newWidth = Math.min(originalWidth, maxWidth);
+    int newHeight = (int) ((double) originalHeight * newWidth / originalWidth);
+    
+    // Resize image
+    BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+    resizedImage.getGraphics().drawImage(originalImage.getScaledInstance(newWidth, newHeight, java.awt.Image.SCALE_SMOOTH), 0, 0, null);
+    
+    // Compress as JPEG with specified quality
+    ByteArrayOutputStream compressed = new ByteArrayOutputStream();
+    
+    // Get JPEG writer and set compression
+    Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
+    if (!writers.hasNext()) {
+        throw new IllegalStateException("No JPEG writers found");
+    }
+    
+    ImageWriter writer = writers.next();
+    ImageWriteParam param = writer.getDefaultWriteParam();
+    param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+    param.setCompressionQuality(quality);
+    
+    try (ImageOutputStream ios = ImageIO.createImageOutputStream(compressed)) {
+        writer.setOutput(ios);
+        writer.write(null, new javax.imageio.IIOImage(resizedImage, null, null), param);
+    } finally {
+        writer.dispose();
+    }
+    
+    byte[] compressedBytes = compressed.toByteArray();
+    String compressedBase64 = Base64.getEncoder().encodeToString(compressedBytes);
+    
+    double compressionRatio = (double) compressedBytes.length / imageBytes.length;
+    LOGGER.info("Image compressed: " + originalWidth + "x" + originalHeight + " → " + newWidth + "x" + newHeight + 
+               ", Size: " + (imageBytes.length / 1024) + "KB → " + (compressedBytes.length / 1024) + "KB " +
+               "(" + String.format("%.1f", compressionRatio * 100) + "% of original)");
+    
+    return compressedBase64;
+}
+
     /**
      * Analyzes a face photo for identity verification quality
      * @param base64Image The captured face photo as base64 string (with or without data:image prefix)
@@ -427,13 +411,14 @@ public class OpenRouterClient {
                 return createFallbackResult(true, "Could not extract content");
             }
             
-            // Parse JSON response - handle both object and array
+            // Parse JSON response - face analysis should return an object
             try {
                 // Clean content
                 content_str = content_str.replace("```json", "").replace("```", "").trim();
                 
-                // Check if it's an array
+                // Face analysis should be an object; if we get an array, it's an error
                 if (content_str.trim().startsWith("[")) {
+                    LOGGER.warning("Face analysis returned an array unexpectedly; treating as error");
                     JSONArray errorArray = new JSONArray(content_str);
                     // Convert array to proper object format
                     JSONObject result = new JSONObject();
