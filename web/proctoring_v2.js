@@ -27,12 +27,12 @@
             this.MULTIPLE_VOICES_THRESHOLD = 420;
             this.EYE_OFF_SCREEN_THRESHOLD = 2800;
             this.HEAD_MOVEMENT_THRESHOLD = 0.145;
-            this.FACE_LOST_THRESHOLD = 400;           // ← FAST & PERFECT no-face trigger
+            this.FACE_LOST_THRESHOLD = 1500;           // ← Increased to 1.5 seconds to reduce false positives
             this.MOUTH_MOVEMENT_THRESHOLD = 1.7;
             this.LOOKING_DOWN_ANGLE = -13;
 
             // PERFECT 10-SECOND COUNTDOWN
-            this.FACE_LOST_MAX_SECONDS = 10;          // ← Exactly 10 seconds
+            this.FACE_LOST_MAX_SECONDS = 15;          // ← Increased to 15 seconds for more tolerance
             this.countdownActive = false;
             this.countdownValue = 10;
             this.countdownOverlay = null;
@@ -264,7 +264,7 @@
                         const detections = await this.faceapi 
                             .detectAllFaces(videoElement, new this.faceapi.TinyFaceDetectorOptions({ 
                                 inputSize: 416, 
-                                scoreThreshold: 0.45 
+                                scoreThreshold: 0.25  // ← Lowered threshold for better detection
                             })) 
                             .withFaceLandmarks() 
                             .withFaceExpressions(); 
@@ -280,10 +280,33 @@
         } 
 
         processFaceDetections(detections) { 
-            const validFaces = detections.filter(d => d.detection && d.detection.score > 0.45);
+            // More lenient face detection - accept lower confidence faces
+            const validFaces = detections.filter(d => d.detection && d.detection.score > 0.35);
+            
+            // Debug logging
+            if (detections.length > 0) {
+                console.log('🔍 Face detection:', {
+                    total: detections.length,
+                    valid: validFaces.length,
+                    scores: detections.map(d => d.detection ? d.detection.score.toFixed(3) : 'null')
+                });
+            }
 
             if (validFaces.length === 0) { 
+                // If countdown is running and we see ANY face boxes (even low-confidence),
+                // immediately stop the countdown and refresh lastFaceDetected.
+                // This prevents the termination countdown continuing after the user returns.
+                if (this.countdownActive && detections.length > 0) {
+                    this.lastFaceDetected = Date.now();
+                    console.log('✅ Face boxes detected during countdown (low confidence), stopping countdown immediately');
+                    this.hideCountdown();
+                    return;
+                }
+
                 const timeLost = Date.now() - this.lastFaceDetected;
+                console.log('⚠️ No valid faces detected, time lost:', timeLost + 'ms');
+                
+                // Only start countdown after longer threshold
                 if (timeLost > this.FACE_LOST_THRESHOLD) { 
                     this.handleCountdown(timeLost, 'FACE NOT DETECTED');
                 } else {
@@ -303,7 +326,13 @@
 
             this.lastFaceDetected = Date.now(); 
             if (this.countdownActive) {
-                console.log('✅ Face re-detected, hiding countdown');
+                console.log('✅ Face re-detected, hiding countdown immediately');
+                this.hideCountdown();
+            }
+            
+            // ADDITIONAL SAFETY: Double ensure countdown is stopped
+            if (this.countdownActive) {
+                console.log('🔧 Force hiding countdown after face detection');
                 this.hideCountdown();
             }
 
@@ -532,8 +561,16 @@
                 }
 
                 this.lastFrame = frame; 
-                this.lastFaceDetected = Date.now(); 
-            } catch (err) {} 
+                
+                // Log fallback detection status
+                const timeSinceLastFace = Date.now() - this.lastFaceDetected;
+                if (timeSinceLastFace > 5000) {
+                    console.log('⚠️ Fallback detection: No significant movement for', Math.round(timeSinceLastFace/1000), 'seconds');
+                }
+                
+            } catch (err) { 
+                console.error('Fallback detection error:', err);
+            } 
         } 
 
         initEnvironmentLockdown() { 
@@ -792,6 +829,45 @@
 
             setTimeout(() => { 
                 if (warningModal.parentNode) { 
+                    warningModal.parentNode.removeChild(warningModal); 
+                } 
+            }, 4000); 
+        }
+
+        handleCountdown(timeLost, reason) {
+            // Check if face has returned - IMMEDIATE STOP
+            const currentFaceLost = Date.now() - this.lastFaceDetected;
+            if (currentFaceLost < this.FACE_LOST_THRESHOLD) {
+                console.log('✅ Face returned! Stopping countdown immediately');
+                this.hideCountdown();
+                return;
+            }
+            
+            const remaining = Math.max(0, this.FACE_LOST_MAX_SECONDS - Math.floor(currentFaceLost / 1000));
+            
+            console.log('⏱️ Countdown:', {
+                currentFaceLost: currentFaceLost,
+                remaining: remaining,
+                maxSeconds: this.FACE_LOST_MAX_SECONDS,
+                reason: reason
+            });
+            
+            if (remaining > 0) {
+                if (!this.countdownActive) {
+                    this.showCountdown(remaining, reason);
+                } else if (remaining !== this.countdownValue) {
+                    this.updateCountdown(remaining);
+                }
+            }
+
+            // Terminate if face is not detected for the full duration
+            if (currentFaceLost >= this.FACE_LOST_MAX_SECONDS * 1000) {
+                console.log('🚫 Exam terminated - face lost for', this.FACE_LOST_MAX_SECONDS, 'seconds');
+                this.autoSubmitForCheating('Face not detected for ' + this.FACE_LOST_MAX_SECONDS + ' seconds');
+            }
+        }
+
+        autoSubmitForCheating(reason = 'Multiple violations detected') {
             if (this.terminated) return;
             this.terminated = true;
             this.examActive = false;
@@ -808,20 +884,75 @@
                 window.gatherAllAnswers();
             } else if (typeof gatherAllAnswers === 'function') {
                 gatherAllAnswers();
+            }
 
-            const remaining = Math.max(0, this.FACE_LOST_MAX_SECONDS - Math.floor((timeLost - 350) / 1000));
-            
-            if (remaining > 0) {
-                if (!this.countdownActive) {
-                    this.showCountdown(remaining, reason);
-                } else if (remaining !== this.countdownValue) {
-                    this.updateCountdown(remaining);
+            // Submit exam automatically
+            setTimeout(() => {
+                try {
+                    const form = document.getElementById('myform');
+                    if (form) {
+                        const submitBtn = form.querySelector('[type="submit"]');
+                        if (submitBtn) {
+                            submitBtn.click();
+                        } else {
+                            form.submit();
+                        }
+                    }
+                } catch (e) {
+                    console.error('Auto-submit failed:', e);
                 }
-            }
+            }, 2000);
+        }
 
-            if (timeLost >= this.FACE_LOST_MAX_SECONDS * 1000) {
-                this.autoSubmitForCheating();
+        disableExamControls() {
+            try {
+                // Disable all input fields
+                const inputs = document.querySelectorAll('input, select, textarea, button');
+                inputs.forEach(input => {
+                    if (input.type === 'hidden') return;
+
+                    // IMPORTANT: disabled fields are NOT submitted.
+                    // Keep selected answers enabled so the server can still mark/score them
+                    // when the exam is auto-submitted on termination.
+                    if ((input.type === 'radio' || input.type === 'checkbox') && input.checked) {
+                        return;
+                    }
+
+                    // Keep textareas enabled so their values submit (if any)
+                    if (input.tagName && input.tagName.toLowerCase() === 'textarea') {
+                        return;
+                    }
+
+                    input.disabled = true;
+                    input.style.opacity = '0.5';
+                });
+
+                // Stop any timers
+                if (window.examTimer) {
+                    clearInterval(window.examTimer);
+                }
+            } catch (e) {
+                console.error('Failed to disable exam controls:', e);
             }
+        }
+
+        showTerminationMessage(reason) {
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);color:white;z-index:10001;display:flex;align-items:center;justify-content:center;text-align:center;font-family:sans-serif;';
+            
+            modal.innerHTML = 
+                '<div style="background:#dc2626;padding:40px;border-radius:12px;max-width:500px;width:90%;">' +
+                    '<h1 style="margin:0 0 20px 0;font-size:28px;">🚫 Exam Terminated</h1>' +
+                    '<p style="margin:0 0 20px 0;font-size:16px;line-height:1.5;">' +
+                        'Your exam has been automatically terminated due to multiple proctoring violations.<br><br>' +
+                        '<strong>Reason:</strong> ' + reason +
+                    '</p>' +
+                    '<p style="margin:0;font-size:14px;opacity:0.8;">' +
+                        'This incident has been recorded and will be reviewed by the instructor.' +
+                    '</p>' +
+                '</div>';
+            
+            document.body.appendChild(modal);
         }
 
         showCountdown(seconds, reason) {
@@ -850,7 +981,7 @@
                     guideHtml +
                     '<div id="proctor-countdown-value" style="font-size:80px; font-weight:bold; margin:10px 0; line-height:1;">' + seconds + '</div>' +
                     '<p style="font-size:16px; margin:20px 0 0 0; font-weight:500;">Please reposition yourself immediately.</p>' +
-                    '<p style="font-size:14px; margin:10px 0 0 0; opacity:0.8;">The exam will be terminated in <strong>10 seconds</strong> if you don\'t return</p>' +
+                    '<p style="font-size:14px; margin:10px 0 0 0; opacity:0.8;">The exam will be terminated if you do not return before the timer reaches <strong>0</strong>.</p>' +
                 '</div>';
             document.body.appendChild(this.countdownOverlay);
 
