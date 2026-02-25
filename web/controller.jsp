@@ -157,11 +157,23 @@ try {
         }
         return;
 
-    } else if ("analyze_face".equalsIgnoreCase(pageParam)) {
-        String faceImage = request.getParameter("faceImage");
-        StringBuilder reason = new StringBuilder();
+    } else if ("verify_face".equalsIgnoreCase(pageParam) || "analyze_face".equalsIgnoreCase(pageParam)) {
+        List<FileItem> items = (List<FileItem>) request.getAttribute("multipartItems");
+        String faceImageBase64 = null;
+        if (items != null) {
+            for (FileItem item : items) {
+                if (!item.isFormField() && "faceImage".equals(item.getFieldName())) {
+                    faceImageBase64 = Base64.getEncoder().encodeToString(item.get());
+                    break;
+                }
+            }
+        }
+        if (faceImageBase64 == null) {
+            faceImageBase64 = request.getParameter("faceImage");
+        }
         
-        boolean isValid = myPackage.OpenRouterClient.isFacePhotoValid(faceImage, reason);
+        StringBuilder reason = new StringBuilder();
+        boolean isValid = OpenRouterClient.isFacePhotoValid(faceImageBase64, reason);
         
         JSONObject result = new JSONObject();
         result.put("success", isValid);
@@ -171,28 +183,34 @@ try {
         response.getWriter().write(result.toString());
         return;
 
-    } else if ("analyze_id".equalsIgnoreCase(pageParam)) {
-        String idImage = request.getParameter("idImage");
+    } else if ("verify_id".equalsIgnoreCase(pageParam) || "analyze_id".equalsIgnoreCase(pageParam)) {
+        List<FileItem> items = (List<FileItem>) request.getAttribute("multipartItems");
+        String idImageBase64 = null;
+        if (items != null) {
+            for (FileItem item : items) {
+                if (!item.isFormField() && "idImage".equals(item.getFieldName())) {
+                    idImageBase64 = Base64.getEncoder().encodeToString(item.get());
+                    break;
+                }
+            }
+        }
+        if (idImageBase64 == null) {
+            idImageBase64 = request.getParameter("idImage");
+        }
+
         StringBuilder reason = new StringBuilder();
+        String operation = (String) request.getAttribute("multipartOperation");
+        if (operation == null) operation = request.getParameter("operation");
         
-        boolean isValid = myPackage.OpenRouterClient.isIdPhotoValid(idImage, reason);
+        boolean isValid;
+        if ("analyze_id".equalsIgnoreCase(pageParam) || "verify".equalsIgnoreCase(operation) || "analyze".equalsIgnoreCase(operation)) {
+            isValid = OpenRouterClient.isIdPhotoValid(idImageBase64, reason);
+        } else {
+            isValid = OpenRouterClient.isHoldingId(idImageBase64, reason);
+        }
         
         JSONObject result = new JSONObject();
         result.put("success", isValid);
-        result.put("reason", reason.toString());
-        
-        response.setContentType("application/json");
-        response.getWriter().write(result.toString());
-        return;
-
-    } else if ("verify_id".equalsIgnoreCase(pageParam)) {
-        String idImage = request.getParameter("idImage");
-        StringBuilder reason = new StringBuilder();
-        
-        boolean holdingId = OpenRouterClient.isHoldingId(idImage, reason);
-        
-        JSONObject result = new JSONObject();
-        result.put("success", holdingId);
         result.put("reason", reason.toString());
         
         response.setContentType("application/json");

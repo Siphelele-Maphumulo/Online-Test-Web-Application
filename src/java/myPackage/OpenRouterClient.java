@@ -349,7 +349,7 @@ public class OpenRouterClient {
 
         try {
             // Clean up base64 string - remove data:image prefix if present
-            if (base64Image.contains(",")) {
+            if (base64Image != null && base64Image.contains(",")) {
                 base64Image = base64Image.split(",")[1];
             }
             
@@ -361,8 +361,12 @@ public class OpenRouterClient {
                 // Continue with original image
             }
 
+            if (base64Image == null || base64Image.trim().isEmpty()) {
+                return createFallbackResult(false, "Invalid image data provided");
+            }
+
             JSONObject payload = new JSONObject();
-            payload.put("model", "anthropic/claude-3.5-sonnet"); // Best for vision tasks
+            payload.put("model", OpenRouterConfig.getVisionModel());
             payload.put("temperature", 0.1); // Low temperature for consistent results
             payload.put("max_tokens", 500);
 
@@ -519,7 +523,7 @@ public class OpenRouterClient {
 
         try {
             // Clean the base64 string
-            if (base64Image.contains(",")) {
+            if (base64Image != null && base64Image.contains(",")) {
                 base64Image = base64Image.split(",")[1];
             }
             
@@ -531,8 +535,12 @@ public class OpenRouterClient {
                 // Continue with original image
             }
 
+            if (base64Image == null || base64Image.trim().isEmpty()) {
+                return createFallbackIdResult(false, "Invalid image data provided");
+            }
+
             JSONObject payload = new JSONObject();
-            payload.put("model", "anthropic/claude-3.5-sonnet"); // Best for vision tasks
+            payload.put("model", OpenRouterConfig.getVisionModel());
             payload.put("temperature", 0.1);
             payload.put("max_tokens", 800);
 
@@ -675,7 +683,7 @@ public class OpenRouterClient {
 
         try {
             // Clean up base64 string
-            if (base64Image.contains(",")) {
+            if (base64Image != null && base64Image.contains(",")) {
                 base64Image = base64Image.split(",")[1];
             }
             
@@ -687,8 +695,12 @@ public class OpenRouterClient {
                 // Continue with original image
             }
 
+            if (base64Image == null || base64Image.trim().isEmpty()) {
+                return createSimpleIdResult(false, "Invalid image data provided");
+            }
+
             JSONObject payload = new JSONObject();
-            payload.put("model", "anthropic/claude-3.5-sonnet");
+            payload.put("model", OpenRouterConfig.getVisionModel());
             payload.put("temperature", 0.1);
             payload.put("max_tokens", 300);
 
