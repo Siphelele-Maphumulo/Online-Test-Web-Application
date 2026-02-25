@@ -362,7 +362,7 @@ public class OpenRouterClient {
             }
 
             JSONObject payload = new JSONObject();
-            payload.put("model", "anthropic/claude-3.5-sonnet"); // Best for vision tasks
+            payload.put("model", OpenRouterConfig.getVisionModel()); // OpenAI model as required
             payload.put("temperature", 0.1); // Low temperature for consistent results
             payload.put("max_tokens", 500);
 
@@ -532,7 +532,7 @@ public class OpenRouterClient {
             }
 
             JSONObject payload = new JSONObject();
-            payload.put("model", "anthropic/claude-3.5-sonnet"); // Best for vision tasks
+            payload.put("model", OpenRouterConfig.getVisionModel()); // OpenAI model as required
             payload.put("temperature", 0.1);
             payload.put("max_tokens", 800);
 
@@ -688,7 +688,7 @@ public class OpenRouterClient {
             }
 
             JSONObject payload = new JSONObject();
-            payload.put("model", "anthropic/claude-3.5-sonnet");
+            payload.put("model", OpenRouterConfig.getVisionModel()); // OpenAI model as required
             payload.put("temperature", 0.1);
             payload.put("max_tokens", 300);
 
