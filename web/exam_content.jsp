@@ -2558,7 +2558,7 @@
                 </div>
                 <!-- RELAUNCH SECTION -->
                 <div style="margin-top: 30px; padding: 20px; background: #f8fafc; border-radius: 10px; text-align: center; border-top: 2px solid #e2e8f0;">
-                    <p style="margin-bottom: 20px; color: #64748b;">Ready to take another exam? Select a course below.</p>
+                    <p style="margin-bottom: 20px; color: #64748b;">Ready to take another exam? Click below.</p>
                     <a href="std-page.jsp?pgprt=1"
                        class="btn-primary"
                        style="padding: 12px 30px; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">

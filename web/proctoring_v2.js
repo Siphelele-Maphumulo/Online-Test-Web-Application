@@ -46,6 +46,7 @@ class ProctoringSystem {
         this.lastEyeContact = Date.now(); 
         this.lastFaceDetected = Date.now(); 
         this.backgroundNoiseBaseline = 40; 
+        this.lastAudioDbLevel = null;
         this.calibrationComplete = false; 
         this.previousNosePosition = null; 
         this.previousMouthHeight = null; 
@@ -354,6 +355,7 @@ class ProctoringSystem {
 
         const average = dataArray.reduce(function(a, b) { return a + b; }, 0) / dataArray.length; 
         const dbLevel = 20 * Math.log10(average || 1); 
+        this.lastAudioDbLevel = dbLevel;
 
         const now = Date.now();
         const noiseThreshold = this.backgroundNoiseBaseline + 10;
@@ -683,7 +685,13 @@ class ProctoringSystem {
 
             this.previousMouthHeight = mouthHeight; 
 
-            return movement > this.MOUTH_MOVEMENT_THRESHOLD &&  
+            // Require at least +3 dB above baseline to treat as real speaking,
+            // otherwise ignore subtle lip movement (thinking partially aloud).
+            const hasSufficientNoise = this.lastAudioDbLevel !== null &&
+                                       this.lastAudioDbLevel > (this.backgroundNoiseBaseline + 3);
+
+            return hasSufficientNoise &&
+                   movement > this.MOUTH_MOVEMENT_THRESHOLD &&  
                    (!expressions || expressions.happy < 0.5); 
         } catch (err) { 
             return false; 
