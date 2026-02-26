@@ -2046,6 +2046,28 @@ try {
             response.sendRedirect("std-page.jsp?pgprt=1&error=Failed to start exam");
         }
         
+    } else if ("terminateExam".equalsIgnoreCase(operation)) {
+        String examId = request.getParameter("examId");
+        String studentId = request.getParameter("studentId");
+        String reason = request.getParameter("reason");
+        
+        boolean terminated = false;
+        try {
+            terminated = pDAO.terminateExam(Integer.parseInt(examId), Integer.parseInt(studentId), reason);
+        } catch (Exception ex) {
+            terminated = false;
+        }
+        
+        if (terminated) {
+            session.removeAttribute("examStarted");
+            session.removeAttribute("examId");
+            session.removeAttribute("remainingTime");
+            session.removeAttribute("courseName");
+            out.print("{\"success\": true}");
+        } else {
+            out.print("{\"success\": false}");
+        }
+        
     } else if ("submitted".equalsIgnoreCase(operation)) {
         try {
             String endTime = java.time.LocalTime.now().truncatedTo(java.time.temporal.ChronoUnit.MINUTES)

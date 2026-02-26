@@ -2131,7 +2131,7 @@ var globalVideoStream = null;
                     <div class="result-item"><strong><i class="fas fa-clock"></i> End Time</strong><div class="result-value"><%= endTime %></div></div>
                     <div class="result-item"><strong><i class="fas fa-star"></i> Obtained Marks</strong><div class="result-value"><%= obtainedMarks %></div></div>
                     <div class="result-item"><strong><i class="fas fa-star-half-alt"></i> Total Marks</strong><div class="result-value"><%= totalMarks %></div></div>
-                    <div class="result-item">
+                    <div class="result-item" style="border-radius: 8px;">
                         <strong><i class="fas fa-flag"></i> Result Status</strong>
                         <div class="result-value <%= resultStatus.equalsIgnoreCase("Pass")?"status-pass":"status-fail" %>">
                             <i class="fas <%= resultStatus.equalsIgnoreCase("Pass")?"fa-check-circle":"fa-times-circle" %>"></i> <%= resultStatus %>
@@ -5085,16 +5085,16 @@ function showSimpleIdError(message) {
         }, 4000); 
     }
 
-    document.getElementById('verifyFinalBtn').onclick = async () => {
-        // Run diagnostics before proceeding
-        const diagnosticsPassed = await runDiagnostics();
-        if (!diagnosticsPassed) {
-            return; // Don't proceed if diagnostics fail
-        }
-        
-        document.getElementById('identityVerificationModal').style.display = 'none';
-        
-        // Show confirm-start immediately (avoid waiting-room delay)
+    document.getElementById('verifyFinalBtn').onclick = () => {
+        // Close identity verification flow
+        const identityModal = document.getElementById('identityVerificationModal');
+        if (identityModal) identityModal.style.display = 'none';
+
+        // Ensure diagnostics modal is NOT shown again from this point
+        const diagnosticsModal = document.getElementById('diagnosticsModal');
+        if (diagnosticsModal) diagnosticsModal.style.display = 'none';
+
+        // Show the final confirmation / "Begin Exam" screen
         const confirmModal = document.getElementById('confirmationModal');
         if (confirmModal) confirmModal.style.display = 'flex';
     };
@@ -7364,4 +7364,157 @@ if (document.querySelector('.exam-header-container')) {
     window.timerManager = new ExamTimerManager(duration, examId, studentId);
     window.timerManager.start();
 }
+</script>
+
+<script>
+(function() {
+    const isExamPage = document.querySelector('.exam-header-container') !== null;
+    
+    if (isExamPage) {
+        let refreshAttempts = 0;
+        let lastUnloadTime = 0;
+        const REFRESH_THRESHOLD = 5000;
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F5' || 
+                (e.ctrlKey && (e.key === 'r' || e.key === 'R')) ||
+                (e.metaKey && (e.key === 'r' || e.key === 'R')) ||
+                (e.ctrlKey && e.key === 'F5') ||
+                (e.ctrlKey && e.shiftKey && (e.key === 'r' || e.key === 'R'))) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (typeof showSystemAlertModal === 'function') {
+                    showSystemAlertModal('⚠️ Refreshing the page is not allowed during an exam. This action has been logged and will be reported.');
+                }
+
+                reportViolation('refresh_attempt', 'User attempted to refresh the page');
+                return false;
+            }
+        });
+
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+
+        window.addEventListener('beforeunload', function(e) {
+            const currentTime = Date.now();
+
+            if (document.readyState === 'complete') {
+                refreshAttempts++;
+
+                if (lastUnloadTime > 0 && (currentTime - lastUnloadTime) < REFRESH_THRESHOLD) {
+                    alert('⚠️ EXAM TERMINATED: Multiple refresh attempts detected. Your exam has been terminated.');
+
+                    navigator.sendBeacon('controller.jsp', new URLSearchParams({
+                        'page': 'exams',
+                        'operation': 'terminateExam',
+                        'examId': window.examId || document.querySelector('input[name="examId"]')?.value || '0',
+                        'studentId': window.studentId || '0',
+                        'reason': 'Multiple refresh attempts',
+                        'csrf_token': document.querySelector('input[name="csrf_token"]')?.value || ''
+                    }));
+
+                    e.preventDefault();
+                    e.returnValue = '⚠️ WARNING: Refreshing will TERMINATE your exam immediately!';
+                    return '⚠️ WARNING: Refreshing will TERMINATE your exam immediately!';
+                }
+
+                lastUnloadTime = currentTime;
+
+                if (refreshAttempts >= 2) {
+                    navigator.sendBeacon('controller.jsp', new URLSearchParams({
+                        'page': 'exams',
+                        'operation': 'terminateExam',
+                        'examId': window.examId || document.querySelector('input[name="examId"]')?.value || '0',
+                        'studentId': window.studentId || '0',
+                        'reason': 'Maximum refresh attempts exceeded',
+                        'csrf_token': document.querySelector('input[name="csrf_token"]')?.value || ''
+                    }));
+
+                    e.preventDefault();
+                    e.returnValue = '❌ EXAM TERMINATED: You have exceeded the allowed number of refresh attempts.';
+                    return '❌ EXAM TERMINATED: You have exceeded the allowed number of refresh attempts.';
+                }
+
+                e.preventDefault();
+                e.returnValue = '⚠️ WARNING: Refreshing the page will TERMINATE your exam! Please click "Stay on Page".';
+                return '⚠️ WARNING: Refreshing the page will TERMINATE your exam! Please click "Stay on Page".';
+            }
+        });
+
+        history.pushState(null, null, location.href);
+        window.addEventListener('popstate', function(e) {
+            e.preventDefault();
+
+            if (typeof showSystemAlertModal === 'function') {
+                showSystemAlertModal('⚠️ Navigation away from the exam page is not allowed. This action has been logged.');
+            }
+
+            history.pushState(null, null, location.href);
+
+            reportViolation('navigation_attempt', 'User attempted to use browser back/forward buttons');
+        });
+
+        function reportViolation(type, details) {
+            try {
+                const examId = window.examId || document.querySelector('input[name="examId"]')?.value || '0';
+                const studentId = window.studentId || '0';
+                const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+
+                navigator.sendBeacon('controller.jsp', new URLSearchParams({
+                    'page': 'exams',
+                    'operation': 'reportViolation',
+                    'examId': examId,
+                    'studentId': studentId,
+                    'violationType': type,
+                    'details': details,
+                    'timestamp': Date.now(),
+                    'csrf_token': csrfToken
+                }));
+            } catch (err) {
+                console.error('Failed to report violation:', err);
+            }
+        }
+
+        function terminateExam(reason) {
+            const examId = window.examId || document.querySelector('input[name="examId"]')?.value || '0';
+            const studentId = window.studentId || '0';
+            const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+
+            alert(`⚠️ EXAM TERMINATED\n\nReason: ${reason}\n\nYou will be redirected to the exam selection page.`);
+
+            fetch('controller.jsp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    'page': 'exams',
+                    'operation': 'terminateExam',
+                    'examId': examId,
+                    'studentId': studentId,
+                    'reason': reason,
+                    'csrf_token': csrfToken
+                })
+            }).finally(() => {
+                window.location.href = 'std-page.jsp?pgprt=1&terminated=1';
+            });
+        }
+
+        window.terminateExam = terminateExam;
+    }
+})();
+
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('terminated') === '1') {
+        if (typeof showSystemAlertModal === 'function') {
+            showSystemAlertModal('Your exam has been terminated due to a violation of exam rules. Please contact your instructor for more information.');
+        } else {
+            alert('Your exam has been terminated due to a violation of exam rules. Please contact your instructor for more information.');
+        }
+    }
+});
 </script>

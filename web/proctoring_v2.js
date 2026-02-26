@@ -356,7 +356,7 @@ class ProctoringSystem {
         const dbLevel = 20 * Math.log10(average || 1); 
 
         const now = Date.now();
-        const noiseThreshold = this.backgroundNoiseBaseline + 12;
+        const noiseThreshold = this.backgroundNoiseBaseline + 10;
 
         if (dbLevel > noiseThreshold) {
             if (!this.noiseSpikeStartAt) this.noiseSpikeStartAt = now;

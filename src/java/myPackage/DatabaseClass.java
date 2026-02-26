@@ -12196,6 +12196,25 @@ public void addNewUserVoid(String fName, String lName, String uName, String emai
         }
     }
     
+    public boolean terminateExam(int examId, int studentId, String reason) {
+        PreparedStatement pstmt = null;
+        try {
+            ensureConnection();
+            String query = "UPDATE exam SET status = 'Terminated', end_time = NOW(), termination_reason = ? WHERE exam_id = ? AND student_id = ?";
+            pstmt = conn.prepareStatement(query);
+            pstmt.setString(1, reason);
+            pstmt.setInt(2, examId);
+            pstmt.setInt(3, studentId);
+            int result = pstmt.executeUpdate();
+            return result > 0;
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error terminating exam: " + e.getMessage(), e);
+            return false;
+        } finally {
+            try { if (pstmt != null) pstmt.close(); } catch (SQLException e) {}
+        }
+    }
+    
      // ================================
     // VERIFY STUDENT NAME
     // ================================
