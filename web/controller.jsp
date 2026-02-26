@@ -159,13 +159,14 @@ try {
 
     } else if ("analyze_face".equalsIgnoreCase(pageParam)) {
         String faceImage = request.getParameter("faceImage");
-        StringBuilder reason = new StringBuilder();
         
-        boolean isValid = myPackage.OpenRouterClient.isFacePhotoValid(faceImage, reason);
+        JSONObject analysis = myPackage.OpenRouterClient.analyzeFacePhoto(faceImage);
+        boolean isValid = analysis.optBoolean("passed", false);
         
         JSONObject result = new JSONObject();
         result.put("success", isValid);
-        result.put("reason", reason.toString());
+        result.put("reason", analysis.optString("reason", "Unknown error"));
+        result.put("analysis", analysis); // Include full analysis for frontend
         
         response.setContentType("application/json");
         response.getWriter().write(result.toString());
@@ -173,13 +174,22 @@ try {
 
     } else if ("analyze_id".equalsIgnoreCase(pageParam)) {
         String idImage = request.getParameter("idImage");
-        StringBuilder reason = new StringBuilder();
         
-        boolean isValid = myPackage.OpenRouterClient.isIdPhotoValid(idImage, reason);
+        JSONObject analysis = myPackage.OpenRouterClient.analyzeIdPhoto(idImage);
+        boolean isValid = analysis.optBoolean("passed", false);
         
         JSONObject result = new JSONObject();
         result.put("success", isValid);
-        result.put("reason", reason.toString());
+        result.put("reason", analysis.optString("reason", "Unknown error"));
+        result.put("analysis", analysis); // Include full analysis for frontend
+
+        // Also check if holding ID if specifically required
+        if (analysis.has("holdingId")) {
+             result.put("holdingId", analysis.getBoolean("holdingId"));
+        } else {
+             // Fallback: if it passed ID verification, we assume they are holding it
+             result.put("holdingId", isValid);
+        }
         
         response.setContentType("application/json");
         response.getWriter().write(result.toString());
@@ -187,13 +197,14 @@ try {
 
     } else if ("verify_id".equalsIgnoreCase(pageParam)) {
         String idImage = request.getParameter("idImage");
-        StringBuilder reason = new StringBuilder();
         
-        boolean holdingId = OpenRouterClient.isHoldingId(idImage, reason);
+        JSONObject analysis = OpenRouterClient.verifyHoldingId(idImage);
+        boolean holdingId = analysis.optBoolean("holdingId", false);
         
         JSONObject result = new JSONObject();
         result.put("success", holdingId);
-        result.put("reason", reason.toString());
+        result.put("reason", analysis.optString("reason", "Unknown error"));
+        result.put("analysis", analysis);
         
         response.setContentType("application/json");
         response.getWriter().write(result.toString());

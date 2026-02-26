@@ -4645,332 +4645,6 @@ async function runDiagnostics() {
         showVerifyStep(currentVerifyStep - 1);
     };
 
-    // Add missing showQualityError function
-    function showQualityError(message) {
-        // Create or get error display element
-        let errorDiv = document.getElementById('faceQualityError');
-        if (!errorDiv) {
-            errorDiv = document.createElement('div');
-            errorDiv.id = 'faceQualityError';
-            
-            // Find where to insert it (after camera container)
-            const cameraSection = document.querySelector('.camera-section');
-            if (cameraSection) {
-                cameraSection.appendChild(errorDiv);
-            }
-        }
-        
-        errorDiv.innerHTML = `
-            <div style="margin-top: 15px; padding: 15px; background: #fee2e2; border: 1px solid #ef4444; border-radius: 8px; color: #b91c1c; animation: slideIn 0.3s ease;">
-                <div style="display: flex; gap: 10px; align-items: flex-start;">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 20px; color: #ef4444;"></i>
-                    <div>
-                        <strong style="display: block; margin-bottom: 5px; font-size: 14px;">Quality Check Failed</strong>
-                        <span style="font-size: 13px;">${message}</span>
-                        <div style="margin-top: 10px; font-size: 12px; color: #7f1d1d; background: #fff5f5; padding: 10px; border-radius: 6px;">
-                            <strong>Quick fixes:</strong>
-                            <ul style="margin-top: 5px; padding-left: 20px;">
-                                <li>Center your face in oval guide</li>
-                                <li>Remove any hats, sunglasses, or masks</li>
-                                <li>Ensure good lighting on your face</li>
-                                <li>Position yourself 30-50cm from camera</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <button onclick="this.parentElement.parentElement.remove(); resetCaptureButton()" style="position: absolute; top: 5px; right: 5px; background: none; border: none; color: #ef4444; cursor: pointer; font-size: 16px;">&times;</button>
-            </div>
-        `;
-        
-        // Auto-remove after 8 seconds
-        setTimeout(() => {
-            if (errorDiv.parentNode) {
-                errorDiv.remove();
-            }
-        }, 8000);
-    }
-    
-    // Function to reset capture button state
-    function resetCaptureButton() {
-        const button = document.getElementById('captureFaceBtn');
-        if (button) {
-            button.innerHTML = '<i class="fas fa-camera"></i> Capture Photo';
-            button.disabled = false;
-        }
-    }
-
-    // SIMPLIFIED - Just basic lighting checks, no complex face detection
-
-    
-    // AI-Powered Face Analysis
-    document.getElementById('captureFaceBtn').onclick = async () => {
-        const video = document.getElementById('faceVideo');
-        
-        // Show checking status
-        const originalText = document.getElementById('captureFaceBtn').innerHTML;
-        document.getElementById('captureFaceBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI Analyzing...';
-        document.getElementById('captureFaceBtn').disabled = true;
-        
-        try {
-            // Capture the photo
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            capturedFaceData = canvas.toDataURL('image/jpeg');
-            
-            // Send to server for AI analysis
-            const formData = new URLSearchParams();
-            formData.append('page', 'analyze_face');
-            formData.append('faceImage', capturedFaceData);
-            
-            const response = await fetch('controller.jsp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: formData
-            });
-            
-            const result = await response.json();
-            
-            if (!result.success) {
-                showQualityError(result.reason);
-                // Reset button on failure
-                document.getElementById('captureFaceBtn').innerHTML = originalText;
-                document.getElementById('captureFaceBtn').disabled = false;
-                return;
-            }
-            
-            // AI says it's good - proceed
-            document.getElementById('faceImgPreview').src = capturedFaceData;
-            document.getElementById('faceCapturedPreview').style.display = 'block';
-            document.getElementById('liveInstructions').style.display = 'none';
-            document.getElementById('retakeSection').style.display = 'block';
-            
-            // Update quality indicators to show all passed
-            const checks = document.querySelectorAll('.check-item');
-            if (checks.length >= 4) {
-                checks[0].innerHTML = '<i class="fas fa-check-circle" style="color:#10b981"></i><span>Face properly positioned</span>';
-                checks[1].innerHTML = '<i class="fas fa-check-circle" style="color:#10b981"></i><span>No face coverings detected</span>';
-                checks[2].innerHTML = '<i class="fas fa-check-circle" style="color:#10b981"></i><span>Lighting adequate</span>';
-                checks[3].innerHTML = '<i class="fas fa-check-circle" style="color:#10b981"></i><span>Single person in frame</span>';
-            }
-            
-            // Hide any error messages
-            const errorDiv = document.getElementById('faceQualityError');
-            if (errorDiv) errorDiv.remove();
-            
-            // Reset button on success - change to "Retake" or keep original
-            document.getElementById('captureFaceBtn').innerHTML = '<i class="fas fa-camera"></i> Retake Photo';
-            document.getElementById('captureFaceBtn').disabled = false;
-            
-        } catch (err) {
-            console.error('Error:', err);
-            showQualityError('Could not analyze photo. Please try again.');
-            // Reset button on error
-            document.getElementById('captureFaceBtn').innerHTML = originalText;
-            document.getElementById('captureFaceBtn').disabled = false;
-        }
-    };
-
-    // Retake button handler
-    document.getElementById('retakeFaceBtn').onclick = () => {
-        document.getElementById('faceCapturedPreview').style.display = 'none';
-        document.getElementById('liveInstructions').style.display = 'block';
-        document.getElementById('retakeSection').style.display = 'none';
-        document.getElementById('captureFaceBtn').disabled = false;
-    };
-
-    // Lighting analysis for Face Photo verification
-    function analyzeLighting(videoElement) {
-        const canvas = document.createElement('canvas');
-        canvas.width = 100;
-        canvas.height = 100;
-        const ctx = canvas.getContext('2d');
-        
-        // Draw a frame from video
-        ctx.drawImage(videoElement, 0, 0, 100, 100);
-        
-        // Get pixel data
-        const imageData = ctx.getImageData(0, 0, 100, 100);
-        const data = imageData.data;
-        
-        // Calculate average brightness
-        let totalBrightness = 0;
-        for (let i = 0; i < data.length; i += 4) {
-            const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-            totalBrightness += brightness;
-        }
-        const avgBrightness = totalBrightness / (data.length / 4);
-        
-        // Check for backlight (sample top vs center)
-        let topBrightness = 0;
-        for (let x = 0; x < 100; x += 10) {
-            const idx = (10 * 100 + x) * 4;
-            topBrightness += (data[idx] + data[idx+1] + data[idx+2]) / 3;
-        }
-        topBrightness = topBrightness / 10;
-        
-        let centerBrightness = 0;
-        for (let y = 40; y < 60; y++) {
-            for (let x = 40; x < 60; x++) {
-                const idx = (y * 100 + x) * 4;
-                centerBrightness += (data[idx] + data[idx+1] + data[idx+2]) / 3;
-            }
-        }
-        centerBrightness = centerBrightness / 400;
-        
-        const backlightRatio = topBrightness / centerBrightness;
-        
-        // Update lighting indicator
-        const indicator = document.getElementById('lightingIndicator');
-        const score = document.getElementById('lightingScore');
-        const progress = document.getElementById('lightingProgress');
-        
-        if (indicator && score && progress) {
-            indicator.style.display = 'block';
-            
-            if (backlightRatio > 2.0) {
-                score.textContent = 'Poor (Backlit!)';
-                progress.className = 'progress-fill poor';
-                progress.style.width = '30%';
-                score.style.color = '#ef4444';
-            } else if (avgBrightness < 60) {
-                score.textContent = 'Too Dark';
-                progress.className = 'progress-fill poor';
-                progress.style.width = '20%';
-                score.style.color = '#ef4444';
-            } else if (avgBrightness > 220) {
-                score.textContent = 'Too Bright';
-                progress.className = 'progress-fill warning';
-                progress.style.width = '95%';
-                score.style.color = '#f59e0b';
-            } else if (avgBrightness > 100) {
-                score.textContent = 'Good';
-                progress.className = 'progress-fill good';
-                progress.style.width = '80%';
-                score.style.color = '#10b981';
-            } else {
-                score.textContent = 'Fair';
-                progress.className = 'progress-fill warning';
-                progress.style.width = '50%';
-                score.style.color = '#f59e0b';
-            }
-        }
-    }
-
-    // Start lighting analysis when camera is active
-    document.getElementById('faceVideo').addEventListener('play', function() {
-        // Show lighting indicator
-        document.getElementById('lightingIndicator').style.display = 'block';
-        
-        // Analyze lighting every 500ms for real-time feedback
-        setInterval(() => analyzeLighting(this), 500);
-    });
-
-    // Simple ID verification - just checks if holding ID/card/paper
-    document.getElementById('captureIdBtn').onclick = async () => {
-        const video = document.getElementById('idVideo');
-        
-        // Show checking status
-        const originalText = document.getElementById('captureIdBtn').innerHTML;
-        document.getElementById('captureIdBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking ID...';
-        document.getElementById('captureIdBtn').disabled = true;
-        
-        try {
-            // Capture the photo
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            capturedIdData = canvas.toDataURL('image/jpeg');
-            
-            // Send to server for simple verification
-            const formData = new URLSearchParams();
-            formData.append('page', 'verify_id');
-            formData.append('idImage', capturedIdData);
-            
-            const response = await fetch('controller.jsp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: formData
-            });
-            
-            const result = await response.json();
-            
-            if (!result.success) {
-                showSimpleIdError(result.reason);
-                // Reset button on failure
-                document.getElementById('captureIdBtn').innerHTML = originalText;
-                document.getElementById('captureIdBtn').disabled = false;
-                return;
-            }
-            
-            // ID detected - proceed
-            document.getElementById('idImgPreview').src = capturedIdData;
-            document.getElementById('idCapturedPreview').style.display = 'block';
-            
-            // Hide any error messages
-            const errorDiv = document.getElementById('simpleIdError');
-            if (errorDiv) errorDiv.remove();
-            
-            // Reset button on success - change to "Retake" or keep original
-            document.getElementById('captureIdBtn').innerHTML = '<i class="fas fa-id-card"></i> Retake ID';
-            document.getElementById('captureIdBtn').disabled = false;
-            
-        } catch (err) {
-            console.error('Error:', err);
-            showSimpleIdError('Could not verify ID. Please try again.');
-            // Reset button on error
-            document.getElementById('captureIdBtn').innerHTML = originalText;
-            document.getElementById('captureIdBtn').disabled = false;
-        }
-    };
-
-// Simple error display
-function showSimpleIdError(message) {
-    let errorDiv = document.getElementById('simpleIdError');
-    if (!errorDiv) {
-        errorDiv = document.createElement('div');
-        errorDiv.id = 'simpleIdError';
-        
-        // Insert after capture button
-        const idSection = document.querySelector('#verification-step-3 .info-section') || 
-                         document.querySelector('#verification-step-3 > div:last-child');
-        if (idSection) {
-            idSection.appendChild(errorDiv);
-        }
-    }
-    
-    errorDiv.innerHTML = `
-        <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; color: #856404; animation: slideIn 0.3s ease;">
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <i class="fas fa-id-card" style="font-size: 20px; color: #856404;"></i>
-                <div>
-                    <strong style="display: block; margin-bottom: 3px;">ID Not Detected</strong>
-                    <span style="font-size: 13px;">${message}</span>
-                </div>
-            </div>
-            <div style="margin-top: 10px; font-size: 12px; padding: 8px; background: #fff9e6; border-radius: 4px;">
-                <strong>Tips:</strong>
-                <ul style="margin-top: 5px; padding-left: 20px;">
-                    <li>Hold your ID card toward the camera</li>
-                    <li>Make sure it's clearly visible</li>
-                    <li>Avoid glare on the surface</li>
-                    <li>Keep it flat and steady</li>
-                </ul>
-            </div>
-            <button onclick="this.parentElement.remove()" style="position: absolute; top: 5px; right: 5px; background: none; border: none; color: #856404; cursor: pointer;">&times;</button>
-        </div>
-    `;
-    
-    // Auto-remove after 8 seconds
-    setTimeout(() => {
-        if (errorDiv.parentNode) {
-            errorDiv.remove();
-        }
-    }, 8000);
-}
-
     async function saveVerificationToBackend() {
         const formData = new URLSearchParams();
         formData.append('page', 'proctoring');
@@ -5085,16 +4759,10 @@ function showSimpleIdError(message) {
         }, 4000); 
     }
 
-    document.getElementById('verifyFinalBtn').onclick = async () => {
-        // Run diagnostics before proceeding
-        const diagnosticsPassed = await runDiagnostics();
-        if (!diagnosticsPassed) {
-            return; // Don't proceed if diagnostics fail
-        }
-        
+    document.getElementById('verifyFinalBtn').onclick = () => {
         document.getElementById('identityVerificationModal').style.display = 'none';
         
-        // Show confirm-start immediately (avoid waiting-room delay)
+        // Show confirm-start immediately
         const confirmModal = document.getElementById('confirmationModal');
         if (confirmModal) confirmModal.style.display = 'flex';
     };
@@ -6546,6 +6214,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Send to server for AI analysis
+            capturedFaceData = imageBase64;
             const formData = new URLSearchParams();
             formData.append('page', 'analyze_face');
             formData.append('faceImage', capturedFaceData);
@@ -6559,42 +6228,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const result = await response.json();
             
             if (!result.success) {
+                // The AI reason is now descriptive and covers earphones, hands, etc.
                 showQualityError(result.reason || 'Face analysis failed. Please try again.');
-                this.innerHTML = originalText;
-                this.disabled = false;
-                return;
-            }
-            
-            // Check the AI analysis results
-            if (!result.analysis.passed) {
-                // Display what needs to be fixed
-                const issues = [];
-                
-                if (result.analysis.faceCount > 1) {
-                    issues.push("Multiple faces detected - please ensure you are alone in the frame");
-                } else if (result.analysis.faceCount === 0) {
-                    issues.push("No face detected - please position your face in the center");
-                }
-                
-                if (result.analysis.obstructions && result.analysis.obstructions.length > 0) {
-                    issues.push("Face obstructed: " + result.analysis.obstructions.join(", "));
-                }
-                
-                if (!result.analysis.isCentered) {
-                    issues.push("Face not centered - please align your face in the oval guide");
-                }
-                
-                if (result.analysis.confidence < 70) {
-                    issues.push("Image quality too low - please ensure good lighting");
-                }
-                
-                // Show the issues to the user
-                if (issues.length > 0) {
-                    showQualityError(issues.join("\n"));
-                } else {
-                    showQualityError("Face verification failed. Please try again with better lighting and positioning.");
-                }
-                
                 this.innerHTML = originalText;
                 this.disabled = false;
                 return;
@@ -6966,38 +6601,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const result = await response.json();
             
-            // Check if the API call itself failed
-            if (!result.success) {
-                showIdQualityError(result.reason || 'ID analysis failed. Please try again.');
-                this.innerHTML = originalText;
-                this.disabled = false;
-                return;
-            }
-            
-            // Check the AI analysis results
-            if (!result.analysis.holdingId) {
-                // Display what needs to be fixed
-                const issues = [];
-                
-                if (result.analysis.reason && result.analysis.reason.toLowerCase().includes('no id')) {
-                    issues.push("No ID document detected - please hold your ID clearly in front of the camera");
-                }
-                
-                if (result.analysis.reason && result.analysis.reason.toLowerCase().includes('glare')) {
-                    issues.push("Glare detected on ID - please adjust lighting or angle");
-                }
-                
-                if (result.analysis.reason && result.analysis.reason.toLowerCase().includes('blur')) {
-                    issues.push("ID is blurry - please hold it steady and ensure focus");
-                }
-                
-                // Show the issues to the user
-                if (issues.length > 0) {
-                    showIdQualityError(issues.join("\n"));
-                } else {
-                    showIdQualityError(result.analysis.reason || "ID verification failed. Please ensure your ID is clearly visible and well-lit.");
-                }
-                
+            // Check if verification failed (including holding check)
+            if (!result.success || !result.holdingId) {
+                showIdQualityError(result.reason || 'ID verification failed. Please ensure you are holding your ID clearly.');
                 this.innerHTML = originalText;
                 this.disabled = false;
                 return;
