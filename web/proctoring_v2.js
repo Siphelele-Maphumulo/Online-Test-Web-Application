@@ -49,6 +49,7 @@ class ProctoringSystem {
         this.calibrationComplete = false; 
         this.previousNosePosition = null; 
         this.previousMouthHeight = null; 
+        this.currentAudioLevel = 0; // Store current audio level in dB 
 
         // Media streams 
         this.audioStream = null; 
@@ -70,7 +71,9 @@ class ProctoringSystem {
         console.log('🔒 Initializing Professional Proctoring System...'); 
 
         this.showStatusBanner(); 
-        await this.loadFaceApi(); 
+        // Load Face-API in the background so the exam UI is not delayed by CDN/model downloads.
+        // The monitoring loop will use fallback detection until face-api becomes available.
+        this.loadFaceApi().catch(() => {});
 
         if (sharedStream) {
             this.sharedStream = sharedStream;
@@ -96,6 +99,7 @@ class ProctoringSystem {
         document.addEventListener('visibilitychange', this.handleVisibilityChange);
         window.addEventListener('beforeunload', this.handleBeforeUnload);
         window.addEventListener('pagehide', this.handleBeforeUnload);
+        window.addEventListener('pageshow', this.handlePageShow);
         this.streamHealthInterval = setInterval(() => this.checkStreamHealth(), 5000);
     }
 
@@ -118,6 +122,30 @@ class ProctoringSystem {
         console.log('Page unloading - preserving stream references');
         try {
             sessionStorage.setItem('proctorAutoStart', '1');
+        } catch (e) {}
+        // Mark potential refresh for detection on reload
+        try {
+            sessionStorage.setItem('examPageUnload', Date.now().toString());
+        } catch (e) {}
+    }
+
+    handlePageShow(event) {
+        // Detect page refresh/reload
+        if (event.persisted) {
+            console.log('Page restored from cache - treating as refresh violation');
+            this.autoSubmitForCheating('Page refreshed/reloaded');
+            return;
+        }
+        try {
+            const unloadTime = sessionStorage.getItem('examPageUnload');
+            if (unloadTime) {
+                const elapsed = Date.now() - parseInt(unloadTime, 10);
+                if (elapsed < 5000) {
+                    console.log('Page reload detected within 5 seconds - terminating exam');
+                    this.autoSubmitForCheating('Page refreshed/reloaded');
+                }
+                sessionStorage.removeItem('examPageUnload');
+            }
         } catch (e) {}
     }
 
@@ -323,22 +351,25 @@ class ProctoringSystem {
     } 
 
     analyzeAudio(dataArray) { 
-        if (!this.calibrationComplete) return; 
+        if (!this.calibrationComplete) return;
 
         const average = dataArray.reduce(function(a, b) { return a + b; }, 0) / dataArray.length; 
         const dbLevel = 20 * Math.log10(average || 1); 
+        
+        // Store current audio level for lip movement detection
+        this.currentAudioLevel = dbLevel;
 
         const now = Date.now();
         const noiseThreshold = this.backgroundNoiseBaseline + 12;
 
-        if (dbLevel > noiseThreshold) {
-            if (!this.noiseSpikeStartAt) this.noiseSpikeStartAt = now;
-            if (now - this.noiseSpikeStartAt >= this.noiseSpikeMinDurationMs) {
-                this.logViolation('AUDIO', 'Sustained loud background noise detected (' + Math.round(dbLevel) + 'dB)');
-                this.noiseSpikeStartAt = now;
-            }
-        } else {
-            this.noiseSpikeStartAt = null;
+        if (dbLevel > noiseThreshold) { 
+            if (!this.noiseSpikeStartAt) this.noiseSpikeStartAt = now; 
+            if (now - this.noiseSpikeStartAt >= this.noiseSpikeMinDurationMs) { 
+                this.logViolation('AUDIO', 'Sustained loud background noise detected (' + Math.round(dbLevel) + 'dB)'); 
+                this.noiseSpikeStartAt = now; 
+            } 
+        } else { 
+            this.noiseSpikeStartAt = null; 
         }
 
         const variance = this.calculateVariance(dataArray); 
@@ -656,8 +687,12 @@ class ProctoringSystem {
 
             this.previousMouthHeight = mouthHeight; 
 
+            // Require at least 10dB of audio before flagging lip movement
+            const hasSufficientAudio = this.currentAudioLevel >= 10;
+            
             return movement > this.MOUTH_MOVEMENT_THRESHOLD &&  
-                   (!expressions || expressions.happy < 0.5); 
+                   (!expressions || expressions.happy < 0.5) &&
+                   hasSufficientAudio; 
         } catch (err) { 
             return false; 
         } 
@@ -756,21 +791,29 @@ class ProctoringSystem {
         this.enforceFullscreen(); 
     } 
 
-    enforceFullscreen() { 
-        setTimeout(() => { 
-            if (document.documentElement.requestFullscreen) { 
-                document.documentElement.requestFullscreen().catch(() => {}); 
-            } 
-        }, 1000); 
+    enforceFullscreen() {
+        // Request fullscreen immediately
+        this.requestFullscreenNow();
+        // Then check every 500ms and re-request if exited
+        this.fullscreenInterval = setInterval(() => {
+            if (!document.fullscreenElement && this.examActive) {
+                this.logViolation('LOCKDOWN', 'Exited fullscreen mode');
+                this.requestFullscreenNow();
+            }
+        }, 500);
+    }
 
-        setInterval(() => { 
-            if (!document.fullscreenElement && this.examActive) { 
-                this.logViolation('LOCKDOWN', 'Exited fullscreen mode'); 
-                try { 
-                    document.documentElement.requestFullscreen(); 
-                } catch (err) {} 
-            } 
-        }, 3000); 
+    requestFullscreenNow() {
+        const el = document.documentElement;
+        if (el.requestFullscreen) {
+            el.requestFullscreen().catch(err => {
+                console.warn('Fullscreen request failed:', err);
+            });
+        } else if (el.webkitRequestFullscreen) {
+            el.webkitRequestFullscreen();
+        } else if (el.msRequestFullscreen) {
+            el.msRequestFullscreen();
+        }
     } 
 
     initBehavioralMonitoring() { 
@@ -1029,6 +1072,32 @@ class ProctoringSystem {
             gatherAllAnswers();
         }
 
+        // Mark the submission as terminated so backend saves result_status = 'Terminated'
+        try {
+            const form = document.getElementById('myform');
+            if (form) {
+                let terminatedFlag = form.querySelector('input[name="cheating_terminated"]');
+                if (!terminatedFlag) {
+                    terminatedFlag = document.createElement('input');
+                    terminatedFlag.type = 'hidden';
+                    terminatedFlag.name = 'cheating_terminated';
+                    form.appendChild(terminatedFlag);
+                }
+                terminatedFlag.value = 'true';
+
+                let reasonInput = form.querySelector('input[name="termination_reason"]');
+                if (!reasonInput) {
+                    reasonInput = document.createElement('input');
+                    reasonInput.type = 'hidden';
+                    reasonInput.name = 'termination_reason';
+                    form.appendChild(reasonInput);
+                }
+                reasonInput.value = String(reason || 'Terminated');
+            }
+        } catch (e) {
+            console.warn('Could not append termination flags to form', e);
+        }
+
         // Submit exam automatically
         setTimeout(() => {
             try {
@@ -1188,9 +1257,14 @@ class ProctoringSystem {
             clearInterval(this.streamHealthInterval);
         }
 
+        if (this.fullscreenInterval) {
+            clearInterval(this.fullscreenInterval);
+        }
+
         document.removeEventListener('visibilitychange', this.handleVisibilityChange);
         window.removeEventListener('beforeunload', this.handleBeforeUnload);
         window.removeEventListener('pagehide', this.handleBeforeUnload);
+        window.removeEventListener('pageshow', this.handlePageShow);
 
         if (!this.examActive) {
             if (this.audioStream) { 

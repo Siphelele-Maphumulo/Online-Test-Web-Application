@@ -362,24 +362,23 @@ private static String compressImage(String base64Image, int maxWidth, float qual
             textPart.put("type", "text");
             textPart.put("text", 
                 "You are an identity verification system. Analyze this face photo and respond with a JSON object only.\n\n" +
-                "Check these criteria reasonably (not strictly):\n" +
-                "1. Is there at least ONE clearly visible face?\n" +
-                "2. Is face reasonably positioned (mostly centered, not extremely close/far)?\n" +
-                "3. Are eyes clearly visible (minor obstructions like headphones, glasses, or hair are OK)?\n" +
-                "4. Is lighting adequate to see the face clearly?\n" +
-                "5. Is person generally facing the camera (slight angle is acceptable)?\n\n" +
-                "BE LENIENT - Allow headphones, glasses, slight head turns, minor obstructions.\n" +
-                "Only FAIL if: no face visible, face completely covered, or person not facing camera at all.\n\n" +
+                "STRICT ACCEPTANCE RULES (must be enforced in your output):\n" +
+                "1. Reject if more than one face is visible (faceCount > 1).\n" +
+                "2. Reject if the face is not centered in the frame.\n" +
+                "3. Reject if there are any obstructions covering key facial features (eyes/nose/mouth).\n" +
+                "4. Reject if the face is unclear due to lighting/blur.\n\n" +
+                "Return confidence 0-100 for how well the photo meets the requirements.\n" +
+                "IMPORTANT: The output MUST be a single JSON OBJECT (NOT an array).\n" +
                 "RESPOND WITH A VALID JSON OBJECT IN THIS EXACT FORMAT (NOT AN ARRAY):\n" +
                 "{\n" +
                 "  \"passed\": true,\n" +
                 "  \"reason\": \"Face verification passed\",\n" +
-                "  \"confidence\": 85,\n" +
+                "  \"confidence\": 95,\n" +
                 "  \"faceCount\": 1,\n" +
-                "  \"obstructions\": []\n" +
+                "  \"obstructions\": [],\n" +
+                "  \"isCentered\": true\n" +
                 "}\n\n" +
-                "IMPORTANT: Return ONLY the JSON object, no other text, no arrays, no markdown. " +
-                "Default to PASS unless there's a clear reason to fail."
+                "IMPORTANT: Return ONLY the JSON object, no other text, no arrays, no markdown."
             );
             content.put(textPart);
             
@@ -464,16 +463,40 @@ private static String compressImage(String base64Image, int maxWidth, float qual
      */
     public static boolean isFacePhotoValid(String base64Image, StringBuilder reason) {
         JSONObject result = analyzeFacePhoto(base64Image);
-        boolean passed = result.optBoolean("passed", true);
-        
-        if (reason != null) {
-            reason.append(result.optString("reason", "Unknown"));
+        boolean aiPassed = result.optBoolean("passed", true);
+
+        int confidence = result.optInt("confidence", 0);
+        int faceCount = result.optInt("faceCount", 0);
+        JSONArray obstructions = result.optJSONArray("obstructions");
+        boolean isCentered = result.has("isCentered") ? result.optBoolean("isCentered", false) : false;
+
+        // Strict validation rules (server-side)
+        boolean strictPassed = true;
+        String strictReason = "Face verification passed";
+
+        if (faceCount != 1) {
+            strictPassed = false;
+            strictReason = (faceCount > 1) ? "More than one face detected" : "No face detected";
+        } else if (confidence < 90) {
+            strictPassed = false;
+            strictReason = "Low confidence (" + confidence + "%) - please retake the photo";
+        } else if (obstructions != null && obstructions.length() > 0) {
+            strictPassed = false;
+            strictReason = "Face obstructed: " + obstructions.toString();
+        } else if (!isCentered) {
+            strictPassed = false;
+            strictReason = "Face not centered - please align your face in the center of the frame";
         }
-        
-        // Log confidence for debugging
-        LOGGER.info("Face analysis confidence: " + result.optInt("confidence", 0) + "%");
-        
-        return passed;
+
+        if (reason != null) {
+            // Prefer strict reason; if strict passed, keep AI reason for extra context
+            reason.append(strictPassed ? result.optString("reason", strictReason) : strictReason);
+        }
+
+        LOGGER.info("Face analysis confidence: " + confidence + "%");
+        LOGGER.info("Face analysis aiPassed: " + aiPassed + ", strictPassed: " + strictPassed + ", faceCount: " + faceCount + ", isCentered: " + isCentered);
+
+        return strictPassed;
     }
     
     /**

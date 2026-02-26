@@ -3514,13 +3514,612 @@ function showSimpleIdError(message) {
         }, 4000); 
     }
 
-    document.getElementById('verifyFinalBtn').onclick = () => {
+    document.getElementById('verifyFinalBtn').onclick = async () => {
+        // Run diagnostics before proceeding
+        const diagnosticsPassed = await runDiagnostics();
+        if (!diagnosticsPassed) {
+            return; // Don't proceed if diagnostics fail
+        }
+        
         document.getElementById('identityVerificationModal').style.display = 'none';
         
-        // Use the current course name from the global variable or JSP
-        const courseName = typeof currentCourseName !== 'undefined' ? currentCourseName : '';
-        showWaitingRoom(courseName);
+        // Show confirm-start immediately (avoid waiting-room delay)
+        const confirmModal = document.getElementById('confirmationModal');
+        if (confirmModal) confirmModal.style.display = 'flex';
     };
+
+    async function runDiagnostics() {
+        console.log('Starting diagnostics...');
+        
+        // Show diagnostics modal
+        const diagnosticsModal = document.getElementById('diagnosticsModal');
+        if (diagnosticsModal) {
+            diagnosticsModal.style.display = 'flex';
+        }
+        
+        // Reset UI
+        document.getElementById('diagProceedButton').disabled = true;
+        document.getElementById('diagRetryButton').style.display = 'none';
+        
+        // Reset all status indicators to loading
+        const statusElements = [
+            'status-internet', 'status-browser', 'status-javascript', 
+            'status-resolution', 'status-os', 'status-camera', 'status-environment'
+        ];
+        
+        statusElements.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            }
+        });
+        
+        const checks = [
+            { 
+                id: 'status-internet', 
+                name: 'Internet Connection',
+                check: async () => {
+                    try {
+                        // Quick connection test
+                        const startTime = Date.now();
+                        const response = await fetch('https://www.google.com/favicon.ico', { 
+                            mode: 'no-cors',
+                            cache: 'no-cache',
+                            timeout: 5000 
+                        });
+                        const endTime = Date.now();
+                        const pingTime = endTime - startTime;
+                        
+                        return { 
+                            pass: true, 
+                            message: `Connected (${pingTime}ms)` 
+                        };
+                    } catch (e) {
+                        return { 
+                            pass: navigator.onLine, 
+                            message: navigator.onLine ? 'Connected' : 'No internet connection' 
+                        };
+                    }
+                }
+            },
+            { 
+                id: 'status-browser', 
+                name: 'Internet Browser',
+                check: async () => {
+                    const ua = navigator.userAgent;
+                    const isChrome = /Chrome/.test(ua) && /Google Inc/.test(navigator.vendor);
+                    const isFirefox = /Firefox/.test(ua);
+                    const isEdge = /Edg/.test(ua);
+                    const isSafari = /Safari/.test(ua) && /Apple Computer/.test(navigator.vendor);
+                    
+                    let version = 0;
+                    let browserName = 'Unknown';
+                    
+                    if (isChrome) {
+                        const match = ua.match(/Chrome\/(\d+)/);
+                        version = match ? parseInt(match[1]) : 0;
+                        browserName = 'Chrome';
+                    } else if (isFirefox) {
+                        const match = ua.match(/Firefox\/(\d+)/);
+                        version = match ? parseInt(match[1]) : 0;
+                        browserName = 'Firefox';
+                    } else if (isEdge) {
+                        const match = ua.match(/Edg\/(\d+)/);
+                        version = match ? parseInt(match[1]) : 0;
+                        browserName = 'Edge';
+                    } else if (isSafari) {
+                        const match = ua.match(/Version\/(\d+)/);
+                        version = match ? parseInt(match[1]) : 0;
+                        browserName = 'Safari';
+                    }
+                    
+                    // More lenient browser check
+                    const isCompatible = (isChrome && version >= 80) || 
+                                         (isFirefox && version >= 80) || 
+                                         (isEdge && version >= 80) ||
+                                         (isSafari && version >= 14);
+                    
+                    return { 
+                        pass: isCompatible, 
+                        message: isCompatible ? `${browserName} ${version} - Compatible` : `${browserName} ${version} - Update recommended` 
+                    };
+                }
+            },
+            { 
+                id: 'status-javascript', 
+                name: 'JavaScript Enabled',
+                check: async () => ({ pass: true, message: 'JavaScript is enabled' })
+            },
+            { 
+                id: 'status-resolution', 
+                name: 'Screen Resolution',
+                check: async () => {
+                    const width = window.screen.width;
+                    const height = window.screen.height;
+                    const isMinimum = width >= 1024 && height >= 768;
+                    
+                    return { 
+                        pass: isMinimum, 
+                        message: isMinimum ? `${width}x${height} - OK` : `${width}x${height} - Below minimum (1024x768)` 
+                    };
+                }
+            },
+            { 
+                id: 'status-os', 
+                name: 'Operating System',
+                check: async () => {
+                    const platform = navigator.platform.toLowerCase();
+                    const userAgent = navigator.userAgent.toLowerCase();
+                    
+                    let os = 'Unknown';
+                    let isCompatible = true;
+                    
+                    if (platform.includes('win')) {
+                        os = 'Windows';
+                        // Check if it's Windows 10 or 11 (both are compatible)
+                        isCompatible = true;
+                    } else if (platform.includes('mac')) {
+                        os = 'macOS';
+                        isCompatible = true;
+                    } else if (platform.includes('linux')) {
+                        os = 'Linux';
+                        isCompatible = true;
+                    } else if (userAgent.includes('android')) {
+                        os = 'Android';
+                        isCompatible = false;
+                    } else if (userAgent.includes('iphone') || userAgent.includes('ipad')) {
+                        os = 'iOS';
+                        isCompatible = false;
+                    }
+                    
+                    return { 
+                        pass: isCompatible, 
+                        message: isCompatible ? `${os} - Compatible` : `${os} - Mobile devices not recommended` 
+                    };
+                }
+            },
+            { 
+                id: 'status-camera', 
+                name: 'Camera',
+                check: async () => {
+                    try {
+                        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                            return { pass: false, message: 'Camera API not supported' };
+                        }
+                        
+                        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                        
+                        // Test video track
+                        const videoTrack = stream.getVideoTracks()[0];
+                        const settings = videoTrack.getSettings();
+                        
+                        // Stop all tracks immediately
+                        stream.getTracks().forEach(t => t.stop());
+                        
+                        return { 
+                            pass: true, 
+                            message: `Camera detected - ${settings.width || '?'}x${settings.height || '?'}` 
+                        };
+                    } catch (e) {
+                        console.warn('Camera access error:', e);
+                        return { pass: false, message: 'Camera not accessible - Check permissions' };
+                    }
+                }
+            },
+            { 
+                id: 'status-environment', 
+                name: 'Exam Environment',
+                check: async () => {
+                    // Check if fullscreen is available
+                    const fullScreenAvailable = document.fullscreenEnabled || 
+                                               document.webkitFullscreenEnabled || 
+                                               document.mozFullScreenEnabled;
+                    
+                    // Check if browser is not in private/incognito mode (simple check)
+                    const isPrivate = await isPrivateMode();
+                    
+                    if (!fullScreenAvailable) {
+                        return { pass: false, message: 'Fullscreen not supported' };
+                    }
+                    
+                    if (isPrivate) {
+                        return { pass: false, message: 'Private browsing detected - Please use normal mode' };
+                    }
+                    
+                    return { pass: true, message: 'Environment ready' };
+                }
+            }
+        ];
+
+        // Track completion
+        let completedChecks = 0;
+        let passedRequired = 0;
+        const requiredChecks = checks.length; // All checks are required now
+        
+        // Function to detect private mode
+        async function isPrivateMode() {
+            return new Promise((resolve) => {
+                try {
+                    // Simple private mode detection for major browsers
+                    if (window.localStorage && window.sessionStorage) {
+                        // Test if storage works
+                        const testKey = '__test__';
+                        try {
+                            localStorage.setItem(testKey, '1');
+                            localStorage.removeItem(testKey);
+                            resolve(false); // Not private
+                        } catch (e) {
+                            resolve(true); // Private mode
+                        }
+                    } else {
+                        resolve(true); // No storage = private
+                    }
+                } catch (e) {
+                    resolve(false); // Can't determine
+                }
+            });
+        }
+
+        // Run all checks
+        checks.forEach((check, index) => {
+            // Stagger checks to avoid overwhelming
+            setTimeout(async () => {
+                try {
+                    const result = await check.check();
+                    const el = document.getElementById(check.id);
+                    
+                    if (el) {
+                        if (result.pass) {
+                            el.innerHTML = '<i class="fas fa-check-circle" style="color:#10b981"></i>';
+                            passedRequired++;
+                        } else {
+                            el.innerHTML = '<i class="fas fa-times-circle" style="color:#ef4444"></i>';
+                        }
+                        
+                        // Add tooltip with message
+                        el.title = result.message;
+                        
+                        // Also update text in diag-item
+                        const diagItem = document.getElementById(`diag-${check.id.replace('status-', '')}`);
+                        if (diagItem) {
+                            const infoDiv = diagItem.querySelector('.diag-info');
+                            if (infoDiv) {
+                                let statusText = infoDiv.querySelector('.diag-status-text');
+                                if (!statusText) {
+                                    statusText = document.createElement('span');
+                                    statusText.className = 'diag-status-text';
+                                    statusText.style.cssText = 'display:block; font-size:11px; color:#64748b; margin-top:4px;';
+                                    infoDiv.appendChild(statusText);
+                                }
+                                statusText.textContent = result.message;
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Check ${check.name} failed:`, error);
+                    const el = document.getElementById(check.id);
+                    if (el) {
+                        el.innerHTML = '<i class="fas fa-times-circle" style="color:#ef4444"></i>';
+                        el.title = 'Check failed';
+                    }
+                } finally {
+                    completedChecks++;
+                    
+                    // When all checks are complete
+                    if (completedChecks === checks.length) {
+                        finishDiagnostics(passedRequired === requiredChecks);
+                    }
+                }
+            }, index * 300); // 300ms delay between checks
+        });
+    }
+
+    function finishDiagnostics(allPassed) {
+        console.log('Diagnostics complete - All passed:', allPassed);
+        
+        const proceedBtn = document.getElementById('diagProceedButton');
+        const retryBtn = document.getElementById('diagRetryButton');
+        
+        if (proceedBtn) {
+            proceedBtn.disabled = !allPassed;
+            if (allPassed) {
+                proceedBtn.classList.add('pulse-animation');
+            }
+        }
+        
+        if (retryBtn) {
+            retryBtn.style.display = 'inline-block';
+        }
+        
+        // Show summary message
+        const modalBody = document.querySelector('#diagnosticsModal .modal-body');
+        if (modalBody) {
+            // Remove any existing summary
+            const existingSummary = document.getElementById('diagnostics-summary');
+            if (existingSummary) existingSummary.remove();
+            
+            const summaryDiv = document.createElement('div');
+            summaryDiv.id = 'diagnostics-summary';
+            summaryDiv.style.cssText = 'margin-top:20px; padding:15px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;';
+            
+            if (allPassed) {
+                summaryDiv.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:10px; color:#059669;">
+                        <i class="fas fa-check-circle" style="font-size:20px;"></i>
+                        <span style="font-weight:600;">All system checks passed!</span>
+                    </div>
+                    <p style="margin:10px 0 0 0; font-size:13px; color:#475569;">
+                        Your system meets all requirements. You can proceed with the exam.
+                    </p>
+                `;
+            } else {
+                summaryDiv.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:10px; color:#dc2626;">
+                        <i class="fas fa-exclamation-triangle" style="font-size:20px;"></i>
+                        <span style="font-weight:600;">Some checks failed</span>
+                    </div>
+                    <p style="margin:10px 0 0 0; font-size:13px; color:#475569;">
+                        Please address issues marked in red above. You can retry checks or contact support.
+                    </p>
+                `;
+            }
+            
+            modalBody.appendChild(summaryDiv);
+        }
+        
+        return allPassed;
+    }
+    
+    async function testInternetSpeed() {
+        return new Promise((resolve) => {
+            const startTime = Date.now();
+            const measurements = [];
+            let completed = 0;
+            const targetMeasurements = 3;
+            
+            // Test with multiple small files to check stability
+            for (let i = 0; i < targetMeasurements; i++) {
+                const img = new Image();
+                img.onload = img.onerror = () => {
+                    const endTime = Date.now();
+                    const duration = (endTime - startTime) / 1000;
+                    const fileSize = 150000; // ~150KB
+                    const speedMbps = (fileSize * 8) / (duration * 1000000);
+                    
+                    measurements.push(speedMbps);
+                    completed++;
+                    
+                    if (completed === targetMeasurements) {
+                        const avgSpeed = measurements.reduce((a, b) => a + b, 0) / measurements.length;
+                        const variance = measurements.reduce((sum, val) => sum + Math.pow(val - avgSpeed, 2), 0) / measurements.length;
+                        const stability = variance < 0.5; // Low variance = stable connection
+                        
+                        resolve({
+                            downloadSpeed: avgSpeed,
+                            stable: stability,
+                            measurements: measurements
+                        });
+                    }
+                };
+                
+                // Use a reliable CDN for speed test
+                img.src = `https://picsum.photos/seed/speedtest${i}/300/200.jpg?t=${Date.now()}_${i}`;
+            }
+            
+            // Fallback timeout
+            setTimeout(() => {
+                if (completed < targetMeasurements) {
+                    resolve({
+                        downloadSpeed: 0,
+                        stable: false,
+                        measurements: measurements
+                    });
+                }
+            }, 10000);
+        });
+    }
+    
+    async function testMicrophoneNoise() {
+        return new Promise((resolve) => {
+            navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+                .then(stream => {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const analyser = audioContext.createAnalyser();
+                    const microphone = audioContext.createMediaStreamSource(stream);
+                    
+                    analyser.fftSize = 256;
+                    const bufferLength = analyser.frequencyBinCount;
+                    const dataArray = new Uint8Array(bufferLength);
+                    
+                    microphone.connect(analyser);
+                    
+                    const measurements = [];
+                    const sampleDuration = 3000; // 3 seconds
+                    const sampleInterval = 100;
+                    let samplesTaken = 0;
+                    const maxSamples = sampleDuration / sampleInterval;
+                    
+                    const interval = setInterval(() => {
+                        analyser.getByteFrequencyData(dataArray);
+                        const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+                        const dbLevel = 20 * Math.log10(average || 1);
+                        measurements.push(dbLevel);
+                        
+                        samplesTaken++;
+                        
+                        if (samplesTaken >= maxSamples) {
+                            clearInterval(interval);
+                             
+                            const avgNoise = measurements.reduce((a, b) => a + b, 0) / measurements.length;
+                            const maxNoise = Math.max(...measurements);
+                             
+                            // Clean up
+                            stream.getTracks().forEach(track => track.stop());
+                            audioContext.close();
+                             
+                            resolve({
+                                noiseLevel: avgNoise,
+                                maxNoise: maxNoise,
+                                measurements: measurements
+                            });
+                        }
+                    }, sampleInterval);
+                })
+                .catch(error => {
+                    resolve({
+                        noiseLevel: 0,
+                        maxNoise: 0,
+                        error: error.message
+                    });
+                });
+        });
+    }
+
+    // Modal button listeners - make sure they're properly set up
+    document.addEventListener('DOMContentLoaded', function() {
+        const diagCancelBtn = document.getElementById('diagCancelButton');
+        const diagRetryBtn = document.getElementById('diagRetryButton');
+        const diagProceedBtn = document.getElementById('diagProceedButton');
+        
+        if (diagCancelBtn) {
+            diagCancelBtn.onclick = () => {
+                document.getElementById('diagnosticsModal').style.display = 'none';
+            };
+        }
+        
+        if (diagRetryBtn) {
+            diagRetryBtn.onclick = () => {
+                runDiagnostics();
+            };
+        }
+        
+        if (diagProceedBtn) {
+            diagProceedBtn.onclick = () => {
+                document.getElementById('diagnosticsModal').style.display = 'none';
+                startIdentityVerification();
+            };
+        }
+    });
+
+    // Also add missing showSystemConfirmModal function
+    function showSystemConfirmModal(message, callback) {
+        const modal = document.getElementById('systemConfirmModal');
+        const messageEl = document.getElementById('systemConfirmMessage');
+        const okBtn = document.getElementById('systemConfirmOkBtn');
+        
+        if (!modal) {
+            // Create modal if it doesn't exist
+            const newModal = document.createElement('div');
+            newModal.id = 'systemConfirmModal';
+            newModal.className = 'alert-modal';
+            newModal.innerHTML = `
+                <div class="alert-modal-content" style="max-width: 560px; width: 92%;">
+                    <div class="alert-modal-header" style="background: #09294d; color: white; padding: 18px 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; font-size: 18px;">
+                            <i class="fas fa-question-circle"></i>
+                            Confirm
+                        </h3>
+                        <button type="button" class="close-modal-btn" onclick="closeSystemConfirmModal(false)" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">&times;</button>
+                    </div>
+                    <div class="alert-modal-body" style="padding: 18px 20px;">
+                        <p id="systemConfirmMessage" style="margin: 0; color: #334155; font-size: 15px; line-height: 1.5;"></p>
+                    </div>
+                    <div class="alert-modal-footer" style="padding: 14px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" class="btn-secondary" onclick="closeSystemConfirmModal(false)">Cancel</button>
+                        <button type="button" class="btn-primary" id="systemConfirmOkBtn" onclick="closeSystemConfirmModal(true)">Proceed</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(newModal);
+            
+            // Re-assign variables
+            window.systemConfirmModal = newModal;
+            window.systemConfirmResolve = null;
+        }
+        
+        // Store callback
+        window.systemConfirmCallback = callback;
+        
+        // Set message
+        const msgEl = document.getElementById('systemConfirmMessage') || messageEl;
+        if (msgEl) msgEl.textContent = message;
+        
+        // Show modal
+        const modalEl = document.getElementById('systemConfirmModal') || modal;
+        if (modalEl) {
+            modalEl.style.display = 'flex';
+        }
+    }
+
+    function closeSystemConfirmModal(confirmed) {
+        const modal = document.getElementById('systemConfirmModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        
+        if (window.systemConfirmCallback) {
+            window.systemConfirmCallback(confirmed);
+            window.systemConfirmCallback = null;
+        }
+    }
+
+    // Fix missing resetVerificationState function
+    function resetVerificationState() {
+        currentVerifyStep = 1;
+        capturedFaceData = null;
+        capturedIdData = null;
+        window.verifiedFullName = null;
+        
+        // Reset UI
+        const nameInput = document.getElementById('studentNameInput');
+        const verifyBtn = document.getElementById('verifyNameBtn');
+        const honorSection = document.getElementById('honorCodeSection');
+        const signatureSection = document.getElementById('signatureSection');
+        const honorCheckbox = document.getElementById('honorCodeCheckbox');
+        const digitalSignature = document.getElementById('digitalSignature');
+        const messageDiv = document.getElementById('nameVerificationMessage');
+        
+        if (nameInput) {
+            nameInput.value = '';
+            nameInput.disabled = false;
+        }
+        
+        if (verifyBtn) {
+            verifyBtn.style.display = 'inline-block';
+            verifyBtn.disabled = false;
+            verifyBtn.innerHTML = 'Verify';
+        }
+        
+        if (honorSection) honorSection.style.display = 'none';
+        if (signatureSection) signatureSection.style.display = 'none';
+        if (honorCheckbox) honorCheckbox.checked = false;
+        if (digitalSignature) digitalSignature.value = '';
+        if (messageDiv) messageDiv.style.display = 'none';
+        
+        // Reset face capture UI
+        const facePreview = document.getElementById('faceCapturedPreview');
+        const liveInstructions = document.getElementById('liveInstructions');
+        const retakeSection = document.getElementById('retakeSection');
+        const captureFaceBtn = document.getElementById('captureFaceBtn');
+        
+        if (facePreview) facePreview.style.display = 'none';
+        if (liveInstructions) liveInstructions.style.display = 'block';
+        if (retakeSection) retakeSection.style.display = 'none';
+        if (captureFaceBtn) {
+            captureFaceBtn.innerHTML = '<i class="fas fa-camera"></i> Capture Photo';
+            captureFaceBtn.disabled = false;
+        }
+        
+        // Reset ID capture UI
+        const idPreview = document.getElementById('idCapturedPreview');
+        const captureIdBtn = document.getElementById('captureIdBtn');
+        
+        if (idPreview) idPreview.style.display = 'none';
+        if (captureIdBtn) {
+            captureIdBtn.innerHTML = '<i class="fas fa-id-card"></i> Capture ID Photo';
+            captureIdBtn.disabled = false;
+        }
+    }
 
     </script>
     <style>
@@ -3993,7 +4592,7 @@ function showSimpleIdError(message) {
         }
     }
     </style>
-<script src="proctoring_v2.js"></script>
+<script src="proctoring_v2.js" defer></script>
 <script>
 // ==================== DRAG AND DROP FUNCTIONALITY ====================
 
