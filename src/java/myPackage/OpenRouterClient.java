@@ -346,7 +346,7 @@ private static String compressImage(String base64Image, int maxWidth, float qual
             }
 
             JSONObject payload = new JSONObject();
-            payload.put("model", "anthropic/claude-3.5-sonnet"); // Best for vision tasks
+            payload.put("model", OpenRouterConfig.getVisionModel()); // directive: use vision model (typically OpenAI)
             payload.put("temperature", 0.1); // Low temperature for consistent results
             payload.put("max_tokens", 500);
 
@@ -363,10 +363,12 @@ private static String compressImage(String base64Image, int maxWidth, float qual
             textPart.put("text", 
                 "You are an identity verification system. Analyze this face photo and respond with a JSON object only.\n\n" +
                 "STRICT ACCEPTANCE RULES (must be enforced in your output):\n" +
-                "1. Reject if more than one face is visible (faceCount > 1).\n" +
+                "1. Reject if no user is visible or more than one face is visible (faceCount must be exactly 1).\n" +
                 "2. Reject if the face is not centered in the frame.\n" +
-                "3. Reject if there are any obstructions covering key facial features (eyes/nose/mouth).\n" +
-                "4. Reject if the face is unclear due to lighting/blur.\n\n" +
+                "3. Reject if the image is blurry or has poor lighting.\n" +
+                "4. Reject if the user is wearing earphones or headphones.\n" +
+                "5. Reject if there are hands over the face or any other obstructions (eyes/nose/mouth must be clear).\n" +
+                "6. Reject if there are any obstructions blocking the user.\n\n" +
                 "Return confidence 0-100 for how well the photo meets the requirements.\n" +
                 "IMPORTANT: The output MUST be a single JSON OBJECT (NOT an array).\n" +
                 "RESPOND WITH A VALID JSON OBJECT IN THIS EXACT FORMAT (NOT AN ARRAY):\n" +
@@ -378,6 +380,7 @@ private static String compressImage(String base64Image, int maxWidth, float qual
                 "  \"obstructions\": [],\n" +
                 "  \"isCentered\": true\n" +
                 "}\n\n" +
+                "If rejected, the 'reason' should explicitly state what is failing (e.g., 'User is wearing earphones', 'Multiple people detected', etc.).\n" +
                 "IMPORTANT: Return ONLY the JSON object, no other text, no arrays, no markdown."
             );
             content.put(textPart);
@@ -540,7 +543,7 @@ private static String compressImage(String base64Image, int maxWidth, float qual
             }
 
             JSONObject payload = new JSONObject();
-            payload.put("model", "anthropic/claude-3.5-sonnet"); // Best for vision tasks
+            payload.put("model", OpenRouterConfig.getVisionModel());
             payload.put("temperature", 0.1);
             payload.put("max_tokens", 800);
 
@@ -696,7 +699,7 @@ private static String compressImage(String base64Image, int maxWidth, float qual
             }
 
             JSONObject payload = new JSONObject();
-            payload.put("model", "anthropic/claude-3.5-sonnet");
+            payload.put("model", OpenRouterConfig.getVisionModel());
             payload.put("temperature", 0.1);
             payload.put("max_tokens", 300);
 
@@ -710,16 +713,13 @@ private static String compressImage(String base64Image, int maxWidth, float qual
             JSONObject textPart = new JSONObject();
             textPart.put("type", "text");
             textPart.put("text", 
-                "Look at this image. Is the person holding some form of identification (ID card, passport, driver's license, or any paper/document) toward the camera?\n\n" +
+                "Look at this image. Is the person holding some form of identification (ID card, passport, driver's license, or any paper/document) toward the camera? The image must be clear and the ID must be clearly visible.\n\n" +
                 "Respond with ONLY a JSON object in this exact format:\n" +
                 "{\n" +
                 "  \"holdingId\": true or false,\n" +
-                "  \"reason\": \"Brief reason if false, or 'ID detected' if true\"\n" +
+                "  \"reason\": \"Brief reason explaining what is seen if failed (e.g., 'User is holding nothing', 'Holding a smartphone instead of ID', etc.), or 'ID detected' if true\"\n" +
                 "}\n\n" +
-                "Examples:\n" +
-                "- If they're holding an ID card: {\"holdingId\": true, \"reason\": \"ID card detected\"}\n" +
-                "- If no ID visible: {\"holdingId\": false, \"reason\": \"No ID or document visible in frame\"}\n" +
-                "- If holding something else: {\"holdingId\": false, \"reason\": \"Holding object but not an ID\"}"
+                "IMPORTANT: Return ONLY the JSON object, no other text."
             );
             content.put(textPart);
             
