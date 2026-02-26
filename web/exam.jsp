@@ -76,23 +76,1462 @@
 
 <link rel="stylesheet" href="style-exam.css">
 
+<!--Style-->
+<style>
+    /* CSS Variables for Maintainability - PROFESSIONAL THEME */
+    :root {
+        /* Primary Colors - Professional Blue Theme */
+        --primary-blue: #09294d;
+        --secondary-blue: #1a3d6d;
+        --accent-blue: #3b82f6;
+        --accent-blue-light: #60a5fa;
+        
+        /* Neutral Colors - Modern Gray Scale */
+        --white: #ffffff;
+        --light-gray: #f8fafc;
+        --medium-gray: #e2e8f0;
+        --dark-gray: #64748b;
+        --text-dark: #1e293b;
+        --border-color: #e5e7eb;
+        
+        /* Semantic Colors */
+        --success: #10b981;
+        --success-light: #d1fae5;
+        --warning: #f59e0b;
+        --warning-light: #fef3c7;
+        --error: #ef4444;
+        --error-light: #fee2e2;
+        --info: #0ea5e9;
+        --info-light: #e0f2fe;
+        
+        /* Spacing - 8px grid */
+        --spacing-xs: 4px;
+        --spacing-sm: 8px;
+        --spacing-md: 16px;
+        --spacing-lg: 24px;
+        --spacing-xl: 32px;
+        --spacing-2xl: 48px;
+        
+        /* Border Radius - Modern */
+        --radius-sm: 6px;
+        --radius-md: 10px;
+        --radius-lg: 16px;
+        --radius-xl: 24px;
+        --radius-full: 9999px;
+        
+        /* Shadows - Material Design inspired */
+        --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        
+        /* Transitions */
+        --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        
+        /* Z-index layers */
+        --z-dropdown: 100;
+        --z-sticky: 200;
+        --z-modal: 300;
+        --z-popover: 400;
+        --z-tooltip: 500;
+    }
+   
+    /* Results Wrapper */
+    .results-wrapper {
+        display: flex;
+        min-height: 100vh;
+        background: transparent;
+    }
+    
+    /* Sidebar - Modern Design */
+    .sidebar {
+        width: 200px;
+        background: linear-gradient(180deg, var(--primary-blue) 0%, #0d3060 100%);
+        color: var(--white);
+        flex-shrink: 0;
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: var(--z-sticky);
+        box-shadow: var(--shadow-lg);
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+    }
 
+    /* Main Content Area - Add margin to account for fixed sidebar */
+    .content-area,
+    .main-content {
+        flex: 1;
+        padding: var(--spacing-md);
+        padding-top: 20px;
+        overflow-y: auto;
+        background: transparent;
+        margin-left: 0px;
+        min-height: 100vh;
+        min-width: 0;
+    }
+    .results-panel {
+        margin-left: 0;
+        width: 100%;
+    }
 
-<div class="exam-wrapper">
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <img src="IMG/mut.png" alt="MUT Logo" class="mut-logo">
-        </div>
-        <nav class="sidebar-nav">
-            <div class="left-menu">
-                <a class="nav-item" href="std-page.jsp?pgprt=0"><i class="fas fa-user"></i><span>Profile</span></a>
-                <a class="nav-item active" href="std-page.jsp?pgprt=1"><i class="fas fa-file-alt"></i><span>Lunch Exam</span></a>
-                <a class="nav-item" href="std-page.jsp?pgprt=2"><i class="fas fa-chart-line"></i><span>Results</span></a>
-                <a class="nav-item" href="std-page.jsp?pgprt=3"><i class="fas fa-chart-line"></i><span>Exam Results</span></a>
-            </div>
-        </nav>
-    </aside>
+    /* Responsive Design - Adjust for mobile */
+    @media (max-width: 768px) {
+        .sidebar {
+            width: 100%;
+            height: auto;
+            position: static;
+        }
+
+        .content-area,
+        .main-content {
+            margin-left: 0;
+            padding: var(--spacing-lg);
+        }
+    }
+    
+    .sidebar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .sidebar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+        background-color: rgba(255, 255, 255, 0.3);
+        border-radius: var(--radius-full);
+    }
+
+    .sidebar-header {
+        padding-top: 35%;
+        text-align: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+    }
+
+    
+    .mut-logo {
+        max-height: 150px;
+        width: auto;
+        filter: brightness(0) invert(1);
+    }
+    
+    .mut-logo:hover {
+        transform: scale(1.05);
+    }
+    
+    .sidebar-nav {
+        padding: var(--spacing-lg) 0;
+    }
+        
+    .nav-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md) var(--spacing-lg);
+        color: rgba(255, 255, 255, 0.85);
+        text-decoration: none;
+        transition: all var(--transition-normal);
+        border-radius: var(--radius-md);
+        margin: 0 var(--spacing-sm) var(--spacing-sm);
+        font-weight: 500;
+        font-size: 14px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .nav-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--accent-blue);
+        transform: translateX(-100%);
+        transition: transform var(--transition-normal);
+    }
+    
+    .nav-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--white);
+        padding-left: var(--spacing-xl);
+    }
+    
+    .nav-item:hover::before {
+        transform: translateX(0);
+    }
+    
+    .nav-item.active {
+        background: linear-gradient(90deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1));
+        color: var(--white);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    }
+    
+    .nav-item.active::before {
+        transform: translateX(0);
+    }
+    
+    .nav-item i {
+        width: 20px;
+        text-align: center;
+        font-size: 16px;
+        opacity: 0.9;
+    }
+    
+    .nav-item h2 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 500;
+        letter-spacing: 0.3px;
+    }
+    
+    /* Left Menu (Legacy Support) */
+    .left-menu a {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md) var(--spacing-lg);
+        color: rgba(255, 255, 255, 0.85);
+        text-decoration: none;
+        transition: all var(--transition-normal);
+        border-radius: var(--radius-md);
+        margin: 0 var(--spacing-sm) var(--spacing-sm);
+        font-weight: 500;
+        font-size: 14px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .left-menu a::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--accent-blue);
+        transform: translateX(-100%);
+        transition: transform var(--transition-normal);
+    }
+    
+    .left-menu a:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--white);
+        padding-left: var(--spacing-xl);
+    }
+    
+    .left-menu a:hover::before {
+        transform: translateX(0);
+    }
+    
+    .left-menu a.active {
+        background: linear-gradient(90deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1));
+        color: var(--white);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    }
+    
+    .left-menu a.active::before {
+        transform: translateX(0);
+    }
+    
+    .left-menu a i {
+        width: 20px;
+        text-align: center;
+        font-size: 16px;
+        opacity: 0.9;
+    }
+    
+    /* Main Content Area */
+    .content-area,
+    .main-content {
+        flex: 1;
+        padding: var(--spacing-xl);
+        overflow-y: auto;
+        background: transparent;
+    }
+    
+    /* Page Header */
+    .page-header {
+        background: linear-gradient(135deg, var(--white) 0%, #fafcff 100%);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, var(--accent-blue), var(--success));
+    }
+    
+    .page-title {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+    
+    .page-title i {
+        color: var(--accent-blue);
+        background: var(--accent-blue-light);
+        padding: var(--spacing-sm);
+        border-radius: var(--radius-md);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    }
+    
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+    }
+    
+    /* Stats Badge */
+    .stats-badge {
+        background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-light));
+        color: var(--white);
+        padding: 8px 20px;
+        border-radius: var(--radius-full);
+        font-size: 14px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        letter-spacing: 0.3px;
+    }
+    
+    /* Latest Badge */
+    .latest-badge {
+        background: linear-gradient(135deg, #FFD700, #FFA500);
+        color: #333;
+        padding: 8px 16px;
+        border-radius: var(--radius-full);
+        font-size: 13px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
+    }
+    
+    /* Exam ID Badge */
+    .exam-id-badge {
+        background: linear-gradient(135deg, var(--dark-gray), #94a3b8);
+        color: var(--white);
+        padding: 8px 16px;
+        border-radius: var(--radius-full);
+        font-size: 13px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 4px 12px rgba(100, 116, 139, 0.15);
+    }
+    
+    /* Alert Messages */
+    .alert {
+        background: linear-gradient(90deg, var(--success-light), #ecfdf5);
+        border-left: 4px solid var(--success);
+        color: var(--text-dark);
+        padding: var(--spacing-lg);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--spacing-xl);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        font-size: 14px;
+        box-shadow: var(--shadow-sm);
+        animation: slideIn 0.3s ease-out;
+    }
+    
+    .alert-success {
+        background: linear-gradient(90deg, var(--success-light), #ecfdf5);
+        border-left-color: var(--success);
+    }
+    
+    .alert-success i {
+        color: var(--success);
+    }
+    
+    .alert-error {
+        background: linear-gradient(90deg, var(--error-light), #fef2f2);
+        border-left-color: var(--error);
+    }
+    
+    .alert-error i {
+        color: var(--error);
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Results Card */
+    .results-card {
+        background: linear-gradient(135deg, var(--white) 0%, #fafcff 100%);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+        margin-bottom: 0;
+        overflow: hidden;
+        transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+    }
+    
+    .results-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-xl);
+    }
+    
+    .card-header {
+        background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
+        color: var(--white);
+        padding: var(--spacing-lg) var(--spacing-xl);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 16px;
+        font-weight: 600;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .card-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, var(--accent-blue), var(--success));
+    }
+    
+    .card-header i {
+        opacity: 0.9;
+        font-size: 18px;
+    }
+    
+    /* Search Container */
+    .search-container {
+        position: relative;
+        margin-bottom: 5px;
+        max-width: 400px;
+    }
+    
+    .search-input {
+        width: 100%;
+        padding: 14px 40px 14px 16px;
+        border: 2px solid var(--border-color);
+        border-radius: var(--radius-md);
+        font-size: 15px;
+        transition: all var(--transition-fast);
+        background: var(--white);
+        color: var(--text-dark);
+        font-family: inherit;
+    }
+    
+    .search-input:focus {
+        outline: none;
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        transform: translateY(-1px);
+    }
+    
+    .search-icon {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--dark-gray);
+        font-size: 16px;
+        transition: color var(--transition-fast);
+    }
+    
+    .search-input:focus + .search-icon {
+        color: var(--accent-blue);
+    }
+    
+    /* Results Summary */
+    .results-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 5px;
+        margin-bottom: 0;
+    }
+    
+    .summary-item {
+        background: linear-gradient(135deg, var(--white) 0%, #fafcff 100%);
+        border: 2px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-lg);
+        text-align: center;
+        box-shadow: var(--shadow-md);
+        transition: all var(--transition-normal);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .summary-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, var(--accent-blue), var(--success));
+    }
+    
+    .summary-item:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-xl);
+        border-color: var(--accent-blue);
+    }
+    
+    .summary-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: var(--spacing-sm);
+        line-height: 1.2;
+    }
+    
+    .summary-label {
+        color: var(--dark-gray);
+        font-weight: 600;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-xs);
+    }
+    
+    .summary-label i {
+        color: var(--accent-blue);
+        font-size: 14px;
+    }
+    
+    /* Results Table Container */
+    .results-table-container {
+        overflow-x: auto;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+        background: var(--white);
+        margin-top: 5px;
+    }
+    
+    .results-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--white);
+    }
+    
+    .results-table thead th {
+        background: linear-gradient(180deg, var(--light-gray) 0%, #f1f5f9 100%);
+        color: var(--text-dark);
+        padding: var(--spacing-lg);
+        font-weight: 600;
+        text-align: left;
+        border-bottom: 2px solid var(--border-color);
+        font-size: 14px;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        position: relative;
+        white-space: nowrap;
+    }
+    
+    .results-table thead th:hover {
+        background: #f1f5f9;
+        color: var(--accent-blue);
+    }
+    
+    .results-table tbody td {
+        padding: var(--spacing-lg);
+        border-bottom: 1px solid var(--light-gray);
+        vertical-align: middle;
+        color: var(--text-dark);
+        font-size: 14px;
+        text-align: left;
+        transition: background-color var(--transition-fast);
+    }
+    
+    .results-table tbody tr {
+        transition: all var(--transition-fast);
+    }
+    
+    .results-table tbody tr:hover {
+        background: var(--light-gray);
+    }
+    
+    .results-table tbody tr:hover td {
+        color: var(--text-dark);
+    }
+    
+    /* Latest Exam Row */
+    .result-row.latest-exam {
+        background: linear-gradient(90deg, rgba(255, 215, 0, 0.05) 0%, rgba(255, 215, 0, 0.02) 100%);
+        border-left: 4px solid #FFD700;
+    }
+    
+    .result-row.latest-exam:hover {
+        background: linear-gradient(90deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.05) 100%);
+    }
+    
+    .latest-indicator {
+        color: #FFA500;
+        margin-left: var(--spacing-xs);
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    /* Status Badges */
+    .status-badge,
+    .exam-status-badge {
+        padding: 8px 16px;
+        border-radius: var(--radius-full);
+        font-weight: 600;
+        font-size: 13px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .status-pass,
+    .exam-status-badge.status-pass {
+        background: linear-gradient(135deg, var(--success), #34d399);
+        color: var(--white);
+    }
+    
+    .status-fail,
+    .exam-status-badge.status-fail {
+        background: linear-gradient(135deg, var(--error), #f87171);
+        color: var(--white);
+    }
+    
+    .status-terminated {
+        background: linear-gradient(135deg, var(--warning), #fbbf24);
+        color: var(--white);
+    }
+    
+    /* Percentage Badge */
+    .percentage-badge {
+        background: linear-gradient(135deg, var(--info), #0ea5e9);
+        color: var(--white);
+        padding: 8px 16px;
+        border-radius: var(--radius-full);
+        font-weight: 700;
+        font-size: 13px;
+        display: inline-block;
+        min-width: 60px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(14, 165, 233, 0.2);
+    }
+    
+    /* Button Styles */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-sm);
+        padding: 12px 24px;
+        border-radius: var(--radius-md);
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        border: none;
+        transition: all var(--transition-normal);
+        font-family: inherit;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .btn::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transform: translateX(-100%);
+        transition: transform 0.6s;
+    }
+    
+    .btn:hover::after {
+        transform: translateX(100%);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-light));
+        color: var(--white);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.35);
+    }
+    
+    .btn-secondary {
+        background: linear-gradient(135deg, var(--dark-gray), #94a3b8);
+        color: var(--white);
+        box-shadow: 0 4px 12px rgba(100, 116, 139, 0.15);
+    }
+    
+    .btn-secondary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(100, 116, 139, 0.25);
+    }
+    
+    .btn-success {
+        background: linear-gradient(135deg, var(--success), #34d399);
+        color: var(--white);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    }
+    
+    .btn-error {
+        background: linear-gradient(135deg, var(--error), #f87171);
+        color: var(--white);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+    }
+    
+    .btn-outline {
+        background: transparent;
+        color: var(--text-dark);
+        border: 2px solid var(--border-color);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+    
+    .btn-outline:hover {
+        background: var(--light-gray);
+        border-color: var(--dark-gray);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Action Button */
+    .action-btn {
+        background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-light));
+        color: var(--white);
+        border: none;
+        border-radius: var(--radius-md);
+        padding: 10px 20px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all var(--transition-normal);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .action-btn::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transform: translateX(-100%);
+        transition: transform 0.6s;
+    }
+    
+    .action-btn:hover::after {
+        transform: translateX(100%);
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+    }
+    
+    /* No Results Message */
+    .no-results,
+    .error-message {
+        text-align: center;
+        padding: var(--spacing-2xl) var(--spacing-xl);
+        color: var(--dark-gray);
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+    }
+    
+    .no-results i,
+    .error-message i {
+        font-size: 64px;
+        color: var(--dark-gray);
+        margin-bottom: var(--spacing-lg);
+        opacity: 0.5;
+    }
+    
+    .no-results h2,
+    .error-message h2 {
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: var(--spacing-md);
+        color: var(--text-dark);
+    }
+    
+    .no-results p,
+    .error-message p {
+        color: var(--dark-gray);
+        margin-bottom: var(--spacing-xl);
+        max-width: 400px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .error-message {
+        color: var(--error);
+    }
+    
+    .error-message i {
+        color: var(--error);
+        opacity: 0.8;
+    }
+    
+    /* Sort Indicator */
+    .sort-indicator {
+        margin-left: var(--spacing-xs);
+        font-size: 10px;
+        color: var(--dark-gray);
+        transition: transform var(--transition-fast);
+    }
+    
+    .sort-indicator.rotate {
+        transform: rotate(180deg);
+        color: var(--accent-blue);
+    }
+    
+    /* Details Header */
+    .details-header {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        margin-bottom: var(--spacing-xl);
+        padding: var(--spacing-lg);
+        background: linear-gradient(135deg, var(--white) 0%, #fafcff 100%);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+    }
+    
+    /* Loading State */
+    .loading {
+        opacity: 0.7;
+        pointer-events: none;
+    }
+    
+    .loading::after {
+        content: '';
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top: 2px solid var(--white);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-left: var(--spacing-sm);
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Code Snippet Styling for Results */
+    .code-question-indicator {
+        background: linear-gradient(135deg, var(--accent-blue), #3b82f6);
+        color: var(--white);
+        padding: var(--spacing-sm) var(--spacing-md);
+        border-radius: var(--radius-sm);
+        margin-bottom: var(--spacing-md);
+        border-left: 3px solid var(--primary-blue);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        font-weight: 500;
+        font-size: 13px;
+    }
+
+    .code-snippet {
+        background: var(--primary-blue);
+        color: var(--light-gray);
+        border: 1px solid var(--secondary-blue);
+        border-radius: var(--radius-sm);
+        padding: var(--spacing-md);
+        margin: var(--spacing-md) 0;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        overflow-x: auto;
+        position: relative;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+
+    .code-header {
+        color: var(--dark-gray);
+        font-size: 12px;
+        margin-bottom: var(--spacing-sm);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        border-bottom: 1px solid var(--secondary-blue);
+        padding-bottom: var(--spacing-sm);
+    }
+
+    /* Question Analysis Styling */
+    .question-analysis {
+        border: 1px solid var(--medium-gray);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--spacing-md);
+        overflow: hidden;
+    }
+
+    .question-text {
+        margin-bottom: var(--spacing-md);
+        color: var(--text-dark);
+        font-weight: 500;
+        line-height: 1.5;
+    }
+
+    .answer-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md);
+    }
+
+    @media (max-width: 768px) {
+        .answer-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Question Analysis Header */
+    .question-analysis-header {
+        background: linear-gradient(135deg, var(--success-light), var(--error-light));
+        padding: var(--spacing-md);
+        display: flex;
+        align-items: flex-start;
+        gap: var(--spacing-md);
+    }
+
+    .question-number {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, var(--success), var(--error));
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .question-content {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    /* Question Image Styles */
+    .question-image-container {
+        margin: var(--spacing-md) 0;
+        text-align: center;
+        width: 100%;
+        clear: both;
+    }
+    
+    .question-image {
+        max-width: 100%;
+        max-height: 500px;
+        height: auto;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--medium-gray);
+        background: var(--white);
+        padding: var(--spacing-sm);
+        object-fit: contain;
+        display: inline-block;
+    }
+    
+    /* Responsive adjustments for images */
+    @media (max-width: 768px) {
+        .question-image {
+            max-height: 300px;
+            padding: var(--spacing-sm);
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .question-image {
+            max-height: 250px;
+        }
+    }
+
+    .question-status {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    /* Ensure question text displays properly */
+    .question-text {
+        margin-bottom: var(--spacing-sm);
+        padding-right: var(--spacing-md);
+    }
+
+    .question-analysis .code-snippet {
+        margin: var(--spacing-sm) 0;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .results-wrapper {
+            flex-direction: column;
+        }
+        
+        .sidebar {
+            width: 100%;
+            height: auto;
+            position: static;
+            box-shadow: none;
+            border-right: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .sidebar-header {
+            padding: var(--spacing-xl) var(--spacing-md);
+        }
+        
+        .sidebar-nav {
+            display: flex;
+            overflow-x: auto;
+            padding: var(--spacing-md);
+            gap: var(--spacing-sm);
+        }
+        
+        .nav-item,
+        .left-menu a {
+            flex-direction: column;
+            padding: var(--spacing-sm) var(--spacing-md);
+            min-width: 80px;
+            text-align: center;
+            margin: 0;
+            border-radius: var(--radius-md);
+        }
+        
+        .nav-item::before,
+        .left-menu a::before {
+            width: 100%;
+            height: 3px;
+            top: auto;
+            bottom: 0;
+            transform: translateY(100%);
+        }
+        
+        .nav-item:hover::before,
+        .nav-item.active::before,
+        .left-menu a:hover::before,
+        .left-menu a.active::before {
+            transform: translateY(0);
+        }
+        
+        .nav-item:hover,
+        .left-menu a:hover {
+            padding-left: var(--spacing-md);
+        }
+        
+        .content-area,
+        .main-content {
+            padding: var(--spacing-lg);
+        }
+        
+        .page-header {
+            flex-direction: column;
+            gap: var(--spacing-lg);
+            text-align: center;
+            padding: var(--spacing-lg);
+        }
+        
+        .header-actions {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .results-summary {
+            grid-template-columns: 1fr;
+        }
+        
+        .summary-item {
+            padding: var(--spacing-lg);
+        }
+        
+        .summary-value {
+            font-size: 20px;
+        }
+        
+        .results-table-container {
+            overflow-x: auto;
+        }
+        
+        .results-table thead th,
+        .results-table tbody td {
+            padding: var(--spacing-md);
+            font-size: 13px;
+        }
+        
+        .status-badge,
+        .exam-status-badge,
+        .percentage-badge {
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+        
+        .action-btn,
+        .btn {
+            padding: 10px 16px;
+            font-size: 13px;
+        }
+
+        .question-analysis-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .question-status {
+            align-self: flex-end;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .content-area,
+        .main-content {
+            padding: var(--spacing-md);
+        }
+        
+        .page-header {
+            padding: var(--spacing-md);
+        }
+        
+        .card-header {
+            padding: var(--spacing-md);
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            text-align: center;
+        }
+        
+        .search-container {
+            max-width: 100%;
+        }
+        
+        .details-header {
+            flex-direction: column;
+            text-align: center;
+            gap: var(--spacing-md);
+        }
+
+        .answer-grid {
+            padding: var(--spacing-sm);
+            gap: var(--spacing-sm);
+        }
+    }
+    
+    @media (min-width: 1440px) {
+        .content-area,
+        .main-content {
+            max-width: calc(100% - 280px);
+        }
+    }
+    
+    /* Utility Classes */
+    .text-center { text-align: center; }
+    .mt-1 { margin-top: var(--spacing-sm); }
+    .mt-2 { margin-top: var(--spacing-md); }
+    .mt-3 { margin-top: var(--spacing-lg); }
+    .mb-1 { margin-bottom: var(--spacing-sm); }
+    .mb-2 { margin-bottom: var(--spacing-md); }
+    .mb-3 { margin-bottom: var(--spacing-lg); }
+    .w-full { width: 100%; }
+    .grid-col-span-2 { grid-column: span 2; }
+    
+    /* Color Utility Classes */
+    .success-light {
+        color: var(--success-light);
+    }
+    
+    .error-light {
+        color: var(--error-light);
+    }
+    
+    /* Focus Styles for Accessibility */
+    *:focus {
+        outline: 2px solid var(--accent-blue);
+        outline-offset: 2px;
+    }
+    
+    *:focus:not(.focus-visible) {
+        outline: none;
+    }
+    
+    /* Floating Delete Button Styles */
+    .floating-delete-selected {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 15px 30px;
+        font-size: 16px;
+        font-weight: 600;
+        box-shadow: 0 10px 25px rgba(220, 38, 38, 0.4);
+        cursor: pointer;
+        display: none;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+    
+    .floating-delete-selected:hover {
+        transform: translateX(-50%) scale(1.05);
+        box-shadow: 0 12px 30px rgba(220, 38, 38, 0.5);
+    }
+    
+    .floating-delete-selected.show {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .floating-delete-selected i {
+        font-size: 18px;
+    }
+    
+  
+    
+    .btn-cancel {
+        padding: 8px 16px;
+        border: 1px solid #d1d5db;
+        background: white;
+        color: var(--dark-gray);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-cancel:hover {
+        background: #f9fafb;
+        border-color: #9ca3af;
+    }
+    
+    .btn-confirm-del {
+        padding: 8px 16px;
+        border: none;
+        background: var(--error);
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-confirm-del:hover {
+        background: #b91c1c;
+    }
+    
+    /* Multi-select functionality */
+    .multi-select-checkbox {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 10;
+        opacity: 0;
+        pointer-events: none;
+    }
+    
+    .question-card.multi-selected {
+        background-color: rgba(250, 150, 150, 0.479);
+        outline-offset: -3px;
+        position: relative;
+    }
+    
+    .question-card.multi-selected::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(226, 79, 74, 0.1);
+        z-index: 1;
+        pointer-events: none;
+    }
+    
+    .multi-select-toggle {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 20;
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--dark-gray);
+        border-radius: 4px;
+        background: var(--white);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+    
+    .multi-select-toggle.checked {
+        background: var(--white);
+        border-color: red;
+    }
+    
+    .multi-select-toggle.checked::after {
+        content: '?';
+        border-color: red;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    /* Floating delete button */
+    .floating-delete-selected {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 15px 30px;
+        font-size: 16px;
+        font-weight: 600;
+        box-shadow: 0 10px 25px rgba(220, 38, 38, 0.4);
+        cursor: pointer;
+        display: none;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+    
+    .floating-delete-selected:hover {
+        transform: translateX(-50%) scale(1.05);
+        box-shadow: 0 12px 30px rgba(220, 38, 38, 0.5);
+    }
+    
+    .floating-delete-selected.show {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .floating-delete-selected i {
+        font-size: 18px;
+    }
+    
+    /* Checkbox container to avoid interfering with card clicks */
+    .checkbox-container {
+        position: relative;
+        display: inline-block;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .floating-scroll {
+            bottom: 80px;
+            right: 15px;
+        }
+        
+        .scroll-btn {
+            width: 35px;
+            height: 35px;
+            font-size: 14px;
+        }
+        
+        .floating-delete-selected {
+            bottom: 20px;
+            padding: 12px 24px;
+            font-size: 14px;
+        }
+    }
+</style>
+
+<div class="results-wrapper">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+        <img src="IMG/mut.png" alt="MUT Logo" class="mut-logo">
+    </div>
+    <nav class="sidebar-nav">
+      <div class="left-menu">
+        <a class="nav-item" href="std-page.jsp?pgprt=0">
+          <i class="fas fa-user"></i>
+          <span>Profile</span>
+        </a>
+        <a class="nav-item active" href="std-page.jsp?pgprt=1">
+          <i class="fas fa-file-alt"></i>
+          <span>Lunch Exam</span>
+        </a>
+        <a class="nav-item" href="std-page.jsp?pgprt=2">
+          <i class="fas fa-chart-line"></i>
+          <span>Results</span>
+        </a>
+        <a class="nav-item" href="std-page.jsp?pgprt=3">
+          <i class="fas fa-chart-line"></i>
+          <span>Daily Register</span>
+        </a>
+      </div>
+    </nav>
+  </aside>
 
     <!-- MAIN CONTENT -->
     <main class="content-area">
@@ -1731,75 +3170,207 @@ var globalVideoStream = null;
     </div>
 </div>
 
-<!-- Diagnostics Modal -->
+<!-- Diagnostics Modal - Compact Professional Version -->
 <div id="diagnosticsModal" class="modal-overlay" style="display: none;">
-    <div class="modal-container" style="max-width: 650px;">
-        <div class="modal-header">
-            <h3 class="modal-title"><i class="fas fa-diagnoses"></i> Diagnostics Check</h3>
+    <div class="modal-container" style="max-width: 500px; width: 90%;">
+        <div class="modal-header" style="padding: 12px 16px;">
+            <h3 class="modal-title" style="font-size: 16px; margin: 0;">
+                <i class="fas fa-diagnoses" style="margin-right: 8px;"></i> System Diagnostics
+            </h3>
+            <button type="button" onclick="closeDiagnosticsModal()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #64748b; line-height: 1;">&times;</button>
         </div>
-        <div class="modal-body">
-            <div class="diagnostics-intro">
-                <h4>Diagnostics Check</h4>
+        
+        <div class="modal-body" style="padding: 12px 16px;">
+            <!-- Compact Grid - 2 columns -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                
+                <!-- Internet Connection -->
+                <div style="background: #f8fafc; border-radius: 6px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; border: 1px solid #e2e8f0;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-globe" style="color: #3b82f6; font-size: 14px; width: 18px;"></i>
+                        <span style="font-size: 13px; font-weight: 500; color: #334155;">Internet</span>
+                    </div>
+                    <div id="status-internet" style="font-size: 14px;"><i class="fas fa-spinner fa-spin" style="color: #94a3b8;"></i></div>
+                </div>
+                
+                <!-- Browser -->
+                <div style="background: #f8fafc; border-radius: 6px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; border: 1px solid #e2e8f0;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-compass" style="color: #8b5cf6; font-size: 14px; width: 18px;"></i>
+                        <span style="font-size: 13px; font-weight: 500; color: #334155;">Browser</span>
+                    </div>
+                    <div id="status-browser" style="font-size: 14px;"><i class="fas fa-spinner fa-spin" style="color: #94a3b8;"></i></div>
+                </div>
+                
+                <!-- JavaScript -->
+                <div style="background: #f8fafc; border-radius: 6px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; border: 1px solid #e2e8f0;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fab fa-js" style="color: #eab308; font-size: 14px; width: 18px;"></i>
+                        <span style="font-size: 13px; font-weight: 500; color: #334155;">JavaScript</span>
+                    </div>
+                    <div id="status-javascript" style="font-size: 14px;"><i class="fas fa-spinner fa-spin" style="color: #94a3b8;"></i></div>
+                </div>
+                
+                <!-- Screen Resolution -->
+                <div style="background: #f8fafc; border-radius: 6px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; border: 1px solid #e2e8f0;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-desktop" style="color: #10b981; font-size: 14px; width: 18px;"></i>
+                        <span style="font-size: 13px; font-weight: 500; color: #334155;">Resolution</span>
+                    </div>
+                    <div id="status-resolution" style="font-size: 14px;"><i class="fas fa-spinner fa-spin" style="color: #94a3b8;"></i></div>
+                </div>
+                
+                <!-- Operating System -->
+                <div style="background: #f8fafc; border-radius: 6px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; border: 1px solid #e2e8f0;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-laptop" style="color: #6b7280; font-size: 14px; width: 18px;"></i>
+                        <span style="font-size: 13px; font-weight: 500; color: #334155;">OS</span>
+                    </div>
+                    <div id="status-os" style="font-size: 14px;"><i class="fas fa-spinner fa-spin" style="color: #94a3b8;"></i></div>
+                </div>
+                
+                <!-- Camera -->
+                <div style="background: #f8fafc; border-radius: 6px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; border: 1px solid #e2e8f0;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-camera" style="color: #ec4899; font-size: 14px; width: 18px;"></i>
+                        <span style="font-size: 13px; font-weight: 500; color: #334155;">Camera</span>
+                    </div>
+                    <div id="status-camera" style="font-size: 14px;"><i class="fas fa-spinner fa-spin" style="color: #94a3b8;"></i></div>
+                </div>
+                
+                <!-- Environment -->
+                <div style="background: #f8fafc; border-radius: 6px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; border: 1px solid #e2e8f0;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-shield-alt" style="color: #f59e0b; font-size: 14px; width: 18px;"></i>
+                        <span style="font-size: 13px; font-weight: 500; color: #334155;">Environment</span>
+                    </div>
+                    <div id="status-environment" style="font-size: 14px;"><i class="fas fa-spinner fa-spin" style="color: #94a3b8;"></i></div>
+                </div>
             </div>
             
-            <div class="diagnostics-grid">
-                <div class="diag-item" id="diag-internet">
-                    <div class="diag-info">
-                        <strong>Active Internet Connection</strong>
-                    </div>
-                    <div class="diag-status" id="status-internet"><i class="fas fa-spinner fa-spin"></i></div>
+            <!-- Progress Bar (optional - shows overall progress) -->
+            <div id="diagnosticsProgress" style="margin-top: 15px; display: none;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #64748b; margin-bottom: 4px;">
+                    <span>Checking system...</span>
+                    <span id="diagnosticsPercent">0%</span>
                 </div>
-                
-                <div class="diag-item" id="diag-browser">
-                    <div class="diag-info">
-                        <strong>Internet Browser</strong>
-                    </div>
-                    <div class="diag-status" id="status-browser"><i class="fas fa-spinner fa-spin"></i></div>
-                </div>
-                
-                <div class="diag-item" id="diag-javascript">
-                    <div class="diag-info">
-                        <strong>JavaScript Enabled</strong>
-                    </div>
-                    <div class="diag-status" id="status-javascript"><i class="fas fa-spinner fa-spin"></i></div>
-                </div>
-                
-                <div class="diag-item" id="diag-resolution">
-                    <div class="diag-info">
-                        <strong>Screen Resolution</strong>
-                    </div>
-                    <div class="diag-status" id="status-resolution"><i class="fas fa-spinner fa-spin"></i></div>
-                </div>
-                
-                <div class="diag-item" id="diag-os">
-                    <div class="diag-info">
-                        <strong>Operating System</strong>
-                    </div>
-                    <div class="diag-status" id="status-os"><i class="fas fa-spinner fa-spin"></i></div>
-                </div>
-                
-                <div class="diag-item" id="diag-camera">
-                    <div class="diag-info">
-                        <strong>Camera Enabled</strong>
-                    </div>
-                    <div class="diag-status" id="status-camera"><i class="fas fa-spinner fa-spin"></i></div>
-                </div>
-                
-                <div class="diag-item" id="diag-environment">
-                    <div class="diag-info">
-                        <strong>Exam Environment</strong>
-                    </div>
-                    <div class="diag-status" id="status-environment"><i class="fas fa-spinner fa-spin"></i></div>
+                <div style="height: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden;">
+                    <div id="diagnosticsProgressBar" style="height: 100%; background: #3b82f6; width: 0%; transition: width 0.3s;"></div>
                 </div>
             </div>
+            
+            <!-- Summary Message (appears when checks complete) -->
+            <div id="diagnosticsSummary" style="margin-top: 12px; font-size: 12px; display: none;"></div>
         </div>
-        <div class="modal-footer">
-            <button id="diagCancelButton" class="btn-secondary">Cancel</button>
-            <button id="diagRetryButton" class="btn-secondary" style="display: none;">Retry</button>
-            <button id="diagProceedButton" class="btn-primary" disabled>Continue</button>
+        
+        <div class="modal-footer" style="padding: 12px 16px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 8px;">
+            <button id="diagCancelButton" class="btn-secondary" style="padding: 8px 16px; font-size: 13px;">Cancel</button>
+            <button id="diagRetryButton" class="btn-secondary" style="padding: 8px 16px; font-size: 13px; display: none;">
+                <i class="fas fa-redo-alt" style="margin-right: 4px;"></i> Retry
+            </button>
+            <button id="diagProceedButton" class="btn-primary" style="padding: 8px 20px; font-size: 13px; background: #059669;" disabled>
+                <i class="fas fa-arrow-right" style="margin-right: 4px;"></i> Continue
+            </button>
         </div>
     </div>
 </div>
+
+<!-- Add this small helper function -->
+<script>
+function closeDiagnosticsModal() {
+    document.getElementById('diagnosticsModal').style.display = 'none';
+}
+
+// Enhanced diagnostics runner with progress tracking
+async function runDiagnostics() {
+    const modal = document.getElementById('diagnosticsModal');
+    const progressDiv = document.getElementById('diagnosticsProgress');
+    const progressBar = document.getElementById('diagnosticsProgressBar');
+    const percentSpan = document.getElementById('diagnosticsPercent');
+    const summaryDiv = document.getElementById('diagnosticsSummary');
+    
+    modal.style.display = 'flex';
+    progressDiv.style.display = 'block';
+    summaryDiv.style.display = 'none';
+    
+    const checks = [
+        { id: 'status-internet', check: () => navigator.onLine },
+        { id: 'status-browser', check: () => {
+            const ua = navigator.userAgent;
+            const isChrome = /Chrome/.test(ua) && /Google Inc/.test(navigator.vendor);
+            const isFirefox = /Firefox/.test(ua);
+            const isEdge = /Edg/.test(ua);
+            return isChrome || isFirefox || isEdge;
+        }},
+        { id: 'status-javascript', check: () => true },
+        { id: 'status-resolution', check: () => window.screen.width >= 1024 && window.screen.height >= 768 },
+        { id: 'status-os', check: () => !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) },
+        { id: 'status-camera', check: async () => {
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                stream.getTracks().forEach(t => t.stop());
+                return true;
+            } catch { return false; }
+        }},
+        { id: 'status-environment', check: () => document.fullscreenEnabled || document.webkitFullscreenEnabled }
+    ];
+    
+    let completed = 0;
+    let passed = 0;
+    
+    // Reset statuses
+    checks.forEach(c => {
+        const el = document.getElementById(c.id);
+        if (el) el.innerHTML = '<i class="fas fa-spinner fa-spin" style="color: #94a3b8;"></i>';
+    });
+    
+    document.getElementById('diagProceedButton').disabled = true;
+    document.getElementById('diagRetryButton').style.display = 'none';
+    
+    // Run checks with delay
+    for (let i = 0; i < checks.length; i++) {
+        setTimeout(async () => {
+            const check = checks[i];
+            const el = document.getElementById(check.id);
+            
+            try {
+                const result = await check.check();
+                
+                if (el) {
+                    if (result) {
+                        el.innerHTML = '<i class="fas fa-check-circle" style="color: #10b981;"></i>';
+                        passed++;
+                    } else {
+                        el.innerHTML = '<i class="fas fa-times-circle" style="color: #ef4444;"></i>';
+                    }
+                }
+            } catch {
+                if (el) el.innerHTML = '<i class="fas fa-times-circle" style="color: #ef4444;"></i>';
+            }
+            
+            completed++;
+            const percent = Math.round((completed / checks.length) * 100);
+            if (progressBar) progressBar.style.width = percent + '%';
+            if (percentSpan) percentSpan.textContent = percent + '%';
+            
+            if (completed === checks.length) {
+                progressDiv.style.display = 'none';
+                summaryDiv.style.display = 'block';
+                
+                if (passed === checks.length) {
+                    summaryDiv.innerHTML = '<div style="color: #10b981; background: #f0fdf4; padding: 8px 12px; border-radius: 6px; border: 1px solid #bbf7d0;"><i class="fas fa-check-circle"></i> All systems ready! You can proceed.</div>';
+                    document.getElementById('diagProceedButton').disabled = false;
+                } else {
+                    const failed = checks.length - passed;
+                    summaryDiv.innerHTML = `<div style="color: #ef4444; background: #fef2f2; padding: 8px 12px; border-radius: 6px; border: 1px solid #fecaca;"><i class="fas fa-exclamation-triangle"></i> ${failed} check${failed > 1 ? 's' : ''} failed. Please fix issues and retry.</div>`;
+                    document.getElementById('diagRetryButton').style.display = 'inline-block';
+                }
+            }
+        }, i * 200);
+    }
+}
+</script>
 
 <!-- Confirmation Modal (for course selection) -->
 <div id="confirmationModal" class="modal-overlay" style="display: none;">
@@ -4975,14 +6546,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Send to server for AI analysis
-            const formData = new FormData();
-            formData.append('page', 'verify_face');
-            formData.append('operation', 'analyze');
-            formData.append('faceImage', imageBlob, 'face.jpg');
-            formData.append('userId', window.studentId || '');
+            const formData = new URLSearchParams();
+            formData.append('page', 'analyze_face');
+            formData.append('faceImage', capturedFaceData);
             
             const response = await fetch('controller.jsp', {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: formData
             });
             
@@ -4995,10 +6565,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Success - update UI
-            capturedFaceData = imageBase64;
+            // Check the AI analysis results
+            if (!result.analysis.passed) {
+                // Display what needs to be fixed
+                const issues = [];
+                
+                if (result.analysis.faceCount > 1) {
+                    issues.push("Multiple faces detected - please ensure you are alone in the frame");
+                } else if (result.analysis.faceCount === 0) {
+                    issues.push("No face detected - please position your face in the center");
+                }
+                
+                if (result.analysis.obstructions && result.analysis.obstructions.length > 0) {
+                    issues.push("Face obstructed: " + result.analysis.obstructions.join(", "));
+                }
+                
+                if (!result.analysis.isCentered) {
+                    issues.push("Face not centered - please align your face in the oval guide");
+                }
+                
+                if (result.analysis.confidence < 70) {
+                    issues.push("Image quality too low - please ensure good lighting");
+                }
+                
+                // Show the issues to the user
+                if (issues.length > 0) {
+                    showQualityError(issues.join("\n"));
+                } else {
+                    showQualityError("Face verification failed. Please try again with better lighting and positioning.");
+                }
+                
+                this.innerHTML = originalText;
+                this.disabled = false;
+                return;
+            }
             
-            // Show preview
+            // SUCCESS - photo passed all checks
             document.getElementById('faceImgPreview').src = imageBase64;
             document.getElementById('faceCapturedPreview').style.display = 'block';
             document.getElementById('liveInstructions').style.display = 'none';
@@ -5042,6 +6644,130 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Enhanced ID error display with actionable feedback
+function showIdQualityError(message) {
+    // Remove any existing error messages
+    const existingError = document.getElementById('idQualityError');
+    if (existingError) existingError.remove();
+    
+    // Create error div
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'idQualityError';
+    
+    // Split message into lines if multiple issues
+    const issues = message.split('\n').filter(line => line.trim());
+    
+    let issuesHtml = '';
+    if (issues.length > 1) {
+        issuesHtml = '<ul style="margin: 10px 0 0 20px; padding: 0;">' + 
+            issues.map(issue => `<li>${issue}</li>`).join('') + 
+            '</ul>';
+    }
+    
+    errorDiv.innerHTML = `
+        <div style="margin-top: 15px; padding: 20px; background: #fee2e2; border: 2px solid #ef4444; border-radius: 12px; color: #b91c1c; animation: slideIn 0.3s ease; position: relative;">
+            <div style="display: flex; gap: 15px; align-items: flex-start;">
+                <div style="background: #ef4444; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="fas fa-id-card" style="font-size: 20px;"></i>
+                </div>
+                <div style="flex: 1;">
+                    <strong style="display: block; margin-bottom: 8px; font-size: 16px;">⚠️ ID Verification Failed</strong>
+                    ${issues.length === 1 ? `<span style="font-size: 14px;">${message}</span>` : issuesHtml}
+                    
+                    <div style="margin-top: 15px; font-size: 13px; color: #7f1d1d; background: #fff5f5; padding: 15px; border-radius: 8px;">
+                        <strong style="display: block; margin-bottom: 8px;">📋 Please fix the following:</strong>
+                        <ul style="margin: 0; padding-left: 20px;">
+                            <li>Hold your government-issued ID close to the camera</li>
+                            <li>Ensure your name and photo on the ID are clearly visible</li>
+                            <li>Avoid glare on the ID surface (adjust angle if needed)</li>
+                            <li>Keep the ID flat and steady during capture</li>
+                            <li>Ensure good lighting without shadows on the ID</li>
+                        </ul>
+                    </div>
+                </div>
+                <button onclick="this.closest('#idQualityError').remove()" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 20px; padding: 0 5px;">&times;</button>
+            </div>
+        </div>
+    `;
+    
+    // Find where to insert it (after ID camera section)
+    const idCameraSection = document.querySelector('.id-camera-section');
+    if (idCameraSection) {
+        idCameraSection.appendChild(errorDiv);
+        // Scroll to show the error
+        errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    // Auto-remove after 15 seconds
+    setTimeout(() => {
+        if (errorDiv.parentNode) {
+            errorDiv.remove();
+        }
+    }, 15000);
+}
+
+// Enhanced error display with actionable feedback
+function showQualityError(message) {
+    // Remove any existing error messages
+    const existingError = document.getElementById('faceQualityError');
+    if (existingError) existingError.remove();
+    
+    // Create error div
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'faceQualityError';
+    
+    // Split message into lines if multiple issues
+    const issues = message.split('\n').filter(line => line.trim());
+    
+    let issuesHtml = '';
+    if (issues.length > 1) {
+        issuesHtml = '<ul style="margin: 10px 0 0 20px; padding: 0;">' + 
+            issues.map(issue => `<li>${issue}</li>`).join('') + 
+            '</ul>';
+    }
+    
+    errorDiv.innerHTML = `
+        <div style="margin-top: 15px; padding: 20px; background: #fee2e2; border: 2px solid #ef4444; border-radius: 12px; color: #b91c1c; animation: slideIn 0.3s ease; position: relative;">
+            <div style="display: flex; gap: 15px; align-items: flex-start;">
+                <div style="background: #ef4444; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 20px;"></i>
+                </div>
+                <div style="flex: 1;">
+                    <strong style="display: block; margin-bottom: 8px; font-size: 16px;">⚠️ Verification Failed</strong>
+                    ${issues.length === 1 ? `<span style="font-size: 14px;">${message}</span>` : issuesHtml}
+                    
+                    <div style="margin-top: 15px; font-size: 13px; color: #7f1d1d; background: #fff5f5; padding: 15px; border-radius: 8px;">
+                        <strong style="display: block; margin-bottom: 8px;">📋 Please fix the following:</strong>
+                        <ul style="margin: 0; padding-left: 20px;">
+                            <li>Center your face completely within the oval guide</li>
+                            <li>Remove any hats, sunglasses, or masks</li>
+                            <li>Ensure your face is well-lit and clearly visible</li>
+                            <li>Position yourself 30-50cm from the camera</li>
+                            <li>Look directly at the camera</li>
+                        </ul>
+                    </div>
+                </div>
+                <button onclick="this.closest('#faceQualityError').remove()" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 20px; padding: 0 5px;">&times;</button>
+            </div>
+        </div>
+    `;
+    
+    // Find where to insert it (after camera section)
+    const cameraSection = document.querySelector('.camera-section');
+    if (cameraSection) {
+        cameraSection.appendChild(errorDiv);
+        // Scroll to show the error
+        errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    // Auto-remove after 15 seconds
+    setTimeout(() => {
+        if (errorDiv.parentNode) {
+            errorDiv.remove();
+        }
+    }, 15000);
+}
 
 // Client-side face quality checks
 async function performFaceQualityChecks(ctx, width, height) {
@@ -5227,23 +6953,51 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Send to server for OCR and verification
-            const formData = new FormData();
-            formData.append('page', 'verify_id');
-            formData.append('operation', 'verify');
-            formData.append('idImage', imageBlob, 'id.jpg');
-            formData.append('userId', window.studentId || '');
-            formData.append('userName', window.verifiedFullName || '');
+            // Send to server for AI analysis
+            const formData = new URLSearchParams();
+            formData.append('page', 'analyze_id');
+            formData.append('idImage', imageBase64);
             
             const response = await fetch('controller.jsp', {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: formData
             });
             
             const result = await response.json();
             
+            // Check if the API call itself failed
             if (!result.success) {
-                showSimpleIdError(result.reason || 'ID verification failed. Please ensure ID is clearly visible.');
+                showIdQualityError(result.reason || 'ID analysis failed. Please try again.');
+                this.innerHTML = originalText;
+                this.disabled = false;
+                return;
+            }
+            
+            // Check the AI analysis results
+            if (!result.analysis.holdingId) {
+                // Display what needs to be fixed
+                const issues = [];
+                
+                if (result.analysis.reason && result.analysis.reason.toLowerCase().includes('no id')) {
+                    issues.push("No ID document detected - please hold your ID clearly in front of the camera");
+                }
+                
+                if (result.analysis.reason && result.analysis.reason.toLowerCase().includes('glare')) {
+                    issues.push("Glare detected on ID - please adjust lighting or angle");
+                }
+                
+                if (result.analysis.reason && result.analysis.reason.toLowerCase().includes('blur')) {
+                    issues.push("ID is blurry - please hold it steady and ensure focus");
+                }
+                
+                // Show the issues to the user
+                if (issues.length > 0) {
+                    showIdQualityError(issues.join("\n"));
+                } else {
+                    showIdQualityError(result.analysis.reason || "ID verification failed. Please ensure your ID is clearly visible and well-lit.");
+                }
+                
                 this.innerHTML = originalText;
                 this.disabled = false;
                 return;

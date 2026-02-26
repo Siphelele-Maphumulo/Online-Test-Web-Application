@@ -49,7 +49,6 @@ class ProctoringSystem {
         this.calibrationComplete = false; 
         this.previousNosePosition = null; 
         this.previousMouthHeight = null; 
-        this.currentAudioLevel = 0; // Store current audio level in dB 
 
         // Media streams 
         this.audioStream = null; 
@@ -351,25 +350,22 @@ class ProctoringSystem {
     } 
 
     analyzeAudio(dataArray) { 
-        if (!this.calibrationComplete) return;
+        if (!this.calibrationComplete) return; 
 
         const average = dataArray.reduce(function(a, b) { return a + b; }, 0) / dataArray.length; 
         const dbLevel = 20 * Math.log10(average || 1); 
-        
-        // Store current audio level for lip movement detection
-        this.currentAudioLevel = dbLevel;
 
         const now = Date.now();
         const noiseThreshold = this.backgroundNoiseBaseline + 12;
 
-        if (dbLevel > noiseThreshold) { 
-            if (!this.noiseSpikeStartAt) this.noiseSpikeStartAt = now; 
-            if (now - this.noiseSpikeStartAt >= this.noiseSpikeMinDurationMs) { 
-                this.logViolation('AUDIO', 'Sustained loud background noise detected (' + Math.round(dbLevel) + 'dB)'); 
-                this.noiseSpikeStartAt = now; 
-            } 
-        } else { 
-            this.noiseSpikeStartAt = null; 
+        if (dbLevel > noiseThreshold) {
+            if (!this.noiseSpikeStartAt) this.noiseSpikeStartAt = now;
+            if (now - this.noiseSpikeStartAt >= this.noiseSpikeMinDurationMs) {
+                this.logViolation('AUDIO', 'Sustained loud background noise detected (' + Math.round(dbLevel) + 'dB)');
+                this.noiseSpikeStartAt = now;
+            }
+        } else {
+            this.noiseSpikeStartAt = null;
         }
 
         const variance = this.calculateVariance(dataArray); 
@@ -687,12 +683,8 @@ class ProctoringSystem {
 
             this.previousMouthHeight = mouthHeight; 
 
-            // Require at least 10dB of audio before flagging lip movement
-            const hasSufficientAudio = this.currentAudioLevel >= 10;
-            
             return movement > this.MOUTH_MOVEMENT_THRESHOLD &&  
-                   (!expressions || expressions.happy < 0.5) &&
-                   hasSufficientAudio; 
+                   (!expressions || expressions.happy < 0.5); 
         } catch (err) { 
             return false; 
         } 

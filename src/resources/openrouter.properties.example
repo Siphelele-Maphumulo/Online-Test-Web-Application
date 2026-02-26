@@ -1,6 +1,14 @@
 # OpenRouter API Configuration
 # Get your API key at https://openrouter.ai/keys
 # Note: Never commit your actual API key to version control!
+# OpenRouter API Configuration
+# Get your API key at https://openrouter.ai/keys
+# Note: Never commit your actual API key to version control!
 #openrouter.api.key=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
-openrouter.api.key=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
+#openrouter.api.key=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
+#openrouter.api.key=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
+#openrouter.api.key=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
+openrouter.api.key=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
 openrouter.model=openai/gpt-4o-mini
+
+
