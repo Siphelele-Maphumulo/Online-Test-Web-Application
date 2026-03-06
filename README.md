@@ -1,189 +1,173 @@
-# Online Examination System
-### Java (JSP) | MySQL | Apache Tomcat
+# 🎓 Online Examination & AI Proctoring System
 
-A production-grade Online Examination System designed to solve real-world educational challenges in South Africa. This project demonstrates a complete, secure, and scalable web application for managing and conducting online assessments.
+[![Java](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=java&logoColor=white)](https://www.oracle.com/java/)
+[![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![Tomcat](https://img.shields.io/badge/Apache_Tomcat-F8DC75?style=for-the-badge&logo=apache-tomcat&logoColor=black)](https://tomcat.apache.org/)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Online-brightgreen?style=for-the-badge)](https://online-test-web-application-7mu3.onrender.com/)
 
+A production-grade, secure, and AI-enhanced Online Examination System designed to modernize the assessment lifecycle. This platform integrates advanced proctoring, anti-cheating mechanisms, and interactive question types to ensure academic integrity in digital learning environments.
 
-### 📊 Business Context
-In many South African schools, the examination process is still heavily reliant on manual, paper-based methods. This leads to administrative overhead, security vulnerabilities, geographical limitations for remote learners, and a lack of timely feedback for students.
-
-This **Online Examination System** solves these critical issues by providing:
-✅ **Centralized & Secure Administration** for courses, questions, and user accounts.
-✅ **Fair & Accessible Examinations** with features like randomized questions and timed tests.
-✅ **Automated Grading & Instant Feedback** to accelerate learning cycles.
-✅ **Reduced Administrative Burden** by automating the entire examination lifecycle.
+![Project Screenshot](https://raw.githubusercontent.com/Siphelele-Maphumulo/Senior_Portfolio/refs/heads/main/assets/images/project/Screenshot%202026-02-17%20102101.png?token=GHSAT0AAAAAADWGU3JKGKLGVEWP5OM4LNC22NLBOVQ)
 
 ---
 
-### 🏗️ Architecture
-**Data Model: Relational Schema**
-The system is built on a robust relational database schema designed for data integrity and scalability.
+## 🔗 Quick Links
+- 🌐 **[Live Demo](https://online-test-web-application-7mu3.onrender.com/)**
+- 📚 **[Documentation](#-features)**
+- 🛠️ **[Installation Guide](#-getting-started)**
+- 🛡️ **[Security Policy](SECURITY.md)**
 
+---
+
+## 📖 Table of Contents
+1. [About the Project](#-about-the-project)
+2. [Key Features](#-key-features)
+3. [Interactive Question Types](#-interactive-question-types)
+4. [Architecture & Data Model](#-architecture--data-model)
+5. [Tech Stack](#-tech-stack)
+6. [Project Structure](#-project-structure)
+7. [Getting Started](#-getting-started)
+8. [Security](#-security)
+9. [Contributing](#-contributing)
+
+---
+
+## 🎯 About the Project
+Traditional examination processes often suffer from administrative overhead and security vulnerabilities. This project provides a robust solution by automating the entire examination lifecycle while maintaining high standards of integrity through AI-driven monitoring.
+
+Originally developed to address challenges in South African education, it is designed for scalability, allowing institutions to manage thousands of students, diverse course structures, and complex assessment types within a single, unified dashboard.
+
+---
+
+## 🚀 Key Features
+
+### 🤖 AI-Powered Proctoring
+- **Face Detection & Verification**: Real-time monitoring using `face-api.js` to ensure the candidate stays on screen.
+- **Identity Verification**: Multi-stage identity check including face and ID card analysis powered by OpenAI models (GPT-4o) via OpenRouter.
+- **Environment Scanning**: AI-driven detection of unauthorized objects and behavior monitoring.
+
+### 🛡️ Advanced Anti-Cheating System
+- **Refresh Prevention**: Blocks F5, Ctrl+R, and right-click menus during active exams.
+- **Tab/Window Switching Detection**: Automatically tracks when a student leaves the exam window and initiates a warning/termination countdown.
+- **Navigation Blocking**: Disables back/forward navigation to keep the user within the assessment environment.
+- **Violation Logging**: Every suspicious activity is logged in the database (e.g., `proctoring_incidents`, `exam_violations`) for post-exam auditing.
+
+### 📊 Comprehensive Administration
+- **Role-Based Access Control (RBAC)**: Secure dashboards for Admins, Lecturers, and Students.
+- **Dynamic Question Bank**: CRUD operations for multiple question types, including image support.
+- **Real-time Analytics**: Instant grading and performance reports for both students and instructors.
+
+---
+
+## 🧩 Interactive Question Types
+The system supports a variety of assessment methods beyond standard Multiple Choice:
+- **Drag & Drop**: Matching items to targets using a modern, intuitive interface.
+- **Rearrange**: Sequential ordering questions where items must be placed in a specific order.
+- **True/False & Multi-Select**: Flexible formats for diverse subject matter.
+
+---
+
+## 🏗️ Architecture & Data Model
+The system follows a refined Model-View-Controller (MVC) pattern for Java Web Applications.
+
+### Relational Schema
+The system is built on a robust relational database schema designed for data integrity:
+- **`users` / `students` / `lectures`**: Centralized user management with role-specific details.
+- **`courses`**: Manages course metadata, timing, and status.
+- **`questions`**: Relational question bank with support for interactive types (`drag_items`, `drop_targets`, `rearrange_items`).
+- **`exams` / `answers`**: Tracks student attempts and saves responses in real-time.
+- **`proctoring_incidents` / `student_verifications`**: Auditing and identity verification logs.
+
+---
+
+## 🛠️ Tech Stack
+
+| Category | Technology |
+| :--- | :--- |
+| **Backend** | Java (JSP), Servlet API |
+| **Database** | MySQL 8.0+ |
+| **AI/Vision** | OpenAI (GPT-4o via OpenRouter), face-api.js |
+| **Frontend** | HTML5, CSS3, JavaScript (ES6+) |
+| **Server** | Apache Tomcat 8.5+ |
+| **Security** | jBCrypt Hashing, Session Management |
+
+---
+
+## 📁 Project Structure
 ```
-┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
-│      users      │      │     students    │      │     lectures    │
-│─────────────────│      │─────────────────│      │─────────────────│
-│ user_id (PK)    │◄───○──│ user_id (PK,FK) │      │ user_id (PK,FK) │
-│ user_name       │      │ ... (details)   │      │ course_name     │
-│ password (hash) │      └─────────────────┘      │ ... (details)   │
-│ user_type       │                             └─────────────────┘
-│ ... (details)   │
-└────────┬────────┘
-         │
-┌────────┴────────┐      ┌─────────────────┐
-│     courses     │      │    questions    │
-│─────────────────│      │─────────────────│
-│ course_name(PK) │◄─────│ course_name(FK) │
-│ total_marks     │      │ question_id(PK) │
-│ time            │      │ question        │
-│ is_active       │      │ opt1, opt2, ... │
-└────────┬────────┘      │ correct_answer  │
-         │               └─────────────────┘
-┌────────┴────────┐      ┌─────────────────┐
-│      exams      │      │     answers     │
-│─────────────────│      │─────────────────│
-│ exam_id (PK)    │◄─────│ exam_id (FK)    │
-│ std_id (FK)     │      │ answer_id (PK)  │
-│ course_name(FK) │      │ question        │
-│ obt_marks       │      │ answer          │
-│ status          │      │ status          │
-└─────────────────┘      └─────────────────┘
-```
-**Key Design Choices:**
-- **Normalized Schema:** Reduces data redundancy and improves data integrity.
-- **BCrypt Hashing:** Passwords are never stored in plaintext, ensuring strong security.
-- **Application-Managed Integrity:** Cascading deletes and updates are handled at the application layer to maintain data consistency across related tables.
-- **Centralized Controller:** A single `controller.jsp` acts as a servlet to manage all business logic, ensuring a clear separation of concerns.
-
----
-
-### 🚀 Features
-
-**1. Secure User & Session Management**
-- **Robust Authentication:** Secure login for Admins, Lecturers, and Students.
-- **Role-Based Access Control (RBAC):** Users only see what they're authorized to, from admin dashboards to student exam portals.
-- **Password Security:** Passwords are hashed using **jBCrypt**.
-- **Session Management:** Secure sessions track user state throughout the application.
-
-**2. Comprehensive Admin Dashboard**
-- **User Management:** Create, Read, Update, and Delete (CRUD) operations for all user accounts.
-- **Course Administration:** Add, edit, and delete courses, set exam durations, and manage total marks.
-- **Question Bank Management:** A centralized repository for creating, updating, and deleting exam questions for each course.
-- **Activate/Deactivate Exams:** Control exam availability for students with a single click.
-
-**3. Powerful Examination Engine**
-- **Timed Examinations:** Each exam has a specific duration, and the system automatically submits when the time is up.
-- **Randomized Questions:** Questions are pulled randomly from the question bank to ensure a fair and unique exam for each student.
-- **Real-time Answer Saving:** Student answers are saved in real-time to prevent data loss.
-
-**4. Automated Grading & Results**
-- **Instantaneous Results:** The system automatically grades exams upon completion.
-- **Detailed Result Reports:** Students and administrators can view detailed results, including obtained marks and pass/fail status.
-- **Centralized Reporting:** Admins can view and manage all student results from a central dashboard.
-
----
-
-### 📦 Installation & Setup
-
-**Prerequisites**
-- **Java Development Kit (JDK) 8+**
-- **Apache Tomcat 8.5+**
-- **MySQL Server 8.0+**
-- **Apache Ant** (for building the project)
-- **NetBeans IDE** (Recommended)
-
-**Quick Start**
-1.  **Clone the repository:**
-    ```sh
-    git clone https://github.com/your-username/Online-Examination-System.git
-    cd Online-Examination-System
-    ```
-2.  **Database Setup:**
-    - Create a new MySQL database named `exam_system`.
-    - Import the schema from `db script/exam_system.sql`.
-    - Update the database credentials in `src/java/myPackage/DatabaseClass.java` if they differ from the defaults (`root`/`root`).
-
-3.  **Build the Project:**
-    - Open the project in NetBeans and click "Run" to build and deploy to the integrated Tomcat server.
-    - **Alternatively, build manually using Ant:**
-      ```sh
-      ant dist
-      ```
-      This will create a `Examination_System.war` file in the `dist/` directory.
-
-4.  **Deploy to Tomcat:**
-    - Copy the `Examination_System.war` file to the `webapps` directory of your Tomcat installation.
-    - Start the Tomcat server.
-
-5.  **Access the Application:**
-    - Open your web browser and navigate to `http://localhost:8080/Examination_System/`.
-
----
-
-### 📁 Project Structure
-```
-Online-Examination-System/
+Online-Test-Web-Application/
 ├── src/
 │   └── java/
 │       └── myPackage/
-│           ├── DatabaseClass.java      # Core data access layer
-│           ├── PasswordUtils.java      # Password hashing utility
-│           └── classes/
-│               ├── User.java           # User model
-│               └── ...                 # Other data models
+│           ├── DatabaseClass.java      # Core Data Access Layer (DAO)
+│           ├── OpenRouterClient.java   # AI Vision Integration
+│           └── classes/                # Data Models (Questions, User, etc.)
 ├── web/
-│   ├── controller.jsp                # Central servlet for all actions
-│   ├── adm-page.jsp                  # Admin dashboard template
-│   ├── std-page.jsp                  # Student dashboard template
-│   ├── login.jsp                     # Login page
-│   ├── exam.jsp                      # Examination interface
-│   └── ...                           # Other JSP pages
-├── db script/
-│   └── exam_system.sql               # Database schema
+│   ├── controller.jsp                # Central Controller (MVC)
+│   ├── exam.jsp                      # Exam Interface with Proctoring
+│   ├── proctor-dashboard.jsp         # Real-time monitoring UI
+│   ├── models/                       # face-api.js binary models
+│   └── ...                           # Other JSP pages & assets
+├── db script/                        # Database schema and setup scripts
 ├── build.xml                         # Ant build script
 └── README.md                         # This file
 ```
 
 ---
 
-### 🛠️ Technology Stack
+## 📦 Getting Started
 
-| Layer       | Technology      | Why?                                                                      |
-|-------------|-----------------|---------------------------------------------------------------------------|
-| **Backend**   | Java (JSP)      | A robust, platform-independent language ideal for building scalable web apps. |
-| **Database**  | MySQL           | A reliable, high-performance open-source relational database.             |
-| **Frontend**  | HTML, CSS, JS   | The standard for creating dynamic and responsive user interfaces.         |
-| **Web Server**| Apache Tomcat   | A widely-used, lightweight, and powerful server for Java web applications.|
-| **Build Tool**| Apache Ant      | A simple and effective XML-based tool for automating the build process.   |
-| **Security**  | jBCrypt         | The industry standard for hashing passwords securely.                     |
+### Prerequisites
+- **JDK 8+**
+- **MySQL 8.0+**
+- **Apache Tomcat 8.5+**
+- **Apache Ant** (Build tool)
+
+### Installation
+1. **Clone the Repository**
+   ```sh
+   git clone https://github.com/Siphelele-Maphumulo/Online-Test-Web-Application.git
+   cd Online-Test-Web-Application
+   ```
+
+2. **Database Configuration**
+   - Create a database named `exam_system`.
+   - Import the schema from `db script/`. Run `exam_system.sql` first.
+   - Configure credentials in `src/java/myPackage/DatabaseClass.java` (default: `root`/`""`).
+
+3. **API Keys (OpenRouter)**
+   - Copy `openrouter.properties.example` to `openrouter.properties`.
+   - Add your `OPENROUTER_API_KEY`.
+
+4. **Build & Deploy**
+   - Use `ant dist` to generate the `.war` file.
+   - Deploy the `.war` to your Tomcat `webapps` directory.
 
 ---
 
-### 💼 Why This Project Stands Out
+## 🛡️ Security
+Security is a core pillar of this application.
+- **No Secrets in Git**: Sensitive data is managed via `.properties` and `.env` files ignored by version control.
+- **Password Protection**: Industry-standard jBCrypt hashing.
+- **Session Integrity**: Secure session handling to prevent hijacking.
 
-**For Recruiters:**
-✅ **Full-Stack Application:** Demonstrates a complete, end-to-end web application, not just a script or a frontend.
-✅ **Secure by Design:** Implements crucial security features like password hashing and role-based access control.
-✅ **Robust Backend Logic:** The centralized controller and data access layer showcase a solid understanding of backend architecture.
-✅ **Real-World Problem Solving:** Addresses a genuine need in the education sector, demonstrating business acumen.
-
-**Skills Demonstrated:**
-- **Backend Development (Java, JSP)**
-- **Database Design & Management (MySQL)**
-- **Frontend Development (HTML, CSS, JavaScript)**
-- **Web Application Architecture**
-- **Security Best Practices**
-- **Software Engineering (Build Automation, Project Structure)**
+See **[SECURITY.md](SECURITY.md)** for full configuration details.
 
 ---
 
-### 🚀 Future Expansion (5-Year Plan)
+## 🤝 Contributing
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
-To continue evolving this platform into a comprehensive educational tool, the following enhancements are planned:
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
--   **Advanced Proctoring:** Integrate AI-powered proctoring solutions to monitor students during exams and flag suspicious behavior in real-time.
--   **Learning Analytics Dashboard:** Develop a module for educators to gain actionable insights into student performance, identify learning gaps, and track progress over time.
--   **Mobile Application:** Create a native mobile app for Android and iOS to provide students with a seamless examination experience on their preferred devices.
--   **Integration with School Management Systems:** Build APIs to allow for seamless integration with existing school management systems, synchronizing student data and streamlining administrative workflows.
--   **Offline Examination Support:** Introduce an offline mode that allows students to take exams in areas with limited or no internet connectivity, with results securely synchronized once a connection is available.
--   **CI/CD Pipeline:** Implement a Continuous Integration/Continuous Deployment pipeline to automate testing and deployment, improving development velocity and reliability.
+---
+
+## 📄 License
+Distributed under the MIT License.
+
+---
+**Maintained by [Siphelele Maphumulo](https://github.com/Siphelele-Maphumulo)**
