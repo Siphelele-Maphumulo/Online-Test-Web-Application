@@ -4,11 +4,12 @@
 <%
     // Check if current page should show loader (exclude login and signup pages)
     String currentPage = request.getRequestURI().toLowerCase();
-    boolean isLoginPage = currentPage.contains("login.jsp");
+    boolean isLoginPage = currentPage.contains("login.jsp"); // kept for reference but not used
     boolean isSignupPage = currentPage.contains("signup.jsp") || 
                           currentPage.contains("lecture_signup.jsp") ||
                           currentPage.contains("register.html");
-    boolean showPageLoader = !isLoginPage && !isSignupPage && request.getAttribute("disableLoader") == null && session.getAttribute("disableLoader") == null;
+    // we want the loader even on the login page, so remove isLoginPage from this check
+    boolean showPageLoader = !isSignupPage && request.getAttribute("disableLoader") == null && session.getAttribute("disableLoader") == null;
 %>
 
 <% if (showPageLoader) { %>

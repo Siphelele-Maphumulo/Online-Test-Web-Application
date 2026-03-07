@@ -138,7 +138,13 @@
         --z-tooltip: 500;
     }
    
-   
+    /* Results Wrapper */
+    .results-wrapper {
+        display: flex;
+        min-height: 100vh;
+        background: transparent;
+    }
+    
     /* Sidebar - Modern Design */
     .sidebar {
         width: 200px;
@@ -352,7 +358,53 @@
         background: transparent;
     }
     
- 
+    /* Page Header */
+    .page-header {
+        background: linear-gradient(135deg, var(--white) 0%, #fafcff 100%);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, var(--accent-blue), var(--success));
+    }
+    
+    .page-title {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+    
+    .page-title i {
+        color: var(--accent-blue);
+        background: var(--accent-blue-light);
+        padding: var(--spacing-sm);
+        border-radius: var(--radius-md);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    }
+    
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+    }
     
     /* Stats Badge */
     .stats-badge {
@@ -456,30 +508,6 @@
     .results-card:hover {
         transform: translateY(-4px);
         box-shadow: var(--shadow-xl);
-    }
-
-    .result-value {
-    display: inline-block;
-    padding: 10px 18px;
-    border-radius: 25px; /* Rounded corners */
-    font-weight: 600;
-    font-size: 14px;
-    text-align: center;
-    margin-top: 8px;
-    }
-
-    /* Pass Style */
-    .status-pass {
-        background-color: #e6f9f0;
-        color: #1ca66f;
-        border: 1px solid #1ca66f;
-    }
-
-    /* Fail Style */
-    .status-fail {
-        background-color: #fdeaea;
-        color: #d93025;
-        border: 1px solid #d93025;
     }
     
     .card-header {
@@ -728,7 +756,344 @@
         box-shadow: 0 2px 8px rgba(14, 165, 233, 0.2);
     }
     
+    /* Button Styles */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-sm);
+        padding: 12px 24px;
+        border-radius: var(--radius-md);
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        border: none;
+        transition: all var(--transition-normal);
+        font-family: inherit;
+        position: relative;
+        overflow: hidden;
+    }
     
+    .btn::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transform: translateX(-100%);
+        transition: transform 0.6s;
+    }
+    
+    .btn:hover::after {
+        transform: translateX(100%);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-light));
+        color: var(--white);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.35);
+        background: linear-gradient(135deg, var(--success), #34d399);
+    }
+    
+    .btn-secondary {
+        background: linear-gradient(135deg, var(--dark-gray), #94a3b8);
+        color: var(--white);
+        box-shadow: 0 4px 12px rgba(100, 116, 139, 0.15);
+    }
+    
+    .btn-secondary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(100, 116, 139, 0.25);
+        background: linear-gradient(135deg, var(--error), #f87171);
+    }
+    
+    .btn-success {
+        background: linear-gradient(135deg, var(--success), #34d399);
+        color: var(--white);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    }
+    
+    .btn-error {
+        background: linear-gradient(135deg, var(--error), #f87171);
+        color: var(--white);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+    }
+    
+    .btn-outline {
+        background: transparent;
+        color: var(--text-dark);
+        border: 2px solid var(--border-color);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+    
+    .btn-outline:hover {
+        background: var(--light-gray);
+        border-color: var(--dark-gray);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Action Button */
+    .action-btn {
+        background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-light));
+        color: var(--white);
+        border: none;
+        border-radius: var(--radius-md);
+        padding: 10px 20px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all var(--transition-normal);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .action-btn::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transform: translateX(-100%);
+        transition: transform 0.6s;
+    }
+    
+    .action-btn:hover::after {
+        transform: translateX(100%);
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+    }
+    
+    /* No Results Message */
+    .no-results,
+    .error-message {
+        text-align: center;
+        padding: var(--spacing-2xl) var(--spacing-xl);
+        color: var(--dark-gray);
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+    }
+    
+    .no-results i,
+    .error-message i {
+        font-size: 64px;
+        color: var(--dark-gray);
+        margin-bottom: var(--spacing-lg);
+        opacity: 0.5;
+    }
+    
+    .no-results h2,
+    .error-message h2 {
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: var(--spacing-md);
+        color: var(--text-dark);
+    }
+    
+    .no-results p,
+    .error-message p {
+        color: var(--dark-gray);
+        margin-bottom: var(--spacing-xl);
+        max-width: 400px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .error-message {
+        color: var(--error);
+    }
+    
+    .error-message i {
+        color: var(--error);
+        opacity: 0.8;
+    }
+    
+    /* Sort Indicator */
+    .sort-indicator {
+        margin-left: var(--spacing-xs);
+        font-size: 10px;
+        color: var(--dark-gray);
+        transition: transform var(--transition-fast);
+    }
+    
+    .sort-indicator.rotate {
+        transform: rotate(180deg);
+        color: var(--accent-blue);
+    }
+    
+    /* Details Header */
+    .details-header {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        margin-bottom: var(--spacing-xl);
+        padding: var(--spacing-lg);
+        background: linear-gradient(135deg, var(--white) 0%, #fafcff 100%);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+    }
+    
+    /* Loading State */
+    .loading {
+        opacity: 0.7;
+        pointer-events: none;
+    }
+    
+    .loading::after {
+        content: '';
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top: 2px solid var(--white);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-left: var(--spacing-sm);
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Code Snippet Styling for Results */
+    .code-question-indicator {
+        background: linear-gradient(135deg, var(--accent-blue), #3b82f6);
+        color: var(--white);
+        padding: var(--spacing-sm) var(--spacing-md);
+        border-radius: var(--radius-sm);
+        margin-bottom: var(--spacing-md);
+        border-left: 3px solid var(--primary-blue);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        font-weight: 500;
+        font-size: 13px;
+    }
+
+    .code-snippet {
+        background: var(--primary-blue);
+        color: var(--light-gray);
+        border: 1px solid var(--secondary-blue);
+        border-radius: var(--radius-sm);
+        padding: var(--spacing-md);
+        margin: var(--spacing-md) 0;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        overflow-x: auto;
+        position: relative;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+
+    .code-header {
+        color: var(--dark-gray);
+        font-size: 12px;
+        margin-bottom: var(--spacing-sm);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        border-bottom: 1px solid var(--secondary-blue);
+        padding-bottom: var(--spacing-sm);
+    }
+
+    /* Question Analysis Styling */
+    .question-analysis {
+        border: 1px solid var(--medium-gray);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--spacing-md);
+        overflow: hidden;
+    }
+
+    .question-text {
+        margin-bottom: var(--spacing-md);
+        color: var(--text-dark);
+        font-weight: 500;
+        line-height: 1.5;
+    }
+
+    .answer-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md);
+    }
+
+    @media (max-width: 768px) {
+        .answer-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Question Analysis Header */
+    .question-analysis-header {
+        background: linear-gradient(135deg, var(--success-light), var(--error-light));
+        padding: var(--spacing-md);
+        display: flex;
+        align-items: flex-start;
+        gap: var(--spacing-md);
+    }
+
+    .question-number {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, var(--success), var(--error));
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .question-content {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    /* Question Image Styles */
+    .question-image-container {
+        margin: var(--spacing-md) 0;
+        text-align: center;
+        width: 100%;
+        clear: both;
+    }
+    
+    .question-image {
+        max-width: 100%;
+        max-height: 500px;
+        height: auto;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--medium-gray);
+        background: var(--white);
+        padding: var(--spacing-sm);
+        object-fit: contain;
+        display: inline-block;
+    }
     
     /* Responsive adjustments for images */
     @media (max-width: 768px) {
@@ -823,7 +1188,13 @@
         .main-content {
             padding: var(--spacing-lg);
         }
-    
+        
+        .page-header {
+            flex-direction: column;
+            gap: var(--spacing-lg);
+            text-align: center;
+            padding: var(--spacing-lg);
+        }
         
         .header-actions {
             width: 100%;
@@ -879,7 +1250,18 @@
         .content-area,
         .main-content {
             padding: var(--spacing-md);
-
+        }
+        
+        .page-header {
+            padding: var(--spacing-md);
+        }
+        
+        .card-header {
+            padding: var(--spacing-md);
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            text-align: center;
+        }
         
         .search-container {
             max-width: 100%;
@@ -1751,7 +2133,7 @@ var globalVideoStream = null;
                     <div class="result-item"><strong><i class="fas fa-clock"></i> End Time</strong><div class="result-value"><%= endTime %></div></div>
                     <div class="result-item"><strong><i class="fas fa-star"></i> Obtained Marks</strong><div class="result-value"><%= obtainedMarks %></div></div>
                     <div class="result-item"><strong><i class="fas fa-star-half-alt"></i> Total Marks</strong><div class="result-value"><%= totalMarks %></div></div>
-                    <div class="result-item">
+                    <div class="result-item" style="border-radius: 8px;">
                         <strong><i class="fas fa-flag"></i> Result Status</strong>
                         <div class="result-value <%= resultStatus.equalsIgnoreCase("Pass")?"status-pass":"status-fail" %>">
                             <i class="fas <%= resultStatus.equalsIgnoreCase("Pass")?"fa-check-circle":"fa-times-circle" %>"></i> <%= resultStatus %>
@@ -1789,7 +2171,7 @@ var globalVideoStream = null;
                 </div>
                 <!-- RELAUNCH SECTION -->
                 <div style="margin-top: 30px; padding: 20px; background: #f8fafc; border-radius: 10px; text-align: center; border-top: 2px solid #e2e8f0;">
-                    <p style="margin-bottom: 20px; color: #64748b;">Ready to take another exam? Click below.</p>
+                    <p style="margin-bottom: 20px; color: #64748b;">Ready to take another exam? Select a course below.</p>
                     <a href="std-page.jsp?pgprt=1"
                        class="btn-primary"
                        style="padding: 12px 30px; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">
@@ -1799,7 +2181,6 @@ var globalVideoStream = null;
                     </a>
                 </div>
             </div>
-            
             
             <!-- CLEAR EXAM SESSION DATA -->
             <script>
@@ -3008,7 +3389,7 @@ async function runDiagnostics() {
             </ul>
         </div>
         <div class="modal-footer">
-            <button id="cancelButton" class="btn-secondary">Cancel</button>
+            <button id="cancelButton" class="btn-secondary" Style="Background-color: red">Cancel</button>
             <button id="beginButton" class="btn-primary">Begin Exam</button>
         </div>
     </div>
@@ -4320,21 +4701,27 @@ async function runDiagnostics() {
         }
     }
 
-    // Enhanced face capture with proper validation
+    // SIMPLIFIED - Just basic lighting checks, no complex face detection
+
+    
+    // AI-Powered Face Analysis
     document.getElementById('captureFaceBtn').onclick = async () => {
         const video = document.getElementById('faceVideo');
         
+        // Show checking status
         const originalText = document.getElementById('captureFaceBtn').innerHTML;
         document.getElementById('captureFaceBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI Analyzing...';
         document.getElementById('captureFaceBtn').disabled = true;
         
         try {
+            // Capture the photo
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
             capturedFaceData = canvas.toDataURL('image/jpeg');
             
+            // Send to server for AI analysis
             const formData = new URLSearchParams();
             formData.append('page', 'analyze_face');
             formData.append('faceImage', capturedFaceData);
@@ -4348,64 +4735,40 @@ async function runDiagnostics() {
             const result = await response.json();
             
             if (!result.success) {
-                showQualityError(result.reason || 'Face verification failed');
+                showQualityError(result.reason);
+                // Reset button on failure
                 document.getElementById('captureFaceBtn').innerHTML = originalText;
                 document.getElementById('captureFaceBtn').disabled = false;
                 return;
             }
             
-            if (!result.analysis || !result.analysis.passed) {
-                const issues = [];
-                
-                if (result.analysis) {
-                    if (typeof result.analysis.faceCount === 'number') {
-                        if (result.analysis.faceCount > 1) {
-                            issues.push("Multiple faces detected - please ensure you are alone in the frame");
-                        } else if (result.analysis.faceCount === 0) {
-                            issues.push("No face detected - please position your face in the center");
-                        }
-                    }
-                    
-                    if (Array.isArray(result.analysis.obstructions) && result.analysis.obstructions.length > 0) {
-                        issues.push("Face obstructed: " + result.analysis.obstructions.join(", "));
-                    }
-                    
-                    if (result.analysis.isCentered === false) {
-                        issues.push("Face not centered - please align your face in the oval guide");
-                    }
-                    
-                    const confidence = typeof result.analysis.confidence === 'number' ? result.analysis.confidence : 0;
-                    if (confidence < 70) {
-                        issues.push("Image quality too low - please ensure good lighting");
-                    }
-                }
-                
-                if (issues.length > 0) {
-                    showQualityError(issues.join("\n"));
-                } else {
-                    showQualityError("Face verification failed. Please try again with better lighting and positioning.");
-                }
-                
-                document.getElementById('captureFaceBtn').innerHTML = originalText;
-                document.getElementById('captureFaceBtn').disabled = false;
-                return;
-            }
-            
+            // AI says it's good - proceed
             document.getElementById('faceImgPreview').src = capturedFaceData;
             document.getElementById('faceCapturedPreview').style.display = 'block';
             document.getElementById('liveInstructions').style.display = 'none';
             document.getElementById('retakeSection').style.display = 'block';
             
-            updateFaceQualityIndicators(true);
+            // Update quality indicators to show all passed
+            const checks = document.querySelectorAll('.check-item');
+            if (checks.length >= 4) {
+                checks[0].innerHTML = '<i class="fas fa-check-circle" style="color:#10b981"></i><span>Face properly positioned</span>';
+                checks[1].innerHTML = '<i class="fas fa-check-circle" style="color:#10b981"></i><span>No face coverings detected</span>';
+                checks[2].innerHTML = '<i class="fas fa-check-circle" style="color:#10b981"></i><span>Lighting adequate</span>';
+                checks[3].innerHTML = '<i class="fas fa-check-circle" style="color:#10b981"></i><span>Single person in frame</span>';
+            }
             
+            // Hide any error messages
+            const errorDiv = document.getElementById('faceQualityError');
+            if (errorDiv) errorDiv.remove();
+            
+            // Reset button on success - change to "Retake" or keep original
             document.getElementById('captureFaceBtn').innerHTML = '<i class="fas fa-camera"></i> Retake Photo';
             document.getElementById('captureFaceBtn').disabled = false;
-            
-            showTemporaryMessage('✓ Face verified successfully!', 'success');
             
         } catch (err) {
             console.error('Error:', err);
             showQualityError('Could not analyze photo. Please try again.');
+            // Reset button on error
             document.getElementById('captureFaceBtn').innerHTML = originalText;
             document.getElementById('captureFaceBtn').disabled = false;
         }

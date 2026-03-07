@@ -8361,13 +8361,12 @@ public String getLastCourseName() {
 
     try {
 
-        String query = "SELECT course_name FROM questions ORDER BY question_id DESC LIMIT 1"; // Your SQL query
+        // Get the most recently added course from courses table using created_at field
+        String query = "SELECT course_name FROM courses WHERE course_name IS NOT NULL AND course_name != '' ORDER BY created_at DESC LIMIT 1";
 
         PreparedStatement pstmt = conn.prepareStatement(query);
 
         ResultSet rs = pstmt.executeQuery();
-
-
 
         if (rs.next()) {
 
@@ -8377,7 +8376,7 @@ public String getLastCourseName() {
 
     } catch (SQLException e) {
 
-        e.printStackTrace();
+        LOGGER.log(Level.SEVERE, "Error getting last course name", e);
 
     }
 

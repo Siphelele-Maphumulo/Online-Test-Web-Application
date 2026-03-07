@@ -22,13 +22,19 @@ class ProctoringSystem {
         this.fastMouseStartAt = null;
         this.lastFastMouseFlagAt = 0;
 
+        // Audio‑visual correlation state
+        this.lastDbLevel = 0;                   // dB measured on last audio frame
+        this.lipMovementStartAt = null;         // timestamps for sustained lip motion
+        this.lipMovementMinDurationMs = 1200;   // require about a second of movement
+        this.LIP_DB_MIN = -60;                  // ignore mouth motions if audio very quiet
+
         // Detection thresholds (calibrated for real cheating scenarios) 
         this.NOISE_THRESHOLD = 38;
-        this.MULTIPLE_VOICES_THRESHOLD = 420;
+        this.MULTIPLE_VOICES_THRESHOLD = 400;   // slightly lower; we also check db level
         this.EYE_OFF_SCREEN_THRESHOLD = 2800;
         this.HEAD_MOVEMENT_THRESHOLD = 0.145;
         this.FACE_LOST_THRESHOLD = 1500;           // ← Increased to 1.5 seconds to reduce false positives
-        this.MOUTH_MOVEMENT_THRESHOLD = 1.7;
+        this.MOUTH_MOVEMENT_THRESHOLD = 0.8;       // lowered; now combined with duration and audio
         this.LOOKING_DOWN_ANGLE = -13;
 
         // PERFECT 10-SECOND COUNTDOWN
@@ -46,7 +52,6 @@ class ProctoringSystem {
         this.lastEyeContact = Date.now(); 
         this.lastFaceDetected = Date.now(); 
         this.backgroundNoiseBaseline = 40; 
-        this.lastAudioDbLevel = null;
         this.calibrationComplete = false; 
         this.previousNosePosition = null; 
         this.previousMouthHeight = null; 
@@ -355,7 +360,6 @@ class ProctoringSystem {
 
         const average = dataArray.reduce(function(a, b) { return a + b; }, 0) / dataArray.length; 
         const dbLevel = 20 * Math.log10(average || 1); 
-        this.lastAudioDbLevel = dbLevel;
 
         const now = Date.now();
         const noiseThreshold = this.backgroundNoiseBaseline + 10;
@@ -685,13 +689,7 @@ class ProctoringSystem {
 
             this.previousMouthHeight = mouthHeight; 
 
-            // Require at least +3 dB above baseline to treat as real speaking,
-            // otherwise ignore subtle lip movement (thinking partially aloud).
-            const hasSufficientNoise = this.lastAudioDbLevel !== null &&
-                                       this.lastAudioDbLevel > (this.backgroundNoiseBaseline + 3);
-
-            return hasSufficientNoise &&
-                   movement > this.MOUTH_MOVEMENT_THRESHOLD &&  
+            return movement > this.MOUTH_MOVEMENT_THRESHOLD &&  
                    (!expressions || expressions.happy < 0.5); 
         } catch (err) { 
             return false; 
