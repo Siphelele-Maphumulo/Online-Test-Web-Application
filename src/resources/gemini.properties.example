@@ -1,0 +1,9 @@
+# Gemini API Configuration
+# Copy this file to gemini.properties and fill in your actual API key
+# NEVER commit the actual gemini.properties file to version control!
+
+# Gemini API Key
+gemini.api.key=AIzaSyDHZ6Ww8DSkA1Us35S9SkqagHAaAZGl9Jk
+
+# Default AI Model (use gemini-3-flash-preview or gemini-1.5-flash)
+gemini.model=gemini-3-flash-preview
