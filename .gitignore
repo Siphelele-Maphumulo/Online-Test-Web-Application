@@ -2,6 +2,7 @@
 /dist/
 # Sensitive configuration files
 openrouter.properties
+openrouter.properties.example
 *.properties
 *.war
 *.jar

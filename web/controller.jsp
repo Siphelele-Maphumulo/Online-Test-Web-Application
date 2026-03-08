@@ -189,7 +189,7 @@ try {
         String idImage = request.getParameter("idImage");
         StringBuilder reason = new StringBuilder();
         
-        boolean holdingId = OpenRouterClient.isHoldingId(idImage, reason);
+        boolean holdingId = myPackage.OpenRouterClient.isHoldingId(idImage, reason);
         
         JSONObject result = new JSONObject();
         result.put("success", holdingId);
@@ -1769,7 +1769,7 @@ try {
                                  text;
                 }
 
-                String aiResponse = OpenRouterClient.generateQuestions(promptText, questionType, remaining, isMarkingGuideline);
+                String aiResponse = myPackage.OpenRouterClient.generateQuestions(promptText, questionType, remaining, isMarkingGuideline);
                 if (aiResponse == null || aiResponse.trim().isEmpty()) {
                     break;
                 }

@@ -43,16 +43,6 @@ if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
     lastCourseName = request.getParameter("coursename");
 }
 
-// If still not available, use the last added course from database
-if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
-    try {
-        lastCourseName = pDAO.getLastCourseName();
-    } catch (Exception e) {
-        // If getLastCourseName fails, fall back to first course
-        lastCourseName = null;
-    }
-}
-
 // If still not available, use the first course if available
 if (lastCourseName == null || lastCourseName.trim().isEmpty()) {
     if (!courseNames.isEmpty()) {
