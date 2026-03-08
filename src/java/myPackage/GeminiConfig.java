@@ -8,24 +8,22 @@ import java.util.logging.Logger;
 public class GeminiConfig {
     private static final Logger LOGGER = Logger.getLogger(GeminiConfig.class.getName());
     private static Properties props = new Properties();
-    private static final String DEFAULT_MODEL = "gemini-3-flash-preview";
+    private static final String DEFAULT_MODEL = "gemini-1.5-flash";
 
     static {
         try {
             // Try to load from gemini.properties in classpath
             InputStream input = GeminiConfig.class.getClassLoader().getResourceAsStream("gemini.properties");
-            if (input != null) {
-                props.load(input);
-                LOGGER.info("Loaded gemini.properties from classpath");
-            } else {
+            if (input == null) {
                 // Try to load from root /
                 input = GeminiConfig.class.getResourceAsStream("/gemini.properties");
-                if (input != null) {
-                    props.load(input);
-                    LOGGER.info("Loaded gemini.properties from /");
-                } else {
-                    LOGGER.warning("Could not find gemini.properties in classpath");
-                }
+            }
+
+            if (input != null) {
+                props.load(input);
+                LOGGER.info("Loaded gemini.properties successfully");
+            } else {
+                LOGGER.warning("Could not find gemini.properties in classpath or root. Please ensure it is in your src/resources or WEB-INF/classes folder.");
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading gemini properties", e);
