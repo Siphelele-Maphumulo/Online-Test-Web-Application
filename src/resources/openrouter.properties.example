@@ -9,7 +9,5 @@
 #openrouter.api.key=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
 #openrouter.api.key=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
 #openrouter.api.key=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
-openrouter.api.key=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
+openrouter.api.key=YOUR_OPENROUTER_API_KEY
 openrouter.model=openai/gpt-4o-mini
-
-

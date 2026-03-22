@@ -161,7 +161,7 @@ try {
         String faceImage = request.getParameter("faceImage");
         StringBuilder reason = new StringBuilder();
         
-        boolean isValid = myPackage.OpenRouterClient.isFacePhotoValid(faceImage, reason);
+        boolean isValid = myPackage.IdentityVerificationProvider.isFacePhotoValid(faceImage, reason);
         
         JSONObject result = new JSONObject();
         result.put("success", isValid);
@@ -175,7 +175,7 @@ try {
         String idImage = request.getParameter("idImage");
         StringBuilder reason = new StringBuilder();
         
-        boolean isValid = myPackage.OpenRouterClient.isIdPhotoValid(idImage, reason);
+        boolean isValid = myPackage.IdentityVerificationProvider.isIdPhotoValid(idImage, reason);
         
         JSONObject result = new JSONObject();
         result.put("success", isValid);
@@ -189,7 +189,7 @@ try {
         String idImage = request.getParameter("idImage");
         StringBuilder reason = new StringBuilder();
         
-        boolean holdingId = myPackage.OpenRouterClient.isHoldingId(idImage, reason);
+        boolean holdingId = myPackage.IdentityVerificationProvider.isHoldingId(idImage, reason);
         
         JSONObject result = new JSONObject();
         result.put("success", holdingId);

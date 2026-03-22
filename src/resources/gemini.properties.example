@@ -1,0 +1,8 @@
+# Gemini API configuration (DO NOT commit real keys)
+# Preferred: set environment variable GEMINI_API_KEY or JVM system property gemini.api.key
+
+gemini.api.key=YOUR_GEMINI_API_KEY
+# Default model for vision tasks
+# Examples: gemini-1.5-flash, gemini-1.5-pro
+
+gemini.model=Gemini 3 Flash Preview
