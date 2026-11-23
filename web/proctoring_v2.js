@@ -1286,27 +1286,38 @@ class ProctoringSystem {
 document.addEventListener('DOMContentLoaded', function () {
     try {
         var examForm = document.getElementById('myform');
-        if (!examForm) return;
+        if (!examForm) {
+            console.info('[Exam start] Exam page form #myform was not found; proctor auto-start is skipped.');
+            return;
+        }
 
-        if (window.proctor) return;
+        if (window.proctor) {
+            console.info('[Exam start] Proctoring is already initialized.');
+            return;
+        }
 
         var shouldAutoStart = false;
         try {
             shouldAutoStart = sessionStorage.getItem('proctorAutoStart') === '1';
         } catch (e) {
-            shouldAutoStart = false;
+            console.error('[Exam start] Could not read the proctor auto-start flag.', e);
         }
 
+        console.info('[Exam start] Proctor auto-start flag:', shouldAutoStart);
         if (!shouldAutoStart) return;
 
         try {
             sessionStorage.removeItem('proctorAutoStart');
-        } catch (e) {}
+            console.info('[Exam start] Removed proctor auto-start flag.');
+        } catch (e) {
+            console.warn('[Exam start] Could not remove the proctor auto-start flag.', e);
+        }
 
         (async function () {
             try {
                 var stream = null;
                 if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    console.info('[Exam start] Requesting camera and microphone access.');
                     stream = await navigator.mediaDevices.getUserMedia({ 
                         video: { 
                             width: { ideal: 1280 }, 
@@ -1319,26 +1330,35 @@ document.addEventListener('DOMContentLoaded', function () {
                             autoGainControl: false 
                         } 
                     });
+                    console.info('[Exam start] Camera and microphone access granted.');
+                } else {
+                    console.error('[Exam start] Camera/microphone API is unavailable in this browser or context.');
                 }
 
+                console.info('[Exam start] Initializing the proctoring system.');
                 var p = new ProctoringSystem();
                 window.proctor = p;
                 await p.initialize(stream);
+                console.info('[Exam start] Proctoring initialization completed.');
             } catch (err) {
-                console.error('Auto-start proctoring failed:', err);
+                console.error('[Exam start] Auto-start proctoring failed:', err);
             }
         })();
     } catch (outerErr) {
-        console.error('Auto-start proctoring setup failed:', outerErr);
+        console.error('[Exam start] Auto-start proctoring setup failed:', outerErr);
     }
 });
 
 // Also check for exam start button click to set auto-start flag
 document.addEventListener('click', function(e) {
-    if (e.target && e.target.id === 'beginExam' || 
-        (e.target.tagName === 'BUTTON' && e.target.textContent.includes('Begin Exam'))) {
+    var clickedButton = e.target && e.target.closest ? e.target.closest('button') : null;
+    if (clickedButton && (clickedButton.id === 'beginExam' ||
+        clickedButton.textContent.includes('Begin Exam'))) {
         try {
             sessionStorage.setItem('proctorAutoStart', '1');
-        } catch (e) {}
+            console.info('[Exam start] Capture-phase listener set proctorAutoStart on click.', clickedButton.id);
+        } catch (e) {
+            console.warn('[Exam start] Capture-phase listener could not set proctorAutoStart.', e);
+        }
     }
 }, true);

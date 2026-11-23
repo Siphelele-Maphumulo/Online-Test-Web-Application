@@ -1267,7 +1267,26 @@ try {
     } else if ("exams".equalsIgnoreCase(pageParam)) {
         String examOperation = nz(request.getParameter("operation"), "");
 
-        if ("startexam".equalsIgnoreCase(examOperation)) {
+        if ("checkCourseStatus".equalsIgnoreCase(examOperation)) {
+            String submittedToken = request.getParameter("csrf_token");
+            String sessionToken = (String) session.getAttribute("csrf_token");
+            if (sessionToken == null || submittedToken == null || !sessionToken.equals(submittedToken)) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                return;
+            }
+
+            String courseName = nz(request.getParameter("courseName"), "");
+            if (courseName.isEmpty()) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST);
+                return;
+            }
+
+            response.setContentType("text/plain");
+            response.setCharacterEncoding("UTF-8");
+            response.getWriter().write(String.valueOf(pDAO.isCourseActive(courseName)));
+            return;
+
+        } else if ("startexam".equalsIgnoreCase(examOperation)) {
             String submittedToken = request.getParameter("csrf_token");
             String sessionToken = (String) session.getAttribute("csrf_token");
             if (sessionToken == null || submittedToken == null || !sessionToken.equals(submittedToken)) {
