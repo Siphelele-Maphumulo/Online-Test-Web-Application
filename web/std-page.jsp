@@ -16,7 +16,8 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
 // Disable loader for fast-loading pages
 String pgprtParam = request.getParameter("pgprt");
-if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("4")) {
+if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("1")
+        || pgprtParam.equals("2") || pgprtParam.equals("4")) {
     request.setAttribute("disableLoader", "true");
 }
 %>
@@ -890,26 +891,6 @@ if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("4")) {
         // Include appropriate page based on parameter
         if ("1".equals(pgprt)) {
     %>
-        <div id="examLoader" class="exam-loader-overlay">
-            <div class="exam-loader-spinner">
-                <div class="spinner"></div>
-                <p>Loading Exam...</p>
-            </div>
-        </div>
-        <script>
-            // Hide loader when exam is fully loaded
-            window.addEventListener('load', function() {
-                setTimeout(function() {
-                    const loader = document.getElementById('examLoader');
-                    if (loader) {
-                        loader.style.opacity = '0';
-                        setTimeout(() => {
-                            loader.style.display = 'none';
-                        }, 300);
-                    }
-                }, 500);
-            });
-        </script>
         <jsp:include page="exam.jsp"/>
     <%
         } else if ("2".equals(pgprt)) {

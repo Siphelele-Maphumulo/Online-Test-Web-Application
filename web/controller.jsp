@@ -1289,6 +1289,19 @@ try {
                 return;
             }
 
+            try {
+                if (!pDAO.hasQuestions(courseName)) {
+                    session.setAttribute("error", "No questions are available for the selected course.");
+                    response.sendRedirect("std-page.jsp?pgprt=1");
+                    return;
+                }
+            } catch (SQLException questionCheckError) {
+                LOGGER.log(Level.SEVERE, "Failed to verify exam questions for course: " + courseName, questionCheckError);
+                session.setAttribute("error", "Unable to verify questions for this exam. Please try again.");
+                response.sendRedirect("std-page.jsp?pgprt=1");
+                return;
+            }
+
             Object userIdObject = session.getAttribute("userId");
             int userId = 0;
             if (userIdObject != null) {

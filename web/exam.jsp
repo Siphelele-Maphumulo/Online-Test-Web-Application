@@ -25,18 +25,24 @@
     
     // CHECK IF USER IS TRYING TO ACCESS EXAM WITHOUT ACTIVE SESSION
     String showExamForm = "true"; // Default to showing exam selection form
-    
-    // Only show active exam if BOTH conditions are met:
-    // 1. session has examStarted = "1"
-    // 2. URL has coursename parameter
-    if ("1".equals(String.valueOf(session.getAttribute("examStarted"))) && 
-        request.getParameter("coursename") != null && 
-        !request.getParameter("coursename").isEmpty()) {
-        showExamForm = "false"; // Show active exam
+
+    // Resolve the course from the URL, falling back to the session for JSP includes.
+    String activeCourseName = request.getParameter("coursename");
+    if (activeCourseName == null || activeCourseName.trim().isEmpty()) {
+        Object examCourse = session.getAttribute("examCourse");
+        if (examCourse != null) {
+            activeCourseName = examCourse.toString();
+        }
+    }
+
+    // Show the exam only when the start-session flag and a course name are both present.
+    if ("1".equals(String.valueOf(session.getAttribute("examStarted"))) &&
+        activeCourseName != null && !activeCourseName.trim().isEmpty()) {
+        showExamForm = "false";
     } else {
-        // Clear any stale exam session data
         session.removeAttribute("examStarted");
         session.removeAttribute("examId");
+        session.removeAttribute("examCourse");
     }
 %>
 
@@ -75,6 +81,8 @@
 
 
 <link rel="stylesheet" href="style-exam.css">
+</head>
+<body>
 
 <!--Style-->
 <style>
@@ -1557,7 +1565,7 @@
                 }
             }
             
-            String courseName = request.getParameter("coursename");
+            String courseName = activeCourseName;
             ArrayList<myPackage.classes.Questions> questionsList = pDAO.getQuestions(courseName, 20);
             int totalQ = questionsList.size();
         %>
@@ -2086,10 +2094,9 @@ var globalVideoStream = null;
                                 eid = 0;
                             }
                         }
-                        myPackage.classes.Exams result = pDAO.getResultByExamId(eid);
-                        String eidParam = request.getParameter("eid");
-                        if (eidParam != null && eidParam.matches("\\d+")) {
-                            result = pDAO.getResultByExamId(Integer.parseInt(eidParam));
+                        myPackage.classes.Exams result = null;
+                        if (eid > 0) {
+                            result = pDAO.getResultByExamId(eid);
                         }
                         
                         // IMPORTANT: Clear exam session when showing results

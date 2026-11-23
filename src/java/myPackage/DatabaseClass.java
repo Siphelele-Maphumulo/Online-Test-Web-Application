@@ -1929,9 +1929,9 @@ public boolean isCourseActive(String courseName) {
 
     try {
 
-        // SIMPLIFIED: Just check is_active column in courses table
+        // Accept course names regardless of surrounding whitespace or letter case.
 
-        String sql = "SELECT is_active FROM courses WHERE course_name = ?";
+        String sql = "SELECT is_active FROM courses WHERE LOWER(TRIM(course_name)) = LOWER(TRIM(?)) LIMIT 1";
 
         ps = conn.prepareStatement(sql);
 
@@ -4959,9 +4959,9 @@ public ArrayList getQuestions(String courseName, int questions) {
 
 
 
-        // 1. normalise the name exactly as stored in courses
+        // Keep the course's stored casing; course names are compared case-insensitively.
 
-        String cName = rawName.trim().toLowerCase();
+        String cName = rawName.trim();
 
 
 
@@ -6809,42 +6809,19 @@ public ArrayList<Exams> getResultsByUserIdAndCourse(int userId, String courseNam
 }
 
 
-    public boolean hasQuestions(String courseName) {
-
-        try {
-
-            ensureConnection();
-
-        } catch (SQLException e) {
-
-            LOGGER.log(Level.SEVERE, "Connection error in hasQuestions", e);
-
+    public boolean hasQuestions(String courseName) throws SQLException {
+        ensureConnection();
+        if (courseName == null) {
             return false;
-
         }
 
-        
-
-        String sql = "SELECT 1 FROM questions WHERE course_name = ? LIMIT 1";
-
+        String sql = "SELECT 1 FROM questions WHERE LOWER(TRIM(course_name)) = LOWER(TRIM(?)) LIMIT 1";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-
             ps.setString(1, courseName);
-
             try (ResultSet rs = ps.executeQuery()) {
-
                 return rs.next();
-
             }
-
-        } catch (SQLException e) {
-
-            LOGGER.log(Level.SEVERE, "hasQuestions failed for course: " + courseName, e);
-
-            return false;
-
         }
-
     }
 
 

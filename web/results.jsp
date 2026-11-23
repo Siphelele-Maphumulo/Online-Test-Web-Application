@@ -2080,6 +2080,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                           <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 8px; font-size: 12px;">
                             <i class="fas fa-user-edit"></i> Your Order
                           </div>
+                          <%
                               try {
                                   org.json.JSONArray userArr = new org.json.JSONArray(a.getAnswer());
                                   for (int j = 0; j < userArr.length(); j++) {
@@ -2126,9 +2127,7 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                             <%
                               }
                             %>
-                          </div>
                         </div>
-                        
                         <!-- Correct Answer -->
                         <div>
                           <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 8px; font-size: 12px;">
