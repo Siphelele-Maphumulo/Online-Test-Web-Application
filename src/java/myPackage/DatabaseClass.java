@@ -54,6 +54,8 @@ import java.sql.Statement;
 
 import java.sql.Time;
 
+import java.sql.DatabaseMetaData;
+
 import java.util.ArrayList;
 
 import java.sql.Types;
@@ -148,8 +150,33 @@ public class DatabaseClass {
 
             LOGGER.info("Database connection established successfully");
 
+            ensureAnswerTableSchema();
+
         }
 
+    }
+
+    private void ensureAnswerTableSchema() {
+        try {
+            DatabaseMetaData meta = conn.getMetaData();
+
+            try (ResultSet rs = meta.getColumns(null, null, "answers", "question_id")) {
+                if (!rs.next()) {
+                    try (Statement st = conn.createStatement()) {
+                        st.executeUpdate("ALTER TABLE answers ADD COLUMN question_id INT NULL AFTER exam_id, ADD INDEX idx_answers_exam_question (exam_id, question_id)");
+                        LOGGER.info("Added missing answers.question_id column");
+                    }
+                }
+            }
+
+            try (Statement st = conn.createStatement()) {
+                st.executeUpdate("ALTER TABLE answers MODIFY question LONGTEXT NOT NULL, MODIFY answer LONGTEXT NOT NULL, MODIFY correct_answer LONGTEXT NOT NULL");
+            } catch (SQLException e) {
+                LOGGER.log(Level.WARNING, "Could not widen answer text columns", e);
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.WARNING, "Could not verify answers table schema", e);
+        }
     }
 
 
@@ -6739,6 +6766,47 @@ public ArrayList<Exams> getResultsFromExams(Integer stdId) {
 
 }
 
+/** Get exam results for every student in a specific course. */
+public ArrayList<Exams> getAllResultsByCourse(String courseName) {
+    ArrayList<Exams> filteredResults = new ArrayList<>();
+
+    if (courseName == null || courseName.trim().isEmpty()) {
+        return filteredResults;
+    }
+
+    try {
+        for (Exams exam : getAllExamResults()) {
+            if (exam != null && courseName.equalsIgnoreCase(exam.getcName())) {
+                filteredResults.add(exam);
+            }
+        }
+    } catch (Exception ex) {
+        LOGGER.log(Level.SEVERE, "Error filtering all results by course: " + courseName, ex);
+    }
+
+    return filteredResults;
+}
+
+/** Get exam results for one student in a specific course. */
+public ArrayList<Exams> getResultsByUserIdAndCourse(int userId, String courseName) {
+    ArrayList<Exams> filteredResults = new ArrayList<>();
+
+    if (userId <= 0 || courseName == null || courseName.trim().isEmpty()) {
+        return filteredResults;
+    }
+
+    try {
+        for (Exams exam : getResultsFromExams(userId)) {
+            if (exam != null && courseName.equalsIgnoreCase(exam.getcName())) {
+                filteredResults.add(exam);
+            }
+        }
+    } catch (Exception ex) {
+        LOGGER.log(Level.SEVERE, "Error filtering results for user " + userId + " and course " + courseName, ex);
+    }
+
+    return filteredResults;
+}
 
 
     public boolean hasQuestions(String courseName) {
@@ -7238,6 +7306,49 @@ public boolean deleteExamRecord(int examId, int studentId) throws SQLException {
 }
 
 
+
+public boolean updateExamResult(int examId, int obtainedMarks, int totalMarks, String status) {
+    if (examId <= 0 || obtainedMarks < 0 || obtainedMarks > totalMarks || totalMarks < 0) {
+        LOGGER.log(Level.WARNING, "Invalid exam result update values for exam ID: {0}", examId);
+        return false;
+    }
+
+    String normalizedStatus;
+    if (status == null) {
+        LOGGER.log(Level.WARNING, "Exam result status cannot be null");
+        return false;
+    } else if (status.equalsIgnoreCase("Pass")) {
+        normalizedStatus = "Pass";
+    } else if (status.equalsIgnoreCase("Fail")) {
+        normalizedStatus = "Fail";
+    } else if (status.equalsIgnoreCase("Terminated")) {
+        normalizedStatus = "Terminated";
+    } else {
+        LOGGER.log(Level.WARNING, "Invalid exam result status: {0}", status);
+        return false;
+    }
+
+    try {
+        ensureConnection();
+        String sql = "UPDATE exams SET obt_marks=?, total_marks=?, result_status=?, status=CASE WHEN ?='Terminated' THEN 'cancelled' ELSE status END WHERE exam_id=?";
+
+        try (PreparedStatement pstm = getConnection().prepareStatement(sql)) {
+            pstm.setInt(1, obtainedMarks);
+            pstm.setInt(2, totalMarks);
+            pstm.setString(3, normalizedStatus);
+            pstm.setString(4, normalizedStatus);
+            pstm.setInt(5, examId);
+
+            int rowsUpdated = pstm.executeUpdate();
+            LOGGER.log(Level.INFO, "Updated exam result ID {0}: marks={1}/{2}, status={3}, rows={4}",
+                    new Object[]{examId, obtainedMarks, totalMarks, normalizedStatus, rowsUpdated});
+            return rowsUpdated > 0;
+        }
+    } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, "Failed to update exam result ID: " + examId, e);
+        return false;
+    }
+}
 
 public boolean deleteExamResult(int examId) {
 

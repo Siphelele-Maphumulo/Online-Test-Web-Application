@@ -1,6 +1,8 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@page import="myPackage.classes.User"%>
 <%@page import="myPackage.DatabaseClass"%>
+<%@page import="myPackage.classes.Questions"%>
+<%@page import="myPackage.classes.Exams"%>
 <%@ page isELIgnored="true" %>
 <!DOCTYPE html>
 <html>

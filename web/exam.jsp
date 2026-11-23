@@ -1,5 +1,9 @@
 <%@ page contentType="text/html; charset=UTF-8" %>
 <%@ page pageEncoding="UTF-8" %>
+<%@ page import="java.util.ArrayList" %>
+<%@ page import="myPackage.classes.Questions" %>
+<%@ page import="myPackage.classes.Exams" %>
+<%@ page isELIgnored="true" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,10 +14,6 @@
     <!-- Bootstrap & Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/gh/Bernardo-Castilho/dragdroptouch@master/DragDropTouch.js"></script>
-<%@page import="java.util.ArrayList"%>
-<%@page import="myPackage.classes.Questions"%>
-<%@page import="myPackage.classes.Exams"%>
-<%@ page isELIgnored="true" %>
 <%
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     
@@ -1558,7 +1558,7 @@
             }
             
             String courseName = request.getParameter("coursename");
-            ArrayList<Questions> questionsList = pDAO.getQuestions(courseName, 20);
+            ArrayList<myPackage.classes.Questions> questionsList = pDAO.getQuestions(courseName, 20);
             int totalQ = questionsList.size();
         %>
             <!-- EXAM ACTIVE HEADER -->
@@ -1660,7 +1660,7 @@
 
                 <div class="questions-container">
                 <% for (int i=0; i<totalQ; i++){
-                    Questions q = questionsList.get(i);
+                    myPackage.classes.Questions q = questionsList.get(i);
                     boolean isMultiTwo = false;
                     boolean isDragDrop = false;
                     boolean isRearrange = false;
@@ -2077,7 +2077,20 @@ var globalVideoStream = null;
 
             <% } else if ("1".equals(request.getParameter("showresult"))) {
                         // SHOW RESULTS PAGE
-                        Exams result = pDAO.getResultByExamId(Integer.parseInt(request.getParameter("eid")));
+                        String eidParam = request.getParameter("eid");
+                        int eid = 0;
+                        if (eidParam != null && !eidParam.isEmpty()) {
+                            try {
+                                eid = Integer.parseInt(eidParam);
+                            } catch (NumberFormatException ex) {
+                                eid = 0;
+                            }
+                        }
+                        myPackage.classes.Exams result = pDAO.getResultByExamId(eid);
+                        String eidParam = request.getParameter("eid");
+                        if (eidParam != null && eidParam.matches("\\d+")) {
+                            result = pDAO.getResultByExamId(Integer.parseInt(eidParam));
+                        }
                         
                         // IMPORTANT: Clear exam session when showing results
                         session.removeAttribute("examStarted");

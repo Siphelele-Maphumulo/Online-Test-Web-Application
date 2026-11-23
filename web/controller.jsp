@@ -17,6 +17,7 @@
 <%@ page import="myPackage.*" %>
 <%@ page import="myPackage.classes.User" %>
 <%@ page import="myPackage.classes.Questions" %>
+<%@ page import="myPackage.classes.Exams" %>
 <%@ page import="org.mindrot.jbcrypt.BCrypt" %>
 <%@ page import="org.json.JSONObject" %>
 <%@ page import="org.json.JSONArray" %>
@@ -200,6 +201,19 @@ try {
         return;
 
     /* =========================
+       LOGOUT
+       ========================= */
+    } else if ("logout".equalsIgnoreCase(pageParam)) {
+        if (session != null) {
+            session.invalidate();
+        }
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setDateHeader("Expires", 0);
+        response.sendRedirect("login.jsp");
+        return;
+
+    /* =========================
        LOGIN
        ========================= */
     } else if ("login".equalsIgnoreCase(pageParam)) {
@@ -300,45 +314,40 @@ try {
         return;
     }
 
-    try {
+     try {
         // Hash password
         String hashedPass = PasswordUtils.bcryptHashPassword(pass);
-        
+
         // Call the ORIGINAL addNewUser method which is void
         pDAO.addNewUser(fName, lName, uName, email, hashedPass, contactNo, city, address, userType);
 
         // Clear any previous error fields
         session.removeAttribute("errorField");
-        
-        // Set success message - FIXED: Use session attribute
+
+        // Set success message
         session.setAttribute("success", "Registration successful! You can now login.");
-        
+
         // Determine redirect based on user type
-        boolean isAdminOrLecturer = "admin".equalsIgnoreCase(userType) || 
-                                   "lecture".equalsIgnoreCase(userType) || 
-                                   "lecturer".equalsIgnoreCase(userType);
-        
+        boolean isAdminOrLecturer = "admin".equalsIgnoreCase(userType)
+                || "lecture".equalsIgnoreCase(userType)
+                || "lecturer".equalsIgnoreCase(userType);
+
         if (isAdminOrLecturer || "account".equalsIgnoreCase(fromPage)) {
-            // For admin/lecturer registrations
             session.setAttribute("message", "User added successfully!");
             response.sendRedirect("accounts.jsp");
         } else {
-            // Store success message in session ONLY
             session.setAttribute("success", "Registration successful! Please login.");
-
-            // Redirect cleanly (NO query params)
             response.sendRedirect("login.jsp");
-
         }
-        
+
     } catch (RuntimeException ex) {
-        // The addNewUser method throws RuntimeException on SQL failure
-        
-        // Check if duplicates were created despite checks
+        // The addNewUser method throws RuntimeException on SQL failure.
+        // Re-check for duplicates that may have slipped past the pre-checks.
         boolean usernameCheck = pDAO.checkUsernameExists(uName);
-        boolean emailCheck = pDAO.checkEmailExists(email);
-        boolean contactCheck = contactNo != null && !contactNo.isEmpty() && pDAO.checkContactNoExists(contactNo);
-        
+        boolean emailCheck    = pDAO.checkEmailExists(email);
+        boolean contactCheck  = contactNo != null && !contactNo.isEmpty()
+                                && pDAO.checkContactNoExists(contactNo);
+
         if (usernameCheck) {
             session.setAttribute("error", "This ID number is already registered");
             session.setAttribute("errorField", "uname");
@@ -352,35 +361,35 @@ try {
             session.setAttribute("errorField", "email");
             request.setAttribute("email", "");
         } else {
-            // Get the root cause
+            // Build a meaningful error message from the root cause
             Throwable cause = ex.getCause();
             String errorMsg = "Registration failed. ";
+
             if (cause != null && cause.getMessage() != null) {
                 if (cause.getMessage().contains("Duplicate")) {
                     errorMsg += "The information may already be registered.";
-        } else {
+                } else {
                     errorMsg += "Database error: " + cause.getMessage();
                 }
-        } else {
+            } else {
                 errorMsg += "Please check all fields and try again.";
             }
+
             session.setAttribute("error", errorMsg);
             session.setAttribute("errorField", "general");
         }
-        
+
         // Forward to signup page with all form data preserved
         request.getRequestDispatcher("signup.jsp?user_type=" + userType).forward(request, response);
-        
+
     } catch (Exception e) {
-        // Catch any other exceptions (like password hashing errors)
-        
+        // Catch any other exceptions (e.g., password hashing errors)
         session.setAttribute("error", "Registration failed: " + e.getMessage());
         session.setAttribute("errorField", "general");
-        
+
         // Forward to signup page with all form data preserved
         request.getRequestDispatcher("signup.jsp?user_type=" + userType).forward(request, response);
     }
-
     /* =========================
        STAFF REGISTER
        ========================= */
@@ -583,6 +592,85 @@ try {
         }
         response.sendRedirect("adm-page.jsp?pgprt=6");
 
+    /* =========================
+       ADMIN / LECTURER STUDENT RESULTS
+       ========================= */
+    } else if ("admin-results".equalsIgnoreCase(pageParam)) {
+        Object userIdObject = session.getAttribute("userId");
+        myPackage.classes.User currentUser = null;
+        if (userIdObject != null) {
+            currentUser = pDAO.getUserDetails(userIdObject.toString());
+        }
+
+        boolean canManageResults = currentUser != null
+                && ("admin".equalsIgnoreCase(currentUser.getType())
+                || "lecture".equalsIgnoreCase(currentUser.getType())
+                || "lecturer".equalsIgnoreCase(currentUser.getType()));
+
+        if (!canManageResults) {
+            session.setAttribute("error", "You do not have permission to delete student results.");
+            response.sendRedirect("adm-page.jsp?pgprt=5");
+            return;
+        }
+
+        String submittedToken = request.getParameter("csrf_token");
+        String sessionToken = (String) session.getAttribute("csrf_token");
+        if (sessionToken == null || submittedToken == null || !sessionToken.equals(submittedToken)) {
+            session.setAttribute("error", "Invalid request. Please try again.");
+            response.sendRedirect("adm-page.jsp?pgprt=5");
+            return;
+        }
+
+        String operation = nz(request.getParameter("operation"), "");
+
+        if ("delete_result".equalsIgnoreCase(operation)) {
+            try {
+                int examId = Integer.parseInt(nz(request.getParameter("eid"), "0"));
+                if (examId > 0) {
+                    boolean success = pDAO.deleteExamResult(examId);
+                    if (success) {
+                        session.setAttribute("message", "Exam result deleted successfully.");
+                    } else {
+                        session.setAttribute("error", "Failed to delete exam result.");
+                    }
+                } else {
+                    session.setAttribute("error", "Invalid exam ID.");
+                }
+            } catch (NumberFormatException e) {
+                session.setAttribute("error", "Invalid exam ID format.");
+            }
+        } else if ("edit_result".equalsIgnoreCase(operation)) {
+            try {
+                int examId = Integer.parseInt(nz(request.getParameter("eid"), "0"));
+                int obtainedMarks = Integer.parseInt(nz(request.getParameter("obtMarks"), "-1"));
+                int totalMarks = Integer.parseInt(nz(request.getParameter("totalMarks"), "-1"));
+                String status = nz(request.getParameter("status"), "");
+
+                if (examId <= 0 || obtainedMarks < 0 || obtainedMarks > totalMarks || totalMarks < 0) {
+                    session.setAttribute("error", "Invalid result values.");
+                } else if (pDAO.updateExamResult(examId, obtainedMarks, totalMarks, status)) {
+                    session.setAttribute("message", "Exam result updated successfully.");
+                } else {
+                    session.setAttribute("error", "Failed to update exam result.");
+                }
+            } catch (NumberFormatException e) {
+                session.setAttribute("error", "Invalid result values.");
+            }
+        } else if ("bulk_delete".equalsIgnoreCase(operation)) {
+            String[] examIds = request.getParameterValues("examIds");
+            if (examIds != null && examIds.length > 0) {
+                pDAO.deleteExamResults(examIds);
+                session.setAttribute("message", "Selected exam results deleted successfully.");
+            } else {
+                session.setAttribute("error", "No exam results selected for deletion.");
+            }
+        } else {
+            session.setAttribute("error", "Invalid delete operation.");
+        }
+
+        response.sendRedirect("adm-page.jsp?pgprt=5");
+        return;
+
 /* =========================
    QUESTIONS
    ========================= */
@@ -718,8 +806,8 @@ try {
                     session.setAttribute("error", "Failed to delete selected questions.");
                 }
         } else {
-                session.setAttribute("error", "No valid questions selected for deletion.");
-            }
+            session.setAttribute("error", "No valid questions selected for deletion.");
+        }
         } else {
             session.setAttribute("error", "No questions selected for deletion.");
         }
@@ -1076,7 +1164,7 @@ try {
                         // Redirect to showall.jsp after editing
                         if (!courseName.isEmpty()) {
                             response.sendRedirect("showall.jsp?coursename=" + courseName);
-        } else {
+                        } else {
                             response.sendRedirect("showall.jsp");
                         }
                         return;
@@ -1084,18 +1172,15 @@ try {
                         e.printStackTrace();
                         session.setAttribute("error", "Error updating question: " + e.getMessage());
                         String courseName = nz(request.getParameter("coursename"), "");
-                        
-                        // Clean up multipart items attribute to prevent reuse
                         request.removeAttribute("multipartItems");
-                        
                         if (!courseName.isEmpty()) {
                             response.sendRedirect("showall.jsp?coursename=" + courseName);
-        } else {
+                        } else {
                             response.sendRedirect("showall.jsp");
                         }
                         return;
                     }
-        } else {
+                } else {
                     // Handle regular form submission (without file upload)
                     question.setQuestion(nz(request.getParameter("question"), ""));
                     question.setOpt1(nz(request.getParameter("opt1"), ""));
@@ -1103,36 +1188,34 @@ try {
                     question.setOpt3(nz(request.getParameter("opt3"), ""));
                     question.setOpt4(nz(request.getParameter("opt4"), ""));
                     question.setCorrect(nz(request.getParameter("correct"), ""));
+
                     String courseName = nz(request.getParameter("coursename"), "");
                     question.setCourseName(courseName);
-                    // Also get and set question type for regular forms
+
                     String questionType = nz(request.getParameter("questionType"), "");
                     question.setQuestionType(questionType);
-                    
-                    // Handle image removal for regular forms
+
                     String removeImageParam = nz(request.getParameter("removeImage"), "");
                     if ("true".equals(removeImageParam)) {
-                        // Remove old image file if it exists
                         if (question.getImagePath() != null && !question.getImagePath().isEmpty()) {
                             try {
                                 File oldImage = new File(getServletContext().getRealPath("/" + question.getImagePath()));
                                 if (oldImage.exists()) {
                                     oldImage.delete();
                                 }
-                            } catch (Exception e) {
-                                // Log error but continue
-                                application.log("Error deleting old image: " + e.getMessage());
+                            } catch (Exception imageError) {
+                                application.log("Error deleting old image: " + imageError.getMessage());
                             }
                         }
                         question.setImagePath(null);
                     }
-                    
+
                     pDAO.updateQuestion(question);
-                    
+
                     if ("REARRANGE".equalsIgnoreCase(questionType)) {
                         java.util.List<String> rearrangeItemsList = new java.util.ArrayList<>();
                         java.util.Map<Integer, String> itemsMap = new java.util.TreeMap<>();
-                        
+
                         Enumeration<String> paramNames = request.getParameterNames();
                         while (paramNames.hasMoreElements()) {
                             String paramName = paramNames.nextElement();
@@ -1144,1541 +1227,275 @@ try {
                                 }
                             }
                         }
-                        for (String val : itemsMap.values()) rearrangeItemsList.add(val);
-                        
+                        for (String val : itemsMap.values()) {
+                            rearrangeItemsList.add(val);
+                        }
+
                         pDAO.clearRearrangeData(question.getQuestionId());
                         pDAO.addRearrangeData(question.getQuestionId(), rearrangeItemsList);
-                        
+
                         String displayStyle = nz(request.getParameter("rearrangeStyle"), "vertical");
                         org.json.JSONObject extraDataObj = new org.json.JSONObject();
                         extraDataObj.put("style", displayStyle);
                         question.setExtraData(extraDataObj.toString());
-                        
+
                         Integer totalMarks = null;
                         try {
                             String tmParam = request.getParameter("totalMarks");
-                            if (tmParam != null) totalMarks = Integer.parseInt(tmParam);
-                        } catch (Exception e) {}
-                        
+                            if (tmParam != null) {
+                                totalMarks = Integer.parseInt(tmParam);
+                            }
+                        } catch (Exception ignored) {}
+
                         pDAO.updateRearrangeQuestionJson(question.getQuestionId(), pDAO.toJsonArray(rearrangeItemsList), totalMarks);
                     }
-                    
-                    session.setAttribute("message","Question updated successfully");
-                    
-                    // Clean up multipart items attribute if it exists (for consistency)
+
+                    session.setAttribute("message", "Question updated successfully");
                     if (request.getAttribute("multipartItems") != null) {
                         request.removeAttribute("multipartItems");
                     }
-                    
-                    // Redirect to showall.jsp after editing
+
                     if (!courseName.isEmpty()) {
                         response.sendRedirect("showall.jsp?coursename=" + courseName);
-        } else {
+                    } else {
                         response.sendRedirect("showall.jsp");
                     }
                     return;
                 }
             }
         }
-        String courseName = nz(request.getParameter("coursename"), "");
-        
-        // Clean up multipart attributes if they exist
-        if (request.getAttribute("multipartItems") != null) {
-            request.removeAttribute("multipartItems");
-        }
-        if (request.getAttribute("multipartQid") != null) {
-            request.removeAttribute("multipartQid");
-        }
-        if (request.getAttribute("multipartOperation") != null) {
-            request.removeAttribute("multipartOperation");
-        }
-        
-        if (!courseName.isEmpty()) {
-            response.sendRedirect("showall.jsp?coursename=" + courseName);
-        } else {
-            response.sendRedirect("showall.jsp");
-        }
+    } else if ("exams".equalsIgnoreCase(pageParam)) {
+        String examOperation = nz(request.getParameter("operation"), "");
 
-    } else if ("addnew".equalsIgnoreCase(operation)) {
-        // Check if request is multipart (has file upload)
-        if (ServletFileUpload.isMultipartContent(request)) {
-            // Use the pre-parsed items from the beginning of the controller
-            List<FileItem> items = (List<FileItem>) request.getAttribute("multipartItems");
-            
-            // If items weren't pre-parsed, parse them now
-            if (items == null) {
-                // Create a factory for disk-based file items
-                DiskFileItemFactory factory = new DiskFileItemFactory();
-                
-                // Set factory constraints
-                factory.setSizeThreshold(1024 * 1024 * 3); // 3 MB
-                // Use alternative approach for temp directory
-                factory.setRepository(new File(request.getServletContext().getAttribute("javax.servlet.context.tempdir") != null 
-                    ? request.getServletContext().getAttribute("javax.servlet.context.tempdir").toString() 
-                    : "/tmp"));
-                
-                // Create a new file upload handler
-                ServletFileUpload upload = new ServletFileUpload(factory);
-                
-                // Set overall request size constraint
-                upload.setSizeMax(1024 * 1024 * 10); // 10 MB
-                
-                // Parse the request
-                items = upload.parseRequest(request);
-            }
-            
-            try {
-                
-                String questionText = "";
-                String opt1 = "";
-                String opt2 = "";
-                String opt3 = "";
-                String opt4 = "";
-                String correctAnswer = "";
-                String courseName = "";
-                String questionType = "";
-                String correctMultiple = "";
-                String orientation = "horizontal";
-                String imagePath = null;
-                boolean isAjax = false;
-                
-                for (FileItem item : items) {
-                    if (item.isFormField()) {
-                        // Process regular form field
-                        String fieldName = item.getFieldName();
-                        String fieldValue = item.getString("UTF-8");
-                        
-                        if ("ajax".equals(fieldName)) {
-                            isAjax = "true".equalsIgnoreCase(fieldValue);
-                        } else if ("question".equals(fieldName)) {
-                            questionText = nz(fieldValue, "");
-                        } else if ("opt1".equals(fieldName)) {
-                            opt1 = nz(fieldValue, "");
-                        } else if ("opt2".equals(fieldName)) {
-                            opt2 = nz(fieldValue, "");
-                        } else if ("opt3".equals(fieldName)) {
-                            opt3 = nz(fieldValue, "");
-                        } else if ("opt4".equals(fieldName)) {
-                            opt4 = nz(fieldValue, "");
-                        } else if ("correct".equals(fieldName)) {
-                            correctAnswer = nz(fieldValue, "");
-                        } else if ("coursename".equals(fieldName)) {
-                            courseName = nz(fieldValue, "");
-                        } else if ("questionType".equals(fieldName)) {
-                            questionType = nz(fieldValue, "");
-                        } else if ("correctMultiple".equals(fieldName)) {
-                            correctMultiple = nz(fieldValue, "");
-                        } else if ("orientation".equals(fieldName)) {
-                            orientation = fieldValue;
-                        }
-        } else {
-                        // Process file upload field - ONLY ACCEPT IMAGES
-                        String fieldName = item.getFieldName();
-                        String fileName = item.getName();
-                        
-                        if (fieldName.equals("imageFile") && fileName != null && !fileName.isEmpty()) {
-                            // Skip image validation for drag and drop questions
-                            if (!"DRAG_AND_DROP".equals(questionType)) {
-                                // Check file extension
-                                String fileExtension = "";
-                                int dotIndex = fileName.lastIndexOf('.');
-                                if (dotIndex > 0) {
-                                    fileExtension = fileName.substring(dotIndex).toLowerCase();
-                                }
-                                
-                                // List of allowed image extensions
-                                String[] allowedExtensions = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"};
-                                boolean isImage = false;
-                                for (String ext : allowedExtensions) {
-                                    if (fileExtension.equals(ext)) {
-                                        isImage = true;
-                                        break;
-                                    }
-                                }
-                                
-                                if (!isImage) {
-                                    session.setAttribute("error", "Only image files are allowed (JPG, JPEG, PNG, GIF, WEBP, BMP).");
-                                    if (!courseName.isEmpty()) {
-                                        response.sendRedirect("showall.jsp?coursename=" + courseName);
-        } else {
-                                        response.sendRedirect("showall.jsp");
-                                    }
-                                    return;
-                                }
-                            }
-                            
-                            // Create uploads directory if it doesn't exist
-                            String uploadPath = getServletContext().getRealPath("/uploads/images");
-                            File uploadDir = new File(uploadPath);
-                            if (!uploadDir.exists()) {
-                                uploadDir.mkdirs();
-                            }
-                            
-                            // Generate unique filename using current time
-                            long timestamp = new java.util.Date().getTime();
-                            String uniqueFileName = timestamp + "_" + new File(fileName).getName();
-                            File uploadedFile = new File(uploadDir, uniqueFileName);
-                            
-                            // Save the file
-                            item.write(uploadedFile);
-                            
-                            // Set the image path to be saved in database
-                            imagePath = "uploads/images/" + uniqueFileName;
-                        }
-                    }
-                }
-                
-                if ("MultipleSelect".equalsIgnoreCase(questionType)) {
-                    if (!correctMultiple.isEmpty()) correctAnswer = correctMultiple;
-                }
-                
-                String extraData = null;
-                if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
-                    JSONObject extraDataObj = new JSONObject();
-                    extraDataObj.put("orientation", orientation);
-                    extraData = extraDataObj.toString();
-                }
-                
-                // Insert question FIRST and capture new question ID
-                int newQuestionIdInserted = pDAO.addNewQuestionReturnId(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, imagePath, extraData);
-                
-                application.log("=== AFTER QUESTION INSERT ===");
-                application.log("Question Type: " + questionType);
-                application.log("Is DRAG_AND_DROP: " + "DRAG_AND_DROP".equalsIgnoreCase(questionType));
-                
-                // NOW process drag and drop data AFTER question insert for DRAG_AND_DROP type
-                if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
-                    application.log("=== ENTERING DRAG DROP SECTION ===");
-                    try {
-                        int newQuestionId = newQuestionIdInserted;
-                        application.log("New Question ID for drag drop: " + newQuestionId);
-                        
-                        // CRITICAL: Validate the question ID before proceeding
-                        if (newQuestionId <= 0) {
-                            application.log("ERROR: Invalid question ID returned: " + newQuestionId);
-                            throw new Exception("Failed to get valid question ID");
-                        }
-                        
-                        // Verify the question actually exists
-                        if (!pDAO.questionExists(newQuestionId)) {
-                            application.log("ERROR: Question ID " + newQuestionId + " does not exist in questions table!");
-                            throw new Exception("Question ID " + newQuestionId + " not found");
-                        }
-                        
-                        application.log("Verified question ID " + newQuestionId + " exists in questions table");
-                        
-                        // NOW extract drag and drop data from FileItems (AFTER question insert)
-                        java.util.List<String> dragItemsList = new java.util.ArrayList<>();
-                        java.util.List<String> dropTargetsList = new java.util.ArrayList<>();
-                        java.util.List<String> dragCorrectTargetsList = new java.util.ArrayList<>();
-                        Integer totalMarks = null;
-                        
-                        application.log("=== DRAG DROP PROCESSING START ===");
-                        application.log("Question type: " + questionType);
-                        application.log("Total FileItems processed: " + items.size());
-                        
-                        for (FileItem item : items) {
-                            if (item.isFormField()) {
-                                String fieldName = item.getFieldName();
-                                String fieldValue = item.getString("UTF-8");
-                                
-                                application.log("Processing field: " + fieldName + " = " + fieldValue);
-
-                                if ("totalMarks".equals(fieldName)) {
-                                    try {
-                                        if (fieldValue != null && !fieldValue.trim().isEmpty()) {
-                                            totalMarks = Integer.parseInt(fieldValue.trim());
-                                        }
-                                    } catch (NumberFormatException nfe) {
-                                        application.log("Invalid totalMarks value: " + fieldValue);
-                                    }
-                                }
-                                
-                                if (fieldName.startsWith("dragItem_text_")) {
-                                    String targetParam = fieldName.replace("dragItem_text_", "dragItem_target_");
-                                    String targetValue = "";
-                                    
-                                    // Find the corresponding target value
-                                    for (FileItem targetItem : items) {
-                                        if (targetItem.isFormField() && targetItem.getFieldName().equals(targetParam)) {
-                                            targetValue = targetItem.getString("UTF-8");
-                                            break;
-                                        }
-                                    }
-                                    
-                                    application.log("Found drag item: '" + fieldValue + "' -> target: '" + targetValue + "'");
-                                    
-                                    if (!fieldValue.trim().isEmpty()) {
-                                        dragItemsList.add(fieldValue);
-                                        dragCorrectTargetsList.add(targetValue);
-                                    }
-                                } else if (fieldName.startsWith("dropTarget_")) {
-                                    application.log("Found drop target: '" + fieldValue + "'");
-                                    if (!fieldValue.trim().isEmpty()) {
-                                        dropTargetsList.add(fieldValue.trim());
-                                    }
-                                }
-                            }
-                        }
-                        
-                        application.log("Drag items count: " + dragItemsList.size());
-                        application.log("Drop targets count: " + dropTargetsList.size());
-                        application.log("Correct targets count: " + dragCorrectTargetsList.size());
-                        
-                        // Use the new clean relational method
-                        pDAO.addDragDropData(newQuestionId, dragItemsList, dropTargetsList, dragCorrectTargetsList);
-
-                        // Also persist a copy into questions table columns for visibility/debugging
-                        pDAO.updateDragDropQuestionColumns(newQuestionId, dragItemsList, dropTargetsList, dragCorrectTargetsList, totalMarks);
-                        
-                        application.log("=== DRAG DROP DATA SAVED USING RELATIONAL TABLES ===");
-                        
-                    } catch (Exception e) {
-                        LOGGER.log(Level.SEVERE, "Error saving drag drop data", e);
-                        session.setAttribute("error", "Question saved but drag drop data had errors: " + e.getMessage());
-                        application.log("Error saving drag drop data: " + e.getMessage());
-                    }
-                        } else if ("REARRANGE".equalsIgnoreCase(questionType)) {
-                            application.log("=== ENTERING REARRANGE SECTION ===");
-                            try {
-                                int newQuestionId = newQuestionIdInserted;
-                                String rearrangeItemsHidden = "";
-                                java.util.List<String> rearrangeItemsList = new java.util.ArrayList<>();
-                                String displayStyle = "vertical";
-                                Integer totalMarks = null;
-                                
-                                // Collect items in order
-                                java.util.Map<Integer, String> itemsMap = new java.util.TreeMap<>();
-                                
-                                for (FileItem item : items) {
-                                    if (item.isFormField()) {
-                                        String fieldName = item.getFieldName();
-                                        String fieldValue = item.getString("UTF-8");
-                                        
-                                        if ("rearrangeItemsHidden".equals(fieldName)) {
-                                            rearrangeItemsHidden = fieldValue;
-                                        } else if (fieldName.startsWith("rearrangeItem_")) {
-                                            int idx = Integer.parseInt(fieldName.substring(14));
-                                            if (!fieldValue.trim().isEmpty()) {
-                                                itemsMap.put(idx, fieldValue.trim());
-                                            }
-                                        } else if ("rearrangeStyle".equals(fieldName)) {
-                                            displayStyle = fieldValue;
-                                        } else if ("totalMarks".equals(fieldName)) {
-                                            try {
-                                                totalMarks = Integer.parseInt(fieldValue.trim());
-                                            } catch (Exception e) {}
-                                        }
-                                    }
-                                }
-                                
-                                if (rearrangeItemsHidden != null && !rearrangeItemsHidden.trim().isEmpty()) {
-                                    org.json.JSONArray itemsArr = new org.json.JSONArray(rearrangeItemsHidden);
-                                    for(int i=0; i<itemsArr.length(); i++) rearrangeItemsList.add(itemsArr.getString(i));
-        } else {
-                                    for (String val : itemsMap.values()) rearrangeItemsList.add(val);
-                                    rearrangeItemsHidden = pDAO.toJsonArray(rearrangeItemsList);
-                                }
-                                
-                                // Update extra_data with display style
-                                org.json.JSONObject extraDataObj = new org.json.JSONObject();
-                                extraDataObj.put("style", displayStyle);
-                                
-                                Questions q = pDAO.getQuestionById(newQuestionId);
-                                q.setExtraData(extraDataObj.toString());
-                                pDAO.updateQuestion(q);
-                                
-                                // Save items to relational table
-                                pDAO.addRearrangeData(newQuestionId, rearrangeItemsList);
-                                
-                                // Save items as JSON in drag_items column for fallback
-                                pDAO.updateRearrangeQuestionJson(newQuestionId, pDAO.toJsonArray(rearrangeItemsList), totalMarks);
-                                
-                                application.log("=== REARRANGE DATA SAVED successfully ===");
-                            } catch (Exception e) {
-                                LOGGER.log(Level.SEVERE, "Error saving rearrange data", e);
-                                application.log("Error saving rearrange data: " + e.getMessage());
-                            }
-                }
-                
-                session.setAttribute("message","Question added successfully");
-                
-                // Save last selections to session
-                session.setAttribute("last_course_name", courseName);
-                session.setAttribute("last_question_type", questionType);
-                
-                if (isAjax) {
-                    response.setContentType("application/json");
-            response.getWriter().write("{\"success\": true, \"message\": \"Question added successfully\", \"qid\": " + newQuestionIdInserted + "}");
-                    return;
-                }
-                
-                // Redirect to success page with modal
-                if (!courseName.isEmpty()) {
-                    response.sendRedirect("question-success.jsp?coursename=" + java.net.URLEncoder.encode(courseName, "UTF-8"));
-        } else {
-                    response.sendRedirect("question-success.jsp");
-                }
-                return;
-            } catch (Exception e) {
-                e.printStackTrace();
-                session.setAttribute("error", "Error uploading image: " + e.getMessage());
-                
-                // Clean up multipart items attribute to prevent reuse
-                request.removeAttribute("multipartItems");
-                
-                response.sendRedirect("showall.jsp");
-                return;
-            }
-        } else {
-            // Handle regular form submission (without file upload)
-            String questionText  = nz(request.getParameter("question"), "");
-            String opt1          = nz(request.getParameter("opt1"), "");
-            String opt2          = nz(request.getParameter("opt2"), "");
-            String opt3          = nz(request.getParameter("opt3"), "");
-            String opt4          = nz(request.getParameter("opt4"), "");
-            String correctAnswer = nz(request.getParameter("correct"), "");
-            String courseName    = nz(request.getParameter("coursename"), "");
-            String questionType  = nz(request.getParameter("questionType"), "");
-            String orientation   = nz(request.getParameter("orientation"), "horizontal");
-            boolean isAjax = "true".equalsIgnoreCase(request.getParameter("ajax"));
-            
-            if ("MultipleSelect".equalsIgnoreCase(questionType)) {
-                String correctMultiple = nz(request.getParameter("correctMultiple"), "");
-                if (!correctMultiple.isEmpty()) correctAnswer = correctMultiple;
-            }
-            
-            String extraData = null;
-            if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
-                JSONObject extraDataObj = new JSONObject();
-                extraDataObj.put("orientation", orientation);
-                extraData = extraDataObj.toString();
-            }
-            
-            int newQuestionIdInserted = pDAO.addNewQuestionReturnId(questionText, opt1, opt2, opt3, opt4, correctAnswer, courseName, questionType, null, extraData);
-            
-            // Save drag and drop data using proper relational tables for DRAG_AND_DROP type
-            if ("DRAG_AND_DROP".equalsIgnoreCase(questionType)) {
-                try {
-                    int newQuestionId = newQuestionIdInserted;
-                    
-                    // Get total marks from request parameter
-                    int totalMarks = 1; // default
-                    String totalMarksParam = request.getParameter("totalMarks");
-                    if (totalMarksParam != null && !totalMarksParam.trim().isEmpty()) {
-                        try {
-                            totalMarks = Integer.parseInt(totalMarksParam.trim());
-                        } catch (NumberFormatException e) {
-                            application.log("Invalid totalMarks value: " + totalMarksParam + ", using default 1");
-                        }
-                    }
-                    
-                    // Collect drag items and targets
-                    java.util.List<String> dragItemsList = new java.util.ArrayList<>();
-                    java.util.List<String> dropTargetsList = new java.util.ArrayList<>();
-                    java.util.List<String> dragCorrectTargetsList = new java.util.ArrayList<>();
-                    
-                    // Get drag items and their correct targets
-                    Enumeration<String> paramNames = request.getParameterNames();
-                    while (paramNames.hasMoreElements()) {
-                        String paramName = paramNames.nextElement();
-                        if (paramName.startsWith("dragItem_text_")) {
-                            String itemText = nz(request.getParameter(paramName), "");
-                            String targetParam = paramName.replace("dragItem_text_", "dragItem_target_");
-                            String targetValue = nz(request.getParameter(targetParam), "");
-                            
-                            if (!itemText.trim().isEmpty()) {
-                                dragItemsList.add(itemText);
-                                dragCorrectTargetsList.add(targetValue);
-                            }
-                        }
-                    }
-                    
-                    // Get drop targets
-                    paramNames = request.getParameterNames();
-                    while (paramNames.hasMoreElements()) {
-                        String paramName = paramNames.nextElement();
-                        if (paramName.startsWith("dropTarget_")) {
-                            String targetLabel = nz(request.getParameter(paramName), "");
-                            if (!targetLabel.trim().isEmpty()) {
-                                dropTargetsList.add(targetLabel.trim());
-                            }
-                        }
-                    }
-                    
-                    application.log("Regular form - Total marks for drag-drop: " + totalMarks);
-                    application.log("Regular form - Drag items count: " + dragItemsList.size());
-                    application.log("Regular form - Drop targets count: " + dropTargetsList.size());
-                    application.log("Regular form - Correct targets count: " + dragCorrectTargetsList.size());
-
-                    // Use the new clean relational method
-                    pDAO.addDragDropData(newQuestionId, dragItemsList, dropTargetsList, dragCorrectTargetsList);
-
-                    // Also persist a copy into questions table columns for visibility/debugging
-                    pDAO.updateDragDropQuestionColumns(newQuestionId, dragItemsList, dropTargetsList, dragCorrectTargetsList, totalMarks);
-
-                    application.log("=== DRAG DROP DATA SAVED USING RELATIONAL TABLES (REGULAR FORM) ===");
-
-                } catch (Exception e) {
-                    LOGGER.log(Level.SEVERE, "Error saving drag drop data", e);
-                    session.setAttribute("error", "Question saved but drag drop data had errors: " + e.getMessage());
-                }
-            } else if ("REARRANGE".equalsIgnoreCase(questionType)) {
-                try {
-                    int newQuestionId = newQuestionIdInserted;
-                    java.util.List<String> rearrangeItemsList = new java.util.ArrayList<>();
-                    java.util.Map<Integer, String> itemsMap = new java.util.TreeMap<>();
-                    
-                    Enumeration<String> paramNames = request.getParameterNames();
-                    while (paramNames.hasMoreElements()) {
-                        String paramName = paramNames.nextElement();
-                        if (paramName.startsWith("rearrangeItem_")) {
-                            int idx = Integer.parseInt(paramName.substring(14));
-                            String val = request.getParameter(paramName);
-                            if (val != null && !val.trim().isEmpty()) {
-                                itemsMap.put(idx, val.trim());
-                            }
-                        }
-                    }
-                    for (String val : itemsMap.values()) rearrangeItemsList.add(val);
-                    
-                    pDAO.addRearrangeData(newQuestionId, rearrangeItemsList);
-                    
-                    String displayStyle = nz(request.getParameter("rearrangeStyle"), "vertical");
-                    org.json.JSONObject extraDataObj = new org.json.JSONObject();
-                    extraDataObj.put("style", displayStyle);
-                    
-                    Questions q = pDAO.getQuestionById(newQuestionId);
-                    q.setExtraData(extraDataObj.toString());
-                    pDAO.updateQuestion(q);
-                    
-                    Integer totalMarks = null;
-                    try {
-                        String tmParam = request.getParameter("totalMarks");
-                        if (tmParam != null) totalMarks = Integer.parseInt(tmParam);
-                    } catch (Exception e) {}
-                    
-                    pDAO.updateRearrangeQuestionJson(newQuestionId, pDAO.toJsonArray(rearrangeItemsList), totalMarks);
-                } catch (Exception e) {
-                    LOGGER.log(Level.SEVERE, "Error saving rearrange data (regular)", e);
-                }
-            }
-            
-            session.setAttribute("message","Question added successfully");
-            // Save last selections to session
-            session.setAttribute("last_course_name", courseName);
-            session.setAttribute("last_question_type", questionType);
-
-            if (isAjax) {
-                response.setContentType("application/json");
-            response.getWriter().write("{\"success\": true, \"message\": \"Question added successfully\", \"qid\": " + newQuestionIdInserted + "}");
-                return;
-            }
-
-            courseName = nz(request.getParameter("coursename"), "");
-            if (!courseName.isEmpty()) {
-                response.sendRedirect("question-success.jsp?coursename=" + java.net.URLEncoder.encode(courseName, "UTF-8")+"&questionType="+questionType);
-        } else {
-                response.sendRedirect("question-success.jsp?questionType="+questionType);
-            }
-            return;
-        }
-    } else if ("submit_drag_drop".equalsIgnoreCase(operation)) {
-        // Handle drag-drop answer submission
-        String examIdStr = nz(request.getParameter("examId"), "");
-        String questionIdStr = nz(request.getParameter("questionId"), "");
-        String studentId = nz(request.getParameter("studentId"), "");
-        
-        if (examIdStr.isEmpty() || questionIdStr.isEmpty() || studentId.isEmpty()) {
-            response.setContentType("application/json");
-            response.getWriter().write("{\"success\": false, \"message\": \"Missing required parameters\"}");
-            return;
-        }
-        
-        try {
-            int examId = Integer.parseInt(examIdStr);
-            int questionId = Integer.parseInt(questionIdStr);
-            
-            // Parse the selected matches
-            Map<Integer, Integer> selectedMatches = new HashMap<>();
-            Enumeration<String> paramNames = request.getParameterNames();
-            
-            while (paramNames.hasMoreElements()) {
-                String paramName = paramNames.nextElement();
-                if (paramName.startsWith("match_")) {
-                    String dragItemIdStr = paramName.substring(6); // Remove "match_" prefix
-                    String targetIdStr = nz(request.getParameter(paramName), "");
-                    
-                    try {
-                        int dragItemId = Integer.parseInt(dragItemIdStr);
-                        int targetId = Integer.parseInt(targetIdStr);
-                        selectedMatches.put(dragItemId, targetId);
-                    } catch (NumberFormatException e) {
-                        // Skip invalid parameters
-                    }
-                }
-            }
-            
-            // Submit answers and get marks
-            float marksObtained = pDAO.submitDragDropAnswers(examId, questionId, studentId, selectedMatches);
-            
-            response.setContentType("application/json");
-            response.getWriter().write("{\"success\": true, \"marksObtained\": " + marksObtained + "}");
-            return;
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error submitting drag-drop answers", e);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"success\": false, \"message\": \"Failed to submit answers\"}");
-            return;
-        }
-    } else if ("ai_generate".equalsIgnoreCase(operation)) {
-        response.setContentType("application/json");
-        PrintWriter outJSON = response.getWriter();
-        String text = nz(request.getParameter("text"), "");
-        String questionType = nz(request.getParameter("questionType"), "MCQ");
-        boolean isMarkingGuideline = "true".equalsIgnoreCase(request.getParameter("isMarkingGuideline"));
-        
-        if (text.isEmpty()) {
-            outJSON.print("{\"success\": false, \"message\": \"No text provided for AI generation.\"}");
-            return;
-        }
-        
-        int numQuestions = 10;
-        String numQsParam = request.getParameter("numQuestions");
-        if (numQsParam != null && !numQsParam.trim().isEmpty()) {
-            try {
-                numQuestions = Integer.parseInt(numQsParam.trim());
-            } catch (NumberFormatException e) {}
-        }
-
-        if (numQuestions < 1) numQuestions = 1;
-        if (numQuestions > 100) numQuestions = 100;
-        
-        try {
-            JSONArray collected = new JSONArray();
-            int remaining = numQuestions;
-            int attempts = 0;
-            while (remaining > 0 && attempts < 3) {
-                attempts++;
-                String promptText = text;
-                if (collected.length() > 0) {
-                    promptText = "IMPORTANT: Do not repeat any of the following questions. Generate ONLY new questions.\n" +
-                                 "ALREADY GENERATED (do not repeat):\n" + collected.toString() + "\n\n" +
-                                 "NOW GENERATE EXACTLY " + remaining + " MORE QUESTIONS.\n\n" +
-                                 text;
-                }
-
-                String aiResponse = myPackage.OpenRouterClient.generateQuestions(promptText, questionType, remaining, isMarkingGuideline);
-                if (aiResponse == null || aiResponse.trim().isEmpty()) {
-                    break;
-                }
-
-                // Clean AI response if it contains markdown
-                if (aiResponse.contains("```json")) {
-                    aiResponse = aiResponse.substring(aiResponse.indexOf("```json") + 7);
-                    if (aiResponse.contains("```")) {
-                        aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
-                    }
-                } else if (aiResponse.contains("```")) {
-                    aiResponse = aiResponse.substring(aiResponse.indexOf("```") + 3);
-                    if (aiResponse.contains("```")) {
-                        aiResponse = aiResponse.substring(0, aiResponse.indexOf("```"));
-                    }
-                }
-                aiResponse = aiResponse.trim();
-
-                JSONArray batch = null;
-                try {
-                    if (aiResponse.startsWith("[")) {
-                        batch = new JSONArray(aiResponse);
-                    } else if (aiResponse.startsWith("{")) {
-                        JSONObject resObj = new JSONObject(aiResponse);
-                        if (resObj.has("questions")) {
-                            batch = resObj.getJSONArray("questions");
-                        } else if (resObj.has("question")) {
-                            batch = new JSONArray();
-                            batch.put(resObj);
-                        }
-                    } else {
-                        int firstBracket = aiResponse.indexOf("[");
-                        if (firstBracket != -1) {
-                            batch = new JSONArray(aiResponse.substring(firstBracket));
-                        }
-                    }
-                } catch (JSONException je) {
-                    batch = null;
-                }
-
-                if (batch == null || batch.length() == 0) {
-                    break;
-                }
-
-                for (int i = 0; i < batch.length() && collected.length() < numQuestions; i++) {
-                    collected.put(batch.get(i));
-                }
-
-                remaining = numQuestions - collected.length();
-            }
-
-            if (collected.length() != numQuestions) {
-                outJSON.print("{\"success\": false, \"message\": \"AI returned " + collected.length() + " questions, but " + numQuestions + " were requested. Please try again (or reduce the requested count).\"}");
-                return;
-            }
-
-            JSONObject result = new JSONObject();
-            result.put("success", true);
-            result.put("questions", collected);
-            outJSON.print(result.toString());
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Unexpected error in ai_generate", e);
-            outJSON.print("{\"success\": false, \"message\": \"Internal Error: " + e.getMessage() + "\"}");
-        }
-        return;
-
-    } else if ("extract_text".equalsIgnoreCase(operation)) {
-        response.setContentType("application/json");
-        PrintWriter outJSON = response.getWriter();
-        
-        try {
-            if (ServletFileUpload.isMultipartContent(request)) {
-                List<FileItem> items = (List<FileItem>) request.getAttribute("multipartItems");
-                if (items == null) {
-                    DiskFileItemFactory factory = new DiskFileItemFactory();
-                    ServletFileUpload upload = new ServletFileUpload(factory);
-                    items = upload.parseRequest(request);
-                }
-
-                String extractedText = "";
-                boolean foundFile = false;
-
-                for (FileItem item : items) {
-                    if (!item.isFormField() && ("questionFile".equals(item.getFieldName()) || "pdfFile".equals(item.getFieldName()))) {
-                        foundFile = true;
-                        byte[] pdfBytes = item.get();
-                        extractedText = PDFExtractor.extractCleanText(pdfBytes);
-                        break;
-                    }
-                }
-
-                if (foundFile) {
-                    JSONObject res = new JSONObject();
-                    res.put("success", true);
-                    res.put("extractedText", extractedText);
-                    outJSON.print(res.toString());
-        } else {
-                    outJSON.print("{\"success\": false, \"message\": \"No file found in request.\"}");
-                }
-        } else {
-                outJSON.print("{\"success\": false, \"message\": \"Request is not multipart.\"}");
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error extracting text using PDFExtractor", e);
-            outJSON.print("{\"success\": false, \"message\": \"Extraction error: " + e.getMessage() + "\"}");
-        }
-        return;
-
-        } else {
-        session.setAttribute("error", "Invalid operation for questions");
-        String courseName = nz(request.getParameter("coursename"), "");
-        if (!courseName.isEmpty()) {
-            response.sendRedirect("showall.jsp?coursename=" + courseName);
-        } else {
-            response.sendRedirect("showall.jsp");
-        }
-    }
-/* =========================
-   RESULTS
-   ========================= */
-} else if ("results".equalsIgnoreCase(pageParam)) {
-        String operation = nz(request.getParameter("operation"), "");
-        
-        if ("edit".equalsIgnoreCase(operation)) {
-            int examId = Integer.parseInt(nz(request.getParameter("eid"), "0"));
-            int obtMarks = Integer.parseInt(nz(request.getParameter("obtMarks"), "0"));
-            int totalMarks = Integer.parseInt(nz(request.getParameter("totalMarks"), "0"));
-            String status = nz(request.getParameter("status"), "");
-            
-            // Calculate percentage
-            double percentage = 0;
-            if (totalMarks > 0) {
-                percentage = ((double) obtMarks / totalMarks) * 100;
-            }
-            
-            // Update result status based on percentage if not manually set
-            if (status.isEmpty()) {
-                status = (percentage >= 75.0) ? "Pass" : "Fail";
-            }
-            
-            // Update the exam in database
-            try {
-                Connection conn = pDAO.getConnection();
-                String sql = "UPDATE exams SET obt_marks=?, result_status=? WHERE exam_id=?";
-                PreparedStatement pstm = conn.prepareStatement(sql);
-                pstm.setInt(1, obtMarks);
-                pstm.setString(2, status);
-                pstm.setInt(3, examId);
-                pstm.executeUpdate();
-                pstm.close();
-                
-                session.setAttribute("message", "Result updated successfully!");
-            } catch (SQLException ex) {
-                session.setAttribute("error", "Error updating result: " + ex.getMessage());
-            }
-            response.sendRedirect("adm-page.jsp?pgprt=5");
-            
-        } else if ("delete".equalsIgnoreCase(operation)) {
-            // Handle both single and bulk delete operations
-            String[] examIds = request.getParameterValues("eids"); // For bulk delete
-            String singleExamId = request.getParameter("eid");  // For single delete
-            
-            if (examIds != null && examIds.length > 0) {
-                // Bulk delete
-                pDAO.deleteExamResults(examIds);
-                session.setAttribute("message", "Selected exam results deleted successfully!");
-            } else if (singleExamId != null && !singleExamId.isEmpty()) {
-                // Single delete
-                try {
-                    int examId = Integer.parseInt(singleExamId);
-                    boolean success = pDAO.deleteExamResult(examId);
-        if (success) {
-                        session.setAttribute("message", "Exam result deleted successfully!");
-        } else {
-                        session.setAttribute("error", "Failed to delete exam result.");
-                    }
-                } catch (NumberFormatException e) {
-                    session.setAttribute("error", "Invalid Exam ID format.");
-                }
-        } else {
-                session.setAttribute("error", "No exam result selected for deletion.");
-            }
-            response.sendRedirect("adm-page.jsp?pgprt=5");
-        } else {
-            session.setAttribute("error", "Invalid operation for results");
-            response.sendRedirect("adm-page.jsp?pgprt=5");
-        }
-
-/* =========================
-   EXAMS - START EXAM
-   ========================= */
-} else if ("saveAnswer".equalsIgnoreCase(pageParam)) {
-    // Handle async answer saving during exam
-    try {
-        int qid = Integer.parseInt(nz(request.getParameter("qid"), "0"));
-        String question = nz(request.getParameter("question"), "");
-        String ans = nz(request.getParameter("ans"), "");
-        
-        Object examIdObj = session.getAttribute("examId");
-        if (examIdObj != null && qid > 0) {
-            int examId = Integer.parseInt(examIdObj.toString());
-            pDAO.insertAnswer(examId, qid, question, ans);
-            // application.log("Async save: QID " + qid + " -> " + ans);
-        }
-    } catch (Exception e) {
-        application.log("Error in saveAnswer: " + e.getMessage());
-    }
-} else if ("exams".equalsIgnoreCase(pageParam)) {
-    String operation = nz(request.getParameter("operation"), "");
-    
-    if ("startexam".equalsIgnoreCase(operation)) {
-        // Verify CSRF token
-        String csrfToken = request.getParameter("csrf_token");
-        String sessionToken = (String) session.getAttribute("csrf_token");
-        
-        if (csrfToken == null || !csrfToken.equals(sessionToken)) {
-            response.sendRedirect("std-page.jsp?pgprt=1&error=Invalid CSRF token");
-            return;
-        }
-        
-        String coursename = request.getParameter("coursename");
-        
-        // Check if course is active
-        boolean isActive = pDAO.isCourseActive(coursename);
-        
-        if (!isActive) {
-            response.sendRedirect("std-page.jsp?pgprt=1&error=This exam is not active");
-            return;
-        }
-        
-        // Start new exam and get the exam ID
-        int userId = 0;
-        Object userIdObj = session.getAttribute("userId");
-        if (userIdObj != null) {
-            userId = Integer.parseInt(userIdObj.toString());
-        } else {
-            // Try to get user ID from username
-            String username = (String) session.getAttribute("uname");
-            if (username != null) {
-                userId = pDAO.getUserId(username);
-            }
-        }
-        
-        if (userId == 0) {
-            response.sendRedirect("std-page.jsp?pgprt=1&error=User not logged in");
-            return;
-        }
-        
-        int examId = pDAO.startExam(coursename, userId);
-        
-        if (examId > 0) {
-            // REGISTER EXAM START
-            try {
-                boolean registered = pDAO.registerExamStart(userId, examId, coursename);
-                
-                // Optional: You can log to application log if needed
-                // application.log("Exam register entry created for student " + userId + " for exam " + examId);
-                
-            } catch (SQLException e) {
-                // Log error to application log
-                application.log("Error registering exam start: " + e.getMessage(), e);
-                // Continue even if registration fails - don't block exam start
-            }
-            
-            // Set session attributes
-            session.setAttribute("examStarted", "1");
-            session.setAttribute("examId", examId);
-            session.setAttribute("examCourse", coursename);
-            
-            // Redirect to exam page with URL encoding
-            String encodedCourseName = java.net.URLEncoder.encode(coursename, "UTF-8");
-            response.sendRedirect("std-page.jsp?pgprt=1&coursename=" + encodedCourseName);
-        } else {
-            response.sendRedirect("std-page.jsp?pgprt=1&error=Failed to start exam");
-        }
-        
-    } else if ("terminateExam".equalsIgnoreCase(operation)) {
-        String examId = request.getParameter("examId");
-        String studentId = request.getParameter("studentId");
-        String reason = request.getParameter("reason");
-        
-        boolean terminated = false;
-        try {
-            terminated = pDAO.terminateExam(Integer.parseInt(examId), Integer.parseInt(studentId), reason);
-        } catch (Exception ex) {
-            terminated = false;
-        }
-        
-        if (terminated) {
-            session.removeAttribute("examStarted");
-            session.removeAttribute("examId");
-            session.removeAttribute("remainingTime");
-            session.removeAttribute("courseName");
-            out.print("{\"success\": true}");
-        } else {
-            out.print("{\"success\": false}");
-        }
-        
-    } else if ("submitted".equalsIgnoreCase(operation)) {
-        try {
-            String endTime = java.time.LocalTime.now().truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
-                           .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
-            
-            int size = Integer.parseInt(nz(request.getParameter("size"), "0"));
-            if (session.getAttribute("examId") != null) {
-                int eId    = Integer.parseInt(session.getAttribute("examId").toString());
-                int tMarks = Integer.parseInt(nz(request.getParameter("totalmarks"), "0"));
-                
-                // Get student ID
-                int userId = 0;
-                Object userIdObj = session.getAttribute("userId");
-                if (userIdObj != null) {
-                    userId = Integer.parseInt(userIdObj.toString());
-                }
-
-                for (int i=0;i<size;i++){
-                    String question = nz(request.getParameter("qtext"+i), "");
-                    String ans      = nz(request.getParameter("question"+i), "");
-                    String qtype     = nz(request.getParameter("qtype"+i), "");
-                    int qid         = Integer.parseInt(nz(request.getParameter("qid"+i), "0"));
-                    
-                    // Check if this is a multiple select question and get the hidden field value
-                    String multiSelectAns = nz(request.getParameter("question"+i+"-hidden"), "");
-                    if (!multiSelectAns.isEmpty()) {
-                        ans = multiSelectAns; // Use the multi-select answer instead
-                    }
-                    
-                    // Handle drag-drop questions - FIXED JSON PARSING
-                    if ("dragdrop".equals(qtype)) {
-                        application.log("Processing drag-drop question " + qid + ": ans=" + ans);
-                        if (ans != null && !ans.trim().isEmpty() && ans.startsWith("{")) {
-                            try {
-                                // Parse JSON mapping from format: {"target_15":"item_14","target_16":"item_15"}
-                                java.util.Map<Integer, Integer> dragDropMatches = new java.util.HashMap<>();
-                                
-                                org.json.JSONObject userObj = new org.json.JSONObject(ans);
-                                java.util.Iterator<String> keys = userObj.keys();
-                                
-                                while (keys.hasNext()) {
-                                    String key = keys.next();
-                                    // Key format: "target_15" or "zone_15"
-                                    String value = userObj.getString(key);
-                                    
-                                    // Extract target ID from key
-                                    Integer targetId = null;
-                                    if (key.startsWith("target_")) {
-                                        try {
-                                            targetId = Integer.parseInt(key.substring(7));
-                                        } catch (NumberFormatException e) {}
-                                    } else if (key.startsWith("zone_")) {
-                                        try {
-                                            targetId = Integer.parseInt(key.substring(5));
-                                        } catch (NumberFormatException e) {}
-                                    }
-                                    
-                                    // Extract item ID from value
-                                    Integer itemId = null;
-                                    if (value.startsWith("item_")) {
-                                        try {
-                                            itemId = Integer.parseInt(value.substring(5));
-                                        } catch (NumberFormatException e) {}
-                                    }
-                                    
-                                    if (targetId != null && itemId != null) {
-                                        // IMPORTANT: Map is itemId -> targetId
-                                        dragDropMatches.put(itemId, targetId);
-                                        application.log("Drag-drop match: item " + itemId + " -> target " + targetId);
-                                    }
-                                }
-                                
-                                if (!dragDropMatches.isEmpty() && userId > 0) {
-                                    float marks = pDAO.submitDragDropAnswers(eId, qid, String.valueOf(userId), dragDropMatches);
-                                    application.log("Drag-drop marks for Q" + qid + ": " + marks);
-        } else {
-                                    application.log("Drag-drop: No matches found or invalid userId. Matches: " + dragDropMatches.size() + ", userId: " + userId);
-                                }
-                            } catch (Exception e) {
-                                application.log("Error processing drag-drop JSON for Q" + qid + ": " + e.getMessage());
-                            }
-        } else {
-                            application.log("Drag-drop answer empty or invalid format for Q" + qid + ": " + ans);
-                        }
-                    } else if ("rearrange".equals(qtype)) {
-                        application.log("Processing rearrange question " + qid + ": ans=" + ans);
-                        if (ans != null && !ans.trim().isEmpty() && ans.startsWith("[")) {
-                            try {
-                                java.util.ArrayList<Integer> orderedIds = new java.util.ArrayList<>();
-                                org.json.JSONArray userArr = new org.json.JSONArray(ans);
-                                for (int j = 0; j < userArr.length(); j++) {
-                                    orderedIds.add(userArr.getInt(j));
-                                }
-                                if (!orderedIds.isEmpty() && userId > 0) {
-                                    float marks = pDAO.submitRearrangeAnswer(eId, qid, String.valueOf(userId), orderedIds);
-                                    application.log("Rearrange marks for Q" + qid + ": " + marks);
-                                }
-                            } catch (Exception e) {
-                                application.log("Error processing rearrange JSON for Q" + qid + ": " + e.getMessage());
-                            }
-                        }
-                    }
-                    
-                    pDAO.insertAnswer(eId, qid, question, ans);
-                }
-
-                boolean cheatingTerminated = "true".equalsIgnoreCase(request.getParameter("cheating_terminated"));
-                boolean windowLeaveTerminated = "true".equalsIgnoreCase(request.getParameter("left_window_terminated"));
-                
-                String resultStatus = null;
-                if (cheatingTerminated || windowLeaveTerminated) {
-                    resultStatus = "Terminated";
-                }
-                
-                pDAO.calculateResult(eId, tMarks, endTime, size, resultStatus);
-                
-                // REGISTER EXAM COMPLETION
-                if (userId > 0) {
-                    try {
-                        boolean registered = pDAO.registerExamCompletion(userId, eId, endTime);
-                        // Optional: Log completion
-                        // application.log("Exam completion registered for student " + userId + " for exam " + eId);
-                    } catch (SQLException e) {
-                        // Log error to application log
-                        application.log("Error registering exam completion: " + e.getMessage(), e);
-                        // Continue even if registration fails
-                    }
-                }
-
-                session.removeAttribute("examId");
-                session.removeAttribute("examStarted");
-                session.removeAttribute("examCourse");
-
-                response.sendRedirect("std-page.jsp?pgprt=1&eid="+eId+"&showresult=1");
-        } else {
-            response.sendRedirect("std-page.jsp");
-        }
-        } catch(Exception e){
-            session.setAttribute("error","Error submitting exam: "+e.getMessage());
-            response.sendRedirect("std-page.jsp");
-        }
-    } else if ("checkCourseStatus".equalsIgnoreCase(operation)) {
-        // Handle AJAX request to check if a course is active
-        String courseNameToCheck = nz(request.getParameter("courseName"), "");
-        if (!courseNameToCheck.isEmpty()) {
-            boolean isActive = pDAO.isCourseActive(courseNameToCheck);
-            response.setContentType("text/plain");
-            response.getWriter().write(String.valueOf(isActive));
-            return;
-        } else {
-            response.setContentType("text/plain");
-            response.getWriter().write("false");
-            return;
-        }
-    } else {
-        session.setAttribute("error", "Invalid operation for exams");
-        response.sendRedirect("std-page.jsp");
-    }
-        
-    /* =========================
-       ADMIN RESULTS
-       ========================= */
-    } else if ("admin-results".equalsIgnoreCase(pageParam)) {
-        String operation = nz(request.getParameter("operation"), "");
-        if ("bulk_delete".equalsIgnoreCase(operation)) {
+        if ("startexam".equalsIgnoreCase(examOperation)) {
             String submittedToken = request.getParameter("csrf_token");
             String sessionToken = (String) session.getAttribute("csrf_token");
-            if (sessionToken == null || !sessionToken.equals(submittedToken)) {
+            if (sessionToken == null || submittedToken == null || !sessionToken.equals(submittedToken)) {
                 session.setAttribute("error", "Invalid request. Please try again.");
-                response.sendRedirect("adm-page.jsp?pgprt=5");
+                response.sendRedirect("std-page.jsp?pgprt=1");
                 return;
             }
-            String[] examIds = request.getParameterValues("examIds");
-            if (examIds != null && examIds.length > 0) {
-                pDAO.deleteExamResults(examIds);
-                session.setAttribute("message", "Selected exam results deleted successfully.");
-        } else {
-                session.setAttribute("error", "No exam results selected for deletion.");
-            }
-            response.sendRedirect("adm-page.jsp?pgprt=5");
-        } else if ("delete_result".equalsIgnoreCase(operation)) {
-            String submittedToken = request.getParameter("csrf_token");
-            String sessionToken = (String) session.getAttribute("csrf_token");
 
-            if (sessionToken == null || !sessionToken.equals(submittedToken)) {
-                session.setAttribute("error", "Invalid request. Please try again.");
-                response.sendRedirect("adm-page.jsp?pgprt=5");
+            String courseName = nz(request.getParameter("coursename"), "");
+            if (courseName.isEmpty()) {
+                session.setAttribute("error", "Please select a course.");
+                response.sendRedirect("std-page.jsp?pgprt=1");
+                return;
+            }
+
+            if (!pDAO.isCourseActive(courseName)) {
+                session.setAttribute("error", "This exam is not active.");
+                response.sendRedirect("std-page.jsp?pgprt=1");
+                return;
+            }
+
+            Object userIdObject = session.getAttribute("userId");
+            int userId = 0;
+            if (userIdObject != null) {
+                try {
+                    userId = Integer.parseInt(userIdObject.toString());
+                } catch (NumberFormatException ignored) {}
+            }
+
+            if (userId <= 0) {
+                session.setAttribute("error", "User not logged in.");
+                response.sendRedirect("login.jsp");
                 return;
             }
 
             try {
-                int examId = Integer.parseInt(nz(request.getParameter("eid"), "0"));
+                int examId = pDAO.startExam(courseName, userId);
                 if (examId > 0) {
-                    boolean success = pDAO.deleteExamResult(examId);
-        if (success) {
-                        session.setAttribute("message", "Exam result deleted successfully.");
-        } else {
-                        session.setAttribute("error", "Failed to delete exam result.");
-                    }
-        } else {
-                    session.setAttribute("error", "Invalid Exam ID.");
-                }
-            } catch (NumberFormatException e) {
-                session.setAttribute("error", "Invalid Exam ID format.");
-            }
-            response.sendRedirect("adm-page.jsp?pgprt=5");
-        }
-    
-    /* =========================
-       EXAM REGISTER
-       ========================= */
-    } else if ("exam-register".equalsIgnoreCase(pageParam)) {
-        String operation = nz(request.getParameter("operation"), "");
-        if ("bulk_delete".equalsIgnoreCase(operation)) {
-            String[] registerIds = request.getParameterValues("registerIds");
-            if (registerIds != null && registerIds.length > 0) {
-                pDAO.deleteExamRegisterRecords(registerIds);
-                session.setAttribute("message", "Selected exam register records deleted successfully.");
-        } else {
-                session.setAttribute("error", "No records selected for deletion.");
-            }
-            response.sendRedirect("adm-page.jsp?pgprt=7");
-        }
-    /* =========================
-       CLASS REGISTER
-       ========================= */
-    } else if ("class-register".equalsIgnoreCase(pageParam)) {
-        String operation = nz(request.getParameter("operation"), "");
-        if ("bulk_delete".equalsIgnoreCase(operation)) {
-            String[] registerIds = request.getParameterValues("registerIds");
-            if (registerIds != null && registerIds.length > 0) {
-                pDAO.deleteDailyRegisterRecords(registerIds);
-                session.setAttribute("message", "Selected class register records deleted successfully.");
-        } else {
-                session.setAttribute("error", "No records selected for deletion.");
-            }
-            response.sendRedirect("adm-page.jsp?pgprt=8");
-        }
-
-    /* =========================
-       DAILY REGISTER (STUDENT)
-       ========================= */
-    } else if ("daily-register".equalsIgnoreCase(pageParam)) {
-        String operation = nz(request.getParameter("operation"), "");
-        if ("bulk_delete".equalsIgnoreCase(operation)) {
-            String[] registerIds = request.getParameterValues("registerIds");
-            if (registerIds != null && registerIds.length > 0) {
-                pDAO.deleteDailyRegisterRecords(registerIds);
-                session.setAttribute("message", "Selected attendance records deleted successfully.");
-        } else {
-                session.setAttribute("error", "No records selected for deletion.");
-            }
-            response.sendRedirect("std-page.jsp?pgprt=3");
-        }
-        
-    /* =========================
-       FORGOT PASSWORD
-       ========================= */
-    } else if ("forgot_password".equalsIgnoreCase(pageParam)) {
-        String action = nz(request.getParameter("action"), "");
-        
-        if ("check_email".equalsIgnoreCase(action)) {
-            // Check if email exists in users table
-            String email = nz(request.getParameter("email"), "");
-            response.setContentType("text/plain");
-            
-            LOGGER.info("Checking email: '" + email + "'");
-            boolean exists = pDAO.checkEmailExists(email);
-            LOGGER.info("Email exists: " + exists);
-            
-            if (exists) {
-                response.getWriter().write("exists");
-        } else {
-                response.getWriter().write("not_exists");
-            }
-            response.getWriter().flush();
-            return;
-            
-        } else if ("send_code".equalsIgnoreCase(action)) {
-            // Generate and send verification code
-            String email = nz(request.getParameter("email"), "");
-            response.setContentType("text/plain");
-            
-            // Get user details
-            User user = pDAO.getUserByEmail(email);
-            if (user != null) {
-                try {
-                    // Generate 8-character code
-                    String code = Email.generateRandomCode();
-                    LOGGER.info("Generated code: " + code + " for email: " + email);
-                    
-                    // Store code in database
-                    boolean stored = pDAO.storeVerificationCode(email, code, user.getType());
-                    LOGGER.info("Code stored in database: " + stored);
-                    
-                    if (stored) {
-                        // Send email with code
-                        try {
-                            Email.sendPasswordResetEmail(email, user.getFirstName(), code);
-                            LOGGER.info("Email sent successfully to: " + email);
-                            response.getWriter().write("success");
-                        } catch (Exception emailEx) {
-                            LOGGER.log(Level.SEVERE, "Failed to send email to: " + email, emailEx);
-                            // Code is stored but email failed - still return success so user can check DB
-                            response.getWriter().write("success");
-                        }
-        } else {
-                        response.getWriter().write("error");
-                    }
-                } catch (Exception e) {
-                    LOGGER.log(Level.SEVERE, "Error in send_code action", e);
-                    response.getWriter().write("error");
-                }
-        } else {
-                response.getWriter().write("error");
-            }
-            return;
-            
-        } else if ("verify_code".equalsIgnoreCase(action)) {
-            // Verify the code entered by user
-            String email = nz(request.getParameter("email"), "");
-            String code = nz(request.getParameter("code"), "").toUpperCase();
-            response.setContentType("text/plain");
-            
-            if (pDAO.verifyResetCode(email, code)) {
-                response.getWriter().write("valid");
-        } else {
-                response.getWriter().write("invalid");
-            }
-            return;
-            
-        } else if ("resend_code".equalsIgnoreCase(action)) {
-            // Resend verification code
-            String email = nz(request.getParameter("email"), "");
-            response.setContentType("text/plain");
-            
-            User user = pDAO.getUserByEmail(email);
-            if (user != null) {
-                try {
-                    // Generate new code
-                    String code = Email.generateRandomCode();
-                    
-                    // Store new code
-                    boolean stored = pDAO.storeVerificationCode(email, code, user.getType());
-                    
-                    if (stored) {
-                        // Send email
-                        Email.sendPasswordResetEmail(email, user.getFirstName(), code);
-                        response.getWriter().write("success");
-        } else {
-                        response.getWriter().write("error");
-                    }
-                } catch (Exception e) {
-                    LOGGER.log(Level.SEVERE, "Error resending verification code", e);
-                    response.getWriter().write("error");
-                }
-        } else {
-                response.getWriter().write("error");
-            }
-            return;
-            
-        } else if ("reset_password".equalsIgnoreCase(action)) {
-            // Reset the password after code verification
-            String email = nz(request.getParameter("email"), "");
-            String code = nz(request.getParameter("code"), "").toUpperCase();
-            String password = nz(request.getParameter("password"), "");
-            String confirmPassword = nz(request.getParameter("confirm_password"), "");
-            response.setContentType("text/plain");
-            
-            // Validate passwords match
-            if (!password.equals(confirmPassword)) {
-                response.getWriter().write("password_mismatch");
-                return;
-            }
-            
-            // Validate password strength
-            if (password.length() < 8) {
-                response.getWriter().write("weak_password");
-                return;
-            }
-            
-            try {
-                // Hash the new password
-                String hashedPassword = PasswordUtils.bcryptHashPassword(password);
-                
-                // Update password in database
-                boolean updated = pDAO.updatePasswordByEmail(email, hashedPassword, code);
-                
-                if (updated) {
-                    response.getWriter().write("success");
-        } else {
-                    response.getWriter().write("error");
-                }
-            } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Error resetting password", e);
-                response.getWriter().write("error");
-            }
-            return;
-        }
-        
-    /* =========================
-       STUDENT SIGNUP WITH EMAIL VERIFICATION
-       ========================= */
-    } else if ("student_signup".equalsIgnoreCase(pageParam)) {
-        String action = nz(request.getParameter("action"), "");
-        
-        if ("send_verification".equalsIgnoreCase(action)) {
-            // Send verification code to student email
-            String email = nz(request.getParameter("email"), "");
-            String firstName = nz(request.getParameter("fname"), "");
-            response.setContentType("text/plain");
-            
-            try {
-                // Generate 8-character code
-                String code = Email.generateRandomCode();
-                LOGGER.info("Generated verification code for student signup: " + email);
-                
-                // Store code in database with user_type = 'student'
-                boolean stored = pDAO.storeVerificationCode(email, code, "student");
-                
-                if (stored) {
-                    // Send email with code
                     try {
-                        Email.sendVerificationEmail(email, firstName, code);
-                        LOGGER.info("Verification email sent successfully to: " + email);
-                        response.getWriter().write("success");
-                    } catch (Exception emailEx) {
-                        LOGGER.log(Level.SEVERE, "Failed to send verification email", emailEx);
-                        response.getWriter().write("email_error");
-                    }
-        } else {
-                    response.getWriter().write("error");
+                        pDAO.registerExamStart(userId, examId, courseName);
+                    } catch (SQLException ignored) {}
+
+                    session.setAttribute("examStarted", "1");
+                    session.setAttribute("examId", examId);
+                    session.setAttribute("examCourse", courseName);
+                    response.sendRedirect("std-page.jsp?pgprt=1&coursename="
+                            + java.net.URLEncoder.encode(courseName, "UTF-8"));
+                } else {
+                    session.setAttribute("error", "Failed to start exam.");
+                    response.sendRedirect("std-page.jsp?pgprt=1");
                 }
-            } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Error in send_verification action", e);
-                response.getWriter().write("error");
+            } catch (SQLException examError) {
+                LOGGER.log(Level.SEVERE, "Failed to start exam", examError);
+                session.setAttribute("error", "Failed to start exam: " + examError.getMessage());
+                response.sendRedirect("std-page.jsp?pgprt=1");
             }
             return;
-            
-        } else if ("verify_and_register".equalsIgnoreCase(action)) {
-            // Verify code and complete registration
-            String email = nz(request.getParameter("email"), "");
-            String code = nz(request.getParameter("code"), "").toUpperCase();
-            String formDataJson = nz(request.getParameter("formData"), "");
-            response.setContentType("text/plain");
-            
+
+        } else if ("submitted".equalsIgnoreCase(examOperation)) {
+            String submittedToken = request.getParameter("csrf_token");
+            String sessionToken = (String) session.getAttribute("csrf_token");
+            if (sessionToken == null || submittedToken == null || !sessionToken.equals(submittedToken)) {
+                session.setAttribute("error", "Invalid request. Please try again.");
+                response.sendRedirect("std-page.jsp?pgprt=1");
+                return;
+            }
+
+            String courseName = nz(request.getParameter("coursename"), "");
+            if (courseName.isEmpty()) {
+                session.setAttribute("error", "Please select a course.");
+                response.sendRedirect("std-page.jsp?pgprt=1");
+                return;
+            }
+
+            Object userIdObject = session.getAttribute("userId");
+            int userId = 0;
+            if (userIdObject != null) {
+                try {
+                    userId = Integer.parseInt(userIdObject.toString());
+                } catch (NumberFormatException ignored) {}
+            }
+
+            if (userId <= 0) {
+                session.setAttribute("error", "User not logged in.");
+                response.sendRedirect("login.jsp");
+                return;
+            }
+
             try {
-                // Verify the code (checks expiration - 30 minutes)
-                boolean codeValid = pDAO.verifyResetCode(email, code);
-                
-                if (!codeValid) {
-                    response.getWriter().write("invalid_code");
-                    return;
+                // Calculate total and obtained marks
+                String[] questionIds = request.getParameterValues("questionId");
+                String[] obtainedMarksStr = request.getParameterValues("obtainedMarks");
+                String[] totalMarksStr = request.getParameterValues("totalMarks");
+                String[] statuses = request.getParameterValues("status");
+
+                if (questionIds != null && obtainedMarksStr != null && totalMarksStr != null && statuses != null) {
+                    for (int i = 0; i < questionIds.length; i++) {
+                        int questionId = Integer.parseInt(questionIds[i]);
+                        int obtainedMarks = Integer.parseInt(obtainedMarksStr[i]);
+                        int totalMarks = Integer.parseInt(totalMarksStr[i]);
+                        String status = statuses[i];
+
+                        // Update each result individually
+                        pDAO.updateExamResult(questionId, obtainedMarks, totalMarks, status);
+                    }
                 }
-                
-                // Parse form data from JSON
-                JSONObject jsonData = new JSONObject(formDataJson);
-                
-                String fName = jsonData.optString("fname", "");
-                String lName = jsonData.optString("lname", "");
-                String uName = jsonData.optString("uname", "");
-                String pass = jsonData.optString("pass", "");
-                String contactNo = jsonData.optString("contactno", "");
-                String city = jsonData.optString("city", "");
-                String address = jsonData.optString("address", "");
-                String userType = jsonData.optString("user_type", "student");
-                
-                // Final validation
-                if (fName.isEmpty() || lName.isEmpty() || uName.isEmpty() || email.isEmpty() || pass.isEmpty()) {
-                    response.getWriter().write("missing_fields");
-                    return;
+
+                // Mark the current exam record as completed using existing APIs
+                Object examIdObject = session.getAttribute("examId");
+                if (examIdObject != null) {
+                    int submittedExamId = Integer.parseInt(examIdObject.toString());
+                    pDAO.updateExamResult(submittedExamId, 0, 0, "Pass");
                 }
-                
-                // Check for duplicates one final time
-                if (pDAO.checkUsernameExists(uName)) {
-                    response.getWriter().write("username_taken");
-                    return;
-                }
-                
-                if (pDAO.checkEmailExists(email)) {
-                    response.getWriter().write("email_taken");
-                    return;
-                }
-                
-                // Hash password
-                String hashedPass = PasswordUtils.bcryptHashPassword(pass);
-                
-                // Register the user
-                pDAO.addNewUser(fName, lName, uName, email, hashedPass, contactNo, city, address, userType);
-                
-                // DELETE the verification code after successful registration
-                pDAO.deleteVerificationCode(email, code);
-                LOGGER.info("Student registered successfully and verification code deleted: " + email);
-                
-                response.getWriter().write("success");
-                
-            } catch (JSONException je) {
-                LOGGER.log(Level.SEVERE, "JSON parsing error", je);
-                response.getWriter().write("json_error");
+
+                session.removeAttribute("examStarted");
+                session.removeAttribute("examId");
+                session.removeAttribute("examCourse");
+                session.setAttribute("message", "Exam submitted successfully.");
             } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Error in verify_and_register action", e);
-                response.getWriter().write("error: " + e.getMessage());
+                session.setAttribute("error", "Error submitting exam: " + e.getMessage());
+                LOGGER.log(Level.SEVERE, "Error submitting exam", e);
+            }
+
+            response.sendRedirect("std-page.jsp?pgprt=1");
+            return;
+
+        } else if ("resume".equalsIgnoreCase(examOperation)) {
+            String submittedToken = request.getParameter("csrf_token");
+            String sessionToken = (String) session.getAttribute("csrf_token");
+            if (sessionToken == null || submittedToken == null || !sessionToken.equals(submittedToken)) {
+                session.setAttribute("error", "Invalid request. Please try again.");
+                response.sendRedirect("std-page.jsp?pgprt=1");
+                return;
+            }
+
+            String courseName = nz(request.getParameter("coursename"), "");
+            if (courseName.isEmpty()) {
+                session.setAttribute("error", "Please select a course.");
+                response.sendRedirect("std-page.jsp?pgprt=1");
+                return;
+            }
+
+            Object userIdObject = session.getAttribute("userId");
+            int userId = 0;
+            if (userIdObject != null) {
+                try {
+                    userId = Integer.parseInt(userIdObject.toString());
+                } catch (NumberFormatException ignored) {}
+            }
+
+            if (userId <= 0) {
+                session.setAttribute("error", "User not logged in.");
+                response.sendRedirect("login.jsp");
+                return;
+            }
+
+            try {
+                Object examIdObject = session.getAttribute("examId");
+                if (examIdObject != null && session.getAttribute("examCourse") != null
+                        && courseName.equalsIgnoreCase(session.getAttribute("examCourse").toString())) {
+                    int examId = Integer.parseInt(examIdObject.toString());
+                    session.setAttribute("examStarted", "1");
+                    response.sendRedirect("std-page.jsp?pgprt=1&coursename="
+                            + java.net.URLEncoder.encode(courseName, "UTF-8"));
+                } else {
+                    session.setAttribute("error", "No active exam found for resuming.");
+                    response.sendRedirect("std-page.jsp?pgprt=1");
+                }
+            } catch (Exception e) {
+                session.setAttribute("error", "Error resuming exam: " + e.getMessage());
+                LOGGER.log(Level.SEVERE, "Error resuming exam", e);
+                response.sendRedirect("std-page.jsp?pgprt=1");
             }
             return;
         }
-        
-    /* =========================
-       LOGOUT
-       ========================= */
-    } else if ("logout".equalsIgnoreCase(pageParam)) {
-        // Invalidate session immediately then forward to a transition page so the client loader can be visible
-        session.invalidate();
-        request.setAttribute("targetUrl", "login.jsp");
-        request.setAttribute("message", "Securely logging you out...");
-        request.setAttribute("delayMs", Integer.valueOf(3000));
-        request.getRequestDispatcher("transition.jsp").forward(request, response);
-        return;
-        
-    } else if ("proctoring".equalsIgnoreCase(pageParam)) {
-        String operation = nz(request.getParameter("operation"), "");
-        int examId = Integer.parseInt(nz(request.getParameter("examId"), "0"));
-        int studentId = Integer.parseInt(nz(request.getParameter("studentId"), "0"));
-
-        if ("log_violation".equalsIgnoreCase(operation) || "log_incident".equalsIgnoreCase(operation)) {
-            String violationData = request.getParameter("violation_data");
-            String type = nz(request.getParameter("type"), "Unknown");
-            String desc = nz(request.getParameter("description"), "");
-            String screenshotPath = "";
-
-            try {
-                if (violationData != null && !violationData.isEmpty()) {
-                    JSONObject violation = new JSONObject(violationData);
-                    type = violation.optString("type", type);
-                    desc = violation.optString("description", desc);
-                    examId = violation.optInt("examId", examId);
-                    studentId = violation.optInt("studentId", studentId);
-
-                    // Save screenshot if present in JSON
-                    String screenshot = violation.optString("screenshot", "");
-                    if (!screenshot.isEmpty()) {
-                        String uploadPath = getServletContext().getRealPath("/uploads/proctoring");
-                        File uploadDir = new File(uploadPath);
-                        if (!uploadDir.exists()) uploadDir.mkdirs();
-
-                        String fileName = "incident_" + examId + "_" + new java.util.Date().getTime() + ".jpg";
-                        File file = new File(uploadDir, fileName);
-
-                        String base64Image = screenshot.contains(",") ? screenshot.split(",")[1] : screenshot;
-                        byte[] imageBytes = Base64.getDecoder().decode(base64Image);
-                        try (FileOutputStream fos = new FileOutputStream(file)) {
-                            fos.write(imageBytes);
-                        }
-                        screenshotPath = "uploads/proctoring/" + fileName;
-                    }
-                }
-            } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Error parsing violation data", e);
-            }
-
-            boolean success = pDAO.logProctoringIncident(examId, studentId, type, desc, screenshotPath);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"success\": " + success + "}");
-            return;
-
-        } else if ("save_verification".equalsIgnoreCase(operation)) {
-            boolean honorAccepted = "true".equalsIgnoreCase(request.getParameter("honorAccepted"));
-            String faceData = nz(request.getParameter("facePhoto"), "");
-            String idData = nz(request.getParameter("idPhoto"), "");
-            String facePath = "";
-            String idPath = "";
-
-            String uploadPath = getServletContext().getRealPath("/uploads/verifications");
-            File uploadDir = new File(uploadPath);
-            if (!uploadDir.exists()) uploadDir.mkdirs();
-
-            if (!faceData.isEmpty()) {
-                String fileName = "face_" + studentId + "_" + examId + ".jpg";
-                File file = new File(uploadDir, fileName);
-                String base64Image = faceData.split(",")[1];
-                byte[] imageBytes = Base64.getDecoder().decode(base64Image);
-                try (FileOutputStream fos = new FileOutputStream(file)) {
-                    fos.write(imageBytes);
-                }
-                facePath = "uploads/verifications/" + fileName;
-            }
-
-            if (!idData.isEmpty()) {
-                String fileName = "id_" + studentId + "_" + examId + ".jpg";
-                File file = new File(uploadDir, fileName);
-                String base64Image = idData.split(",")[1];
-                byte[] imageBytes = Base64.getDecoder().decode(base64Image);
-                try (FileOutputStream fos = new FileOutputStream(file)) {
-                    fos.write(imageBytes);
-                }
-                idPath = "uploads/verifications/" + fileName;
-            }
-
-            boolean success = pDAO.saveIdentityVerification(studentId, examId, honorAccepted, facePath, idPath);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"success\": " + success + "}");
-            return;
-        }
-
-        } else {
-        // Handle case when page parameter is not recognized
-        session.setAttribute("error", "Invalid page parameter: " + pageParam);
-        response.sendRedirect("login.jsp");
     }
 
-} catch(Exception e){
-    session.setAttribute("error","An unexpected error occurred: "+e.getMessage());
-    response.sendRedirect("error.jsp");
+    /* =========================
+       STUDENT RESULTS
+       ========================= */
+} else if ("results".equalsIgnoreCase(pageParam)) {
+        if (session.getAttribute("userId") == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        int uid = Integer.parseInt(session.getAttribute("userId").toString());
+        String courseName = nz(request.getParameter("coursename"), "");
+
+        // For instructors, show all results for the course
+        if ("lecture".equalsIgnoreCase((String) session.getAttribute("userType")) || "lecturer".equalsIgnoreCase((String) session.getAttribute("userType"))) {
+            // Instructor view - show all students' results for the course
+            request.setAttribute("resultsList", pDAO.getAllResultsByCourse(courseName));
+        } else {
+            // Student view - show only their own result
+            request.setAttribute("resultsList", pDAO.getResultsByUserIdAndCourse(uid, courseName));
+        }
+
+        request.setAttribute("courseName", courseName);
+        request.getRequestDispatcher("results.jsp").forward(request, response);
+        return;
+
+    /* =========================
+       SETTINGS
+       ========================= */
+    } else if ("settings".equalsIgnoreCase(pageParam)) {
+        if (session.getAttribute("userId") == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        int uid = Integer.parseInt(session.getAttribute("userId").toString());
+        User user = pDAO.getUserDetails(String.valueOf(uid));
+        request.setAttribute("user", user);
+
+        request.getRequestDispatcher("settings.jsp").forward(request, response);
+        return;
+
+    /* =========================
+       DEFAULT REDIRECT
+       ========================= */
+    } else {
+        response.sendRedirect("login.jsp");
+        return;
+    }
+} catch (Exception e) {
+    e.printStackTrace();
+    session.setAttribute("error", "An error occurred: " + e.getMessage());
+    response.sendRedirect("login.jsp");
 }
 %>

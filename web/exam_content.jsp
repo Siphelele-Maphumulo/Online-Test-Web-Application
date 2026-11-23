@@ -1746,7 +1746,7 @@
         <% if ("false".equals(showExamForm)) { 
             // SHOW ACTIVE EXAM
             String courseName = request.getParameter("coursename");
-            ArrayList<Questions> questionsList = pDAO.getQuestions(courseName, 20);
+            ArrayList<myPackage.classes.Questions> questionsList = pDAO.getQuestions(courseName, 20);
             int totalQ = questionsList.size();
         %>
             <!-- EXAM ACTIVE -->
@@ -1763,7 +1763,7 @@
 
                 <div class="questions-container">
                 <% for (int i=0; i<totalQ; i++){
-                    Questions q = questionsList.get(i);
+                    myPackage.classes.Questions q = questionsList.get(i);
                     boolean isMultiTwo = false;
                     try{
                         String qt = q.getQuestion().toLowerCase();
@@ -2335,7 +2335,7 @@
 
             <% } else if ("1".equals(request.getParameter("showresult"))) {
                         // SHOW RESULTS PAGE
-                        Exams result = pDAO.getResultByExamId(Integer.parseInt(request.getParameter("eid")));
+                        myPackage.classes.Exams result = pDAO.getResultByExamId(Integer.parseInt(request.getParameter("eid")));
                         
                         // IMPORTANT: Clear exam session when showing results
                         session.removeAttribute("examStarted");
@@ -2562,7 +2562,7 @@
                     <a href="std-page.jsp?pgprt=1"
                        class="btn-primary"
                        style="padding: 12px 30px; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">
-                        <h3 style="margin-bottom: 0; color: #fffff;">
+                        <h3 style="margin-bottom: 0; color: #ffffff;">
                             <i class="fas fa-redo"></i> Daily Register
                         </h3>
                     </a>

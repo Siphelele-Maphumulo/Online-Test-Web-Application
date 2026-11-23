@@ -1104,9 +1104,6 @@ public String escapeHtml(String input) {
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="badge badge-info"><%= String.format("%.0f", percentage) %>%</span>
-                                </td>
-                                <td>
                                 <div class="action-buttons">
                                     <button class="btn btn-secondary action-btn edit-btn" data-exam-id="<%= examId %>">
                                         <i class="fas fa-edit"></i><span>Edit</span>
@@ -1831,12 +1828,13 @@ public String escapeHtml(String input) {
         
         // Create hidden inputs
         const fields = [
-            {name: 'page', value: 'results'},
-            {name: 'operation', value: 'edit'},
+            {name: 'page', value: 'admin-results'},
+            {name: 'operation', value: 'edit_result'},
             {name: 'eid', value: examId},
             {name: 'obtMarks', value: obtMarks},
             {name: 'totalMarks', value: totalMarks},
-            {name: 'status', value: status}
+            {name: 'status', value: status},
+            {name: 'csrf_token', value: csrf_token}
         ];
         
         fields.forEach(function(field) {

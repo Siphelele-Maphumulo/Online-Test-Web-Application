@@ -45,21 +45,23 @@ double avgPercentage = 0.0;
 // Variable to store latest exam ID
 int latestExamId = 0;
 
-if (userId != null) {
+if (request.getAttribute("resultsList") instanceof ArrayList) {
+    examList = (ArrayList<Exams>) request.getAttribute("resultsList");
+} else if (userId != null) {
     examList = pDAO.getResultsFromExams(userId);
-    totalResults = examList.size();
-    
+}
+
+totalResults = examList.size();
+
+if (!examList.isEmpty()) {
     // Find the latest exam ID
-    if (!examList.isEmpty()) {
-        // Sort by exam ID to find the latest
-        Exams latestExam = examList.get(0);
-        for (Exams exam : examList) {
-            if (exam.getExamId() > latestExam.getExamId()) {
-                latestExam = exam;
-            }
+    Exams latestExam = examList.get(0);
+    for (Exams exam : examList) {
+        if (exam.getExamId() > latestExam.getExamId()) {
+            latestExam = exam;
         }
-        latestExamId = latestExam.getExamId();
     }
+    latestExamId = latestExam.getExamId();
     
     // Calculate passed exams and average percentage
     double totalPercentage = 0;
@@ -2078,8 +2080,6 @@ boolean showLatestResults = "true".equals(request.getParameter("showLatest"));
                           <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 8px; font-size: 12px;">
                             <i class="fas fa-user-edit"></i> Your Order
                           </div>
-                          <div style="background: var(--white); padding: 12px; border-radius: var(--radius-sm); border: 1px solid <%= isCorrect ? "var(--success)" : "var(--error)" %>;">
-                            <%
                               try {
                                   org.json.JSONArray userArr = new org.json.JSONArray(a.getAnswer());
                                   for (int j = 0; j < userArr.length(); j++) {

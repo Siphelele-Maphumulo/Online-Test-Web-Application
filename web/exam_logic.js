@@ -1,4 +1,3 @@
-
 /* --- CALCULATOR LOGIC --- */
 var calcInputStr = "";
 
@@ -729,6 +728,9 @@ function gatherAllAnswers() {
                         if (confirmBtn) {
                             confirmBtn.onclick = function() {
                                 closeConfirmSubmitModal();
+                                if (typeof gatherAllAnswers === 'function') {
+                                    gatherAllAnswers();
+                                }
                                 
                                 cleanupExam();
                                 
