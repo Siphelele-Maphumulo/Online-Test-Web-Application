@@ -2733,10 +2733,7 @@
                 console.log('Course is active:', isActive);
                 callback(isActive);
             } else {
-                console.error('Unexpected response format:', trimmedData);
-                // If we get an unexpected response, assume course is active
-                // because getActiveCourseNames() already filtered inactive ones
-                console.log('Assuming course is active due to unexpected response format');
+                console.warn('Course status probe returned an unexpected format; deferring to server validation.');
                 callback(true);
             }
         })

@@ -1,9 +1,5 @@
 <%@ page contentType="text/html; charset=UTF-8" %>
 <%@ page pageEncoding="UTF-8" %>
-<%@ page import="java.util.ArrayList" %>
-<%@ page import="myPackage.classes.Questions" %>
-<%@ page import="myPackage.classes.Exams" %>
-<%@ page isELIgnored="true" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,6 +10,10 @@
     <!-- Bootstrap & Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/gh/Bernardo-Castilho/dragdroptouch@master/DragDropTouch.js"></script>
+<%@page import="java.util.ArrayList"%>
+<%@page import="myPackage.classes.Questions"%>
+<%@page import="myPackage.classes.Exams"%>
+<%@ page isELIgnored="true" %>
 <%
     myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
     
@@ -25,24 +25,18 @@
     
     // CHECK IF USER IS TRYING TO ACCESS EXAM WITHOUT ACTIVE SESSION
     String showExamForm = "true"; // Default to showing exam selection form
-
-    // Resolve the course from the URL, falling back to the session for JSP includes.
-    String activeCourseName = request.getParameter("coursename");
-    if (activeCourseName == null || activeCourseName.trim().isEmpty()) {
-        Object examCourse = session.getAttribute("examCourse");
-        if (examCourse != null) {
-            activeCourseName = examCourse.toString();
-        }
-    }
-
-    // Show the exam only when the start-session flag and a course name are both present.
-    if ("1".equals(String.valueOf(session.getAttribute("examStarted"))) &&
-        activeCourseName != null && !activeCourseName.trim().isEmpty()) {
-        showExamForm = "false";
+    
+    // Only show active exam if BOTH conditions are met:
+    // 1. session has examStarted = "1"
+    // 2. URL has coursename parameter
+    if ("1".equals(String.valueOf(session.getAttribute("examStarted"))) && 
+        request.getParameter("coursename") != null && 
+        !request.getParameter("coursename").isEmpty()) {
+        showExamForm = "false"; // Show active exam
     } else {
+        // Clear any stale exam session data
         session.removeAttribute("examStarted");
         session.removeAttribute("examId");
-        session.removeAttribute("examCourse");
     }
 %>
 
@@ -81,8 +75,6 @@
 
 
 <link rel="stylesheet" href="style-exam.css">
-</head>
-<body>
 
 <!--Style-->
 <style>
@@ -1565,8 +1557,8 @@
                 }
             }
             
-            String courseName = activeCourseName;
-            ArrayList<myPackage.classes.Questions> questionsList = pDAO.getQuestions(courseName, 20);
+            String courseName = request.getParameter("coursename");
+            ArrayList<Questions> questionsList = pDAO.getQuestions(courseName, 20);
             int totalQ = questionsList.size();
         %>
             <!-- EXAM ACTIVE HEADER -->
@@ -1661,7 +1653,6 @@
             <form id="myform" action="controller.jsp" method="post">
                 <input type="hidden" name="page" value="exams">
                 <input type="hidden" name="operation" value="submitted">
-                <input type="hidden" name="csrf_token" value="<%= session.getAttribute("csrf_token") != null ? session.getAttribute("csrf_token") : "" %>">
                 <input type="hidden" name="examId" value="<%= session.getAttribute("examId") != null ? session.getAttribute("examId") : "0" %>">
                 <input type="hidden" name="size" value="<%= totalQ %>">
                 <input type="hidden" name="totalmarks" value="<%= pDAO.getTotalMarksByName(courseName) %>">
@@ -1669,7 +1660,7 @@
 
                 <div class="questions-container">
                 <% for (int i=0; i<totalQ; i++){
-                    myPackage.classes.Questions q = questionsList.get(i);
+                    Questions q = questionsList.get(i);
                     boolean isMultiTwo = false;
                     boolean isDragDrop = false;
                     boolean isRearrange = false;
@@ -1932,7 +1923,7 @@
                                     <svg class="progress-ring" width="80" height="80">
                                         <circle class="progress-ring-circle" stroke="#e2e8f0" stroke-width="6" fill="transparent" r="34" cx="40" cy="40"/>
                                         <circle class="progress-ring-progress" stroke="#059669" stroke-width="6" fill="transparent" r="34" cx="40" cy="40" stroke-dasharray="213.628" stroke-dashoffset="213.628"/>
-                                    </svg>
+                                    </svg>hOW MA
                                     <div class="progress-text"><span class="progress-percent">0%</span><small>Complete</small></div>
                                 </div>
                                 <div class="stats-grid">
@@ -2086,19 +2077,7 @@ var globalVideoStream = null;
 
             <% } else if ("1".equals(request.getParameter("showresult"))) {
                         // SHOW RESULTS PAGE
-                        String eidParam = request.getParameter("eid");
-                        int eid = 0;
-                        if (eidParam != null && !eidParam.isEmpty()) {
-                            try {
-                                eid = Integer.parseInt(eidParam);
-                            } catch (NumberFormatException ex) {
-                                eid = 0;
-                            }
-                        }
-                        myPackage.classes.Exams result = null;
-                        if (eid > 0) {
-                            result = pDAO.getResultByExamId(eid);
-                        }
+                        Exams result = pDAO.getResultByExamId(Integer.parseInt(request.getParameter("eid")));
                         
                         // IMPORTANT: Clear exam session when showing results
                         session.removeAttribute("examStarted");
@@ -2415,20 +2394,6 @@ var globalVideoStream = null;
             <div class="stats-badge"><i class="fas fa-clipboard-check"></i> Available Exams</div>
         </div>
 
-        <%
-            Object examError = session.getAttribute("error");
-            if (examError != null) {
-                session.removeAttribute("error");
-        %>
-            <div class="alert alert-error" role="alert">
-                <i class="fas fa-exclamation-circle"></i>
-                <span><%= examError %></span>
-            </div>
-            <script>
-                console.error('[Exam start] The server rejected the exam-start request; see the message above.');
-            </script>
-        <% } %>
-
         <div class="course-card">
             <form action="controller.jsp" method="post" id="examStartForm">
                 <input type="hidden" name="page" value="exams">
@@ -2597,17 +2562,16 @@ var globalVideoStream = null;
         const csrfTokenInput = document.querySelector('input[name="csrf_token"]');
         if (!csrfTokenInput || !csrfTokenInput.value) {
             console.error('CSRF token not found');
-            callback(false, 'Unable to verify exam availability. Please refresh the page and try again.');
+            callback(true); // Assume active on error
             return;
         }
 
-        // Send URL-encoded fields so controller.jsp can read them with getParameter().
-        const formData = new URLSearchParams({
-            page: 'exams',
-            operation: 'checkCourseStatus',
-            courseName: courseName,
-            csrf_token: csrfTokenInput.value
-        });
+        // Create form data
+        const formData = new FormData();
+        formData.append('page', 'exams');
+        formData.append('operation', 'checkCourseStatus');
+        formData.append('courseName', courseName);
+        formData.append('csrf_token', csrfTokenInput.value);
 
         console.log('Sending AJAX request to check course status...');
 
@@ -2648,10 +2612,13 @@ var globalVideoStream = null;
             if (trimmedData === 'true' || trimmedData === 'false') {
                 const isActive = trimmedData === 'true';
                 console.log('Course is active:', isActive);
-                callback(isActive, null);
+                callback(isActive);
             } else {
                 console.error('Unexpected response format:', trimmedData);
-                callback(false, 'Unable to verify exam availability. Please refresh the page and try again.');
+                // If we get an unexpected response, assume course is active
+                // because getActiveCourseNames() already filtered inactive ones
+                console.log('Assuming course is active due to unexpected response format');
+                callback(true);
             }
         })
         .catch(error => {
@@ -2660,10 +2627,14 @@ var globalVideoStream = null;
             console.error('Error name:', error.name);
             console.error('Error message:', error.message);
 
-            const message = error.name === 'AbortError'
-                ? 'Checking exam availability timed out. Please try again.'
-                : 'Unable to check exam availability. Please check your connection and try again.';
-            callback(false, message);
+            // Show error message only if it's not an abort error
+            if (error.name === 'AbortError') {
+                console.log('Request aborted due to timeout');
+            } else {
+                console.log('Error:', error.message);
+            }
+            // Default to true on error (since getActiveCourseNames already filtered)
+            callback(true);
         });
     }
     
@@ -2703,14 +2674,7 @@ var globalVideoStream = null;
             return;
         }
         
-        checkCourseStatus(courseName, function(isActive, errorMessage) {
-            if (errorMessage) {
-                if (typeof showSystemAlertModal === 'function') {
-                    showSystemAlertModal(errorMessage);
-                }
-                return;
-            }
-
+        checkCourseStatus(courseName, function(isActive) {
             if (!isActive) {
                 // show inactive modal (your existing code)
                 inactiveCourseName.textContent = courseName;
@@ -3425,8 +3389,8 @@ async function runDiagnostics() {
             </ul>
         </div>
         <div class="modal-footer">
-            <button type="button" id="cancelButton" class="btn-secondary" style="background-color: red;">Cancel</button>
-            <button type="button" id="beginButton" class="btn-primary">Begin Exam</button>
+            <button id="cancelButton" class="btn-secondary" Style="Background-color: red">Cancel</button>
+            <button id="beginButton" class="btn-primary">Begin Exam</button>
         </div>
     </div>
 </div>
@@ -3511,46 +3475,17 @@ async function runDiagnostics() {
 
         if (beginButton) {
             beginButton.addEventListener('click', async function (e) {
+                // Ensure waiting room is hidden
+                if (typeof hideWaitingRoom === 'function') hideWaitingRoom();
+
+                // Ensure proctoring starts before the exam begins.
                 e.preventDefault();
-                console.info('[Exam start] Begin Exam button clicked.', {
-                    course: courseSelect ? courseSelect.value : null,
-                    formFound: !!form
-                });
 
                 try {
-                    if (typeof hideWaitingRoom === 'function') {
-                        console.info('[Exam start] Hiding the waiting room.');
-                        hideWaitingRoom();
-                    } else {
-                        console.info('[Exam start] No waiting-room handler is available.');
-                    }
-
-                    if (!form) {
-                        console.error('[Exam start] Cannot submit: #examStartForm was not found.');
-                        if (typeof showSystemAlertModal === 'function') {
-                            showSystemAlertModal('System error: Exam form not found. Please refresh the page and try again.');
-                        }
-                        return;
-                    }
-
-                    console.info('[Exam start] Form details:', {
-                        action: form.action,
-                        method: form.method,
-                        valid: form.checkValidity()
-                    });
-
                     // Clear any stale session storage keys before leaving this page.
                     // Important: do this BEFORE setting the proctor auto-start flag.
                     try {
-                        const storageKeys = [];
-                        for (let i = 0; i < sessionStorage.length; i++) {
-                            storageKeys.push(sessionStorage.key(i));
-                        }
                         sessionStorage.clear();
-                        console.info('[Exam start] Cleared sessionStorage.', {
-                            previousKeys: storageKeys,
-                            remainingKeys: sessionStorage.length
-                        });
                     } catch (storageErr) {
                         console.warn('Could not clear sessionStorage.', storageErr);
                     }
@@ -3559,25 +3494,20 @@ async function runDiagnostics() {
                     // Set a flag so proctoring is automatically restarted on the exam page.
                     try {
                         sessionStorage.setItem('proctorAutoStart', '1');
-                        console.info('[Exam start] Set proctorAutoStart flag:', sessionStorage.getItem('proctorAutoStart'));
                     } catch (storageErr) {
-                        console.error('[Exam start] Could not set proctor auto-start flag.', storageErr);
+                        console.warn('Could not set proctor auto-start flag.', storageErr);
                     }
 
-                    console.info('[Exam start] Submitting form to controller.', {
-                        operation: form.querySelector('[name="operation"]') ? form.querySelector('[name="operation"]').value : null,
-                        course: courseSelect ? courseSelect.value : null
-                    });
-                    form.submit();
-                } catch (err) {
-                    console.error('[Exam start] Click handler failed:', err);
-                    if (typeof showSystemAlertModal === 'function') {
-                        showSystemAlertModal('Unable to start the exam. Check the browser console for details and try again.');
+                    if (form) {
+                        form.submit();
                     }
+                } catch (err) {
+                    if (typeof showSystemAlertModal === 'function') {
+                        showSystemAlertModal('Camera and microphone access is required for this exam. Please allow permissions and try again.');
+                    }
+                    console.error('Permission error:', err);
                 }
             });
-        } else {
-            console.error('[Exam start] #beginButton was not found; no click handler was attached.');
         }
 
         if (cancelButton) {
@@ -5377,12 +5307,7 @@ function showSimpleIdError(message) {
         // Track completion
         let completedChecks = 0;
         let passedRequired = 0;
-        const nonBlockingCheckIds = {
-            'status-resolution': true,
-            'status-os': true,
-            'status-environment': true
-        };
-        const requiredChecks = checks.length - Object.keys(nonBlockingCheckIds).length;
+        const requiredChecks = checks.length; // All checks are required now
         
         // Function to detect private mode
         async function isPrivateMode() {
@@ -5419,9 +5344,7 @@ function showSimpleIdError(message) {
                     if (el) {
                         if (result.pass) {
                             el.innerHTML = '<i class="fas fa-check-circle" style="color:#10b981"></i>';
-                            if (!nonBlockingCheckIds[check.id]) {
-                                passedRequired++;
-                            }
+                            passedRequired++;
                         } else {
                             el.innerHTML = '<i class="fas fa-times-circle" style="color:#ef4444"></i>';
                         }
@@ -7199,7 +7122,7 @@ async function detectIDCard(ctx, width, height) {
 // Improved error display
 function showSimpleIdError(message) {
     let errorDiv = document.getElementById('simpleIdError');
-    if (!errorDiv) {
+    if (!errorDiv) {a
         errorDiv = document.createElement('div');
         errorDiv.id = 'simpleIdError';
         

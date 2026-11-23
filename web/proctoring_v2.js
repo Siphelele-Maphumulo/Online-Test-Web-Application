@@ -1286,8 +1286,9 @@ class ProctoringSystem {
 document.addEventListener('DOMContentLoaded', function () {
     try {
         var examForm = document.getElementById('myform');
-        if (!examForm) {
-            console.info('[Exam start] Exam page form #myform was not found; proctor auto-start is skipped.');
+        var examContainer = document.querySelector('.exam-header-container');
+        if (!examForm && !examContainer) {
+            // This is the course-selection/results view, not an active exam.
             return;
         }
 
