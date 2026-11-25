@@ -11,10 +11,10 @@
         .error { color: red; font-weight: bold; }
         table { border-collapse: collapse; width: 100%; margin: 20px 0; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #09294d; color: white; }
+        th { background-color: #959596; color: white; }
         .test-form { background: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0; }
         input[type="text"] { padding: 8px; width: 300px; }
-        button { padding: 10px 20px; background: #09294d; color: white; border: none; cursor: pointer; }
+        button { padding: 10px 20px; background: #959596; color: white; border: none; cursor: pointer; }
     </style>
 </head>
 <body>

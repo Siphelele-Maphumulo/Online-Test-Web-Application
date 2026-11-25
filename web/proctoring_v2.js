@@ -255,7 +255,7 @@ class ProctoringSystem {
     showStatusBanner() { 
         const banner = document.createElement('div'); 
         banner.id = 'proctoring-banner'; 
-        banner.style.cssText = 'position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); background: #09294d; color: white; padding: 8px 15px; border-radius: 20px; font-size: 12px; z-index: 9999; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);'; 
+        banner.style.cssText = 'position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); background: #959596; color: white; padding: 8px 15px; border-radius: 20px; font-size: 12px; z-index: 9999; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);';
         banner.innerHTML = '<span class="live-indicator" style="width: 10px; height: 10px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite;"></span>' + 
             '<span>Proctoring Active</span>' + 
             '<span id="violation-counter" style="background: #ef4444; padding: 2px 6px; border-radius: 10px; font-size: 10px;">0/' + this.MAX_WARNINGS + '</span>'; 

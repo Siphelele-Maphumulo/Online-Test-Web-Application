@@ -15,10 +15,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
          /* CSS Variables for Maintainability - PROFESSIONAL THEME */
         :root {
             /* Primary Colors - Professional Blue Theme */
-            --primary-blue: #09294d;
-            --secondary-blue: #1a3d6d;
-            --accent-blue: #3b82f6;
-            --accent-blue-light: #60a5fa;
+
             
             /* Neutral Colors - Modern Gray Scale */
             --white: #ffffff;
@@ -47,11 +44,11 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             --spacing-2xl: 48px;
             
             /* Border Radius - Modern */
-            --radius-sm: 6px;
+/*            --radius-sm: 6px;
             --radius-md: 10px;
             --radius-lg: 16px;
             --radius-xl: 24px;
-            --radius-full: 9999px;
+            --radius-full: 9999px;*/
             
             /* Shadows - Material Design inspired */
             --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
@@ -159,8 +156,8 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 
         
         .mut-logo {
-            max-height: 150px;
-            width: auto;
+            max-height: 400px;
+            width: 400px;
             filter: brightness(0) invert(1);
         }
         
@@ -243,19 +240,24 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         }
         
         /* Page Header */
-        .page-header {
-            background: linear-gradient(135deg, var(--white) 0%, #fafcff 100%);
-            border-radius: var(--radius-lg);
-            padding: var(--spacing-xl);
-            margin-bottom: var(--spacing-xl);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: var(--shadow-md);
-            border: 1px solid var(--border-color);
-            position: relative;
-            overflow: hidden;
-        }
+.page-header {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.page-header,
+.page-title,
+.content-area div {
+    border-bottom: 1px solid ...
+}
         
         .page-header::before {
             content: '';
@@ -341,12 +343,16 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
             border-radius: var(--radius-md);
             padding: var(--spacing-lg);
             margin-bottom: var(--spacing-lg);
+
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: var(--shadow-sm);
+
             border: 1px solid var(--medium-gray);
-        }
+            box-shadow:
+              0 1px 3px rgba(0, 0, 0, 0.08),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+          }
         
         .page-title {
             display: flex;
@@ -414,7 +420,7 @@ myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
         .avatar {
             width: 80px;
             height: 80px;
-            background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+            background: #1E293B;
             border-radius: 50%;
             display: flex;
             align-items: center;

@@ -18,8 +18,8 @@
     <style>
         
         :root {
-            --primary-color: #09294D;
-            --secondary-color: #0056b3;
+            --primary-color: #dcdcdc;
+            --secondary-color: #c0c0c0;
             --error-color: #dc3545;
             --input-height: 3.125rem;
         }
@@ -83,7 +83,7 @@
         }
 
         .form-control:focus {
-            box-shadow: 0 0 0 .25rem rgba(9,41,77,.25);
+            box-shadow: 0 0 0 .25rem rgba(224, 232, 241, 0.25)1, 0.25;
             border-color: var(--primary-color);
         }
 
@@ -99,7 +99,7 @@
         }
 
         .btn-login:hover {
-            background: var(--secondary-color);
+            background:#8eb99e;
         }
 
         .forgot-password {

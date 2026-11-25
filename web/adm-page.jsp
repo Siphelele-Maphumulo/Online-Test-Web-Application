@@ -28,9 +28,8 @@
     <style>
     /* CSS Variables for easy customization */
     :root {
-        --primary-blue: #09294d;
-        --secondary-blue: #1a3d6d;
-        --accent-blue: #4a90e2;
+/*        --primary-blue: #959596;
+        --secondary-blue: #0550ae;*/
         --text-white: #ffffff;
         --text-light: #e0e9ff;
         --shadow-light: rgba(255, 255, 255, 0.1);
@@ -56,6 +55,7 @@
 
     /* Professional Dashboard Header - Compact Size */
     .dashboard-header {
+        color: #334155;
         background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
         padding: 8px 0; /* Reduced from 12px */
         border-bottom: 2px solid var(--text-white);
@@ -607,7 +607,7 @@
         width: 60px;
         height: 60px;
         border: 5px solid #f3f3f3;
-        border-top: 5px solid #09294d;
+        border-top: 5px solid #959596;
         border-radius: 50%;
         animation: pageLoaderSpin 1s linear infinite;
         margin: 0 auto 20px;
@@ -639,7 +639,7 @@
     .page-loader-text {
         font-size: 16px;
         font-weight: 500;
-        color: #09294d;
+        color: #959596;
         font-family: 'Segoe UI', 'Roboto', sans-serif;
         animation: pageLoaderPulse 1.5s ease-in-out infinite;
     }
@@ -710,7 +710,7 @@
 %>
 
 <!-- Professional Dashboard Header - 3 Column Layout -->
-<header class="dashboard-header">
+<header class="dashboard-header app-shell-header">
     <div class="header-container">
         <div class="header-row">
             <!-- Logo Column -->
@@ -733,7 +733,7 @@
                 <div class="user-section">
                     <div class="user-info" style="color: var(--text-white);">
                         <span class="user-name"><%= currentUser.getFirstName() %> <%= currentUser.getLastName() %></span>
-                        
+                        <span class="user-role"><%= panelTitle %></span>
                     </div>
                     <a href="controller.jsp?page=logout" class="logout-btn">
                         <i class="fas fa-sign-out-alt"></i>
@@ -1082,6 +1082,8 @@
         }
     })();
 </script>
+
+<link rel="stylesheet" href="app-theme.css">
 
 </body>
 </html>

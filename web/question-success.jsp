@@ -42,8 +42,8 @@
     
     <style>
         :root {
-            --primary-blue: #09294d;
-            --secondary-blue: #1a3d6d;
+            --primary-blue: #959596;
+            --secondary-blue: #0550ae;
             --accent-blue: #4a90e2;
             --success: #059669;
             --white: #ffffff;

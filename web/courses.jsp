@@ -26,9 +26,9 @@
     /* Use the same CSS Variables as the profile page */
     :root {
         /* Primary Colors */
-        --primary-blue: #09294d;
-        --secondary-blue: #1a3d6d;
-        --accent-blue: #4a90e2;
+/*        --primary-blue: #959596;
+        --secondary-blue: #0550ae;
+        --accent-blue: #4a90e2;*/
         
         /* Neutral Colors */
         --white: #ffffff;
@@ -51,9 +51,9 @@
         --spacing-xl: 32px;
         
         /* Border Radius */
-        --radius-sm: 4px;
+/*        --radius-sm: 4px;
         --radius-md: 8px;
-        --radius-lg: 16px;
+        --radius-lg: 16px;*/
         
         /* Shadows */
         --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -104,7 +104,7 @@
     }
     
     .mut-logo {
-        max-height: 150px;
+        max-height: 300px;
         width: auto;
         filter: brightness(0) invert(1);
     }

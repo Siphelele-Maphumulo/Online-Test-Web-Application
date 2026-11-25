@@ -91,8 +91,8 @@
     <style>
         /* Professional Attendance Register Report Styling */
         :root {
-            --primary-blue: #09294d;
-            --secondary-blue: #1a3d6d;
+            --primary-blue: #959596;
+            --secondary-blue: #0550ae;
             --accent-blue: #4a90e2;
             --success-green: #059669;
             --warning-orange: #d97706;
@@ -313,7 +313,7 @@
         }
         
         .morning-time {
-            background: linear-gradient(135deg, #4a90e2, #1a3d6d);
+            background: linear-gradient(135deg, #4a90e2, #0550ae);
             color: var(--white);
         }
         

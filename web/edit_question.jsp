@@ -178,8 +178,8 @@
     /* Use the same CSS Variables as the profile page */
     :root {
         /* Primary Colors */
-        --primary-blue: #09294d;
-        --secondary-blue: #1a3d6d;
+        --primary-blue: #959596;
+        --secondary-blue: #0550ae;
         --accent-blue: #4a90e2;
         
         /* Neutral Colors */
@@ -257,7 +257,7 @@
     }
     
     .mut-logo {
-        max-height: 150px;
+        max-height: 300px;
         width: auto;
         filter: brightness(0) invert(1);
     }

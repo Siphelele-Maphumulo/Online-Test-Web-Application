@@ -155,10 +155,7 @@
             /* CSS Variables for Maintainability - PROFESSIONAL THEME */
             :root {
                 /* Primary Colors - Professional Blue Theme */
-                --primary-blue: #09294d;
-                --secondary-blue: #1a3d6d;
-                --accent-blue: #3b82f6;
-                --accent-blue-light: #60a5fa;
+
                 
                 /* Neutral Colors - Modern Gray Scale */
                 --white: #ffffff;
@@ -187,11 +184,11 @@
                 --spacing-2xl: 48px;
                 
                 /* Border Radius - Modern */
-                --radius-sm: 6px;
+/*                --radius-sm: 6px;
                 --radius-md: 10px;
                 --radius-lg: 16px;
                 --radius-xl: 24px;
-                --radius-full: 9999px;
+                --radius-full: 9999px;*/
                 
                 /* Shadows - Material Design inspired */
                 --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
@@ -277,7 +274,7 @@
             }
 
             .mut-logo {
-                max-height: 150px;
+                max-height: 300px;
                 width: auto;
                 filter: brightness(0) invert(1);
             }

@@ -43,8 +43,8 @@ int lecturerCount = lecturerList.size();
     /* Use the same CSS Variables as the profile page */
     :root {
         /* Primary Colors */
-        --primary-blue: #09294d;
-        --secondary-blue: #1a3d6d;
+        --primary-blue: #0969da;
+        --secondary-blue: #0550ae;
         --accent-blue: #4a90e2;
         
         /* Neutral Colors */
@@ -68,9 +68,9 @@ int lecturerCount = lecturerList.size();
         --spacing-xl: 32px;
         
         /* Border Radius */
-        --radius-sm: 4px;
+/*        --radius-sm: 4px;
         --radius-md: 8px;
-        --radius-lg: 16px;
+        --radius-lg: 16px;*/
         
         /* Shadows */
         --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -121,7 +121,7 @@ int lecturerCount = lecturerList.size();
     }
     
     .mut-logo {
-        max-height: 150px;
+        max-height: 300px;
         width: auto;
         filter: brightness(0) invert(1);
     }
@@ -488,6 +488,7 @@ int lecturerCount = lecturerList.size();
     }
     
     /* Badges */
+    /* Badges */
     .badge {
         color: var(--white);
         padding: 4px 10px;
@@ -501,8 +502,9 @@ int lecturerCount = lecturerList.size();
     }
     
     .badge-info {
-        background: linear-gradient(90deg, var(--info), #0ea5e9);
+        background: #57606A;
     }
+    
     
     .badge-success {
         background: linear-gradient(90deg, var(--success), #10b981);
@@ -896,7 +898,7 @@ int lecturerCount = lecturerList.size();
             
             <!-- Search and Actions Bar -->
             <div class="actions-bar">
-                <a href="signup.jsp?from=account&user_type=lecture" class="btn btn-success">
+                <a href="signup.jsp?from=lecture_accounts&user_type=lecture" class="btn btn-success">
                     <i class="fas fa-plus-circle"></i>
                     Add New Lecturer
                 </a>

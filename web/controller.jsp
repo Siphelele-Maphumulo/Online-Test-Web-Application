@@ -318,10 +318,13 @@ try {
                                    "lecture".equalsIgnoreCase(userType) || 
                                    "lecturer".equalsIgnoreCase(userType);
         
-        if (isAdminOrLecturer || "account".equalsIgnoreCase(fromPage)) {
+        if (isAdminOrLecturer || "account".equalsIgnoreCase(fromPage)
+                || "accounts".equalsIgnoreCase(fromPage)
+                || "lecture_accounts".equalsIgnoreCase(fromPage)) {
             // For admin/lecturer registrations
             session.setAttribute("message", "User added successfully!");
-            response.sendRedirect("accounts.jsp");
+            response.sendRedirect("lecture_accounts".equalsIgnoreCase(fromPage)
+                    ? "Lecturers_accounts.jsp" : "accounts.jsp");
         } else {
             // Store success message in session ONLY
             session.setAttribute("success", "Registration successful! Please login.");
@@ -2282,6 +2285,20 @@ try {
     } else if ("exam-register".equalsIgnoreCase(pageParam)) {
         String operation = nz(request.getParameter("operation"), "");
         if ("bulk_delete".equalsIgnoreCase(operation)) {
+            Object userIdObj = session.getAttribute("userId");
+            User requestUser = userIdObj == null
+                ? null
+                : pDAO.getUserDetails(userIdObj.toString());
+            if (requestUser == null || !"admin".equalsIgnoreCase(requestUser.getType())) {
+                session.setAttribute("error", "You are not authorized to delete exam register records.");
+                if (requestUser == null) {
+                    response.sendRedirect("login.jsp");
+                } else {
+                    response.sendRedirect("std-page.jsp");
+                }
+                return;
+            }
+
             String[] registerIds = request.getParameterValues("registerIds");
             if (registerIds != null && registerIds.length > 0) {
                 pDAO.deleteExamRegisterRecords(registerIds);

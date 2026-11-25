@@ -27,6 +27,11 @@ if (currentUser == null) {
     return;
 }
 
+// Roles allowed to edit/delete student accounts
+boolean canManageStudents = "admin".equalsIgnoreCase(currentUser.getType())
+                         || "lecture".equalsIgnoreCase(currentUser.getType())
+                         || "lecturer".equalsIgnoreCase(currentUser.getType());
+
 // Now get student list
 ArrayList<User> studentList = pDAO.getAllStudents();
 int totalCount = 0;
@@ -48,9 +53,9 @@ for (User user : studentList) {
     /* Use the same CSS Variables as the profile page */
     :root {
         /* Primary Colors */
-        --primary-blue: #09294d;
-        --secondary-blue: #1a3d6d;
-        --accent-blue: #4a90e2;
+        --primary-blue: #57606A;
+        --secondary-blue: #57606A;
+        --accent-blue: #f8fafc;
         
         /* Neutral Colors */
         --white: #ffffff;
@@ -73,9 +78,9 @@ for (User user : studentList) {
         --spacing-xl: 32px;
         
         /* Border Radius */
-        --radius-sm: 4px;
+/*        --radius-sm: 4px;
         --radius-md: 8px;
-        --radius-lg: 16px;
+        --radius-lg: 16px;*/
         
         /* Shadows */
         --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -109,65 +114,66 @@ for (User user : studentList) {
     }
     
     /* Sidebar Styles - Same as profile page */
-    .sidebar {
-        width: 200px;
-        background: linear-gradient(180deg, var(--primary-blue), var(--secondary-blue));
-        color: var(--white);
-        flex-shrink: 0;
-        position: sticky;
-        top: 0;
-        height: 100vh;
-    }
-    
-    .sidebar-header {
-        padding: var(--spacing-xl) var(--spacing-lg);
-        text-align: center;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    
-    .mut-logo {
-        max-height: 150px;
-        width: auto;
-        filter: brightness(0) invert(1);
-    }
-    
-    .sidebar-nav {
-        padding: var(--spacing-lg) 0;
-    }
-    
-    .nav-item {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-md);
-        padding: var(--spacing-md) var(--spacing-lg);
-        color: rgba(255, 255, 255, 0.8);
-        text-decoration: none;
-        transition: all var(--transition-normal);
-        border-left: 3px solid transparent;
-    }
-    
-    .nav-item:hover {
-        background: rgba(255, 255, 255, 0.1);
-        color: var(--white);
-        border-left-color: var(--accent-blue);
-    }
-    
-    .nav-item.active {
-        background: rgba(255, 255, 255, 0.15);
-        color: var(--white);
-        border-left-color: var(--white);
-    }
-    
-    .nav-item i {
-        width: 20px;
-        text-align: center;
-    }
-    
-    .nav-item h2 {
-        font-size: 14px;
-        font-weight: 500;
-        margin: 0;
-    }
+/* Sidebar - Matches accounts.jsp */
+.sidebar {
+    width: 200px;
+    background: linear-gradient(180deg, var(--primary-blue), var(--secondary-blue));
+    color: var(--white);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+}
+
+.sidebar-header {
+    padding: var(--spacing-xl) var(--spacing-lg);
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mut-logo {
+    max-height: 150px;
+    width: auto;
+    filter: brightness(0) invert(1);
+}
+
+.sidebar-nav {
+    padding: var(--spacing-lg) 0;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    transition: all var(--transition-normal);
+    border-left: 3px solid transparent;
+}
+
+.nav-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--white);
+    border-left-color: var(--accent-blue);
+}
+
+.nav-item.active {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--white);
+    border-left-color: var(--white);
+}
+
+.nav-item i {
+    width: 20px;
+    text-align: center;
+}
+
+.nav-item h2 {
+    font-size: 14px;
+    font-weight: 500;
+    margin: 0;
+}
     
     /* Main Content Area */
     .main-content {
@@ -180,69 +186,73 @@ for (User user : studentList) {
     .page-header {
         background: var(--white);
         border-radius: var(--radius-md);
-        padding: var(--spacing-lg);
-        margin-bottom: var(--spacing-lg);
+        padding: 12px 16px;
+        margin-bottom: 14px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         box-shadow: var(--shadow-sm);
         border: 1px solid var(--medium-gray);
+        gap: 10px;
+        flex-wrap: wrap;
     }
-    
+
     .page-title {
         display: flex;
         align-items: center;
-        gap: var(--spacing-sm);
-        font-size: 18px;
+        gap: 6px;
+        font-size: 15px;
         font-weight: 600;
         color: var(--text-dark);
+        line-height: 1.3;
     }
-    
+
     .stats-badge {
         background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
         color: var(--white);
-        padding: 6px 16px;
+        padding: 4px 12px;
         border-radius: 20px;
-        font-size: 13px;
+        font-size: 11.5px;
         font-weight: 500;
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 4px;
+        line-height: 1.3;
     }
-    
+
     /* Accounts Cards */
     .accounts-card {
         background: var(--white);
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-md);
         border: 1px solid var(--medium-gray);
-        margin-bottom: var(--spacing-lg);
+        margin-bottom: 14px;
         overflow: hidden;
         transition: transform var(--transition-normal), box-shadow var(--transition-normal);
     }
-    
+
     .accounts-card:hover {
-        transform: translateY(-2px);
+        transform: translateY(-1px);
         box-shadow: var(--shadow-lg);
     }
-    
+
     .card-header {
         background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
         color: var(--white);
-        padding: var(--spacing-md) var(--spacing-lg);
+        padding: 8px 14px;
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
-    
+
     .card-header span {
-        font-size: 14px;
+        font-size: 12.5px;
         font-weight: 500;
         display: flex;
         align-items: center;
-        gap: var(--spacing-sm);
-    }
-    
+        gap: 5px;
+        line-height: 1.3;
+    }    
     /* Filter Container */
     .filter-container {
         background: var(--white);
@@ -289,19 +299,22 @@ for (User user : studentList) {
     }
     
     /* Buttons - Consistent with profile page */
+    /* Buttons ? compact */
     .btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: var(--spacing-sm);
-        padding: 10px 20px;
+        gap: 5px;
+        padding: 6px 12px;
         border-radius: var(--radius-sm);
-        font-size: 14px;
+        font-size: 12px;
         font-weight: 500;
         text-decoration: none;
         cursor: pointer;
         border: none;
         transition: all var(--transition-normal);
+        line-height: 1.35;
+        white-space: nowrap;
     }
     
     .btn-primary {
@@ -481,7 +494,7 @@ for (User user : studentList) {
     .student-avatar {
         width: 40px;
         height: 40px;
-        background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+        background: #57606A;
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -507,7 +520,7 @@ for (User user : studentList) {
     }
     
     .badge-info {
-        background: linear-gradient(90deg, var(--info), #0ea5e9);
+        background: #57606A;
     }
     
     .badge-success {
@@ -570,7 +583,7 @@ for (User user : studentList) {
         padding: 6px 12px;
         border-radius: 16px;
         font-weight: 500;
-        color: var(--white);
+        color: var(--dark-gray);
         font-size: 12px;
     }
     
@@ -656,6 +669,46 @@ for (User user : studentList) {
             width: 100%;
             justify-content: center;
         }
+        
+                .page-header { padding: 10px 12px; }
+        .page-title { font-size: 14px; }
+        .stats-badge { font-size: 11px; padding: 3px 10px; }
+
+        .card-header { padding: 7px 12px; }
+        .card-header span { font-size: 12px; }
+        .students-count { font-size: 10px; padding: 3px 8px; }
+
+        .filter-container { padding: 10px 12px; }
+        .filter-grid { gap: 7px; margin-bottom: 8px; }
+        .filter-label { font-size: 11px; }
+        .filter-control { font-size: 12px; padding: 6px 9px; }
+
+        .actions-bar { padding: 7px 12px; gap: 6px; }
+        .search-input { font-size: 12px; padding: 6px 30px 6px 10px; }
+
+        .quick-filter-btn { font-size: 11px; padding: 4px 9px; }
+
+        .accounts-table thead th { padding: 7px 8px; font-size: 11px; }
+        .accounts-table tbody td { padding: 5px 8px; font-size: 11.5px; }
+
+        .accounts-table tbody td > div[style] { font-size: 11px !important; }
+        .accounts-table tbody td > div[style] i { font-size: 10px !important; margin-right: 4px !important; }
+
+        .accounts-table .action-buttons {
+            flex-direction: row;
+            gap: 4px;
+        }
+        .accounts-table .action-buttons .btn {
+            width: auto !important;
+            font-size: 10px !important;
+            padding: 3px 7px !important;
+        }
+
+        .student-name { font-size: 12px; gap: 6px; }
+        .student-avatar { width: 26px; height: 26px; font-size: 10px; }
+        .user-role { font-size: 9.5px; padding: 1px 5px; margin-left: 4px; }
+
+        .results-count { font-size: 11px; padding: 6px 12px; }
     }
     
     @media (max-width: 480px) {
@@ -701,232 +754,344 @@ for (User user : studentList) {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
+/* ?? Checkbox container ????????????????????????????????????????? */
+.checkbox-container {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 100%;
+    min-height: 40px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
 
-    /* FIXED: Checkbox Styles - Make them visible and clickable */
-    .checkbox-container {
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 30px;
-        height: 30px;
-        cursor: pointer;
-    }
-    
-    .checkbox-container input[type="checkbox"] {
-        position: absolute;
-        opacity: 0;
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        cursor: pointer;
-        z-index: 10;
-    }
-    
-    .checkbox-container .custom-checkbox {
-        width: 20px;
-        height: 20px;
-        border: 2px solid var(--dark-gray);
-        border-radius: var(--radius-sm);
-        background: var(--white);
-        transition: all 0.2s ease;
-        pointer-events: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-    }
-    
-    .checkbox-container input[type="checkbox"]:checked + .custom-checkbox {
-        background: var(--error) !important;
-        border-color: var(--error) !important;
-    }
-    
-    .checkbox-container input[type="checkbox"]:checked + .custom-checkbox::after {
-        content: '✓' !important;
-        color: white !important;
-        font-size: 14px !important;
-        font-weight: bold !important;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-    }
-    
-    .checkbox-container input[type="checkbox"]:hover + .custom-checkbox {
-        border-color: var(--error);
-    }
-    
-    /* Multi-selected row style */
-    .student-row.multi-selected {
-        background-color: rgba(220, 38, 38, 0.1);
-    }
-    
-    /* Floating delete button */
-    .floating-delete-selected {
-        position: fixed;
-        bottom: 30px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 1000;
-        background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%);
-        color: white;
-        border: none;
-        border-radius: 50px;
-        padding: 15px 30px;
-        font-size: 16px;
-        font-weight: 600;
-        box-shadow: 0 10px 25px rgba(220, 38, 38, 0.4);
-        cursor: pointer;
-        display: none;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        align-items: center;
-        gap: 8px;
-    }
-    
-    .floating-delete-selected:hover {
-        transform: translateX(-50%) scale(1.05);
-        box-shadow: 0 12px 30px rgba(220, 38, 38, 0.5);
-    }
-    
-    .floating-delete-selected.show {
-        display: flex !important;
-    }
-    
-    .floating-delete-selected i {
-        font-size: 18px;
-    }
-    
-    /* Floating Scroll Button */
+/* Hide the native checkbox but keep it clickable and filling the cell */
+.checkbox-container input[type="checkbox"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+    z-index: 10;
+}
+
+/* The visible box */
+.checkbox-container .custom-checkbox {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--dark-gray);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    transition: all 0.2s ease;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Red hint on hover */
+.checkbox-container input[type="checkbox"]:hover + .custom-checkbox {
+    border-color: var(--error);
+}
+
+/* ?? SELECTED ? solid red fill + white tick ????????????????????? */
+.checkbox-container input[type="checkbox"]:checked + .custom-checkbox {
+    background: var(--error) !important;
+    border-color: var(--error) !important;
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35);
+}
+
+.checkbox-container input[type="checkbox"]:checked + .custom-checkbox::after {
+    content: '\2713';            /* ? */
+    color: var(--white);
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+/* ?? "Select all" indeterminate state ? red minus ??????????????? */
+.checkbox-container input[type="checkbox"]:indeterminate + .custom-checkbox {
+    background: var(--error);
+    border-color: var(--error);
+}
+
+.checkbox-container input[type="checkbox"]:indeterminate + .custom-checkbox::after {
+    content: '\2212';            /* ? */
+    color: var(--white);
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+/* ?? Red row highlight for selected students ???????????????????? */
+/* ?? Red row highlight for selected students ???????????????????? */
+.student-row.multi-selected,
+.student-row.multi-selected > td {
+    background-color: rgba(250, 150, 150, 0.479) !important;
+}
+
+.student-row.multi-selected {
+    outline: 2px solid rgba(220, 38, 38, 0.3);
+    outline-offset: -2px;
+    position: relative;
+}
+
+.student-row.multi-selected:hover,
+.student-row.multi-selected:hover > td {
+    background-color: rgba(250, 150, 150, 0.6) !important;
+}
+
+/* ?? Floating delete button ????????????????????????????????????? */
+.floating-delete-selected {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 15px 30px;
+    font-size: 16px;
+    font-weight: 600;
+    box-shadow: 0 10px 25px rgba(220, 38, 38, 0.4);
+    cursor: pointer;
+    display: none;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.floating-delete-selected:hover {
+    transform: translateX(-50%) scale(1.05);
+    box-shadow: 0 12px 30px rgba(220, 38, 38, 0.5);
+}
+
+.floating-delete-selected.show {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.floating-delete-selected i {
+    font-size: 18px;
+}
+
+/* ?? Floating scroll buttons ???????????????????????????????????? */
+/* ?? Floating scroll buttons ???????????????????????????????????? */
+.floating-scroll {
+    position: fixed;
+    bottom: 100px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.floating-scroll.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.scroll-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: #E5E5E5;   /* #57606A ? theme grey */
+    color: var(--white);
+    border: 1px solid #4a535c;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    box-shadow: 0 4px 12px rgba(87, 96, 106, 0.35);
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.scroll-btn:hover {
+    background-color: #57606A;                /* lighter grey on hover */
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(87, 96, 106, 0.45);
+}
+
+.scroll-btn:active {
+    transform: translateY(0) scale(0.95);
+}
+
+.scroll-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+    transform: translate(-50%, -50%);
+    transition: width 0.4s ease, height 0.4s ease;
+}
+
+.scroll-btn:active::before {
+    width: 100%;
+    height: 100%;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
     .floating-scroll {
-        position: fixed;
-        bottom: 300px;
-        right: 5px;
-        z-index: 1000;
-        display: flex;
-        flex-direction: column;
+        bottom: 90px;
+        right: 14px;
         gap: 8px;
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.3s ease;
-    }
-
-    .floating-scroll.visible {
-        opacity: 1;
-        visibility: visible;
     }
 
     .scroll-btn {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background-color: #476287;
-        color: var(--white);
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 8px;
-        box-shadow: var(--shadow-lg);
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
+        width: 38px;
+        height: 38px;
+        font-size: 13px;
+    }
+}
+
+/* ?? Modal Styles ??????????????????????????????????????????????? */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.modal-content {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-xl);
+}
+
+.modal-header {
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--medium-gray);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--dark-gray);
+}
+
+.close-button:hover {
+    color: var(--error);
+}
+
+.modal-body {
+    padding: var(--spacing-lg);
+    color: var(--dark-gray);
+}
+
+.modal-footer {
+    padding: var(--spacing-lg);
+    border-top: 1px solid var(--medium-gray);
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-sm);
+}
+
+.multi-select-toggle.checked {
+/*    background: var(--error);*/
+    border-color: var(--error);
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35);
+}
+
+.multi-select-toggle.checked::after {
+    content: '\2713';
+    color: var(--white);
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+    /* Very small phones ? extra compaction */
+    @media (max-width: 480px) {
+        .page-header { padding: 8px 10px; gap: 6px; }
+        .page-title { font-size: 13px; gap: 5px; }
+        .stats-badge { font-size: 10.5px; padding: 3px 8px; gap: 3px; }
+
+        .filter-container { padding: 8px 10px; }
+        .filter-grid { gap: 6px; }
+        .filter-control { font-size: 11.5px; }
+
+        .actions-bar { padding: 6px 10px; flex-direction: column; align-items: stretch; }
+        .search-container { max-width: 100%; }
+        .actions-bar .action-buttons { flex-direction: row; gap: 6px; }
+        .actions-bar .btn { font-size: 11px; padding: 5px 10px; }
+
+        .accounts-table thead th { padding: 6px 7px; font-size: 10.5px; }
+        .accounts-table tbody td { padding: 4px 7px; font-size: 11px; }
+        .accounts-table tbody td > div[style] { font-size: 10.5px !important; }
+
+        .student-name { font-size: 11.5px; }
+        .student-avatar { width: 24px; height: 24px; font-size: 9.5px; }
+
+        .badge { font-size: 10px; padding: 2px 6px; }
+        .user-role { font-size: 9px; }
+
+        .results-count { font-size: 10.5px; padding: 5px 10px; }
+    }
+    
+        /* ?? Compact row cells: override inline font-size ????????????? */
+    .accounts-table tbody td > div[style] {
+        font-size: 11.5px !important;
+        line-height: 1.35 !important;
     }
 
-    .scroll-btn:hover {
-        transform: scale(1.1);
-        box-shadow: 0 8px 25px rgba(9, 41, 77, 0.3);
+    .accounts-table tbody td > div[style] i {
+        margin-right: 5px !important;
+        font-size: 10.5px !important;
     }
 
-    .scroll-btn:active {
-        transform: scale(0.95);
+    /* ?? Compact row action buttons: override inline style ???????? */
+    .accounts-table .action-buttons .btn {
+        font-size: 10.5px !important;
+        padding: 4px 9px !important;
+        gap: 3px !important;
+        line-height: 1.3 !important;
     }
 
-    .scroll-btn::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 0;
-        height: 0;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.3);
-        transform: translate(-50%, -50%);
-        transition: width 0.4s ease, height 0.4s ease;
-    }
-
-    .scroll-btn:active::before {
-        width: 100%;
-        height: 100%;
-    }
-    
-    /* Modal Styles */
-    .modal-overlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        justify-content: center;
-        align-items: center;
-        z-index: 2000;
-    }
-    
-    .modal-content {
-        background: var(--white);
-        border-radius: var(--radius-lg);
-        max-width: 500px;
-        width: 90%;
-        max-height: 80vh;
-        overflow-y: auto;
-        box-shadow: var(--shadow-xl);
-    }
-    
-    .modal-header {
-        padding: var(--spacing-lg);
-        border-bottom: 1px solid var(--medium-gray);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .modal-title {
-        font-size: 18px;
-        font-weight: 600;
-        color: var(--text-dark);
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-sm);
-    }
-    
-    .close-button {
-        background: none;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
-        color: var(--dark-gray);
-    }
-    
-    .close-button:hover {
-        color: var(--error);
-    }
-    
-    .modal-body {
-        padding: var(--spacing-lg);
-        color: var(--dark-gray);
-    }
-    
-    .modal-footer {
-        padding: var(--spacing-lg);
-        border-top: 1px solid var(--medium-gray);
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
+    .accounts-table .action-buttons .btn i {
+        font-size: 10px !important;
     }
 </style>
 
@@ -1149,7 +1314,7 @@ for (User user : studentList) {
                             </td>
                             <td>
                                 <div style="color: var(--dark-gray); font-size: 13px;">
-                                    <i class="fas fa-envelope" style="color: var(--accent-blue); margin-right: 8px;"></i>
+                                    <i class="fas fa-envelope" style="color: var(--dark-grey); margin-right: 8px;"></i>
                                     <%= user.getEmail() %>
                                 </div>
                             </td>
@@ -1171,13 +1336,13 @@ for (User user : studentList) {
                                         <i class="fas fa-edit"></i>
                                         Edit
                                     </a>
-                                   <% if (currentUser.getType().equalsIgnoreCase("admin")) { %>
-                                   <button class="btn btn-error" style="font-size: 13px; padding: 8px 16px;"
+                                    <% if (canManageStudents) { %>
+                                    <button class="btn btn-error" style="font-size: 13px; padding: 8px 16px;"
                                             onclick="openDeleteStudentModal('<%= user.getUserId() %>', '<%= user.getFirstName() + " " + user.getLastName() %>', '<%= user.getUserName() %>')">
                                         <i class="fas fa-trash"></i>
                                         Delete
                                     </button>
-                                   <% } %>
+                                    <% } %>
                                 </div>
                             </td>
                         </tr>
@@ -1207,10 +1372,12 @@ for (User user : studentList) {
         </div>
 
 <!-- Floating Delete Selected Button -->
+<% if (canManageStudents) { %>
 <button id="floatingDeleteSelected" class="floating-delete-selected" onclick="openBatchDeleteModal()">
     <i class="fas fa-trash"></i>
     Delete Selected (<span id="selectedCount">0</span>)
 </button>
+<% } %>
 
 <!-- Batch Delete Confirmation Modal -->
 <div id="batchDeleteModal" class="modal-overlay">

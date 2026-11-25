@@ -15,7 +15,7 @@
     <title>Redirecting...</title>
     <meta http-equiv="refresh" content="<%= (delayMs/1000.0) %>;url=<%= target %>">
     <style>
-        body { margin:0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #09294d; color: #fff; display:flex; align-items:center; justify-content:center; height:100vh; }
+        body { margin:0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #F8FAFC; color: #1E293B; display:flex; align-items:center; justify-content:center; height:100vh; }
         .loader-wrap { text-align:center; }
         .loader-wave { width: 10vmin; height: 10vmin; border-radius: 50%; background: rgba(255,255,255,0.12); position: relative; animation: breath 2.2s infinite ease-in-out; margin: 0 auto; }
         .loader-wave::before, .loader-wave::after { content: ''; position:absolute; inset:0; border-radius:inherit; background:inherit; animation: breath 2.2s infinite ease-in-out; }
@@ -50,7 +50,7 @@
 }
 
 
-        .loader-text { margin-top: 24px; font-size:1.05rem; color:#fff; }
+        .loader-text { margin-top: 24px; font-size:1.05rem; color:#1E293B; }
     </style>
     <script>
         (function(){

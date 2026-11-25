@@ -56,10 +56,7 @@
     /* CSS Variables - Enhanced color palette */
     :root {
         /* Primary Colors */
-        --primary-blue: #09294d;
-        --secondary-blue: #1a3d6d;
-        --accent-blue: #4a90e2;
-        --light-blue: #e8f2ff;
+
         
         /* Neutral Colors */
         --white: #ffffff;
@@ -195,7 +192,7 @@
     }
     
     .mut-logo {
-        max-height: 140px;
+        max-height: 280px;
         width: auto;
         filter: brightness(0) invert(1);
         transition: transform var(--transition-normal);

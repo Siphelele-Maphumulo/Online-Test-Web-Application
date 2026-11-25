@@ -13,13 +13,6 @@
 <% 
 myPackage.DatabaseClass pDAO = myPackage.DatabaseClass.getInstance();
 //pDAO.autoActivateExams();
-
-// Disable loader for fast-loading pages
-String pgprtParam = request.getParameter("pgprt");
-if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("1")
-        || pgprtParam.equals("2") || pgprtParam.equals("4")) {
-    request.setAttribute("disableLoader", "true");
-}
 %>
 
 <!-- Font Awesome for Icons -->
@@ -28,9 +21,9 @@ if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("1")
 <style>
     /* CSS Variables for easy customization */
     :root {
-        --primary-blue: #09294d;
-        --secondary-blue: #1a3d6d;
-        --accent-blue: #4a90e2;
+/*        --primary-blue: #959596;
+        --secondary-blue: #0550ae;
+        --accent-blue: #4a90e2;*/
         --text-white: #ffffff;
         --text-light: #e0e9ff;
         --shadow-light: rgba(255, 255, 255, 0.1);
@@ -56,6 +49,7 @@ if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("1")
 
     /* Professional Dashboard Header - Compact Size */
     .dashboard-header {
+        color: #334155;
         background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
         padding: 8px 0; /* Reduced from 12px */
         border-bottom: 2px solid var(--text-white);
@@ -203,71 +197,6 @@ if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("1")
     .logout-btn i {
         font-size: 0.625rem; /* Reduced from 0.6875rem */
     }
-
-        /* Floating Scroll Button */
-    .floating-scroll {
-        position: fixed;
-        bottom: 300px;
-        right: 5px;
-        z-index: 1000;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.3s ease;
-    }
-
-    .floating-scroll.visible {
-        opacity: 1;
-        visibility: visible;
-    }
-
-    .scroll-btn {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background-color: #476287;
-        color: var(--white);
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 8px;
-        box-shadow: var(--shadow-lg);
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .scroll-btn:hover {
-        transform: scale(1.1);
-        box-shadow: 0 8px 25px rgba(9, 41, 77, 0.3);
-    }
-
-    .scroll-btn:active {
-        transform: scale(0.95);
-    }
-
-    .scroll-btn::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 0;
-        height: 0;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.3);
-        transform: translate(-50%, -50%);
-        transition: width 0.4s ease, height 0.4s ease;
-    }
-
-    .scroll-btn:active::before {
-        width: 100%;
-        height: 100%;
-    }
-
     /* Responsive Design */
     @media (max-width: 991.98px) {
         .dashboard-header {
@@ -466,79 +395,6 @@ if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("1")
         }
     }
 
-    /* Page Loader Styles */
-    .page-loader-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(5px);
-        z-index: 99999;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 1;
-        visibility: visible;
-        transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
-    }
-
-    .page-loader-overlay.hidden {
-        opacity: 0;
-        visibility: hidden;
-    }
-
-    .page-loader-content {
-        text-align: center;
-    }
-
-    .page-loader-spinner {
-        width: 60px;
-        height: 60px;
-        border: 5px solid #f3f3f3;
-        border-top: 5px solid #09294d;
-        border-radius: 50%;
-        animation: pageLoaderSpin 1s linear infinite;
-        margin: 0 auto 20px;
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .page-loader-img {
-        width: 32px;
-        height: 32px;
-        position: absolute;
-        filter: brightness(0) invert(1); /* Makes image white */
-        animation: pageLoaderImgSpin 1s linear infinite;
-        object-fit: contain;
-    }
-
-    @keyframes pageLoaderSpin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
-    @keyframes pageLoaderImgSpin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
-    .page-loader-text {
-        font-size: 16px;
-        font-weight: 500;
-        color: #09294d;
-        font-family: 'Segoe UI', 'Roboto', sans-serif;
-        animation: pageLoaderPulse 1.5s ease-in-out infinite;
-    }
-
-    @keyframes pageLoaderPulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-    }
-
     @media (max-width: 399.98px) {
         .dashboard-header {
             height: 40px;
@@ -584,203 +440,223 @@ if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("1")
         }
     }
 
-    /* Scrollbar Styling */
-    .dashboard-sidebar::-webkit-scrollbar {
-        width: 4px; /* Thinner */
-    }
-    
-    .dashboard-sidebar::-webkit-scrollbar-track {
-        background: #f1f5f9;
-    }
-    
-    .dashboard-sidebar::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 2px; /* Smaller radius */
-    }
-    
-    .dashboard-sidebar::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
+        /* Scrollbar Styling */
+        .dashboard-sidebar::-webkit-scrollbar {
+            width: 4px; /* Thinner */
+        }
+
+        .dashboard-sidebar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        .dashboard-sidebar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 2px; /* Smaller radius */
+        }
+
+        .dashboard-sidebar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Exam Register Styles */
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
-    /* Status Modal Styles */
-    .status-modal-overlay {
+    .filter-form .form-row {
+        display: flex;
+        gap: 15px;
+        align-items: flex-end;
+    }
+
+    .filter-form .form-group {
+        flex: 1;
+    }
+
+    .filter-form .form-group:last-child {
+        flex: 0 0 auto;
+    }
+
+    .data-table-container {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .table-header {
+        padding: 20px;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .table-info {
+        display: flex;
+        gap: 10px;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table th {
+        background: #f8fafc;
+        padding: 12px 15px;
+        text-align: left;
+        font-weight: 600;
+        color: #475569;
+        border-bottom: 2px solid #e2e8f0;
+    }
+
+    .data-table td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .data-table tr:hover {
+        background: #f1f5f9;
+    }
+
+    .device-info {
+        font-family: monospace;
+        background: #f1f5f9;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.85em;
+    }
+
+    .badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.85em;
+        font-weight: 500;
+    }
+
+    .badge-success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .badge-warning {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .badge-danger {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #64748b;
+    }
+
+    .empty-state i {
+        margin-bottom: 20px;
+        color: #cbd5e1;
+    }
+
+    .empty-state h3 {
+        margin-bottom: 10px;
+        color: #475569;
+    }
+
+    /* Page Loader Styles */
+    .page-loader-overlay {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0, 0, 0, 0.6);
-        display: none;
-        justify-content: center;
-        align-items: center;
-        z-index: 2000;
-    }
-
-    .status-modal {
-        background-color: #fff;
-        padding: 30px;
-        border-radius: 10px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        text-align: center;
-        width: 90%;
-        max-width: 400px;
-    }
-
-    .status-modal-icon {
-        font-size: 50px;
-        margin-bottom: 20px;
-    }
-
-    .status-modal-icon.deactivated { color: #f87171; }
-    .status-modal-icon.passed { color: #fbbf24; }
-    .status-modal-icon.future { color: #60a5fa; }
-
-    .status-modal-title {
-        font-size: 24px;
-        font-weight: 600;
-        margin-bottom: 10px;
-    }
-
-    .status-modal-message {
-        font-size: 16px;
-        color: #64748b;
-        margin-bottom: 25px;
-    }
-
-    .status-modal-close-btn {
-        background-color: var(--primary-blue);
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 16px;
-    }
-    
-    /* Floating Scroll Buttons */
-    .floating-scroll {
-        position: fixed;
-        bottom: 100px;
-        right: 20px;
-        z-index: 1000;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(5px);
+        z-index: 99999;
         display: flex;
-        flex-direction: column;
-        gap: 8px;
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.3s ease;
-    }
-
-    .floating-scroll.visible {
+        align-items: center;
+        justify-content: center;
         opacity: 1;
         visibility: visible;
+        transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
     }
 
-    .scroll-btn {
-        width: 40px;
-        height: 40px;
+    .page-loader-overlay.hidden {
+        opacity: 0;
+        visibility: hidden;
+    }
+
+    .page-loader-content {
+        text-align: center;
+    }
+
+    .page-loader-spinner {
+        width: 60px;
+        height: 60px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #d2d6da;
         border-radius: 50%;
-        background-color: var(--primary-blue);
-        color: var(--text-white);
-        border: none;
-        cursor: pointer;
+        animation: pageLoaderSpin 1s linear infinite;
+        margin: 0 auto 20px;
+        position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 16px;
-        box-shadow: var(--shadow-lg);
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
     }
 
-    .scroll-btn:hover {
-        transform: scale(1.1);
-        box-shadow: 0 8px 25px rgba(9, 41, 77, 0.3);
-    }
-
-    .scroll-btn:active {
-        transform: scale(0.95);
-    }
-
-    .scroll-btn::before {
-        content: '';
+    .page-loader-img {
+        width: 32px;
+        height: 32px;
         position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 0;
-        height: 0;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.3);
-        transform: translate(-50%, -50%);
-        transition: width 0.4s ease, height 0.4s ease;
+        filter: brightness(0) invert(1); /* Makes image white */
+        animation: pageLoaderImgSpin 1s linear infinite;
+        object-fit: contain;
     }
 
-    .scroll-btn:active::before {
-        width: 100%;
-        height: 100%;
+    @keyframes pageLoaderSpin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
 
-    @media (max-width: 768px) {
-        .floating-scroll {
-            bottom: 20px;
-            right: 20px;
-        }
-
-        .scroll-btn {
-            width: 45px;
-            height: 45px;
-            font-size: 16px;
-        }
-        
-        /* Exam Loader Styles */
-        .exam-loader-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            transition: opacity 0.3s ease;
-        }
-        
-        .exam-loader-spinner {
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            text-align: center;
-            min-width: 200px;
-        }
-        
-        .exam-loader-spinner .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid var(--accent-blue);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 16px;
-        }
-        
-        .exam-loader-spinner p {
-            margin: 0;
-            color: #333;
-            font-weight: 500;
-            font-size: 14px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+    @keyframes pageLoaderImgSpin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
+
+    .page-loader-text {
+        font-size: 16px;
+        font-weight: 500;
+        color: #959596;
+        font-family: 'Segoe UI', 'Roboto', sans-serif;
+        animation: pageLoaderPulse 1.5s ease-in-out infinite;
+    }
+
+        @keyframes pageLoaderPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+
+        @media (max-width: 768px) {
+            .floating-scroll {
+                bottom: 20px;
+                right: 20px;
+            }
+
+            .scroll-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 16px;
+            }
+        }
 </style>
-
 <%
     // Get userId from session
     Object userIdObj = session.getAttribute("userId");
@@ -801,8 +677,7 @@ if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("1")
     }
 %>
 
-  <!-- Page Loader - Shows for 0.5 seconds -->
-  <% if (request.getAttribute("disableLoader") == null && session.getAttribute("disableLoader") == null) { %>
+  <!-- Page Loader -->
   <div id="pageLoader" class="page-loader-overlay">
     <div class="page-loader-content">
       <div class="page-loader-spinner">
@@ -811,10 +686,9 @@ if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("1")
       <div class="page-loader-text">Loading...</div>
     </div>
   </div>
-  <% } %>
 
 <!-- Professional Dashboard Header - 3 Column Layout -->
-<header class="dashboard-header">
+<header class="dashboard-header app-shell-header">
     <div class="header-container">
         <div class="header-row">
             <!-- Logo Column -->
@@ -828,15 +702,16 @@ if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("1")
 
             <!-- Title Column -->
             <div class="title-col">
-                <h1 class="header-title">Student Panel</h1>
-                <span class="header-subtitle">CodeSA Institute Pty LTD</span>
+                <h1 class="header-title">Web-Based Online Assessment System</h1>
+                <span class="header-subtitle">CodeSA Institute | Professional Testing Platform</span>
             </div>
 
-            <!-- User Info Column -->
+            <!-- Logout Action Column -->
             <div class="user-col">
                 <div class="user-section">
                     <div class="user-info">
                         <span class="user-name"><%= currentUser.getFirstName() %> <%= currentUser.getLastName() %></span>
+                        <span class="user-role">Student</span>
                     </div>
                     <a href="controller.jsp?page=logout" class="logout-btn">
                         <i class="fas fa-sign-out-alt"></i>
@@ -860,9 +735,8 @@ if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("1")
             String pgprt = request.getParameter("pgprt");
             
             
-            // Page title and badge
+            // Page title
             String pageTitle = "Student Profile";
-            String userRole = "Student";
             
             if ("1".equals(pgprt)) {
                 pageTitle = "Student Exams";
@@ -880,10 +754,6 @@ if (pgprtParam == null || pgprtParam.equals("0") || pgprtParam.equals("1")
       <div class="page-title">
         <i class="fas fa-user-graduate"></i>
         <%= pageTitle %>
-      </div>
-      <div class="role-badge">
-        <i class="fas fa-user"></i>
-        <%= currentUser.getFirstName() + " " + currentUser.getLastName() %>
       </div>
     </div>
 
@@ -1138,6 +1008,8 @@ if (document.readyState === 'loading') {
     initScrollButtons();
 }
 </script>
+
+<link rel="stylesheet" href="app-theme.css">
 
 </body>
 </html>

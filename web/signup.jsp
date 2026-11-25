@@ -14,24 +14,88 @@
   <!-- Include modal assets -->
   <%@ include file="modal_assets.jspf" %>
 
-  <style>
-    :root{ --primary:#09294D; --error:#dc3545; }
-    body{ background:#E5E5E5; min-height:100vh; display:flex; flex-direction:column; }
-    .auth-card{ background:#fff; border:1px solid rgba(9,41,77,.12); border-radius:1rem; box-shadow:0 12px 24px rgba(0,0,0,.08); }
-    .auth-title{ color:var(--primary); font-weight:700; letter-spacing:.2px; }
-    .input-icon{ position:relative; }
-    .input-icon > i{ position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--primary); opacity:.6; pointer-events:none; }
-    .input-icon input{ padding-left:40px; }
-    .toggle-password{ position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#777; cursor:pointer; }
-    .error-message{ color:var(--error); font-size:.875rem; margin-top:4px; }
-    .form-row > .col-md-6{ margin-bottom:1rem; }
-    .btn-auth{ background:linear-gradient(135deg, var(--primary), #1e4580); border:none; }
-    .btn-auth:hover{ background:#1e4580; }
-    
-    @media (max-width:575.98px){ .auth-card{ border-radius:.75rem; } .auth-title{ font-size:1.25rem; } }
+ <style>
+    :root {
+        --primary-color: #dcdcdc;
+        --secondary-color: #c0c0c0;
+        --error-color: #dc3545;
+        --input-height: 3.125rem;
+        --ink: #2b2b2b;        /* dark blackish grey - main text */
+        --ink-soft: #4a4a4a;   /* dark blackish grey - icons / secondary text */
+    }
 
-  
-  </style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: var(--ink);
+        background: linear-gradient(135deg, #dcdcdc, #c0c0c0);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .auth-card{
+        background:#fff;
+        border:1px solid rgba(9,105,218,.12);
+        border-radius:1rem;
+        box-shadow:0 12px 24px rgba(0,0,0,.08);
+        color: var(--ink);
+    }
+    .auth-title{ color: var(--ink); font-weight:700; letter-spacing:.2px; }
+
+    .input-icon{ position:relative; }
+    .input-icon > i{
+        position:absolute;
+        left:12px;
+        top:50%;
+        transform:translateY(-50%);
+        color: var(--ink-soft);
+        opacity:1;
+        pointer-events:none;
+    }
+    .input-icon input{ padding-left:40px; }
+
+    .toggle-password{
+        position:absolute;
+        right:12px;
+        top:50%;
+        transform:translateY(-50%);
+        color: var(--ink-soft);
+        cursor:pointer;
+    }
+    .toggle-password:hover{ color: var(--ink); }
+
+    .error-message{ color:var(--error-color); font-size:.875rem; margin-top:4px; }
+    .form-row > .col-md-6{ margin-bottom:1rem; }
+    .btn-auth{ background:linear-gradient(135deg, var(--primary), var(--primary-dark)); border:none; }
+    .btn-auth:hover{ background:var(--primary-dark); text-decoration: none; }
+
+    /* Text inside the card */
+    .auth-card .form-control{ color: var(--ink); }
+    .auth-card .form-control::placeholder{ color:#8b8b8b; }
+    .auth-card .text-muted{ color: var(--ink-soft) !important; }
+    .auth-card a{ color: #1f1f1f; }
+
+    /* Remove underline for button-style links (Back to Accounts, Sign Up, etc.)
+       across all states, and force it even if a global a:hover rule exists */
+    .auth-card a.btn,
+    .auth-card a.btn:link,
+    .auth-card a.btn:visited,
+    .auth-card a.btn:hover,
+    .auth-card a.btn:focus,
+    .auth-card a.btn:active,
+    .auth-card a.btn:focus-visible,
+    .auth-card a.btn-outline-secondary,
+    .auth-card a.btn-outline-secondary:link,
+    .auth-card a.btn-outline-secondary:visited,
+    .auth-card a.btn-outline-secondary:hover,
+    .auth-card a.btn-outline-secondary:focus,
+    .auth-card a.btn-outline-secondary:active,
+    .auth-card a.btn-outline-secondary:focus-visible {
+        text-decoration: none !important;
+    }
+
+    @media (max-width:575.98px){ .auth-card{ border-radius:.75rem; } .auth-title{ font-size:1.25rem; } }
+</style>
 </head>
 <%
     // IMPORTANT: Set response encoding
@@ -43,6 +107,16 @@
         userType = "student";
     }
     String fromPage = request.getParameter("from");
+    if (fromPage == null || fromPage.trim().isEmpty()) {
+        fromPage = request.getParameter("from_page");
+    }
+    if ("account".equalsIgnoreCase(fromPage) || "accounts".equalsIgnoreCase(fromPage)) {
+        fromPage = "accounts";
+    } else if ("lecture_accounts".equalsIgnoreCase(fromPage)) {
+        fromPage = "lecture_accounts";
+    } else {
+        fromPage = null;
+    }
     
     String title = "Create your account";
     String subtitle = "Please fill in your details to sign up.";
@@ -211,24 +285,21 @@
                                     <a href="login.jsp">Log in</a>
                                 </small>
                             </div>
-                            <!-- Back Button (only show when coming from accounts.jsp) -->
-                            <% if ("account".equals(fromPage)) { %>
-                            <div class="container-fluid">
-                                <div class="row">
-                                    <div class="col-12 text-center">
-                                        <button onclick="goBackToAccounts()" class="btn btn-outline-secondary mb-3">
-                                            <i class="fas fa-arrow-left mr-2"></i>Back to Accounts
-                                        </button>
-                                    </div>
-                                </div>
+                            <% if (fromPage != null) {
+                                // Return to the main admin layout (which includes the fragment),
+                                // NOT to the fragment file directly - otherwise sidebar/theme CSS is lost.
+                                String returnPage  = "lecture_accounts".equals(fromPage)
+                                                       ? "adm-page.jsp?pgprt=6"
+                                                       : "adm-page.jsp?pgprt=1";
+                                String returnLabel = "lecture_accounts".equals(fromPage)
+                                                       ? "Back to Lecturer Accounts"
+                                                       : "Back to Accounts";
+                            %>
+                            <div class="col-12 text-center mt-3">
+                                <a href="<%= returnPage %>" class="btn btn-outline-secondary">
+                                    <i class="fas fa-arrow-left mr-2"></i><%= returnLabel %>
+                                </a>
                             </div>
-
-                            <script>
-                            function goBackToAccounts() {
-                                // Redirect back to accounts.jsp
-                                window.location.href = 'accounts.jsp';
-                            }
-                            </script>
                             <% } %>
                         </div>
                     </form>

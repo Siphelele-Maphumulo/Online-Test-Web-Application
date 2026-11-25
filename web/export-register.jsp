@@ -143,8 +143,8 @@
     <style>
         /* Professional Exam Register Report Styling */
         :root {
-            --primary-blue: #09294d;
-            --secondary-blue: #1a3d6d;
+            --primary-blue: #959596;
+            --secondary-blue: #0550ae;
             --accent-blue: #4a90e2;
             --text-white: #ffffff;
             --text-light: #e0e9ff;
@@ -371,7 +371,7 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
             border-bottom: 2px solid var(--accent-blue);
-            background: linear-gradient(135deg, #0F3058, #1a3d6d);
+            background: linear-gradient(135deg, #0F3058, #0550ae);
             color: white;
             position: sticky;
             top: 0;
@@ -411,7 +411,7 @@
 
         /* Column-specific professional styling */
         .data-table td.col-serial {
-            background: linear-gradient(135deg, #0F3058, #1a3d6d);
+            background: linear-gradient(135deg, #0F3058, #0550ae);
             color: white;
             font-weight: 700;
             text-align: center;

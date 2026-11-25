@@ -116,7 +116,7 @@ public String escapeHtml(String input) {
   }
   
   .mut-logo {
-    max-height: 80px;
+    max-height: 320px;
   }
   
   .exam-card {
@@ -610,6 +610,8 @@ public String escapeHtml(String input) {
 
 </style>
 
+<link rel="stylesheet" href="app-theme.css">
+
 <%@ include file="modal_assets.jspf" %>
 
 <!-- SIDEBAR -->
@@ -617,7 +619,7 @@ public String escapeHtml(String input) {
     <div class="sidebar-background" style="background-color:#F3F3F3; color:black">
         <!-- Logo on the left -->
         <div style="flex: 1;">
-            <img src="IMG/mut.png" alt="MUT Logo" style="max-height: 120px;">
+            <img src="IMG/mut.png" alt="MUT Logo" style="max-height: 240px;">
         </div>
 
         <div class="left-menu">

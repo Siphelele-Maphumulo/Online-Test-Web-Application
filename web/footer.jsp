@@ -1,4 +1,4 @@
-<footer class="footer text-white py-3" style="background-color:#09294d;">
+<footer class="footer text-white py-3" style="background-color:#959596;">
     <div class="container">
         <div class="row align-items-center">
             
@@ -84,8 +84,8 @@
 <style>
     
     :root {
-    --primary-blue: #09294d;
-    --secondary-blue: #1a3d6d;
+    --primary-blue: #959596;
+    --secondary-blue: #0550ae;
     --text-white: #ffffff;
     --text-light: #e0e9ff;
     --transition-speed: 0.2s;

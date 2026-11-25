@@ -33,9 +33,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { font-family: 'Segoe UI', sans-serif; padding: 40px; background: #f1f5f9; color: #1e293b; }
-        .report-container { max-width: 1000px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 8px solid #09294d; }
+        .report-container { max-width: 1000px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 8px solid #959596; }
         .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 2px solid #f1f5f9; padding-bottom: 20px; }
-        .title h1 { margin: 0; font-size: 24px; color: #09294d; }
+        .title h1 { margin: 0; font-size: 24px; color: #959596; }
         .title p { margin: 5px 0 0; color: #64748b; }
         .status-badge { padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; }
         .status-clean { background: #d1fae5; color: #065f46; }
@@ -58,6 +58,7 @@
             .btn-print { display: none; }
         }
     </style>
+    <link rel="stylesheet" href="app-theme.css">
 </head>
 <body>
     <div class="report-container">

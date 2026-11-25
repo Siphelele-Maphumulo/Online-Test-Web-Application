@@ -20,6 +20,7 @@
 <html> 
 <head> 
     <title>Proctor Dashboard - Live Monitoring</title> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"> 
     <style> 
         * { 
@@ -40,7 +41,7 @@
         } 
          
         .sidebar { 
-            background: #09294d; 
+            background: #959596;
             color: white; 
             padding: 20px; 
         } 
@@ -81,11 +82,11 @@
          
         .header h1 { 
             font-size: 24px; 
-            color: #09294d; 
+            color: #959596;
         } 
          
         .refresh-btn { 
-            background: #09294d; 
+            background: #959596;
             color: white; 
             border: none; 
             padding: 10px 20px; 
@@ -98,7 +99,7 @@
         } 
          
         .refresh-btn:hover { 
-            background: #1a3d6d; 
+            background: #0550ae; 
         } 
          
         .student-grid { 
@@ -317,7 +318,7 @@
          
         .incident-type { 
             font-weight: bold; 
-            color: #09294d; 
+            color: #959596;
             margin: 5px 0; 
         } 
          
@@ -333,10 +334,14 @@
             color: #cbd5e1; 
         } 
     </style> 
+    <link rel="stylesheet" href="app-theme.css">
 </head> 
 <body> 
     <div class="dashboard"> 
         <div class="sidebar"> 
+            <div class="sidebar-header">
+                <img src="IMG/mut.png" alt="MUT Logo" class="mut-logo">
+            </div>
             <h2>Proctor Dashboard</h2> 
             <div class="stats"> 
                 <div>Active Exams: <span id="activeCount"><%= activeExams.size() %></span></div> 
@@ -449,7 +454,7 @@
         <div class="modal-content"> 
             <h2 style="margin-bottom: 20px;">Incident History</h2> 
             <div id="incidentsList"></div> 
-            <button style="margin-top: 20px; padding: 10px; background: #09294d; color: white; border: none; border-radius: 6px; cursor: pointer;" onclick="closeModal()">Close</button> 
+            <button style="margin-top: 20px; padding: 10px; background: #959596; color: white; border: none; border-radius: 6px; cursor: pointer;" onclick="closeModal()">Close</button>
         </div> 
     </div> 
      

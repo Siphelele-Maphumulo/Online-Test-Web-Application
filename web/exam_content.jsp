@@ -52,8 +52,8 @@
     /* CSS Variables for Maintainability - PROFESSIONAL THEME */
     :root {
         /* Primary Colors - Professional Blue Theme */
-        --primary-blue: #09294d;
-        --secondary-blue: #1a3d6d;
+        --primary-blue: #959596;
+        --secondary-blue: #0550ae;
         --accent-blue: #3b82f6;
         --accent-blue-light: #60a5fa;
         
@@ -200,7 +200,7 @@
     }
     
     .mut-logo {
-        max-height: 150px;
+        max-height: 300px;
         width: auto;
         filter: brightness(0) invert(1);
     }

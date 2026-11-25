@@ -81,10 +81,7 @@
     /* CSS Variables for Maintainability - PROFESSIONAL THEME */
     :root {
         /* Primary Colors - Professional Blue Theme */
-        --primary-blue: #09294d;
-        --secondary-blue: #1a3d6d;
-        --accent-blue: #3b82f6;
-        --accent-blue-light: #60a5fa;
+
         
         /* Neutral Colors - Modern Gray Scale */
         --white: #ffffff;
@@ -113,11 +110,11 @@
         --spacing-2xl: 48px;
         
         /* Border Radius - Modern */
-        --radius-sm: 6px;
+/*        --radius-sm: 6px;
         --radius-md: 10px;
         --radius-lg: 16px;
         --radius-xl: 24px;
-        --radius-full: 9999px;
+        --radius-full: 9999px;*/
         
         /* Shadows - Material Design inspired */
         --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
@@ -148,7 +145,7 @@
     /* Sidebar - Modern Design */
     .sidebar {
         width: 200px;
-        background: linear-gradient(180deg, var(--primary-blue) 0%, #0d3060 100%);
+
         color: var(--white);
         flex-shrink: 0;
         position: fixed;
@@ -218,7 +215,7 @@
 
     
     .mut-logo {
-        max-height: 150px;
+        max-height: 300px;
         width: auto;
         filter: brightness(0) invert(1);
     }
@@ -270,7 +267,7 @@
     }
     
     .nav-item.active {
-        background: linear-gradient(90deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1));
+        background: linear-gradient(90deg, rgba(213, 222, 236, 0.2), rgba(59, 130, 246, 0.1));
         color: var(--white);
         box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
     }
@@ -361,7 +358,7 @@
     /* Page Header */
     .page-header {
         background: linear-gradient(135deg, var(--white) 0%, #fafcff 100%);
-        border-radius: var(--radius-lg);
+/*        border-radius: var(--radius-lg);*/
         padding: var(--spacing-xl);
         margin-bottom: var(--spacing-xl);
         display: flex;
@@ -380,7 +377,7 @@
         left: 0;
         width: 100%;
         height: 4px;
-        background: linear-gradient(90deg, var(--accent-blue), var(--success));
+
     }
     
     .page-title {
@@ -1531,6 +1528,10 @@
           <i class="fas fa-chart-line"></i>
           <span>Daily Register</span>
         </a>
+                <a class="nav-item" href="std-page.jsp?pgprt=4">
+                    <i class="fas fa-eye"></i>
+                    <span>Attendance</span>
+                </a>
       </div>
     </nav>
   </aside>
@@ -1599,7 +1600,7 @@
                 <!-- SYSTEM ALERT MODAL (replaces alert() to keep fullscreen) -->
                 <div id="systemAlertModal" class="alert-modal">
                     <div class="alert-modal-content" style="max-width: 520px; width: 92%;">
-                        <div class="alert-modal-header" style="background: #09294d; color: white; padding: 18px 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                        <div class="alert-modal-header" style="background: #959596; color: white; padding: 18px 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">
                             <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; font-size: 18px;">
                                 <i class="fas fa-info-circle"></i>
                                 Notice
@@ -1632,7 +1633,7 @@
                 <!-- CONFIRM ACTION MODAL (replaces confirm() to keep fullscreen) -->
                 <div id="systemConfirmModal" class="alert-modal">
                     <div class="alert-modal-content" style="max-width: 560px; width: 92%;">
-                        <div class="alert-modal-header" style="background: #09294d; color: white; padding: 18px 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                        <div class="alert-modal-header" style="background: #959596; color: white; padding: 18px 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">
                             <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; font-size: 18px;">
                                 <i class="fas fa-question-circle"></i>
                                 Confirm
@@ -1987,7 +1988,7 @@
                 <!-- QUESTION NAVIGATION MODAL -->
                 <div id="questionNavModal" class="alert-modal" style="display: none;">
                     <div class="alert-modal-content" style="max-width: 800px; width: 90%;">
-                        <div class="alert-modal-header" style="background: #09294d; color: white; padding: 20px; border-radius: 12px 12px 0 0;">
+                        <div class="alert-modal-header" style="background: #959596; color: white; padding: 20px; border-radius: 12px 12px 0 0;">
                             <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
                                 <i class="fas fa-list-ol"></i>
                                 Question Navigation
@@ -2389,7 +2390,7 @@ var globalVideoStream = null;
             session.removeAttribute("courseName");
         %>
         <!-- EXAM SELECTION -->
-        <div class="page-header">
+      <div class="page-header">
             <div class="page-title"><i class="fas fa-file-alt"></i> Take Exam</div>
             <div class="stats-badge"><i class="fas fa-clipboard-check"></i> Available Exams</div>
         </div>
@@ -2491,7 +2492,7 @@ var globalVideoStream = null;
                 modal.className = 'alert-modal';
                 modal.innerHTML = '' +
                     '<div class="alert-modal-content" style="max-width: 520px; width: 92%;">' +
-                        '<div class="alert-modal-header" style="background: #09294d; color: white; padding: 18px 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">' +
+                        '<div class="alert-modal-header" style="background: #959596; color: white; padding: 18px 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">' +
                             '<h3 style="margin: 0; display: flex; align-items: center; gap: 10px; font-size: 18px;">' +
                                 '<i class="fas fa-info-circle"></i>' +
                                 'Notice' +
@@ -2988,22 +2989,22 @@ var globalVideoStream = null;
 <!-- WAITING ROOM: Proctor Assignment in Progress --> 
 <div id="waitingRoomModal" class="modal-overlay" style="display: none;"> 
     <div class="modal-container" style="max-width: 550px;"> 
-        <div class="modal-header" style="background: #09294d;"> 
+        <div class="modal-header" style="background: #959596;">
             <h3 class="modal-title" style="color: white;"><i class="fas fa-user-clock"></i> Proctor Assignment in Progress</h3> 
         </div> 
         <div class="modal-body" style="text-align: center; padding: 30px 25px;"> 
             <!-- Animated waiting indicator --> 
             <div style="position: relative; width: 100px; height: 100px; margin: 0 auto 25px;"> 
                 <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 4px solid #e2e8f0; border-radius: 50%;"></div> 
-                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 4px solid transparent; border-top-color: #09294d; border-radius: 50%; animation: spin 1s linear infinite;"></div> 
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 32px; color: #09294d;"> 
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 4px solid transparent; border-top-color: #959596; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 32px; color: #959596;">
                     <i class="fas fa-user-shield"></i> 
                 </div> 
             </div> 
  
             <!-- Exam Info --> 
             <div style="margin-bottom: 20px;"> 
-                <span style="background: #09294d20; color: #09294d; padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: 500; display: inline-block; margin-bottom: 15px;"> 
+                <span style="background: #95959620; color: #959596; padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: 500; display: inline-block; margin-bottom: 15px;">
                     <i class="fas fa-certificate"></i> <span id="waitingRoomCourseName">PCEP™ – Certified Entry-Level Python Programmer</span> 
                 </span> 
                  
@@ -3060,7 +3061,7 @@ var globalVideoStream = null;
             <!-- Loading Animation --> 
             <div style="margin-top: 25px; display: flex; justify-content: center; gap: 20px;"> 
                 <div style="text-align: center;"> 
-                    <div style="width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #09294d; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 8px;"></div> 
+                    <div style="width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #959596; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 8px;"></div>
                     <span style="font-size: 12px; color: #64748b;">Checking System</span> 
                 </div> 
                 <div style="text-align: center;"> 
@@ -5587,7 +5588,7 @@ function showSimpleIdError(message) {
             newModal.className = 'alert-modal';
             newModal.innerHTML = `
                 <div class="alert-modal-content" style="max-width: 560px; width: 92%;">
-                    <div class="alert-modal-header" style="background: #09294d; color: white; padding: 18px 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="alert-modal-header" style="background: #959596; color: white; padding: 18px 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">
                         <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; font-size: 18px;">
                             <i class="fas fa-question-circle"></i>
                             Confirm
@@ -6165,6 +6166,7 @@ function showSimpleIdError(message) {
         }
     }
     </style>
+<link rel="stylesheet" href="app-theme.css">
 <script src="proctoring_v2.js" defer></script>
 <script>
 // ==================== DRAG AND DROP FUNCTIONALITY ====================

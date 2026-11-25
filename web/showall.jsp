@@ -85,9 +85,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
 <!-- Your existing CSS -->
 <style>
     :root {
-        --primary-blue: #09294d;
-        --secondary-blue: #1a3d6d;
-        --accent-blue: #4a90e2;
+
         --white: #ffffff;
         --light-gray: #f8fafc;
         --medium-gray: #e2e8f0;
@@ -123,7 +121,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     }
 
     .sidebar-header { padding: 32px 24px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-    .mut-logo { max-height: 120px; width: auto; filter: brightness(0) invert(1); }
+    .mut-logo { max-height: 240px; width: auto; filter: brightness(0) invert(1); }
     .sidebar-nav { padding: 24px 0; }
     .nav-item {
         display: flex; align-items: center; gap: 16px; padding: 16px 24px;
@@ -188,7 +186,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
         position: relative; transition: 0.2s;
     }
     .option-card.correct { border-color: var(--success); background-color: #ecfdf5; }
-    .option-card.correct-multi { border-color: var(--info); background-color: #f0f9ff; }
+    .option-card.correct-multi { border-color: var(--success); background-color: #ecfdf5; }
     .option-marker { font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 4px; display: block; }
     .option-content { font-size: 14px; color: #1e293b; }
     .correct-tag {
@@ -205,7 +203,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     .dd-item-list { display: flex; flex-direction: column; gap: 8px; }
     .dd-pair {
         display: flex; align-items: center; justify-content: space-between;
-        background: white; padding: 10px 16px; border-radius: 6px; border: 1px solid #e2e8f0;
+        background: #ecfdf5; padding: 10px 16px; border-radius: 6px; border: 1px solid var(--success);
         font-size: 14px;
     }
     .dd-drag-text { color: var(--primary-blue); font-weight: 600; }
@@ -230,7 +228,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     }
     .rearrange-item {
         display: flex; align-items: center; justify-content: space-between;
-        background: white; padding: 10px 16px; border-radius: 6px; border: 1px solid #e2e8f0;
+        background: #ecfdf5; padding: 10px 16px; border-radius: 6px; border: 1px solid var(--success);
         font-size: 14px;
     }
     .rearrange-item-number {
@@ -403,7 +401,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
     }
 
     .btn-search:hover {
-        background: #3b82f6;
+        background: #a2bde8;
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
     }
@@ -643,7 +641,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
         width: 20px;
         height: 20px;
         border-radius: 50%;
-        background-color: #476287;
+        background-color: #c8d1de;
         color: var(--white);
         border: none;
         cursor: pointer;
@@ -659,7 +657,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
 
     .scroll-btn:hover {
         transform: scale(1.1);
-        box-shadow: 0 8px 25px rgba(9, 41, 77, 0.3);
+        box-shadow: 0 8px 25px rgba(188, 201, 216, 0.3)0.3);
     }
 
     .scroll-btn:active {
@@ -684,6 +682,8 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
         height: 100%;
     }
 </style>
+
+<link rel="stylesheet" href="app-theme.css">
 
 <div class="dashboard-container">
     <aside class="sidebar">
@@ -972,7 +972,7 @@ ArrayList list = (courseName != null) ? pDAO.getAllQuestions(courseName, searchT
                                                 <span class="option-marker">OPTION <%= labels[j] %></span>
                                                 <div class="option-content"><%= opts[j] %></div>
                                                 <% if (isCorrect) { %>
-                                                    <span class="correct-tag" style="<%= isMS ? "background: var(--info);" : "" %>">
+                                                    <span class="correct-tag">
                                                         <i class="fas fa-check"></i>
                                                     </span>
                                                 <% } %>

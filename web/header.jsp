@@ -1,4 +1,6 @@
 <%@ page import="javax.servlet.http.HttpSession" %>
+<%@ page import="myPackage.DatabaseClass" %>
+<%@ page import="myPackage.classes.User" %>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <%
@@ -8,9 +10,18 @@
     boolean isSignupPage = currentPage.contains("signup.jsp") || 
                           currentPage.contains("lecture_signup.jsp") ||
                           currentPage.contains("register.html");
+    boolean isLoggedIn = session.getAttribute("userStatus") != null
+                          && "1".equals(session.getAttribute("userStatus").toString());
+    User headerUser = null;
+    Object headerUserId = session.getAttribute("userId");
+    if (isLoggedIn && headerUserId != null) {
+        headerUser = DatabaseClass.getInstance().getUserDetails(headerUserId.toString());
+    }
     // we want the loader even on the login page, so remove isLoginPage from this check
     boolean showPageLoader = !isSignupPage && request.getAttribute("disableLoader") == null && session.getAttribute("disableLoader") == null;
 %>
+
+<link rel="stylesheet" href="app-theme.css">
 
 <% if (showPageLoader) { %>
 <!-- Page Loader - Shows for 2 seconds on all pages except login/signup -->
@@ -55,7 +66,7 @@
     width: 60px;
     height: 60px;
     border: 5px solid #f3f3f3;
-    border-top: 5px solid #09294d;
+    border-top: 5px solid #c1c7cd;
     border-radius: 50%;
     animation: pageLoaderSpin 1s linear infinite;
     margin: 0 auto 20px;
@@ -87,7 +98,7 @@
 .page-loader-text {
     font-size: 16px;
     font-weight: 500;
-    color: #09294d;
+    color: #959596;
     font-family: 'Segoe UI', 'Roboto', sans-serif;
     animation: pageLoaderPulse 1.5s ease-in-out infinite;
 }
@@ -119,7 +130,7 @@
 <% } %>
 
 <!-- Professional Header -->
-<header class="header">
+<header class="header app-shell-header" style="color:#334155;">
     <div class="container-fluid">
         <div class="header-content-wrapper">
             <!-- Logo Section -->
@@ -133,22 +144,17 @@
 
             <!-- Title Section -->
             <div class="header-title-section">
-                <h1 class="header-title">Online Assessment System</h1>
+                <h1 class="header-title">Web-Based Online Assessment System</h1>
                 <p class="header-subtitle">CodeSA Institute | Professional Testing Platform</p>
             </div>
 
             <!-- Navigation Section -->
             <div class="header-nav-section">
-                <nav class="header-nav">
+                <nav class="header-nav <%= isLoggedIn ? "authenticated-header-nav" : "" %>">
                     <button class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Toggle navigation">
                         <i class="fas fa-bars"></i>
                     </button>
-                    <div class="nav-links" id="navLinks">
-                        <% 
-                            boolean isLoggedIn = session.getAttribute("userStatus") != null 
-                                                && session.getAttribute("userStatus").equals("1");
-                        %>
-
+                    <div class="nav-links <%= isLoggedIn ? "authenticated-nav-links" : "" %>" id="navLinks">
                         <% if (!isLoggedIn && !isSignupPage) { %>
                         <a href="signup.jsp" class="nav-link signup-link">
                             <i class="fas fa-user-plus"></i>
@@ -171,6 +177,12 @@
                         <% } %>
 
                         <% if (isLoggedIn) { %>
+                        <% if (headerUser != null) { %>
+                        <div class="header-user-info">
+                            <span class="header-user-name"><%= headerUser.getFirstName() %> <%= headerUser.getLastName() %></span>
+                            <span class="user-role"><%= headerUser.getType() %></span>
+                        </div>
+                        <% } %>
                         <button type="button" class="nav-link logout-link" id="logoutBtn">
                             <i class="fas fa-sign-out-alt"></i>
                             <span class="link-text">Logout</span>
@@ -265,7 +277,7 @@
 .logout-loader {
     position: fixed;
     inset: 0;
-    background: #09294d;
+    background: #e6ecf2;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -332,8 +344,8 @@
 
 /* ---------- Header ---------- */
 :root {
-    --primary-blue: #09294d;
-    --secondary-blue: #1a3d6d;
+    --primary-blue: #e1e8ef;
+    --secondary-blue: #f7f9fb;
     --text-white: #ffffff;
     --text-light: #e0e9ff;
     --transition-speed: 0.2s;

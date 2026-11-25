@@ -57,9 +57,9 @@
     /* Use the same CSS Variables as the profile page */
     :root {
         /* Primary Colors */
-        --primary-blue: #09294d;
-        --secondary-blue: #1a3d6d;
-        --accent-blue: #4a90e2;
+/*        --primary-blue: #0969da;
+        --secondary-blue: #0550ae;
+        --accent-blue: #4a90e2;*/
         
         /* Neutral Colors */
         --white: #ffffff;
